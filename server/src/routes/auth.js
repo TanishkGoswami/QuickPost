@@ -11,6 +11,7 @@ import linkedinOAuth from '../services/linkedinOAuth.js';
 import mastodonOAuth from '../services/mastodonOAuth.js';
 import tiktokOAuth from '../services/tiktokOAuth.js';
 import threadsOAuth from '../services/threadsOAuth.js';
+import xOAuth from '../services/xOAuth.js';
 
 import supabase, { createOrUpdateUser, getConnectedAccounts } from '../services/supabase.js';
 import { authenticateUser, generateToken } from '../middleware/authenticateUser.js';
@@ -449,6 +450,80 @@ router.get('/threads/callback', async (req, res) => {
   }
 });
 
+/* ---------------- 𝕏 (TWITTER) ---------------- */
+
+router.get('/x', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.redirect(`${CLIENT_URL}/dashboard?error=missing_token`);
+
+    let userId;
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      userId = decoded.userId;
+    } catch (e) {
+      return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token`);
+    }
+
+    // X requires PKCE. We'll generate a verifier and challenge.
+    // Since we don't have sessions, we'll encode the verifier into the state.
+    const { verifier, challenge } = xOAuth.generatePKCE();
+    
+    // Create state object with verifier
+    const stateObj = {
+      userId,
+      provider: 'x',
+      codeVerifier: verifier, // Store verifier here to use in callback
+      nonce: crypto.randomUUID(),
+      ts: Date.now()
+    };
+    
+    const state = Buffer.from(JSON.stringify(stateObj)).toString('base64url');
+    const authUrl = xOAuth.getAuthorizationUrl(state, challenge);
+    
+    return res.redirect(authUrl);
+  } catch (error) {
+    console.error('X init error:', error);
+    res.redirect(`${CLIENT_URL}/dashboard?error=x_oauth_failed`);
+  }
+});
+
+router.get('/x/callback', async (req, res) => {
+  const { code, error, state } = req.query;
+
+  console.log('\n🔵 X OAuth Callback Received');
+  console.log(' - Code:', code ? '***' + code.substring(code.length - 5) : 'MISSING');
+  console.log(' - State:', state ? 'PRESENT' : 'MISSING');
+  console.log(' - Error:', error || 'NONE');
+
+  if (error) {
+    console.error('❌ X OAuth Error from provider:', error);
+    return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied&details=${error}`);
+  }
+  if (!code || !state) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
+
+  const parsed = decodeState(state);
+  if (!parsed?.userId || !parsed?.codeVerifier) {
+    console.error('❌ X callback error: invalid state or missing verifier');
+    console.log(' - Parsed State:', parsed);
+    return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
+  }
+
+  console.log(' - Verifier retrieved:', parsed.codeVerifier ? 'YES' : 'NO');
+
+  try {
+    const tokenData = await xOAuth.exchangeCodeForTokens(code, parsed.codeVerifier);
+    console.log(' - Token exchange success!');
+    await xOAuth.storeTokens(parsed.userId, tokenData);
+
+    console.log(`✅ [AUTH] X connected successfully for user ${parsed.userId}`);
+    res.redirect(`${CLIENT_URL}/dashboard?success=x_connected`);
+  } catch (err) {
+    console.error('❌ X callback error:', err.message);
+    res.redirect(`${CLIENT_URL}/dashboard?error=x_connection_failed&message=${encodeURIComponent(err.message)}`);
+  }
+});
+
 // LinkedIn manual connection with access token
 router.post('/linkedin/connect', authenticateUser, async (req, res) => {
   try {
@@ -600,7 +675,7 @@ router.get('/accounts', authenticateUser, async (req, res) => {
 router.delete('/disconnect/:provider', authenticateUser, async (req, res) => {
   try {
     const { provider } = req.params;
-    const validProviders = ['youtube', 'instagram', 'pinterest', 'facebook', 'bluesky', 'linkedin', 'mastodon', 'tiktok', 'threads'];
+    const validProviders = ['youtube', 'instagram', 'pinterest', 'facebook', 'bluesky', 'linkedin', 'mastodon', 'tiktok', 'threads', 'x'];
     if (!validProviders.includes(provider)) {
       return res.status(400).json({ success: false, error: 'Invalid provider' });
     }

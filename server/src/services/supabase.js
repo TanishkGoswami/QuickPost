@@ -48,7 +48,8 @@ export async function getTokensForUser(userId) {
       bluesky: null,
       linkedin: null,
       mastodon: null,
-      tiktok: null
+      tiktok: null,
+      x: null
     };
 
     for (const row of data) {
@@ -124,6 +125,15 @@ export async function getTokensForUser(userId) {
         tokens.threads = {
           accessToken: row.access_token,
           account_id: row.account_id
+        };
+      }
+      
+      if (row.provider === 'x') {
+        tokens.x = {
+          accessToken: row.access_token,
+          refreshToken: row.refresh_token,
+          tokenExpiry: row.token_expiry,
+          accountId: row.account_id
         };
       }
     }
@@ -229,7 +239,7 @@ export async function getConnectedAccounts(userId) {
       throw error;
     }
 
-    const providers = ['youtube', 'instagram', 'facebook', 'pinterest', 'bluesky', 'linkedin', 'mastodon', 'tiktok', 'threads'];
+    const providers = ['youtube', 'instagram', 'facebook', 'pinterest', 'bluesky', 'linkedin', 'mastodon', 'tiktok', 'threads', 'x'];
     const result = {};
     for (const p of providers) result[p] = { connected: false };
 

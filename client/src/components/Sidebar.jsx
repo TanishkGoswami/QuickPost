@@ -22,6 +22,7 @@ function Sidebar() {
   const [showMastodonModal, setShowMastodonModal] = useState(false);
   const [showTikTokModal, setShowTikTokModal] = useState(false);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
+  const [connectingPlatform, setConnectingPlatform] = useState(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleConnectInstagram = () => {
@@ -43,6 +44,13 @@ function Sidebar() {
   const handleConnectThreads = () => {
     const token = localStorage.getItem('quickpost_token');
     window.location.href = `${API_BASE_URL}/api/auth/threads?token=${token}`;
+  };
+
+  const handleConnectX = () => {
+    console.log('𝕏 Initiating X connection...');
+    setConnectingPlatform('x');
+    const token = localStorage.getItem('quickpost_token');
+    window.location.href = `${API_BASE_URL}/api/auth/x?token=${token}`;
   };
 
   const handleDisconnect = async (platform) => {
@@ -125,16 +133,16 @@ function Sidebar() {
       onConnect: handleConnectInstagram,
     },
     {
-      id: 'twitter',
-      name: 'X (Twitter)',
-      connected: connectedAccounts.twitter,
+      id: 'x',
+      name: 'X',
+      connected: connectedAccounts.x,
       icon: (
         <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.294 19.497h2.039L6.482 3.239H4.293L17.607 20.65z"/>
         </svg>
       ),
       connectText: 'Connect X',
-      onConnect: () => alert('X (Twitter) integration coming soon!'),
+      onConnect: handleConnectX,
     },
     {
       id: 'linkedin',
@@ -346,18 +354,30 @@ function Sidebar() {
           {/* Connect Buttons */}
           {!isCollapsed && (
             <div className="mt-4 pt-4 border-t border-gray-200 space-y-1">
-              {platforms.filter(p => !p.connected).map((platform) => (
-                <button
-                  key={platform.id}
-                  onClick={platform.onConnect}
-                  className="group flex items-center gap-3 px-3 py-2 rounded-lg w-full text-left text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-all"
-                >
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity">
-                    {platform.icon}
-                  </div>
-                  <span className="text-sm opacity-70 group-hover:opacity-100 transition-opacity">{platform.connectText}</span>
-                </button>
-              ))}
+              {platforms.filter(p => !p.connected).map((platform) => {
+                const isConnecting = connectingPlatform === platform.id;
+                return (
+                  <button
+                    key={platform.id}
+                    onClick={platform.onConnect}
+                    disabled={isConnecting}
+                    className={`group flex items-center gap-3 px-3 py-2 rounded-lg w-full text-left transition-all ${
+                      isConnecting ? 'bg-gray-50 cursor-wait' : 'text-gray-600 hover:bg-gray-100 active:bg-gray-200'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center transition-opacity ${
+                      isConnecting ? 'opacity-100 animate-pulse' : 'opacity-40 group-hover:opacity-100'
+                    }`}>
+                      {platform.icon}
+                    </div>
+                    <span className={`text-sm transition-opacity ${
+                      isConnecting ? 'opacity-100 font-medium' : 'opacity-70 group-hover:opacity-100'
+                    }`}>
+                      {isConnecting ? `Connecting ${platform.name}...` : platform.connectText}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

@@ -67,6 +67,12 @@ export async function saveBroadcast(userId, caption, videoFilename, results, med
       threads_post_id: results.threads?.postId || null,
       threads_url: results.threads?.url || null,
       threads_error: results.threads?.error || null,
+
+      // X results
+      x_success: results.x?.success || false,
+      x_post_id: results.x?.postId || null,
+      x_url: results.x?.url || null,
+      x_error: results.x?.error || null,
     };
 
     const { data, error } = await supabase

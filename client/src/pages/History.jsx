@@ -72,6 +72,11 @@ function History() {
       case 'bluesky': return <Share2 className="w-5 h-5 text-[#0085FF]" />;
       case 'pinterest': return <Share2 className="w-5 h-5 text-[#BD081C]" />;
       case 'threads': return <ThreadsIcon className="w-5 h-5" />;
+      case 'x': return (
+        <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.294 19.497h2.039L6.482 3.239H4.293L17.607 20.65z"/>
+        </svg>
+      );
       default: return <Share2 className="w-5 h-5" />;
     }
   };
@@ -130,7 +135,8 @@ function History() {
               { id: 'mastodon', success: post.mastodon_success, name: 'Mastodon', error: post.mastodon_error, url: post.mastodon_url },
               { id: 'bluesky', success: post.bluesky_success, name: 'Bluesky', error: post.bluesky_error, url: post.bluesky_url },
               { id: 'pinterest', success: post.pinterest_success, name: 'Pinterest', error: post.pinterest_error, url: post.pinterest_url },
-              { id: 'threads', success: post.threads_success, name: 'Threads', error: post.threads_error, url: post.threads_url }
+              { id: 'threads', success: post.threads_success, name: 'Threads', error: post.threads_error, url: post.threads_url },
+              { id: 'x', success: post.x_success, name: 'X', error: post.x_error, url: post.x_url }
             ].filter(p => p.success || (p.error && p.error !== 'Not selected')); // FILTER OUT NOT SELECTED
 
             return (

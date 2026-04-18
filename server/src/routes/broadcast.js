@@ -10,6 +10,7 @@ import { postToLinkedIn } from '../services/linkedin.js';
 import mastodon from '../services/mastodon.js';
 import tiktok from '../services/tiktok.js';
 import { postToThreads } from '../services/threads.js';
+import { broadcastToX } from '../services/x.js';
 import { authenticateUser } from '../middleware/authenticateUser.js';
 import { saveBroadcast } from '../services/broadcasts.js';
 import { uploadToCloudinary, isCloudinaryConfigured } from '../services/cloudinary.js';
@@ -86,7 +87,8 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
       linkedin: { success: false, platform: 'LinkedIn', error: 'Not selected' },
       mastodon: { success: false, platform: 'Mastodon', error: 'Not selected' },
       tiktok: { success: false, platform: 'TikTok', error: 'Not selected' },
-      threads: { success: false, platform: 'Threads', error: 'Not selected' }
+      threads: { success: false, platform: 'Threads', error: 'Not selected' },
+      x: { success: false, platform: 'X', error: 'Not selected' }
     };
 
     if (isVideo && channels && channels.length > 0) {
@@ -150,6 +152,18 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
           );
         } else {
           results.threads = { success: false, platform: 'Threads', error: 'No Threads token found' };
+        }
+      }
+
+      // X Video
+      if (channels.includes('x')) {
+        if (tokens.x) {
+          platformPromises.push(
+            broadcastToX(caption, [mediaUrl], tokens.x, userId)
+              .then(result => ({ platform: 'x', result }))
+          );
+        } else {
+          results.x = { success: false, platform: 'X', error: 'No X token found' };
         }
       }
     } else if (isImage && channels && channels.length > 0) {
@@ -282,6 +296,21 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
           results.threads = { success: false, platform: 'Threads', error: 'No Threads token found' };
         }
       }
+
+      // X Image
+      if (channels.includes('x')) {
+        console.log('𝕏 X selected, checking tokens...');
+        if (tokens.x) {
+          console.log('𝕏 Posting to X...');
+          platformPromises.push(
+            broadcastToX(caption, [mediaUrl], tokens.x, userId)
+              .then(result => ({ platform: 'x', result }))
+          );
+        } else {
+          console.log('❌ No X token found');
+          results.x = { success: false, platform: 'X', error: 'No X token found' };
+        }
+      }
     }
 
     // Broadcast concurrently
@@ -309,6 +338,7 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
     if (results.mastodon?.success !== undefined) console.log('Mastodon:', results.mastodon.success ? '✅ Success' : '❌ Failed');
     if (results.tiktok?.success !== undefined) console.log('TikTok:', results.tiktok.success ? '✅ Success' : '❌ Failed');
     if (results.threads?.success !== undefined) console.log('Threads:', results.threads.success ? '✅ Success' : '❌ Failed');
+    if (results.x?.success !== undefined) console.log('X:', results.x.success ? '✅ Success' : '❌ Failed');
 
     // Save broadcast to database
     try {
@@ -338,7 +368,8 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
                           results.linkedin?.success ||
                           results.mastodon?.success ||
                           results.tiktok?.success ||
-                          results.threads?.success;
+                          results.threads?.success ||
+                          results.x?.success;
     
     return res.status(overallSuccess ? 200 : 500).json({
       success: overallSuccess,
