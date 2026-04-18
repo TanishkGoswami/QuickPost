@@ -58,12 +58,7 @@ router.get('/google/callback', async (req, res) => {
       tokenData.userInfo.picture
     );
 
-    console.log('--- LOGIN DEBUG ---');
-    console.log('User created/found:', { id: user.id, email: user.email });
-
-    console.log('Storing YouTube tokens for user:', user.id);
     await googleOAuth.storeTokens(user.id, tokenData);
-    console.log('YouTube tokens stored successfully.');
 
     const jwtToken = generateToken({
       userId: user.id,

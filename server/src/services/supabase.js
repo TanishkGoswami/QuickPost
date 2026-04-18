@@ -183,22 +183,16 @@ export async function createOrUpdateUser(email, name, googleId = null, profilePi
  */
 export async function getConnectedAccounts(userId) {
   try {
-    console.log('--- ACCOUNTS DEBUG ---');
-    console.log('Fetching accounts for userId:', userId);
-    
     const { data, error } = await supabase
       .from('social_tokens')
       .select('provider, updated_at, token_expiry, page_id, instagram_business_id, account_id, bluesky_did, bluesky_handle')
       .eq('user_id', userId);
 
     if (error) {
-      console.error('Supabase fetch error:', error);
       throw error;
     }
 
-    console.log('Raw accounts data from DB:', data);
-
-    const providers = ['youtube', 'instagram', 'facebook', 'pinterest', 'bluesky'];
+    const providers = ['youtube', 'instagram', 'facebook', 'pinterest', 'bluesky', 'linkedin'];
     const result = {};
     for (const p of providers) result[p] = { connected: false };
 
