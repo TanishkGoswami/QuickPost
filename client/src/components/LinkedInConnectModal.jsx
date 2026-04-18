@@ -9,8 +9,9 @@ function LinkedInConnectModal({ isOpen, onClose }) {
   const handleConnect = () => {
     setIsLoading(true);
     const token = localStorage.getItem('quickpost_token');
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     // Redirect to LinkedIn OAuth flow
-    window.location.href = `http://localhost:5000/api/auth/linkedin?token=${token}`;
+    window.location.href = `${apiUrl}/api/auth/linkedin?token=${token}`;
   };
 
   const handleBackdropClick = (e) => {

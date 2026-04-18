@@ -7,6 +7,9 @@ import { postToPinterest } from '../services/pinterest.js';
 import { postToFacebook } from '../services/facebook.js';
 import { postToBluesky } from '../services/bluesky.js';
 import { postToLinkedIn } from '../services/linkedin.js';
+import mastodon from '../services/mastodon.js';
+import tiktok from '../services/tiktok.js';
+import { postToThreads } from '../services/threads.js';
 import { authenticateUser } from '../middleware/authenticateUser.js';
 import { saveBroadcast } from '../services/broadcasts.js';
 import { uploadToCloudinary, isCloudinaryConfigured } from '../services/cloudinary.js';
@@ -80,7 +83,10 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
       pinterest: { success: false, platform: 'Pinterest', error: 'Not selected' },
       facebook: { success: false, platform: 'Facebook', error: 'Not selected' },
       bluesky: { success: false, platform: 'Bluesky', error: 'Not selected' },
-      linkedin: { success: false, platform: 'LinkedIn', error: 'Not selected' }
+      linkedin: { success: false, platform: 'LinkedIn', error: 'Not selected' },
+      mastodon: { success: false, platform: 'Mastodon', error: 'Not selected' },
+      tiktok: { success: false, platform: 'TikTok', error: 'Not selected' },
+      threads: { success: false, platform: 'Threads', error: 'Not selected' }
     };
 
     if (isVideo && channels && channels.length > 0) {
@@ -108,6 +114,42 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
           );
         } else {
           results.instagram = { success: false, platform: 'Instagram', error: 'No Instagram token found' };
+        }
+      }
+
+      // TikTok
+      if (channels.includes('tiktok')) {
+        if (tokens.tiktok) {
+          platformPromises.push(
+            tiktok.publishVideo(tokens.tiktok.accessToken, uploadedFilePath, caption)
+              .then(result => ({ platform: 'tiktok', result }))
+          );
+        } else {
+          results.tiktok = { success: false, platform: 'TikTok', error: 'No TikTok token found' };
+        }
+      }
+
+      // Mastodon Video
+      if (channels.includes('mastodon')) {
+        if (tokens.mastodon) {
+          platformPromises.push(
+            mastodon.postStatus(tokens.mastodon.accessToken, tokens.mastodon.instanceUrl, caption, [uploadedFilePath])
+              .then(result => ({ platform: 'mastodon', result }))
+          );
+        } else {
+          results.mastodon = { success: false, platform: 'Mastodon', error: 'No Mastodon token found' };
+        }
+      }
+
+      // Threads Video
+      if (channels.includes('threads')) {
+        if (tokens.threads) {
+          platformPromises.push(
+            postToThreads(tokens.threads.accessToken, tokens.threads.account_id, caption, mediaUrl, 'video')
+              .then(result => ({ platform: 'threads', result }))
+          );
+        } else {
+          results.threads = { success: false, platform: 'Threads', error: 'No Threads token found' };
         }
       }
     } else if (isImage && channels && channels.length > 0) {
@@ -210,6 +252,36 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
           results.linkedin = { success: false, platform: 'LinkedIn', error: 'No LinkedIn token found' };
         }
       }
+
+      // Mastodon Image
+      if (channels.includes('mastodon')) {
+        console.log('🐘 Mastodon selected, checking tokens...');
+        if (tokens.mastodon) {
+          console.log('🐘 Posting to Mastodon...');
+          platformPromises.push(
+            mastodon.postStatus(tokens.mastodon.accessToken, tokens.mastodon.instanceUrl, caption, [uploadedFilePath])
+              .then(result => ({ platform: 'mastodon', result }))
+          );
+        } else {
+          console.log('❌ No Mastodon token found');
+          results.mastodon = { success: false, platform: 'Mastodon', error: 'No Mastodon token found' };
+        }
+      }
+
+      // Threads Image
+      if (channels.includes('threads')) {
+        console.log('🧵 Threads selected, checking tokens...');
+        if (tokens.threads) {
+          console.log('🧵 Posting to Threads...');
+          platformPromises.push(
+            postToThreads(tokens.threads.accessToken, tokens.threads.account_id, caption, mediaUrl, 'image')
+              .then(result => ({ platform: 'threads', result }))
+          );
+        } else {
+          console.log('❌ No Threads token found');
+          results.threads = { success: false, platform: 'Threads', error: 'No Threads token found' };
+        }
+      }
     }
 
     // Broadcast concurrently
@@ -233,10 +305,16 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
     if (results.pinterest?.success !== undefined) console.log('Pinterest:', results.pinterest.success ? '✅ Success' : '❌ Failed');
     if (results.facebook?.success !== undefined) console.log('Facebook:', results.facebook.success ? '✅ Success' : '❌ Failed');
     if (results.bluesky?.success !== undefined) console.log('Bluesky:', results.bluesky.success ? '✅ Success' : '❌ Failed');
+    if (results.linkedin?.success !== undefined) console.log('LinkedIn:', results.linkedin.success ? '✅ Success' : '❌ Failed');
+    if (results.mastodon?.success !== undefined) console.log('Mastodon:', results.mastodon.success ? '✅ Success' : '❌ Failed');
+    if (results.tiktok?.success !== undefined) console.log('TikTok:', results.tiktok.success ? '✅ Success' : '❌ Failed');
+    if (results.threads?.success !== undefined) console.log('Threads:', results.threads.success ? '✅ Success' : '❌ Failed');
 
     // Save broadcast to database
     try {
-      await saveBroadcast(userId, caption, req.file.filename, results, mediaType, platData);
+      // Add mediaUrl to results for the service to pick up
+      const broadcastResults = { ...results, mediaUrl: mediaUrl };
+      await saveBroadcast(userId, caption, req.file.filename, broadcastResults, mediaType, platData);
       console.log('💾 Broadcast saved to database');
     } catch (error) {
       console.error('Failed to save broadcast to database:', error);
@@ -252,7 +330,15 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
     }, 2000);
 
     // Return response
-    const overallSuccess = results.youtube?.success || results.instagram?.success || results.pinterest?.success || results.facebook?.success || results.bluesky?.success;
+    const overallSuccess = results.youtube?.success || 
+                          results.instagram?.success || 
+                          results.pinterest?.success || 
+                          results.facebook?.success || 
+                          results.bluesky?.success ||
+                          results.linkedin?.success ||
+                          results.mastodon?.success ||
+                          results.tiktok?.success ||
+                          results.threads?.success;
     
     return res.status(overallSuccess ? 200 : 500).json({
       success: overallSuccess,

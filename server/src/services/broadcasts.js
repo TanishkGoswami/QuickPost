@@ -11,6 +11,8 @@ export async function saveBroadcast(userId, caption, videoFilename, results, med
       video_filename: videoFilename,
       status: 'sent',
       posted_at: new Date().toISOString(),
+      media_type: mediaType,
+      media_url: results.mediaUrl || null, // Capture the public URL if provided in results
       
       // Instagram results
       instagram_success: results.instagram?.success || false,
@@ -36,24 +38,60 @@ export async function saveBroadcast(userId, caption, videoFilename, results, med
       facebook_post_id: results.facebook?.postId || null,
       facebook_url: results.facebook?.postUrl || null,
       facebook_error: results.facebook?.error || null,
+      
+      // LinkedIn results
+      linkedin_success: results.linkedin?.success || false,
+      linkedin_post_id: results.linkedin?.postId || null,
+      linkedin_url: results.linkedin?.url || null,
+      linkedin_error: results.linkedin?.error || null,
+
+      // Mastodon results
+      mastodon_success: results.mastodon?.success || false,
+      mastodon_post_id: results.mastodon?.id || null,
+      mastodon_url: results.mastodon?.url || null,
+      mastodon_error: results.mastodon?.error || null,
+
+      // TikTok results
+      tiktok_success: results.tiktok?.success || false,
+      tiktok_publish_id: results.tiktok?.publishId || null,
+      tiktok_error: results.tiktok?.error || null,
+      
+      // Bluesky results
+      bluesky_success: results.bluesky?.success || false,
+      bluesky_post_id: results.bluesky?.uri || results.bluesky?.id || null,
+      bluesky_url: results.bluesky?.url || null,
+      bluesky_error: results.bluesky?.error || null,
+
+      // Threads results
+      threads_success: results.threads?.success || false,
+      threads_post_id: results.threads?.postId || null,
+      threads_url: results.threads?.url || null,
+      threads_error: results.threads?.error || null,
     };
 
     const { data, error } = await supabase
       .from('broadcasts')
       .insert([broadcastData])
-      .select()
-      .single();
+      .select();
 
     if (error) {
-      console.error('Error saving broadcast:', error);
-      throw error;
+      console.error('❌ [SUPABASE] Error saving broadcast record:', error.message);
+      console.error('   Hint: If you see "threads_error" not found, run: NOTIFY pgrst, "reload schema";');
+      // We don't throw here to prevent the whole broadcast response from being blocked
+      // but we return null so the caller knows it wasn't saved.
+      return null;
     }
 
-    console.log('✅ Broadcast saved to database:', data.id);
-    return data;
+    const savedRecord = data?.[0];
+    if (savedRecord) {
+      console.log('✅ Broadcast saved to database:', savedRecord.id);
+      return savedRecord;
+    }
+    
+    return null;
   } catch (error) {
-    console.error('Failed to save broadcast:', error);
-    throw error;
+    console.error('💥 Failed to save broadcast:', error.message || error);
+    return null;
   }
 }
 

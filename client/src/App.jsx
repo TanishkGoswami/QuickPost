@@ -12,6 +12,7 @@ import BroadcastForm from './components/BroadcastForm';
 import LandingPage from './pages/LandingPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
+import History from './pages/History';
 import { useAuth } from './context/AuthContext';
 
 function AppContent() {
@@ -48,6 +49,14 @@ function AppContent() {
                       element={
                         <ProtectedRoute>
                           <Dashboard />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/history" 
+                      element={
+                        <ProtectedRoute>
+                          <History />
                         </ProtectedRoute>
                       } 
                     />

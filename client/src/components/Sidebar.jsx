@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Settings, Zap, CheckCircle2, HelpCircle, PanelLeftClose } from 'lucide-react';
+import { Plus, Settings, Zap, CheckCircle2, HelpCircle, PanelLeftClose, Clock } from 'lucide-react';
 import InstagramBusinessSetupModal from './InstagramBusinessSetupModal';
 import BlueskyConnectModal from './BlueskyConnectModal';
 import PinterestConnectModal from './PinterestConnectModal';
 import LinkedInConnectModal from './LinkedInConnectModal';
+import MastodonConnectModal from './MastodonConnectModal';
+import TikTokConnectModal from './TikTokConnectModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -17,6 +19,8 @@ function Sidebar() {
   const [showBlueskyModal, setShowBlueskyModal] = useState(false);
   const [showPinterestModal, setShowPinterestModal] = useState(false);
   const [showLinkedInModal, setShowLinkedInModal] = useState(false);
+  const [showMastodonModal, setShowMastodonModal] = useState(false);
+  const [showTikTokModal, setShowTikTokModal] = useState(false);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -34,6 +38,11 @@ function Sidebar() {
   const handleConnectFacebook = () => {
     const token = localStorage.getItem('quickpost_token');
     window.location.href = `${API_BASE_URL}/api/auth/facebook?token=${token}`;
+  };
+
+  const handleConnectThreads = () => {
+    const token = localStorage.getItem('quickpost_token');
+    window.location.href = `${API_BASE_URL}/api/auth/threads?token=${token}`;
   };
 
   const handleDisconnect = async (platform) => {
@@ -73,6 +82,14 @@ function Sidebar() {
 
   const handleConnectLinkedIn = () => {
     setShowLinkedInModal(true);
+  };
+
+  const handleConnectMastodon = () => {
+    setShowMastodonModal(true);
+  };
+
+  const handleConnectTikTok = () => {
+    setShowTikTokModal(true);
   };
 
   const platforms = [
@@ -141,7 +158,7 @@ function Sidebar() {
         </svg>
       ),
       connectText: 'Connect TikTok',
-      onConnect: () => alert('TikTok integration coming soon!'),
+      onConnect: handleConnectTikTok,
     },
     {
       id: 'youtube',
@@ -177,7 +194,7 @@ function Sidebar() {
         </svg>
       ),
       connectText: 'Connect Threads',
-      onConnect: () => alert('Threads integration coming soon!'),
+      onConnect: handleConnectThreads,
     },
     {
       id: 'mastodon',
@@ -189,7 +206,7 @@ function Sidebar() {
         </svg>
       ),
       connectText: 'Connect Mastodon',
-      onConnect: () => alert('Mastodon integration coming soon!'),
+      onConnect: handleConnectMastodon,
     },
     {
       id: 'bluesky',
@@ -270,6 +287,26 @@ function Sidebar() {
             {!isCollapsed && (
               <div className="flex-1">
                 <div className="text-sm font-medium">All Channels</div>
+              </div>
+            )}
+          </Link>
+
+          {/* History */}
+          <Link
+            to="/dashboard/history"
+            className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg mb-2 transition-colors ${
+              location.pathname === '/dashboard/history'
+                ? 'bg-gray-100 text-gray-700'
+                : 'text-gray-700 hover:bg-gray-50'
+            }`}
+            title={isCollapsed ? "Post History" : ""}
+          >
+            <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+              <Clock className="w-5 h-5 text-blue-600" />
+            </div>
+            {!isCollapsed && (
+              <div className="flex-1">
+                <div className="text-sm font-medium">Post History</div>
               </div>
             )}
           </Link>
@@ -362,6 +399,20 @@ function Sidebar() {
       <LinkedInConnectModal
         isOpen={showLinkedInModal}
         onClose={() => setShowLinkedInModal(false)}
+        onSuccess={refreshAccounts}
+      />
+
+      {/* Mastodon Connect Modal */}
+      <MastodonConnectModal
+        isOpen={showMastodonModal}
+        onClose={() => setShowMastodonModal(false)}
+        onSuccess={refreshAccounts}
+      />
+
+      {/* TikTok Connect Modal */}
+      <TikTokConnectModal
+        isOpen={showTikTokModal}
+        onClose={() => setShowTikTokModal(false)}
         onSuccess={refreshAccounts}
       />
     </aside>

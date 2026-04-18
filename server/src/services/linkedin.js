@@ -25,7 +25,7 @@ export async function postToLinkedIn(imageUrl, text, tokens) {
       }
     });
 
-    const userUrn = userInfoResponse.data.sub;
+    const userUrn = `urn:li:person:${userInfoResponse.data.sub}`;
     console.log('User URN:', userUrn);
 
     let postData;

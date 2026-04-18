@@ -13,7 +13,11 @@ export function AuthProvider({ children }) {
     youtube: false,
     pinterest: false,
     facebook: false,
-    bluesky: false
+    bluesky: false,
+    linkedin: false,
+    mastodon: false,
+    tiktok: false,
+    threads: false
   });
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('quickpost_token'));
@@ -69,6 +73,10 @@ export function AuthProvider({ children }) {
           pinterest: accounts.pinterest?.connected || false,
           facebook: accounts.facebook?.connected || false,
           bluesky: accounts.bluesky?.connected || false,
+          linkedin: accounts.linkedin?.connected || false,
+          mastodon: accounts.mastodon?.connected || false,
+          tiktok: accounts.tiktok?.connected || false,
+          threads: accounts.threads?.connected || false,
         };
         setConnectedAccounts(transformedAccounts);
       }
@@ -86,7 +94,10 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('quickpost_token');
     setToken(null);
     setUser(null);
-    setConnectedAccounts({ instagram: false, youtube: false, pinterest: false, facebook: false });
+    setConnectedAccounts({ 
+      instagram: false, youtube: false, pinterest: false, facebook: false, 
+      bluesky: false, linkedin: false, mastodon: false, tiktok: false, threads: false 
+    });
   };
 
   const refreshAccounts = async () => {

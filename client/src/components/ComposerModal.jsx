@@ -29,6 +29,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
       if (connectedAccounts.instagram) connected.push('instagram');
       if (connectedAccounts.pinterest) connected.push('pinterest');
       if (connectedAccounts.facebook) connected.push('facebook');
+      if (connectedAccounts.threads) connected.push('threads');
       setSelectedChannels(connected);
     }
   }, [isOpen, connectedAccounts]);
