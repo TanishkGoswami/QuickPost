@@ -1,0 +1,471 @@
+import express from 'express';
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+
+import googleOAuth from '../services/googleOAuth.js';
+import instagramOAuth from '../services/instagramOAuth.js';
+import pinterestOAuth from '../services/pinterestOAuth.js';
+import facebookOAuth from '../services/facebookOAuth.js';
+import blueskyAuth from '../services/blueskyAuth.js';
+import linkedinOAuth from '../services/linkedinOAuth.js';
+
+import supabase, { createOrUpdateUser, getConnectedAccounts } from '../services/supabase.js';
+import { authenticateUser, generateToken } from '../middleware/authenticateUser.js';
+
+const router = express.Router();
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+
+function decodeState(state) {
+  try {
+    return JSON.parse(Buffer.from(state, 'base64url').toString('utf-8'));
+  } catch (e) {
+    return null;
+  }
+}
+
+function requireJwtSecret() {
+  if (!process.env.JWT_SECRET) {
+    console.error('❌ JWT_SECRET missing in env');
+  }
+}
+requireJwtSecret();
+
+/* ---------------- GOOGLE ---------------- */
+
+router.get('/google', (req, res) => {
+  try {
+    const authUrl = googleOAuth.getAuthorizationUrl();
+    res.redirect(authUrl);
+  } catch (error) {
+    console.error('Google OAuth init error:', error);
+    res.redirect(`${CLIENT_URL}/login?error=google_oauth_failed`);
+  }
+});
+
+router.get('/google/callback', async (req, res) => {
+  const { code, error } = req.query;
+
+  if (error) return res.redirect(`${CLIENT_URL}/login?error=access_denied`);
+  if (!code) return res.redirect(`${CLIENT_URL}/login?error=no_code`);
+
+  try {
+    const tokenData = await googleOAuth.exchangeCodeForTokens(code);
+
+    const user = await createOrUpdateUser(
+      tokenData.userInfo.email,
+      tokenData.userInfo.name,
+      tokenData.userInfo.googleId,
+      tokenData.userInfo.picture
+    );
+
+    console.log('--- LOGIN DEBUG ---');
+    console.log('User created/found:', { id: user.id, email: user.email });
+
+    console.log('Storing YouTube tokens for user:', user.id);
+    await googleOAuth.storeTokens(user.id, tokenData);
+    console.log('YouTube tokens stored successfully.');
+
+    const jwtToken = generateToken({
+      userId: user.id,
+      email: user.email,
+      name: user.name
+    });
+
+    res.redirect(`${CLIENT_URL}/auth/callback?token=${jwtToken}&provider=google`);
+  } catch (err) {
+    console.error('Google callback error:', err);
+    res.redirect(`${CLIENT_URL}/login?error=authentication_failed`);
+  }
+});
+
+/* ---------------- INSTAGRAM ---------------- */
+
+router.get('/instagram', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.redirect(`${CLIENT_URL}/dashboard?error=missing_token`);
+
+    let userId;
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      userId = decoded.userId;
+    } catch (e) {
+      return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token`);
+    }
+
+    const state = instagramOAuth.makeState(userId);
+    const authUrl = instagramOAuth.getAuthorizationUrl(state);
+    return res.redirect(authUrl);
+  } catch (error) {
+    console.error('Instagram init error:', error);
+    res.redirect(`${CLIENT_URL}/dashboard?error=instagram_oauth_failed`);
+  }
+});
+
+router.get('/instagram/callback', async (req, res) => {
+  const { code, error, state } = req.query;
+
+  console.log('\n🔵 Instagram OAuth Callback Received');
+  console.log('Query params:', { code: code ? 'present' : 'missing', error, state: state ? 'present' : 'missing' });
+
+  if (error) return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied`);
+  if (!code || !state) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
+
+  const parsed = decodeState(state);
+  if (!parsed?.userId) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
+
+  try {
+    const tokenData = await instagramOAuth.exchangeCodeForToken(code);
+    await instagramOAuth.storeTokens(parsed.userId, tokenData);
+
+    res.redirect(`${CLIENT_URL}/dashboard?success=instagram_connected`);
+  } catch (err) {
+    console.error('❌ IG callback error:', err.message);
+    res.redirect(`${CLIENT_URL}/dashboard?error=instagram_connection_failed`);
+  }
+});
+
+/* ---------------- FACEBOOK ---------------- */
+
+router.get('/facebook', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.redirect(`${CLIENT_URL}/dashboard?error=missing_token`);
+
+    let userId;
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      userId = decoded.userId;
+    } catch (e) {
+      return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token`);
+    }
+
+    const state = facebookOAuth.makeState(userId);
+    const authUrl = facebookOAuth.getAuthorizationUrl(state);
+    return res.redirect(authUrl);
+  } catch (error) {
+    console.error('Facebook init error:', error);
+    res.redirect(`${CLIENT_URL}/dashboard?error=facebook_oauth_failed`);
+  }
+});
+
+router.get('/facebook/callback', async (req, res) => {
+  const { code, error, state } = req.query;
+
+  console.log('\n🔵 Facebook OAuth Callback Received');
+  console.log('Query params:', { code: code ? 'present' : 'missing', error, state: state ? 'present' : 'missing' });
+
+  if (error) return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied`);
+  if (!code || !state) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
+
+  const parsed = decodeState(state);
+  if (!parsed?.userId) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
+
+  try {
+    const tokenData = await facebookOAuth.exchangeCodeForToken(code);
+    await facebookOAuth.storeTokens(parsed.userId, tokenData);
+
+    res.redirect(`${CLIENT_URL}/dashboard?success=facebook_connected`);
+  } catch (err) {
+    console.error('❌ FB callback error:', err.message);
+    res.redirect(`${CLIENT_URL}/dashboard?error=facebook_connection_failed`);
+  }
+});
+
+/* ---------------- PINTEREST ---------------- */
+
+router.get('/pinterest', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.redirect(`${CLIENT_URL}/dashboard?error=missing_token`);
+
+    let userId;
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      userId = decoded.userId;
+    } catch (e) {
+      return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token`);
+    }
+
+    const state = Buffer.from(JSON.stringify({ userId, provider: 'pinterest', nonce: crypto.randomUUID(), ts: Date.now() })).toString('base64url');
+    const authUrl = pinterestOAuth.getAuthorizationUrl(state);
+    res.redirect(authUrl);
+  } catch (error) {
+    console.error('Pinterest init error:', error);
+    res.redirect(`${CLIENT_URL}/dashboard?error=pinterest_oauth_failed`);
+  }
+});
+
+router.get('/pinterest/callback', async (req, res) => {
+  const { code, error, state } = req.query;
+
+  if (error) return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied`);
+  if (!code || !state) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
+
+  const parsed = decodeState(state);
+  if (!parsed?.userId) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
+
+  try {
+    const tokenData = await pinterestOAuth.exchangeCodeForToken(code);
+    await pinterestOAuth.storeTokens(parsed.userId, tokenData);
+
+    res.redirect(`${CLIENT_URL}/dashboard?success=pinterest_connected`);
+  } catch (err) {
+    console.error('Pinterest callback error:', err);
+    res.redirect(`${CLIENT_URL}/dashboard?error=pinterest_connection_failed`);
+  }
+});
+
+/* ---------------- BLUESKY ---------------- */
+
+// Bluesky uses a different auth flow - handle and app password
+router.post('/bluesky/connect', authenticateUser, async (req, res) => {
+  try {
+    const { handle, appPassword } = req.body;
+    const userId = req.user.userId;
+
+    if (!handle || !appPassword) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bluesky handle and app password are required'
+      });
+    }
+
+    console.log('\n🔵 Bluesky: Connecting account...');
+    console.log('User ID:', userId);
+    console.log('Handle:', handle);
+
+    // Authenticate with Bluesky
+    const sessionData = await blueskyAuth.authenticate(handle, appPassword);
+
+    // Store credentials
+    await blueskyAuth.storeCredentials(userId, sessionData);
+
+    res.json({
+      success: true,
+      message: 'Bluesky account connected successfully',
+      handle: sessionData.handle
+    });
+  } catch (error) {
+    console.error('❌ Bluesky connect error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to connect Bluesky account'
+    });
+  }
+});
+
+/* ---------------- LINKEDIN ---------------- */
+
+router.get('/linkedin', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.redirect(`${CLIENT_URL}/dashboard?error=missing_token`);
+
+    let userId;
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      userId = decoded.userId;
+    } catch (e) {
+      return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token`);
+    }
+
+    const state = linkedinOAuth.makeState(userId);
+    const authUrl = linkedinOAuth.getAuthorizationUrl(state);
+    return res.redirect(authUrl);
+  } catch (error) {
+    console.error('LinkedIn init error:', error);
+    res.redirect(`${CLIENT_URL}/dashboard?error=linkedin_oauth_failed`);
+  }
+});
+
+router.get('/linkedin/callback', async (req, res) => {
+  const { code, error, state } = req.query;
+
+  console.log('\n🔵 LinkedIn OAuth Callback Received');
+  console.log('Query params:', { code: code ? 'present' : 'missing', error, state: state ? 'present' : 'missing' });
+
+  if (error) return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied`);
+  if (!code || !state) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
+
+  const parsed = decodeState(state);
+  if (!parsed?.userId) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
+
+  try {
+    const tokenData = await linkedinOAuth.exchangeCodeForToken(code);
+    await linkedinOAuth.storeTokens(parsed.userId, tokenData);
+
+    res.redirect(`${CLIENT_URL}/dashboard?success=linkedin_connected`);
+  } catch (err) {
+    console.error('❌ LinkedIn callback error:', err.message);
+    res.redirect(`${CLIENT_URL}/dashboard?error=linkedin_connection_failed`);
+  }
+});
+
+// LinkedIn manual connection with access token
+router.post('/linkedin/connect', authenticateUser, async (req, res) => {
+  try {
+    const { accessToken } = req.body;
+    const userId = req.user.userId;
+
+    if (!accessToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'LinkedIn access token is required'
+      });
+    }
+
+    console.log('\n🔵 LinkedIn: Connecting account with manual token...');
+    console.log('User ID:', userId);
+
+    // Get user info from LinkedIn API
+    const userInfo = await linkedinOAuth.getUserProfile(accessToken);
+
+    // Store tokens
+    await linkedinOAuth.storeTokens(userId, {
+      accessToken,
+      expiresIn: 5184000, // 60 days default
+      userInfo
+    });
+
+    res.json({
+      success: true,
+      message: 'LinkedIn account connected successfully',
+      name: userInfo.name
+    });
+  } catch (error) {
+    console.error('❌ LinkedIn connect error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.response?.data?.message || error.message || 'Failed to connect LinkedIn account'
+    });
+  }
+});
+
+/* ---------------- PINTEREST MANUAL CONNECT ---------------- */
+
+// Pinterest manual connection with access token
+router.post('/pinterest/connect', authenticateUser, async (req, res) => {
+  try {
+    const { accessToken, boardId } = req.body;
+    const userId = req.user.userId;
+
+    if (!accessToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'Pinterest access token is required'
+      });
+    }
+
+    console.log('\n📌 Pinterest: Connecting account with manual token...');
+    console.log('User ID:', userId);
+    console.log('Token preview:', accessToken.substring(0, 20) + '...');
+
+    // Get user info from Pinterest API
+    const userInfo = await pinterestOAuth.getUserInfo(accessToken);
+    
+    // Get boards
+    const boards = await pinterestOAuth.getBoards(accessToken);
+    
+    // Use provided boardId or first board
+    let targetBoardId = boardId;
+    let targetBoardName = null;
+    
+    if (!targetBoardId && boards.length > 0) {
+      targetBoardId = boards[0].id;
+      targetBoardName = boards[0].name;
+    } else if (targetBoardId && boards.length > 0) {
+      const foundBoard = boards.find(b => b.id === targetBoardId);
+      targetBoardName = foundBoard?.name || null;
+    }
+
+    // Store tokens
+    await pinterestOAuth.storeTokens(userId, {
+      accessToken,
+      refreshToken: null, // Manual tokens don't have refresh
+      boardId: targetBoardId,
+      boardName: targetBoardName,
+      userInfo: {
+        username: userInfo.username,
+        profileImage: userInfo.profile_image
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Pinterest account connected successfully',
+      username: userInfo.username,
+      boardId: targetBoardId,
+      boardName: targetBoardName
+    });
+  } catch (error) {
+    console.error('❌ Pinterest connect error:', error);
+    console.error('Full error response:', error.response?.data);
+    
+    // Provide more detailed error messages
+    let errorMessage = error.message || 'Failed to connect Pinterest account';
+    
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    }
+    
+    if (error.response?.data?.code === 1) {
+      errorMessage = 'Consumer app type not supported. Please create a Business or Creator+Advertiser app on Pinterest Developers Console and regenerate your access token.';
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: errorMessage,
+      details: error.response?.data
+    });
+  }
+});
+
+/* ---------------- ME + ACCOUNTS ---------------- */
+
+router.get('/me', authenticateUser, (req, res) => {
+  res.json({
+    success: true,
+    user: {
+      userId: req.user.userId,
+      email: req.user.email,
+      name: req.user.name
+    }
+  });
+});
+
+router.get('/accounts', authenticateUser, async (req, res) => {
+  try {
+    const accounts = await getConnectedAccounts(req.user.userId);
+    res.json({ success: true, accounts });
+  } catch (error) {
+    console.error('Get accounts error:', error);
+    res.status(500).json({ success: false, error: 'Failed to get connected accounts' });
+  }
+});
+
+/* ---------------- DISCONNECT (single clean route) ---------------- */
+router.delete('/disconnect/:provider', authenticateUser, async (req, res) => {
+  try {
+    const { provider } = req.params;
+    const validProviders = ['youtube', 'instagram', 'pinterest', 'facebook', 'bluesky'];
+    if (!validProviders.includes(provider)) {
+      return res.status(400).json({ success: false, error: 'Invalid provider' });
+    }
+
+    const { error } = await supabase
+      .from('social_tokens')
+      .delete()
+      .eq('user_id', req.user.userId)
+      .eq('provider', provider);
+
+    if (error) throw error;
+
+    res.json({ success: true, message: `${provider} disconnected successfully` });
+  } catch (err) {
+    console.error('Disconnect error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+export default router;

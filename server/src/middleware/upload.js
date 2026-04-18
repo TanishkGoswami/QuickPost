@@ -1,0 +1,74 @@
+import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Configure storage
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../../uploads');
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    const prefix = file.mimetype.startsWith('image/') ? 'image' : 'video';
+    cb(null, `${prefix}-${uniqueSuffix}${ext}`);
+  }
+});
+
+// File filter for images and videos
+const fileFilter = (req, file, cb) => {
+  const allowedMimes = [
+    // Videos
+    'video/mp4',
+    'video/mpeg',
+    'video/quicktime',
+    'video/x-msvideo',
+    // Images
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+    'image/gif'
+  ];
+
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only images (JPEG, PNG, WebP, GIF) and videos (MP4, MOV, AVI) are allowed.'), false);
+  }
+};
+
+// Multer configuration
+export const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 256 * 1024 * 1024 // 256MB max file size (for videos)
+  }
+});
+
+// Error handler middleware for multer errors
+export const handleUploadError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        error: 'File size exceeds 256MB limit'
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      error: `Upload error: ${err.message}`
+    });
+  } else if (err) {
+    return res.status(400).json({
+      success: false,
+      error: err.message
+    });
+  }
+  next();
+};
