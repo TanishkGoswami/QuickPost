@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { DialogProvider } from './context/DialogContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -86,9 +87,11 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppContent />
-      </BrowserRouter>
+      <DialogProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
+      </DialogProvider>
     </AuthProvider>
   );
 }

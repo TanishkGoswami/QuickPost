@@ -18,7 +18,8 @@ export function AuthProvider({ children }) {
     mastodon: false,
     tiktok: false,
     threads: false,
-    x: false
+    x: false,
+    reddit: false
   });
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('quickpost_token'));
@@ -79,6 +80,7 @@ export function AuthProvider({ children }) {
           tiktok: accounts.tiktok?.connected || false,
           threads: accounts.threads?.connected || false,
           x: accounts.x?.connected || false,
+          reddit: accounts.reddit?.connected || false,
         };
         setConnectedAccounts(transformedAccounts);
       }
@@ -98,7 +100,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setConnectedAccounts({ 
       instagram: false, youtube: false, pinterest: false, facebook: false, 
-      bluesky: false, linkedin: false, mastodon: false, tiktok: false, threads: false, x: false
+      bluesky: false, linkedin: false, mastodon: false, tiktok: false, threads: false, x: false, reddit: false
     });
   };
 

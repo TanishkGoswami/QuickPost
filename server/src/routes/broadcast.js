@@ -11,6 +11,7 @@ import mastodon from '../services/mastodon.js';
 import tiktok from '../services/tiktok.js';
 import { postToThreads } from '../services/threads.js';
 import { broadcastToX } from '../services/x.js';
+import { postToReddit } from '../services/reddit.js';
 import { authenticateUser } from '../middleware/authenticateUser.js';
 import { saveBroadcast } from '../services/broadcasts.js';
 import { uploadToCloudinary, isCloudinaryConfigured } from '../services/cloudinary.js';
@@ -88,7 +89,8 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
       mastodon: { success: false, platform: 'Mastodon', error: 'Not selected' },
       tiktok: { success: false, platform: 'TikTok', error: 'Not selected' },
       threads: { success: false, platform: 'Threads', error: 'Not selected' },
-      x: { success: false, platform: 'X', error: 'Not selected' }
+      x: { success: false, platform: 'X', error: 'Not selected' },
+      reddit: { success: false, platform: 'Reddit', error: 'Not selected' }
     };
 
     if (isVideo && channels && channels.length > 0) {
@@ -166,10 +168,45 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
           results.x = { success: false, platform: 'X', error: 'No X token found' };
         }
       }
+
+      // Bluesky Video
+      if (channels.includes('bluesky')) {
+        console.log('🦋 Bluesky selected for video, checking tokens...');
+        if (tokens.bluesky) {
+          const did = tokens.bluesky.did;
+          if (did) {
+            console.log('🦋 Posting video to Bluesky...');
+            let videoBlob = null;
+            if (uploadedFilePath) {
+              videoBlob = fs.readFileSync(uploadedFilePath);
+            }
+            platformPromises.push(
+              postToBluesky(tokens.bluesky.accessToken, did, caption, mediaUrl, videoBlob, true)
+                .then(result => ({ platform: 'bluesky', result }))
+            );
+          } else {
+            console.log('❌ No Bluesky DID found');
+            results.bluesky = { success: false, platform: 'Bluesky', error: 'No Bluesky DID found' };
+          }
+        } else {
+          console.log('❌ No Bluesky token found');
+          results.bluesky = { success: false, platform: 'Bluesky', error: 'No Bluesky token found' };
+        }
+      }
     } else if (isImage && channels && channels.length > 0) {
       // Image: Process selected channels
       console.log('🎯 Processing image for selected channels:', channels);
       
+      // YouTube Image
+      if (channels.includes('youtube')) {
+        console.log('📺 YouTube selected for image, but API does not support Community Posts...');
+        results.youtube = { 
+          success: false, 
+          platform: 'YouTube', 
+          error: 'YouTube Data API only supports uploading Videos. It does not support creating Image or Community Posts.' 
+        };
+      }
+
       // Pinterest
       if (channels.includes('pinterest')) {
         if (tokens.pinterest) {
@@ -311,6 +348,21 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
           results.x = { success: false, platform: 'X', error: 'No X token found' };
         }
       }
+
+      // Reddit Image
+      if (channels.includes('reddit')) {
+        console.log('🤖 Reddit selected, checking tokens...');
+        if (tokens.reddit) {
+          console.log('🤖 Posting to Reddit...');
+          platformPromises.push(
+            postToReddit(userId, caption, mediaUrl, tokens.reddit, platData?.reddit)
+              .then(result => ({ platform: 'reddit', result }))
+          );
+        } else {
+          console.log('❌ No Reddit token found');
+          results.reddit = { success: false, platform: 'Reddit', error: 'No Reddit token found' };
+        }
+      }
     }
 
     // Broadcast concurrently
@@ -339,6 +391,7 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
     if (results.tiktok?.success !== undefined) console.log('TikTok:', results.tiktok.success ? '✅ Success' : '❌ Failed');
     if (results.threads?.success !== undefined) console.log('Threads:', results.threads.success ? '✅ Success' : '❌ Failed');
     if (results.x?.success !== undefined) console.log('X:', results.x.success ? '✅ Success' : '❌ Failed');
+    if (results.reddit?.success !== undefined) console.log('Reddit:', results.reddit.success ? '✅ Success' : '❌ Failed');
 
     // Save broadcast to database
     try {
@@ -369,7 +422,8 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
                           results.mastodon?.success ||
                           results.tiktok?.success ||
                           results.threads?.success ||
-                          results.x?.success;
+                          results.x?.success ||
+                          results.reddit?.success;
     
     return res.status(overallSuccess ? 200 : 500).json({
       success: overallSuccess,

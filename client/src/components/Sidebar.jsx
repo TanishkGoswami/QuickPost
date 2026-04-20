@@ -1,8 +1,9 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Settings, CheckCircle2, HelpCircle, PanelLeftClose, Clock, LogOut } from 'lucide-react';
+import { Plus, Settings, Zap, CheckCircle2, HelpCircle, PanelLeftClose, Clock, LogOut } from 'lucide-react';
+import { useDialog } from '../context/DialogContext';
 import logo from '/logo.png';
 import InstagramBusinessSetupModal from './InstagramBusinessSetupModal';
 import BlueskyConnectModal from './BlueskyConnectModal';
@@ -17,6 +18,7 @@ function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, connectedAccounts, refreshAccounts, logout } = useAuth();
+  const { confirm, alert } = useDialog();
   const [showBusinessSetupModal, setShowBusinessSetupModal] = useState(false);
   const [showBlueskyModal, setShowBlueskyModal] = useState(false);
   const [showPinterestModal, setShowPinterestModal] = useState(false);
@@ -29,8 +31,14 @@ function Sidebar() {
   const [connectedOpen, setConnectedOpen] = useState(true);
   const [showMoreUnconnected, setShowMoreUnconnected] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const handleLogout = () => {
-    if (confirm('Are you sure you want to log out?')) {
+  const handleLogout = async () => {
+    const confirmed = await confirm('Logout', 'Are you sure you want to log out?', { 
+      intent: 'logout', 
+      confirmText: 'Logout',
+      cancelText: 'Stay logged in'
+    });
+    
+    if (confirmed) {
       logout();
       navigate('/login');
     }
@@ -64,10 +72,21 @@ function Sidebar() {
     window.location.href = `${API_BASE_URL}/api/auth/x?token=${token}`;
   };
 
+  const handleConnectReddit = () => {
+    console.log('🤖 Initiating Reddit connection...');
+    setConnectingPlatform('reddit');
+    const token = localStorage.getItem('quickpost_token');
+    window.location.href = `${API_BASE_URL}/api/auth/reddit?token=${token}`;
+  };
+
   const handleDisconnect = async (platform) => {
-    if (!confirm(`Are you sure you want to disconnect ${platform}?`)) {
-      return;
-    }
+    const confirmed = await confirm('Disconnect Account', `Are you sure you want to disconnect your ${platform} account? This will stop all scheduled posts to this channel.`, {
+      intent: 'danger',
+      confirmText: 'Disconnect',
+      cancelText: 'Keep Connected'
+    });
+
+    if (!confirmed) return;
 
     setDisconnectingPlatform(platform);
     try {
@@ -84,12 +103,13 @@ function Sidebar() {
 
       if (data.success) {
         await refreshAccounts();
+        alert('Success', `Successfully disconnected from ${platform}`, { intent: 'primary' });
       } else {
-        alert(`Failed to disconnect: ${data.error}`);
+        alert('Error', `Failed to disconnect: ${data.error}`, { intent: 'danger' });
       }
     } catch (error) {
       console.error('Disconnect error:', error);
-      alert('Failed to disconnect account');
+      alert('Error', 'Failed to disconnect account. Please try again.', { intent: 'danger' });
     } finally {
       setDisconnectingPlatform(null);
     }
@@ -254,6 +274,34 @@ function Sidebar() {
       connectText: 'Connect Google Business',
       onConnect: () => alert('Google Business Profile integration coming soon!'),
     },
+    {
+      id: 'reddit',
+      name: 'Reddit',
+      connected: connectedAccounts.reddit,
+      icon: (
+        <svg className="w-5 h-5 text-[#FF4500]" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M24 11.5c0-1.65-1.35-3-3-3-.41 0-.8.08-1.15.22C18.21 7.27 15.71 6.5 13 6.5c-.01 0-.02 0-.03.01l1.32-4.19c.01-.03 0-.07-.02-.1-.02-.03-.05-.05-.08-.05l-4.44.93c-.15-.47-.59-.81-1.11-.81-.66 0-1.2.54-1.2 1.2s.54 1.2 1.2 1.2c.5 0 .93-.31 1.1-.74l3.87-.81-1.1 3.5c-2.73.04-5.24.81-6.85 2.23-.35-.14-.74-.22-1.15-.22-1.65 0-3 1.35-3 3 0 1.25.77 2.32 1.86 2.76-.04.24-.06.49-.06.74 0 3.31 4.03 6 9 6s9-2.69 9-6c0-.25-.02-.5-.06-.74 1.09-.44 1.86-1.51 1.86-2.76zM7.5 14c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5zm10.5 4.5c-1.84 0-3.48-.96-4.5-2.5-.1-.14-.07-.34.07-.44.15-.1.35-.07.45.07.9 1.37 2.37 2.22 3.98 2.22s3.08-.85 3.98-2.22c.1-.14.3-.17.44-.07.14.1.17.3.07.44-1.02 1.54-2.66 2.5-4.5 2.5zm1.5-3c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+        </svg>
+      ),
+      connectText: 'Coming Soon',
+      onConnect: () => alert('Coming Soon', 'Reddit integration is currently awaiting API approval. It will be available shortly!', { intent: 'warning' }),
+      disabled: true
+    },
+    {
+      id: 'snapchat',
+      name: 'Snapchat',
+      connected: false,
+      icon: (
+        <svg className="w-5 h-5 text-[#FFFC00]" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2.4c.6 0 1.2.1 1.8.2.4.1.8.3 1.1.5.3.2.6.4.8.7.2.3.4.6.5.9.1.3.2.6.2.9 0 .4-.1.7-.2 1.1-.1.3-.3.6-.5.9-.2.3-.5.5-.8.7-.3.2-.7.4-1.1.5-.6.2-1.2.2-1.8.2-3.3 0-6 2.7-6 6s2.7 6 6 6c.6 0 1.2-.1 1.8-.2.4-.1.8-.3 1.1-.5.3-.2.6-.4.8-.7.2-.3.4-.6.5-.9.1-.3.2-.6.2-.9 0-.4-.1-.7-.2-1.1-.1-.3-.3-.6-.5-.9-.2-.3-.5-.5-.8-.7-.3-.2-.7-.4-1.1-.5-.6-.2-1.2-.2-1.8-.2-3.3 0-6-2.7-6-6s2.7-6 6-6z"/>
+          {/* Simplified Ghost shape for Snapchat */}
+          <path d="M12 2c4.418 0 8 3.582 8 8 0 1.341-.331 2.603-.913 3.712.593.456 1.413 1.288 1.413 2.288 0 .5-.1.9-.3 1.2-.2.3-.5.5-.9.7-.4.2-.9.3-1.4.3-.5 0-1-.1-1.4-.3-.4-.2-.7-.4-.9-.7l-.4-.6c-1 1-2.3 1.6-3.8 1.6-1.5 0-2.8-.6-3.8-1.6l-.4.6c-.2.3-.5.5-.9.7l-1.4.3c-.5 0-1-.1-1.4-.3-.4-.2-.7-.4-.9-.7-.2-.3-.3-.7-.3-1.2 0-1 1.18-2.168 1.413-2.288C2.331 12.603 2 11.341 2 10c0-4.418 3.582-8 8-8z"/>
+        </svg>
+      ),
+      connectText: 'Coming Soon',
+      onConnect: () => alert('Coming Soon', 'Snapchat integration is in development!', { intent: 'warning' }),
+      disabled: true
+    }
   ];
 
   return (
