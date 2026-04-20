@@ -1,33 +1,78 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Default site zoom set to 85% for better layout fitting on desktops */
+@media screen and (min-width: 1024px) {
+  html {
+    zoom: 0.85;
+    background-color: #f9fafb; /* Matches bg-gray-50 to prevent white gaps */
+    min-height: 117.65vh; /* Fill physical viewport (100 / 0.85) */
+    scroll-behavior: smooth;
+  }
+
+  /* Compensate vh units for the 85% zoom level (100 / 0.85 = 117.65) */
+  .h-screen {
+    height: 117.65vh !important;
+  }
+  .min-h-screen {
+    min-height: 117.65vh !important;
+  }
+}
+
 @layer base {
   body {
     @apply bg-gray-50 text-gray-900 font-sans;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   }
 }
 
 @layer utilities {
   /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 20px;
+    border: 1px solid transparent;
+    background-clip: padding-box;
+    transition: background 0.3s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(142, 76, 251, 0.4); /* Subtle purple on hover */
+  }
+
+  /* Support for Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
+  }
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: #f1f1f1;
+    background: transparent;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 3px;
+    background: rgba(142, 76, 251, 0.2);
+    border-radius: 10px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: rgba(142, 76, 251, 0.5);
   }
 
   /* Modal Styles */
@@ -57,7 +102,7 @@
   /* Composer Textarea */
   .composer-textarea {
     @apply w-full border-none outline-none resize-none text-gray-900 placeholder-gray-400;
-    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 14px;
     line-height: 1.5;
   }
@@ -378,8 +423,46 @@
     background-clip: text;
   }
 
-  /* Smooth Scroll */
-  html {
-    scroll-behavior: smooth;
+  /* Fly-away Send Button */
+  .btn-fly-send {
+    @apply relative flex items-center justify-center bg-[#6366f1] text-white font-bold py-3 px-8 rounded-full overflow-hidden cursor-pointer transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed min-w-[140px] shadow-sm h-[44px];
+  }
+
+  .btn-fly-send span {
+    @apply hidden;
+  }
+
+  .btn-fly-send .svg-wrapper-1 {
+    @apply flex items-center justify-center transition-all duration-500 w-full;
+  }
+
+  .btn-fly-send svg {
+    @apply block transition-all duration-500 ease-in-out text-white fill-white;
+    transform-origin: center center;
+  }
+
+  /* Initial arrow position */
+  .btn-fly-send:not(.sending) svg {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  /* When sending/loading */
+  .btn-fly-send.sending .svg-wrapper {
+    animation: fly-1 0.6s ease-in-out infinite alternate;
+  }
+
+  .btn-fly-send.sending svg {
+    transform: translateX(120px) rotate(30deg) scale(0.5);
+    opacity: 0;
+  }
+
+  .btn-fly-send:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+
+  @keyframes fly-1 {
+    from { transform: translateY(2px); }
+    to { transform: translateY(-2px); }
   }
 }

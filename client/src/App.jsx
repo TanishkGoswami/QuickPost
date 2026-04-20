@@ -17,6 +17,8 @@ import History from './pages/History';
 import Onboarding from './components/Onboarding';
 import { useAuth } from './context/AuthContext';
 
+import DashboardLayout from './components/DashboardLayout';
+
 function AppContent() {
   const { isAuthenticated } = useAuth();
 
@@ -26,57 +28,23 @@ function AppContent() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfService />} />
+      
       <Route path="/login" element={
         isAuthenticated
           ? (localStorage.getItem('qp_onboarding_done') ? <Navigate to="/dashboard" replace /> : <Navigate to="/onboarding" replace />)
           : <Login />
       } />
+      
       <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="/onboarding" element={isAuthenticated ? <Onboarding /> : <Navigate to="/login" replace />} />
 
-      {/* Protected Dashboard Routes */}
-      <Route
-        path="/dashboard/*"
-        element={
-          isAuthenticated ? (
-            <div className="flex h-screen bg-gray-50">
-              {/* Sidebar */}
-              <Sidebar />
-
-              {/* Main content area */}
-              <div className="flex-1 ml-64 flex flex-col">
-                {/* Header */}
-                <Header />
-
-                {/* Main content */}
-                <main className="flex-1 mt-16 overflow-y-auto">
-                  <Routes>
-                    <Route 
-                      path="/" 
-                      element={
-                        <ProtectedRoute>
-                          <Dashboard />
-                        </ProtectedRoute>
-                      } 
-                    />
-
-                    <Route 
-                      path="/compose" 
-                      element={
-                        <ProtectedRoute>
-                          <BroadcastForm />
-                        </ProtectedRoute>
-                      } 
-                    />
-                  </Routes>
-                </main>
-              </div>
-            </div>
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
+      {/* Protected Dashboard Routes with Persistent Layout */}
+      <Route path="/dashboard" element={<DashboardLayout />}>
+        {/* Child routes that will render inside the Layout's Outlet */}
+        <Route index element={<Dashboard />} />
+        <Route path="compose" element={<BroadcastForm />} />
+        <Route path="history" element={<History />} />
+      </Route>
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,6 +1,7 @@
-﻿import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import apiClient from '../utils/apiClient';
-import { X, Upload, Loader2, Sparkles, Eye, ChevronDown, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Loader2, Sparkles, Eye, ChevronDown, Image as ImageIcon, GripVertical } from 'lucide-react';
+import { Reorder, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import ChannelSelector from './ChannelSelector';
 import PlatformCustomization from './PlatformCustomization';
@@ -9,57 +10,81 @@ import PlatformCustomization from './PlatformCustomization';
 /* â”€â”€ Platform meta â”€â”€ */
 const PLATFORM_META = {
   instagram: {
-    label: 'Instagram', icon: 'https://cdn.simpleicons.org/instagram/E4405F',
+    label: 'Instagram', icon: '/icons/ig-instagram-icon.svg',
     headerBg: 'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)',
     bodyBg: '#fff', textColor: '#fff', imgAspect: 'aspect-square',
     actions: ['â¤ï¸', 'ðŸ’¬', 'âœˆï¸', 'ðŸ”–'],
   },
   facebook: {
-    label: 'Facebook', icon: 'https://cdn.simpleicons.org/facebook/1877F2',
+    label: 'Facebook', icon: '/icons/facebook-round-color-icon.svg',
     headerBg: '#1877F2', bodyBg: '#f0f2f5', textColor: '#fff', imgAspect: 'aspect-video',
     actions: ['ðŸ‘ Like', 'ðŸ’¬ Comment', 'â†—ï¸ Share'],
   },
   x: {
-    label: 'X', icon: null,
+    label: 'X', icon: '/icons/x-social-media-round-icon.svg',
     headerBg: '#000', bodyBg: '#fff', textColor: '#fff', imgAspect: 'aspect-video',
     actions: ['ðŸ’¬', 'ðŸ”', 'â¤ï¸', 'ðŸ“Š'],
   },
   linkedin: {
-    label: 'LinkedIn', icon: null,
+    label: 'LinkedIn', icon: '/icons/linkedin-icon.svg',
     headerBg: '#0A66C2', bodyBg: '#f3f2ef', textColor: '#fff', imgAspect: 'aspect-[1.91/1]',
     actions: ['ðŸ‘ Like', 'ðŸ’¬ Comment', 'â†—ï¸ Share'],
   },
   youtube: {
-    label: 'YouTube', icon: 'https://cdn.simpleicons.org/youtube/FF0000',
+    label: 'YouTube', icon: '/icons/youtube-color-icon.svg',
     headerBg: '#FF0000', bodyBg: '#0f0f0f', textColor: '#fff', imgAspect: 'aspect-video',
     actions: ['ðŸ‘', 'ðŸ‘Ž', 'â†—ï¸ Share', 'â¬‡ï¸ Save'],
   },
   tiktok: {
-    label: 'TikTok', icon: 'https://cdn.simpleicons.org/tiktok/000',
+    label: 'TikTok', icon: '/icons/tiktok-circle-icon.svg',
     headerBg: '#000', bodyBg: '#000', textColor: '#fff', imgAspect: 'aspect-[9/16]',
     actions: ['â¤ï¸', 'ðŸ’¬', 'ðŸ”–', 'â†—ï¸'],
   },
   threads: {
-    label: 'Threads', icon: 'https://cdn.simpleicons.org/threads/000',
+    label: 'Threads', icon: '/icons/threads-icon.svg',
     headerBg: '#000', bodyBg: '#fff', textColor: '#fff', imgAspect: 'aspect-square',
     actions: ['â¤ï¸', 'ðŸ’¬', 'ðŸ”', 'â†—ï¸'],
   },
   pinterest: {
-    label: 'Pinterest', icon: 'https://cdn.simpleicons.org/pinterest/BD081C',
+    label: 'Pinterest', icon: '/icons/pinterest-round-color-icon.svg',
     headerBg: '#BD081C', bodyBg: '#fff', textColor: '#fff', imgAspect: 'aspect-[2/3]',
     actions: ['Save'],
   },
   bluesky: {
-    label: 'Bluesky', icon: 'https://cdn.simpleicons.org/bluesky/0085FF',
+    label: 'Bluesky', icon: '/icons/bluesky-circle-color-icon.svg',
     headerBg: '#0085FF', bodyBg: '#fff', textColor: '#fff', imgAspect: 'aspect-video',
     actions: ['â¤ï¸', 'ðŸ”', 'ðŸ’¬', 'â†—ï¸'],
   },
   mastodon: {
-    label: 'Mastodon', icon: 'https://cdn.simpleicons.org/mastodon/6364FF',
+    label: 'Mastodon', icon: '/icons/mastodon-round-icon.svg',
     headerBg: '#6364FF', bodyBg: '#191b22', textColor: '#fff', imgAspect: 'aspect-video',
     actions: ['â†©ï¸ Reply', 'ðŸ” Boost', 'â­ Fav', 'â†—ï¸'],
   },
 };
+
+const QUICK_SUGGESTIONS = [
+  "Hell yeh !!",
+  "Excited to share this! ",
+  "What do you think? ",
+  "Check out my latest post! ",
+  "Behind the scenes ",
+  "Stay tuned for more! ",
+  "New update alert! ",
+  "Link in bio! ",
+  "Happy Monday! ",
+  "Weekend vibes!"
+];
+
+const SUGGESTED_HASHTAGS = [
+  "#productivity",
+  "#marketing",
+  "#socialmedia",
+  "#growth",
+  "#creator",
+  "#digitalmarketing",
+  "#branding",
+  "#socialstrategy"
+];
 
 function XIcon({ className }) {
   return (
@@ -78,7 +103,7 @@ function LinkedInIcon({ className }) {
 }
 
 /* â”€â”€ Platform Preview Panel â”€â”€ */
-function PlatformPreviewPanel({ selectedChannels, caption, mediaFile, mediaType }) {
+function PlatformPreviewPanel({ selectedChannels, caption, mediaFiles, mediaType }) {
   const [activeId, setActiveId] = React.useState(null);
 
   // Keep activeId in sync with selectedChannels
@@ -89,7 +114,13 @@ function PlatformPreviewPanel({ selectedChannels, caption, mediaFile, mediaType 
   }, [selectedChannels]);
 
   const meta = PLATFORM_META[activeId] || PLATFORM_META.instagram;
-  const mediaUrl = mediaFile ? URL.createObjectURL(mediaFile) : null;
+  
+  // Memoize URL creation to prevent leaks and flicker
+  const mediaUrl = useMemo(() => {
+    if (!mediaFiles || mediaFiles.length === 0) return null;
+    return URL.createObjectURL(mediaFiles[0].file);
+  }, [mediaFiles]);
+
   const truncatedCaption = caption?.length > 120 ? caption.slice(0, 120) + 'â€¦' : caption;
   const videoTitle = caption?.length > 60 ? caption.slice(0, 60) + 'â€¦' : caption || 'Your Video Title';
 
@@ -110,12 +141,7 @@ function PlatformPreviewPanel({ selectedChannels, caption, mediaFile, mediaType 
                 isActive ? 'bg-gray-100 ring-2 ring-indigo-400 ring-offset-1' : 'hover:bg-gray-50'
               }`}
             >
-              {id === 'x'
-                ? <XIcon className="w-4 h-4 text-black" />
-                : id === 'linkedin'
-                  ? <LinkedInIcon className="w-5 h-5 text-[#0A66C2]" />
-                  : <img src={m.icon} alt={m.label} className="w-5 h-5 object-contain" />
-              }
+              <img src={m.icon} alt={m.label} className="w-5 h-5 object-contain" />
             </button>
           );
         })}
@@ -186,9 +212,18 @@ function PlatformPreviewPanel({ selectedChannels, caption, mediaFile, mediaType 
               </div>
               <div className="relative w-full aspect-square bg-gray-900">
                 {mediaUrl ? (
-                  mediaType === 'image'
-                    ? <img src={mediaUrl} alt="Post" className="w-full h-full object-cover" />
-                    : <video src={mediaUrl} className="w-full h-full object-cover" muted playsInline />
+                  <>
+                    {mediaType === 'image'
+                      ? <img src={mediaUrl} alt="Post" className="w-full h-full object-cover" />
+                      : <video src={mediaUrl} className="w-full h-full object-cover" muted playsInline />
+                    }
+                    {mediaFiles.length > 1 && (
+                      <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md rounded-full px-2 py-0.5 flex items-center gap-1 border border-white/10 shadow-lg">
+                        <ImageIcon className="w-2.5 h-2.5 text-white" />
+                        <span className="text-[10px] font-bold text-white leading-none">1/{mediaFiles.length}</span>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100">
                     <ImageIcon className="w-8 h-8 text-gray-400 mb-1" />
@@ -346,7 +381,7 @@ function PlatformPreviewPanel({ selectedChannels, caption, mediaFile, mediaType 
           ) : (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="flex items-center gap-2 px-3 py-2" style={{ background: meta.headerBg }}>
-                {activeId === 'x' ? <XIcon className="w-4 h-4 text-white" /> : activeId === 'linkedin' ? <LinkedInIcon className="w-4 h-4 text-white" /> : <img src={meta.icon} alt={meta.label} className="w-4 h-4 object-contain brightness-200" />}
+                <img src={meta.icon} alt={meta.label} className="w-4 h-4 object-contain brightness-200" />
                 <span className="text-[11px] font-bold tracking-wide" style={{ color: meta.textColor }}>{meta.label}</span>
               </div>
               <div style={{ background: meta.bodyBg }}>
@@ -387,7 +422,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
   const { connectedAccounts } = useAuth();
   const [caption, setCaption] = useState('');
-  const [mediaFile, setMediaFile] = useState(null);
+  const [mediaFiles, setMediaFiles] = useState([]);
   const [selectedChannels, setSelectedChannels] = useState([]);
   const [platformData, setPlatformData] = useState({
     pinterest: { title: '', link: '', boardId: '' },
@@ -439,31 +474,45 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     e.stopPropagation();
     setDragActive(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
-        setMediaFile(file);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const files = Array.from(e.dataTransfer.files).filter(f => 
+        f.type.startsWith('image/') || f.type.startsWith('video/')
+      );
+      
+      if (files.length > 0) {
+        const newFiles = files.map(file => ({
+          id: Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
+          file
+        }));
+        setMediaFiles(prev => [...prev, ...newFiles].slice(0, 10));
         setError(null);
       } else {
-        setError('Please upload an image or video file');
+        setError('Please upload image or video files');
       }
     }
   };
 
   const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
-        setMediaFile(file);
+    if (e.target.files && e.target.files.length > 0) {
+      const files = Array.from(e.target.files).filter(f => 
+        f.type.startsWith('image/') || f.type.startsWith('video/')
+      );
+      
+      if (files.length > 0) {
+        const newFiles = files.map(file => ({
+          id: Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
+          file
+        }));
+        setMediaFiles(prev => [...prev, ...newFiles].slice(0, 10));
         setError(null);
       } else {
-        setError('Please upload an image or video file');
+        setError('Please upload image or video files');
       }
     }
   };
 
-  const removeFile = () => {
-    setMediaFile(null);
+  const removeFile = (index) => {
+    setMediaFiles(prev => prev.filter((_, i) => i !== index));
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -480,8 +529,8 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
       return false;
     }
 
-    if (!mediaFile) {
-      setError('Please upload an image or video');
+    if (mediaFiles.length === 0) {
+      setError('Please upload at least one image or video');
       return false;
     }
 
@@ -498,7 +547,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     }
 
     // Validate YouTube media type
-    if (selectedChannels.includes('youtube') && mediaFile && mediaFile.type.startsWith('image/')) {
+    if (selectedChannels.includes('youtube') && mediaFiles.some(m => m.file.type.startsWith('image/'))) {
       setError('Posting on YouTube via app is not possible for images. You can only upload video.');
       return false;
     }
@@ -517,7 +566,10 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
     try {
       const formData = new FormData();
-      formData.append('media', mediaFile);
+      // Append each file with the same key 'media'
+      mediaFiles.forEach(m => {
+        formData.append('media', m.file);
+      });
       formData.append('caption', caption);
       formData.append('selectedChannels', JSON.stringify(selectedChannels));
       formData.append('platformData', JSON.stringify(platformData));
@@ -537,7 +589,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
   const handleClose = () => {
     setCaption('');
-    setMediaFile(null);
+    setMediaFiles([]);
     setSelectedChannels([]);
     setPlatformData({
       pinterest: { title: '', link: '', boardId: '' },
@@ -551,7 +603,9 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
   if (!isOpen) return null;
 
-  const mediaType = mediaFile?.type.startsWith('video/') ? 'video' : 'image';
+  if (!isOpen) return null;
+
+  const mediaType = mediaFiles[0]?.file?.type?.startsWith('video/') ? 'video' : 'image';
 
   return (
     <div className="modal-overlay" onClick={handleClose}>
@@ -617,66 +671,179 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                 className="composer-textarea min-h-[160px]"
                 maxLength={2200}
               />
-              <div className="flex justify-between items-center mt-2">
-                <p className="text-sm text-gray-500">
-                  {caption.length}/2200
+              <div className="mt-3">
+                <div className="flex items-center justify-between mb-2 ml-1">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Quick Ideas</p>
+                  {caption && (
+                    <button 
+                      onClick={() => setCaption('')}
+                      className="text-[10px] text-gray-400 hover:text-red-500 transition-colors uppercase tracking-wider font-bold"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  {QUICK_SUGGESTIONS.map((suggestion, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setCaption(prev => prev ? `${prev} ${suggestion}` : suggestion)}
+                      className="flex-shrink-0 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full text-[11px] text-gray-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all whitespace-nowrap"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Hashtag Suggestions & Promotion */}
+              <div className="mt-4">
+                <div className="flex items-center gap-2 mb-2 ml-1">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Hashtag Ideas</p>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {/* Brand Promotion Card */}
+                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-3 border border-indigo-100/50 flex items-center justify-between group hover:shadow-sm transition-all duration-300">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm text-indigo-500">
+                        <Sparkles className="w-4 h-4 animate-pulse" />
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-indigo-900 group-hover:text-indigo-600 transition-colors">Get Featured!</p>
+                        <p className="text-[10px] text-indigo-500/80">Use #getaipilot to boost your reach</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCaption(prev => prev ? `${prev} #getaipilot` : "#getaipilot")}
+                      className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold shadow-md shadow-indigo-200 transition-all active:scale-95 flex items-center gap-1.5"
+                    >
+                      <span>#getaipilot</span>
+                      <Sparkles className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  {/* Other Hashtags Row */}
+                  <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    {SUGGESTED_HASHTAGS.map((tag, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setCaption(prev => prev ? `${prev} ${tag}` : tag)}
+                        className="flex-shrink-0 px-3 py-1 bg-white border border-gray-200 rounded-md text-[11px] font-medium text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-all"
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-2 px-1">
+                <p className="text-[11px] text-gray-500 font-medium">
+                  {caption.length} / 2200
                 </p>
               </div>
             </div>
 
-            {/* Media Upload - Simplified Buffer Style */}
+            {/* Media Upload - Multi-image gallery style */}
             <div className="mb-6">
-              {!mediaFile ? (
-                <div
-                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                    dragActive
-                      ? 'border-gray-400 bg-gray-100'
-                      : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                  onDragEnter={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDragOver={handleDrag}
-                  onDrop={handleDrop}
-                >
-                  <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" strokeWidth={1.5} />
-                  <p className="text-gray-600 text-sm mb-1">
-                    Drag & drop or{' '}
-                    <label className="text-buffer-blue hover:text-buffer-blueDark cursor-pointer font-medium">
-                      select a file
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*,video/*"
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-                    </label>
-                  </p>
-                </div>
-              ) : (
-                <div className="relative border border-gray-200 rounded-lg overflow-hidden">
-                  {mediaType === 'image' ? (
-                    <img 
-                      src={URL.createObjectURL(mediaFile)} 
-                      alt="Preview" 
-                      className="w-full h-48 object-cover"
+              <div
+                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors mb-4 ${
+                  dragActive
+                    ? 'border-gray-400 bg-gray-100'
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+              >
+                <ImageIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" strokeWidth={1.5} />
+                <p className="text-gray-600 text-sm mb-1">
+                  Drag & drop or{' '}
+                  <label className="text-buffer-blue hover:text-buffer-blueDark cursor-pointer font-medium">
+                    select multiple files
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept="image/*,video/*"
+                      onChange={handleFileChange}
+                      className="hidden"
                     />
-                  ) : (
-                    <div className="w-full h-48 bg-gray-100 flex items-center justify-center">
-                      <div className="text-center">
-                        <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600">{mediaFile.name}</p>
-                      </div>
-                    </div>
+                  </label>
+                </p>
+                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mt-1">Up to 10 images or video</p>
+              </div>
+
+              {/* Image Preview Grid with Reordering */}
+              {mediaFiles.length > 0 && (
+                <Reorder.Group 
+                  axis="x" 
+                  values={mediaFiles} 
+                  onReorder={setMediaFiles}
+                  className="grid grid-cols-5 gap-3 mt-4"
+                >
+                  <AnimatePresence>
+                    {mediaFiles.map((m, idx) => {
+                      const isVideo = m.file.type.startsWith('video/');
+                      return (
+                        <Reorder.Item
+                          key={m.id}
+                          value={m}
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-50 cursor-grab active:cursor-grabbing"
+                        >
+                          {isVideo ? (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-900 pointer-events-none">
+                              <Upload className="w-6 h-6 text-white/50" />
+                            </div>
+                          ) : (
+                            <img 
+                              src={URL.createObjectURL(m.file)} 
+                              alt={m.file.name} 
+                              className="w-full h-full object-cover pointer-events-none" 
+                            />
+                          )}
+                          
+                          {/* Reorder Handle Overlay */}
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
+                          <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <GripVertical className="w-3 h-3 text-white drop-shadow-md" />
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeFile(idx);
+                            }}
+                            className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                          
+                          {idx === 0 && (
+                            <span className="absolute bottom-1 left-1 px-1 rounded bg-blue-600 text-[8px] text-white font-bold uppercase z-10">Cover</span>
+                          )}
+                        </Reorder.Item>
+                      );
+                    })}
+                  </AnimatePresence>
+                  
+                  {mediaFiles.length < 10 && (
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="aspect-square rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center hover:border-gray-300 hover:bg-gray-50 transition-all text-gray-400 group"
+                    >
+                      <Upload className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                    </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={removeFile}
-                    className="absolute top-2 right-2 p-1.5 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
-                  >
-                    <X className="w-4 h-4 text-gray-600" />
-                  </button>
-                </div>
+                </Reorder.Group>
               )}
             </div>
 
@@ -714,7 +881,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
               <PlatformPreviewPanel
                 selectedChannels={selectedChannels}
                 caption={caption}
-                mediaFile={mediaFile}
+                mediaFiles={mediaFiles}
                 mediaType={mediaType}
               />
             )}
@@ -733,17 +900,23 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={loading || !caption.trim() || !mediaFile || selectedChannels.length === 0}
-            className="px-5 py-2 bg-buffer-blue hover:bg-buffer-blueDark disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors text-sm flex items-center gap-2"
+            disabled={loading || !caption.trim() || mediaFiles.length === 0 || selectedChannels.length === 0}
+            className={`btn-fly-send ${loading ? 'sending' : ''}`}
           >
-            {loading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Sending...
-              </>
-            ) : (
-              'Send'
+            {loading && (
+              <div className="absolute inset-0 flex items-center justify-center z-20">
+                <Loader2 className="w-5 h-5 animate-spin text-white/50" />
+              </div>
             )}
+            
+            <div className="svg-wrapper-1">
+              <div className="svg-wrapper">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width={24} height={24} fill="white">
+                  <path d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z" />
+                </svg>
+              </div>
+            </div>
+            <span>Send</span>
           </button>
         </div>
       </div>

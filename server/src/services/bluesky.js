@@ -3,60 +3,72 @@ import axios from 'axios';
 const BLUESKY_API_URL = 'https://bsky.social/xrpc';
 
 /**
- * Post to Bluesky
+ * Post to Bluesky (Supports single or multiple images/videos)
  * @param {string} accessJwt - Access token
  * @param {string} did - Decentralized Identifier
  * @param {string} text - Post text (max 300 characters)
- * @param {string} mediaUrl - Optional: URL to media
- * @param {Object} mediaBlob - Optional: Media blob data if mediaUrl is provided
+ * @param {string|string[]} mediaUrls - Optional: URL(s) to media
+ * @param {Object|Object[]} mediaBlobs - Optional: Media blob data (Buffer or array of Buffers)
  * @param {boolean} isVideo - Optional: Is the media a video
- * @returns {Object} Result with post URI
+ * @returns {Object} Result
  */
-async function postToBluesky(accessJwt, did, text, mediaUrl = null, mediaBlob = null, isVideo = false) {
+async function postToBluesky(accessJwt, did, text, mediaUrls = null, mediaBlobs = null, isVideo = false) {
   try {
     console.log('\n🦋 Posting to Bluesky...');
-    console.log('DID:', did);
-    console.log('Text length:', text?.length || 0);
-    console.log('Media:', mediaUrl ? 'provided' : 'none');
+    
+    // Normalize inputs to arrays
+    const urls = Array.isArray(mediaUrls) ? mediaUrls : [mediaUrls].filter(Boolean);
+    const blobs = Array.isArray(mediaBlobs) ? mediaBlobs : [mediaBlobs].filter(Boolean);
 
     // Bluesky has a 300 character limit
-    if (text && text.length > 300) {
+    let processedText = text || '';
+    if (processedText.length > 300) {
       console.warn('⚠️ Text exceeds 300 characters, truncating...');
-      text = text.substring(0, 297) + '...';
+      processedText = processedText.substring(0, 297) + '...';
     }
 
     const record = {
-      text: text || '',
+      text: processedText,
       createdAt: new Date().toISOString(),
       $type: 'app.bsky.feed.post'
     };
 
-    // Handle media upload if provided
-    if (mediaUrl && mediaBlob) {
-      console.log(`📸 Uploading ${isVideo ? 'video' : 'image'} to Bluesky...`);
-      
+    // Handle media upload
+    if (blobs.length > 0) {
       if (isVideo) {
-        const uploadedMedia = await uploadVideoToBlueskyService(accessJwt, did, mediaBlob);
+        // Bluesky supports one video per post
+        console.log('🎬 Uploading video to Bluesky...');
+        const uploadedMedia = await uploadVideoToBlueskyService(accessJwt, did, blobs[0]);
         record.embed = {
           $type: 'app.bsky.embed.video',
           video: uploadedMedia.blob
         };
       } else {
-        const uploadedMedia = await uploadMedia(accessJwt, mediaBlob, 'image/jpeg');
+        // Multi-image upload (up to 4)
+        console.log(`📸 Uploading ${blobs.length} image(s) to Bluesky...`);
+        const imageEmbeds = [];
+        
+        // Limit to 4 images
+        const imagesToUpload = blobs.slice(0, 4);
+        
+        for (const blob of imagesToUpload) {
+          const uploadedMedia = await uploadMedia(accessJwt, blob, 'image/jpeg');
+          imageEmbeds.push({
+            alt: processedText.substring(0, 100) || 'Post Image',
+            image: uploadedMedia.blob
+          });
+        }
+
         record.embed = {
           $type: 'app.bsky.embed.images',
-          images: [{
-            alt: text.substring(0, 100) || 'Media',
-            image: uploadedMedia.blob
-          }]
+          images: imageEmbeds
         };
       }
     }
 
-    // Detect and format URLs, mentions, and hashtags
-    record.facets = extractFacets(text);
+    // Detect facets (links, mentions, tags)
+    record.facets = extractFacets(processedText);
 
-    // Create the post
     const response = await axios.post(
       `${BLUESKY_API_URL}/com.atproto.repo.createRecord`,
       {
@@ -72,29 +84,17 @@ async function postToBluesky(accessJwt, did, text, mediaUrl = null, mediaBlob = 
       }
     );
 
-    const uri = response.data.uri;
-    const cid = response.data.cid;
-
-    console.log('✅ Bluesky post successful');
-    console.log('URI:', uri);
-
-    // Extract handle from DID for URL construction
-    const postUrl = constructPostUrl(did, uri);
-
     return {
       success: true,
-      uri: uri,
-      cid: cid,
-      postUrl: postUrl,
-      message: 'Posted to Bluesky successfully'
+      uri: response.data.uri,
+      cid: response.data.cid,
+      postUrl: constructPostUrl(did, response.data.uri),
+      platform: 'Bluesky'
     };
+
   } catch (error) {
     console.error('❌ Bluesky posting error:', error.response?.data || error.message);
-    throw new Error(
-      error.response?.data?.message ||
-      error.message ||
-      'Failed to post to Bluesky'
-    );
+    throw new Error(error.response?.data?.message || 'Failed to post to Bluesky');
   }
 }
 

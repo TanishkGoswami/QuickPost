@@ -32,7 +32,7 @@ export default function Hero() {
 
           {/* Subheadline */}
           <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-            Post once, reach millions. QuickPost automatically publishes your content to Instagram, YouTube, LinkedIn, Twitter, and Pinterest—all at the same time.
+            Post once, reach millions. GAP Social-pilot automatically publishes your content to Instagram, YouTube, LinkedIn, Twitter, and Pinterest—all at the same time.
           </p>
 
           {/* CTA Buttons */}

@@ -5,7 +5,7 @@ import { X, ExternalLink, CheckCircle2, XCircle, ChevronLeft, ChevronRight } fro
 const PLATFORM_CONFIG = {
   instagram: {
     name: 'Instagram', color: '#E4405F', bg: '#fff',
-    icon: 'https://cdn.simpleicons.org/instagram/E4405F',
+    icon: '/icons/ig-instagram-icon.svg',
     formats: [
       { label: 'Square Post', ratio: '1:1',    w: 1080, h: 1080, css: 'aspect-square'     },
       { label: 'Portrait',    ratio: '4:5',    w: 1080, h: 1350, css: 'aspect-[4/5]'      },
@@ -17,7 +17,7 @@ const PLATFORM_CONFIG = {
   },
   x: {
     name: 'X (Twitter)', color: '#000', bg: '#000',
-    icon: null, // custom SVG below
+    icon: '/icons/x-social-media-round-icon.svg',
     formats: [
       { label: 'Feed Image', ratio: '16:9', w: 1200, h: 675,  css: 'aspect-video'      },
       { label: 'Square',     ratio: '1:1',  w: 1080, h: 1080, css: 'aspect-square'     },
@@ -27,7 +27,7 @@ const PLATFORM_CONFIG = {
   },
   linkedin: {
     name: 'LinkedIn', color: '#0A66C2', bg: '#f3f2ef',
-    icon: 'https://cdn.simpleicons.org/linkedin/0A66C2',
+    icon: '/icons/linkedin-icon.svg',
     formats: [
       { label: 'Feed Image',  ratio: '1.91:1', w: 1200, h: 628,  css: 'aspect-[191/100]' },
       { label: 'Square Post', ratio: '1:1',    w: 1080, h: 1080, css: 'aspect-square'     },
@@ -38,7 +38,7 @@ const PLATFORM_CONFIG = {
   },
   youtube: {
     name: 'YouTube', color: '#FF0000', bg: '#0f0f0f',
-    icon: 'https://cdn.simpleicons.org/youtube/FF0000',
+    icon: '/icons/youtube-color-icon.svg',
     formats: [
       { label: 'Thumbnail',   ratio: '16:9', w: 1280, h: 720,  css: 'aspect-video'  },
       { label: 'Shorts',      ratio: '9:16', w: 1080, h: 1920, css: 'aspect-[9/16]' },
@@ -48,7 +48,7 @@ const PLATFORM_CONFIG = {
   },
   facebook: {
     name: 'Facebook', color: '#1877F2', bg: '#f0f2f5',
-    icon: 'https://cdn.simpleicons.org/facebook/1877F2',
+    icon: '/icons/facebook-round-color-icon.svg',
     formats: [
       { label: 'Feed Post',   ratio: '1.91:1', w: 1200, h: 628,  css: 'aspect-[191/100]' },
       { label: 'Square',      ratio: '1:1',    w: 1080, h: 1080, css: 'aspect-square'     },
@@ -59,7 +59,7 @@ const PLATFORM_CONFIG = {
   },
   tiktok: {
     name: 'TikTok', color: '#000', bg: '#000',
-    icon: 'https://cdn.simpleicons.org/tiktok/000000',
+    icon: '/icons/tiktok-circle-icon.svg',
     formats: [
       { label: 'Video',       ratio: '9:16', w: 1080, h: 1920, css: 'aspect-[9/16]' },
     ],
@@ -68,7 +68,7 @@ const PLATFORM_CONFIG = {
   },
   pinterest: {
     name: 'Pinterest', color: '#BD081C', bg: '#fff',
-    icon: 'https://cdn.simpleicons.org/pinterest/BD081C',
+    icon: '/icons/pinterest-round-color-icon.svg',
     formats: [
       { label: 'Standard Pin', ratio: '2:3',   w: 1000, h: 1500, css: 'aspect-[2/3]'   },
       { label: 'Square Pin',   ratio: '1:1',   w: 1000, h: 1000, css: 'aspect-square'   },
@@ -79,7 +79,7 @@ const PLATFORM_CONFIG = {
   },
   threads: {
     name: 'Threads', color: '#000', bg: '#fff',
-    icon: 'https://cdn.simpleicons.org/threads/000000',
+    icon: '/icons/threads-icon.svg',
     formats: [
       { label: 'Feed Post',   ratio: '1:1',  w: 1080, h: 1080, css: 'aspect-square'  },
       { label: 'Portrait',    ratio: '4:5',  w: 1080, h: 1350, css: 'aspect-[4/5]'   },
@@ -89,7 +89,7 @@ const PLATFORM_CONFIG = {
   },
   bluesky: {
     name: 'Bluesky', color: '#0085FF', bg: '#fff',
-    icon: 'https://cdn.simpleicons.org/bluesky/0085FF',
+    icon: '/icons/bluesky-circle-color-icon.svg',
     formats: [
       { label: 'Feed Image',  ratio: '16:9', w: 1200, h: 675,  css: 'aspect-video'   },
       { label: 'Square',      ratio: '1:1',  w: 1080, h: 1080, css: 'aspect-square'  },
@@ -99,7 +99,7 @@ const PLATFORM_CONFIG = {
   },
   mastodon: {
     name: 'Mastodon', color: '#6364FF', bg: '#191b22',
-    icon: 'https://cdn.simpleicons.org/mastodon/6364FF',
+    icon: '/icons/mastodon-round-icon.svg',
     formats: [
       { label: 'Feed Image',  ratio: '16:9', w: 1280, h: 720,  css: 'aspect-video'   },
       { label: 'Square',      ratio: '1:1',  w: 1080, h: 1080, css: 'aspect-square'  },
@@ -137,11 +137,7 @@ function PhoneFrame({ children, config, format }) {
 
         {/* Platform header bar */}
         <div className="px-3 py-1.5 flex items-center gap-1.5" style={{ background: config.headerBg }}>
-          {config.icon ? (
-            <img src={config.icon} alt={config.name} className="w-3.5 h-3.5 object-contain brightness-200" />
-          ) : (
-            <XIcon className="w-3.5 h-3.5 text-white" />
-          )}
+          <img src={config.icon} alt={config.name} className="w-3.5 h-3.5 object-contain brightness-200" />
           <span className="text-[9px] font-bold tracking-wide" style={{ color: config.textColor }}>{config.name}</span>
         </div>
 
@@ -251,11 +247,7 @@ export default function PostPreviewModal({ post, onClose }) {
                   }`}
                 >
                   <div className="relative flex-shrink-0">
-                    {p.icon ? (
-                      <img src={p.icon} alt={p.name} className="w-7 h-7 object-contain" />
-                    ) : (
-                      <XIcon className="w-7 h-7 text-black" />
-                    )}
+                    <img src={p.icon} alt={p.name} className="w-7 h-7 object-contain" />
                     <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${p.success ? 'bg-green-500' : 'bg-red-500'}`} />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -306,7 +298,7 @@ export default function PostPreviewModal({ post, onClose }) {
                           src={post.media_url}
                           alt="Post"
                           className="w-full h-full object-cover"
-                          onError={e => { e.target.src = 'https://via.placeholder.com/600?text=Preview'; }}
+                          onError={e => { e.target.src = 'https://placehold.co/600x600?text=Preview'; }}
                         />
                       ) : (
                         <div className={`w-full h-full flex items-center justify-center ${isImage ? 'bg-blue-50' : 'bg-gray-900'}`}>

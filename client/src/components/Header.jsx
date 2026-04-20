@@ -11,7 +11,7 @@ function Header() {
     : user.email?.[0]?.toUpperCase() || 'U';
 
   return (
-    <header className="bg-white border-b border-gray-200 h-16 fixed top-0 left-64 right-0 z-10">
+    <header className="bg-white border-b border-gray-200 h-16 fixed top-0 left-60 right-0 z-10">
       <div className="h-full px-6 flex items-center justify-end">
         {/* User avatar + name — read only, sign out is in sidebar */}
         <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl">
