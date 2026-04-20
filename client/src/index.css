@@ -10,7 +10,6 @@
     zoom: 0.85;
     background-color: #f9fafb; /* Matches bg-gray-50 to prevent white gaps */
     min-height: 117.65vh; /* Fill physical viewport (100 / 0.85) */
-    scroll-behavior: smooth;
   }
 
   /* Compensate vh units for the 85% zoom level (100 / 0.85 = 117.65) */
@@ -31,48 +30,21 @@
 
 @layer utilities {
   /* Custom Scrollbar */
-  ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  ::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 20px;
-    border: 1px solid transparent;
-    background-clip: padding-box;
-    transition: background 0.3s ease;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(142, 76, 251, 0.4); /* Subtle purple on hover */
-  }
-
-  /* Support for Firefox */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
-  }
-
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
+    background: #f1f1f1;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(142, 76, 251, 0.2);
-    border-radius: 10px;
+    background: #888;
+    border-radius: 3px;
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(142, 76, 251, 0.5);
+    background: #555;
   }
 
   /* Modal Styles */

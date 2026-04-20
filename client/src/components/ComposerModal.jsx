@@ -1,49 +1,49 @@
 import React, { useState, useRef, useMemo } from 'react';
 import apiClient from '../utils/apiClient';
-import { X, Upload, Loader2, Sparkles, Eye, ChevronDown, Image as ImageIcon, GripVertical } from 'lucide-react';
+import { X, Upload, Loader2, Sparkles, Eye, ChevronDown, Image as ImageIcon, GripVertical, Monitor, Smartphone, Square, RectangleVertical } from 'lucide-react';
 import { Reorder, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import ChannelSelector from './ChannelSelector';
 import PlatformCustomization from './PlatformCustomization';
 
 
-/* â”€â”€ Platform meta â”€â”€ */
+/* ── Platform meta ── */
 const PLATFORM_META = {
   instagram: {
     label: 'Instagram', icon: '/icons/ig-instagram-icon.svg',
     headerBg: 'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)',
     bodyBg: '#fff', textColor: '#fff', imgAspect: 'aspect-square',
-    actions: ['â¤ï¸', 'ðŸ’¬', 'âœˆï¸', 'ðŸ”–'],
+    actions: ['❤️', '💬', '✈️', '🔖'],
   },
   facebook: {
     label: 'Facebook', icon: '/icons/facebook-round-color-icon.svg',
     headerBg: '#1877F2', bodyBg: '#f0f2f5', textColor: '#fff', imgAspect: 'aspect-video',
-    actions: ['ðŸ‘ Like', 'ðŸ’¬ Comment', 'â†—ï¸ Share'],
+    actions: ['👍 Like', '💬 Comment', '↗️ Share'],
   },
   x: {
     label: 'X', icon: '/icons/x-social-media-round-icon.svg',
     headerBg: '#000', bodyBg: '#fff', textColor: '#fff', imgAspect: 'aspect-video',
-    actions: ['ðŸ’¬', 'ðŸ”', 'â¤ï¸', 'ðŸ“Š'],
+    actions: ['💬', '🔍', '❤️', '📊'],
   },
   linkedin: {
     label: 'LinkedIn', icon: '/icons/linkedin-icon.svg',
     headerBg: '#0A66C2', bodyBg: '#f3f2ef', textColor: '#fff', imgAspect: 'aspect-[1.91/1]',
-    actions: ['ðŸ‘ Like', 'ðŸ’¬ Comment', 'â†—ï¸ Share'],
+    actions: ['👍 Like', '💬 Comment', '↗️ Share'],
   },
   youtube: {
     label: 'YouTube', icon: '/icons/youtube-color-icon.svg',
     headerBg: '#FF0000', bodyBg: '#0f0f0f', textColor: '#fff', imgAspect: 'aspect-video',
-    actions: ['ðŸ‘', 'ðŸ‘Ž', 'â†—ï¸ Share', 'â¬‡ï¸ Save'],
+    actions: ['👍', '👎', '↗️ Share', '⬇️ Save'],
   },
   tiktok: {
     label: 'TikTok', icon: '/icons/tiktok-circle-icon.svg',
     headerBg: '#000', bodyBg: '#000', textColor: '#fff', imgAspect: 'aspect-[9/16]',
-    actions: ['â¤ï¸', 'ðŸ’¬', 'ðŸ”–', 'â†—ï¸'],
+    actions: ['❤️', '💬', '🔖', '↗️'],
   },
   threads: {
     label: 'Threads', icon: '/icons/threads-icon.svg',
     headerBg: '#000', bodyBg: '#fff', textColor: '#fff', imgAspect: 'aspect-square',
-    actions: ['â¤ï¸', 'ðŸ’¬', 'ðŸ”', 'â†—ï¸'],
+    actions: ['❤️', '💬', '🔍', '↗️'],
   },
   pinterest: {
     label: 'Pinterest', icon: '/icons/pinterest-round-color-icon.svg',
@@ -53,12 +53,12 @@ const PLATFORM_META = {
   bluesky: {
     label: 'Bluesky', icon: '/icons/bluesky-circle-color-icon.svg',
     headerBg: '#0085FF', bodyBg: '#fff', textColor: '#fff', imgAspect: 'aspect-video',
-    actions: ['â¤ï¸', 'ðŸ”', 'ðŸ’¬', 'â†—ï¸'],
+    actions: ['❤️', '🔍', '💬', '↗️'],
   },
   mastodon: {
     label: 'Mastodon', icon: '/icons/mastodon-round-icon.svg',
     headerBg: '#6364FF', bodyBg: '#191b22', textColor: '#fff', imgAspect: 'aspect-video',
-    actions: ['â†©ï¸ Reply', 'ðŸ” Boost', 'â­ Fav', 'â†—ï¸'],
+    actions: ['↩️ Reply', '🔍 Boost', '⭐ Fav', '↗️'],
   },
 };
 
@@ -86,6 +86,13 @@ const SUGGESTED_HASHTAGS = [
   "#socialstrategy"
 ];
 
+const ASPECT_RATIOS = [
+  { id: '1:1', label: 'Feed', desc: 'Square', aspect: 'aspect-square', icon: Square, preview: "w-6 h-6 border-2" },
+  { id: '4:5', label: 'Portrait', desc: '4:5 Format', aspect: 'aspect-[4/5]', icon: RectangleVertical, preview: "w-5 h-6 border-2" },
+  { id: '9:16', label: 'Reel / Story', desc: 'Full Vertical', aspect: 'aspect-[9/16]', icon: Smartphone, preview: "w-4 h-7 border-2" },
+  { id: '16:9', label: 'Landscape', desc: 'Wide', aspect: 'aspect-video', icon: Monitor, preview: "w-8 h-4.5 border-2" },
+];
+
 function XIcon({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -102,8 +109,8 @@ function LinkedInIcon({ className }) {
   );
 }
 
-/* â”€â”€ Platform Preview Panel â”€â”€ */
-function PlatformPreviewPanel({ selectedChannels, caption, mediaFiles, mediaType }) {
+/* ── Platform Preview Panel ── */
+function PlatformPreviewPanel({ selectedChannels, caption, mediaFiles, mediaType, selectedRatio }) {
   const [activeId, setActiveId] = React.useState(null);
 
   // Keep activeId in sync with selectedChannels
@@ -115,14 +122,17 @@ function PlatformPreviewPanel({ selectedChannels, caption, mediaFiles, mediaType
 
   const meta = PLATFORM_META[activeId] || PLATFORM_META.instagram;
   
+  // Use user selected ratio if available, otherwise fallback to platform default
+  const currentAspect = selectedRatio ? ASPECT_RATIOS.find(r => r.id === selectedRatio)?.aspect : meta.imgAspect;
+  
   // Memoize URL creation to prevent leaks and flicker
   const mediaUrl = useMemo(() => {
     if (!mediaFiles || mediaFiles.length === 0) return null;
     return URL.createObjectURL(mediaFiles[0].file);
   }, [mediaFiles]);
 
-  const truncatedCaption = caption?.length > 120 ? caption.slice(0, 120) + 'â€¦' : caption;
-  const videoTitle = caption?.length > 60 ? caption.slice(0, 60) + 'â€¦' : caption || 'Your Video Title';
+  const truncatedCaption = caption?.length > 120 ? caption.slice(0, 120) + '…' : caption;
+  const videoTitle = caption?.length > 60 ? caption.slice(0, 60) + '…' : caption || 'Your Video Title';
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
@@ -151,10 +161,10 @@ function PlatformPreviewPanel({ selectedChannels, caption, mediaFiles, mediaType
       <div className="flex-1 overflow-y-auto p-4">
         {activeId && (
           activeId === 'youtube' ? (
-            /* â”€â”€ YouTube video card layout â”€â”€ */
+            /* ── YouTube video card layout ── */
             <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
               {/* Thumbnail */}
-              <div className="relative w-full aspect-video bg-gray-900">
+              <div className={`relative w-full ${currentAspect} bg-gray-900 group`}>
                 {mediaUrl ? (
                   mediaType === 'image'
                     ? <img src={mediaUrl} alt="Thumbnail" className="w-full h-full object-cover" />
@@ -183,7 +193,7 @@ function PlatformPreviewPanel({ selectedChannels, caption, mediaFiles, mediaType
                     {videoTitle}
                   </p>
                   <p className="text-[10px] text-gray-500">Your Channel</p>
-                  <p className="text-[10px] text-gray-500">1.2K views Â· Just now</p>
+                  <p className="text-[10px] text-gray-500">1.2K views · Just now</p>
                 </div>
                 {/* 3-dot menu */}
                 <div className="flex flex-col gap-[3px] mt-1 flex-shrink-0">
@@ -210,7 +220,7 @@ function PlatformPreviewPanel({ selectedChannels, caption, mediaFiles, mediaType
                   {[0,1,2].map(i => <div key={i} className="w-[3px] h-[3px] rounded-full bg-gray-500" />)}
                 </div>
               </div>
-              <div className="relative w-full aspect-square bg-gray-900">
+              <div className={`relative w-full ${currentAspect} bg-gray-900 overflow-hidden`}>
                 {mediaUrl ? (
                   <>
                     {mediaType === 'image'
@@ -266,8 +276,8 @@ function PlatformPreviewPanel({ selectedChannels, caption, mediaFiles, mediaType
               </div>
               {/* Caption */}
               {caption && <p className="px-3 pb-2 text-[12px] leading-relaxed text-gray-900">{truncatedCaption}</p>}
-              {/* Media 16:9 */}
-              <div className="relative w-full aspect-video bg-gray-100">
+              {/* Media */}
+              <div className={`relative w-full ${currentAspect} bg-gray-100`}>
                 {mediaUrl ? (mediaType === 'image' ? <img src={mediaUrl} alt="Post" className="w-full h-full object-cover" /> : <video src={mediaUrl} className="w-full h-full object-cover" muted playsInline />) : (<div className="w-full h-full flex flex-col items-center justify-center bg-gray-100"><ImageIcon className="w-8 h-8 text-gray-300 mb-1" /><span className="text-[10px] text-gray-400">No media yet</span></div>)}
               </div>
               {/* Reaction counts */}
@@ -306,8 +316,8 @@ function PlatformPreviewPanel({ selectedChannels, caption, mediaFiles, mediaType
               </div>
               {/* Caption */}
               {caption && <p className="px-3 pb-2 text-[12px] leading-relaxed text-gray-900">{truncatedCaption} <span className="text-[#0A66C2] font-medium cursor-pointer">...see more</span></p>}
-              {/* Media 1.91:1 */}
-              <div className="relative w-full aspect-[1.91/1] bg-gray-100">
+              {/* Media */}
+              <div className={`relative w-full ${currentAspect} bg-gray-100`}>
                 {mediaUrl ? (mediaType === 'image' ? <img src={mediaUrl} alt="Post" className="w-full h-full object-cover" /> : <video src={mediaUrl} className="w-full h-full object-cover" muted playsInline />) : (<div className="w-full h-full flex flex-col items-center justify-center bg-gray-100"><ImageIcon className="w-8 h-8 text-gray-300 mb-1" /><span className="text-[10px] text-gray-400">No media yet</span></div>)}
               </div>
               {/* Reactions */}
@@ -351,12 +361,12 @@ function PlatformPreviewPanel({ selectedChannels, caption, mediaFiles, mediaType
                   </div>
                   {caption && <p className="text-[12px] text-gray-900 leading-relaxed mb-2">{truncatedCaption}</p>}
                   {mediaUrl && (
-                    <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-gray-100 mb-2">
+                    <div className={`relative w-full ${currentAspect} rounded-xl overflow-hidden bg-gray-100 mb-2`}>
                       {mediaType === 'image' ? <img src={mediaUrl} alt="Post" className="w-full h-full object-cover" /> : <video src={mediaUrl} className="w-full h-full object-cover" muted playsInline />}
                     </div>
                   )}
                   {!mediaUrl && (
-                    <div className="relative w-full aspect-square rounded-xl overflow-hidden bg-gray-100 mb-2 flex flex-col items-center justify-center">
+                    <div className={`relative w-full ${currentAspect} rounded-xl overflow-hidden bg-gray-100 mb-2 flex flex-col items-center justify-center`}>
                       <ImageIcon className="w-8 h-8 text-gray-300 mb-1" />
                       <span className="text-[10px] text-gray-400">No media yet</span>
                     </div>
@@ -394,7 +404,7 @@ function PlatformPreviewPanel({ selectedChannels, caption, mediaFiles, mediaType
                   {activeId === 'tiktok' && (<span className="text-[9px] font-bold px-2 py-0.5 rounded-full border border-white text-white">Follow</span>)}
                 </div>
                 {!['pinterest','tiktok'].includes(activeId) && caption && (<p className="px-3 pb-2 text-[11px] leading-relaxed" style={{ color: activeId === 'mastodon' ? '#eee' : '#222' }}>{truncatedCaption}</p>)}
-                <div className={`w-full ${meta.imgAspect} overflow-hidden relative bg-gray-900`}>
+                <div className={`w-full ${currentAspect} overflow-hidden relative bg-gray-900`}>
                   {mediaUrl ? (mediaType === 'image' ? <img src={mediaUrl} alt="Preview" className="w-full h-full object-cover" /> : <video src={mediaUrl} className="w-full h-full object-cover" muted playsInline />) : (<div className="w-full h-full flex flex-col items-center justify-center bg-gray-100"><ImageIcon className="w-8 h-8 text-gray-300 mb-1" /><span className="text-[10px] text-gray-400">No media yet</span></div>)}
                   {activeId === 'tiktok' && caption && (<div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent"><p className="text-white text-[10px] leading-tight">{truncatedCaption}</p></div>)}
                 </div>
@@ -410,7 +420,7 @@ function PlatformPreviewPanel({ selectedChannels, caption, mediaFiles, mediaType
         {/* Platform label */}
         {activeId && (
           <p className="text-center text-[10px] text-gray-400 mt-3 font-medium">
-            Preview â€” {PLATFORM_META[activeId]?.label}
+            Preview — {PLATFORM_META[activeId]?.label}
           </p>
         )}
       </div>
@@ -434,6 +444,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dragActive, setDragActive] = useState(false);
+  const [selectedRatio, setSelectedRatio] = useState('1:1');
   const fileInputRef = useRef(null);
 
   // Auto-select connected channels on mount
@@ -595,13 +606,12 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
       pinterest: { title: '', link: '', boardId: '' },
       instagram: { firstComment: '' },
       youtube: {},
+      reddit: { subreddit: '' },
     });
     setCustomizationExpanded(false);
     setError(null);
     onClose();
   };
-
-  if (!isOpen) return null;
 
   if (!isOpen) return null;
 
@@ -618,10 +628,6 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
         <div className="border-b border-gray-200 px-6 py-3 flex items-center justify-between bg-white">
           <div className="flex items-center gap-3">
             <h2 className="text-lg font-semibold text-gray-900">Create Post</h2>
-            <button className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md border border-gray-300">
-              <span>Tags</span>
-              <ChevronDown className="w-4 h-4" />
-            </button>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -845,6 +851,48 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                   )}
                 </Reorder.Group>
               )}
+
+              {/* Post Format Selection */}
+              <div className="mt-8 border-t border-gray-100 pt-6">
+                <div className="flex items-center gap-2 mb-4 ml-1">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em]">Select Post Size</p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {ASPECT_RATIOS.map((ratio) => (
+                    <button
+                      key={ratio.id}
+                      type="button"
+                      onClick={() => setSelectedRatio(ratio.id)}
+                      className={`flex flex-col items-center gap-4 p-4 rounded-xl border transition-all duration-300 group ${
+                        selectedRatio === ratio.id 
+                          ? 'bg-indigo-50/40 border-indigo-200 shadow-sm ring-1 ring-indigo-200' 
+                          : 'bg-white border-gray-100 hover:border-gray-200 hover:shadow-sm'
+                      }`}
+                    >
+                      <div className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-500 ${
+                        selectedRatio === ratio.id 
+                          ? 'bg-white shadow-md shadow-indigo-100/50 scale-110' 
+                          : 'bg-gray-50 text-gray-400 group-hover:bg-white group-hover:shadow-sm'
+                      }`}>
+                        {/* Visual Ratio Preview Box */}
+                        <div className={`rounded-[3px] transition-all duration-500 ${ratio.preview} ${
+                          selectedRatio === ratio.id 
+                            ? 'border-indigo-500 bg-indigo-500/10' 
+                            : 'border-gray-300 bg-gray-50'
+                        }`} />
+                      </div>
+                      <div className="text-center">
+                        <p className={`text-[11px] font-bold tracking-tight mb-0.5 ${selectedRatio === ratio.id ? 'text-indigo-900' : 'text-gray-700'}`}>
+                          {ratio.label}
+                        </p>
+                        <p className={`text-[9px] font-semibold tabular-nums ${selectedRatio === ratio.id ? 'text-indigo-500/70' : 'text-gray-400'}`}>
+                          {ratio.id}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Platform Customization */}
@@ -883,6 +931,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                 caption={caption}
                 mediaFiles={mediaFiles}
                 mediaType={mediaType}
+                selectedRatio={selectedRatio}
               />
             )}
           </div>
@@ -920,6 +969,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
           </button>
         </div>
       </div>
+     
     </div>
   );
 }
