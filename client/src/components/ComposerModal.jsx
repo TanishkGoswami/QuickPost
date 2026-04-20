@@ -441,6 +441,8 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     reddit: { subreddit: '' },
   });
   const [customizationExpanded, setCustomizationExpanded] = useState(false);
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dragActive, setDragActive] = useState(false);
@@ -577,17 +579,27 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
     try {
       const formData = new FormData();
-      // Append each file with the same key 'media'
-      mediaFiles.forEach(m => {
-        formData.append('media', m.file);
-      });
+      // Important: Append text fields BEFORE files for some multipart parsers
       formData.append('caption', caption);
       formData.append('selectedChannels', JSON.stringify(selectedChannels));
       formData.append('platformData', JSON.stringify(platformData));
+      formData.append('isScheduled', isScheduled ? 'true' : 'false');
+      
+      if (isScheduled && scheduledAt) {
+        // Convert local datetime-local string to UTC ISO string
+        const scheduledDate = new Date(scheduledAt);
+        formData.append('scheduledAt', scheduledDate.toISOString());
+      }
+
+
+      mediaFiles.forEach(m => {
+        formData.append('media', m.file);
+      });
 
       const response = await apiClient.post('/api/broadcast', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+
       onPostCreated(response.data);
       handleClose();
     } catch (error) {
@@ -609,6 +621,8 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
       reddit: { subreddit: '' },
     });
     setCustomizationExpanded(false);
+    setIsScheduled(false);
+    setScheduledAt('');
     setError(null);
     onClose();
   };
@@ -665,7 +679,9 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
               <ChannelSelector
                 selectedChannels={selectedChannels}
                 onChannelToggle={handleChannelToggle}
+                onBulkSelect={setSelectedChannels}
               />
+
             </div>
 
             {/* Main Caption */}
@@ -895,6 +911,43 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
               </div>
             </div>
 
+            {/* Scheduling */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isScheduled ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-200 text-gray-500'}`}>
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-gray-900 uppercase tracking-tight">Schedule Post</p>
+                    <p className="text-[10px] text-gray-500">Pick a future date and time</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsScheduled(!isScheduled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isScheduled ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isScheduled ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+
+              {isScheduled && (
+                <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <input
+                    type="datetime-local"
+                    value={scheduledAt}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                    min={new Date().toISOString().slice(0, 16)}
+                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                  />
+                  <p className="text-[10px] text-indigo-600 font-medium ml-1">
+                    Posts will be automatically published at the selected time.
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* Platform Customization */}
             <PlatformCustomization
               selectedChannels={selectedChannels}
@@ -949,8 +1002,8 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={loading || !caption.trim() || mediaFiles.length === 0 || selectedChannels.length === 0}
-            className={`btn-fly-send ${loading ? 'sending' : ''}`}
+            disabled={loading || !caption.trim() || mediaFiles.length === 0 || selectedChannels.length === 0 || (isScheduled && !scheduledAt)}
+            className={`btn-fly-send ${loading ? 'sending' : ''} ${isScheduled ? 'bg-indigo-600 hover:bg-indigo-700' : ''}`}
           >
             {loading && (
               <div className="absolute inset-0 flex items-center justify-center z-20">
@@ -965,8 +1018,9 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                 </svg>
               </div>
             </div>
-            <span>Send</span>
+            <span>{isScheduled ? 'Schedule' : 'Send'}</span>
           </button>
+
         </div>
       </div>
      
