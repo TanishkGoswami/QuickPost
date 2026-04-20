@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Settings, Zap, CheckCircle2, HelpCircle, PanelLeftClose, Clock, LogOut } from 'lucide-react';
+import { useDialog } from '../context/DialogContext';
 import logo from '/logo.png';
 import InstagramBusinessSetupModal from './InstagramBusinessSetupModal';
 import BlueskyConnectModal from './BlueskyConnectModal';
@@ -16,6 +17,7 @@ function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, connectedAccounts, refreshAccounts, logout } = useAuth();
+  const { confirm, alert } = useDialog();
   const [showBusinessSetupModal, setShowBusinessSetupModal] = useState(false);
   const [showBlueskyModal, setShowBlueskyModal] = useState(false);
   const [showPinterestModal, setShowPinterestModal] = useState(false);
@@ -25,8 +27,14 @@ function Sidebar() {
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
   const [connectingPlatform, setConnectingPlatform] = useState(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const handleLogout = () => {
-    if (confirm('Are you sure you want to log out?')) {
+  const handleLogout = async () => {
+    const confirmed = await confirm('Logout', 'Are you sure you want to log out?', { 
+      intent: 'logout', 
+      confirmText: 'Logout',
+      cancelText: 'Stay logged in'
+    });
+    
+    if (confirmed) {
       logout();
       navigate('/login');
     }
@@ -68,9 +76,13 @@ function Sidebar() {
   };
 
   const handleDisconnect = async (platform) => {
-    if (!confirm(`Are you sure you want to disconnect ${platform}?`)) {
-      return;
-    }
+    const confirmed = await confirm('Disconnect Account', `Are you sure you want to disconnect your ${platform} account? This will stop all scheduled posts to this channel.`, {
+      intent: 'danger',
+      confirmText: 'Disconnect',
+      cancelText: 'Keep Connected'
+    });
+
+    if (!confirmed) return;
 
     setDisconnectingPlatform(platform);
     try {
@@ -87,12 +99,13 @@ function Sidebar() {
 
       if (data.success) {
         await refreshAccounts();
+        alert('Success', `Successfully disconnected from ${platform}`, { intent: 'primary' });
       } else {
-        alert(`Failed to disconnect: ${data.error}`);
+        alert('Error', `Failed to disconnect: ${data.error}`, { intent: 'danger' });
       }
     } catch (error) {
       console.error('Disconnect error:', error);
-      alert('Failed to disconnect account');
+      alert('Error', 'Failed to disconnect account. Please try again.', { intent: 'danger' });
     } finally {
       setDisconnectingPlatform(null);
     }
@@ -267,7 +280,7 @@ function Sidebar() {
         </svg>
       ),
       connectText: 'Coming Soon',
-      onConnect: () => alert('Reddit integration is currently awaiting API approval. It will be available shortly!'),
+      onConnect: () => alert('Coming Soon', 'Reddit integration is currently awaiting API approval. It will be available shortly!', { intent: 'warning' }),
       disabled: true
     },
     {
@@ -282,7 +295,7 @@ function Sidebar() {
         </svg>
       ),
       connectText: 'Coming Soon',
-      onConnect: () => alert('Snapchat integration is in development!'),
+      onConnect: () => alert('Coming Soon', 'Snapchat integration is in development!', { intent: 'warning' }),
       disabled: true
     }
   ];
