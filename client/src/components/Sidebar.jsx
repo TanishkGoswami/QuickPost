@@ -313,30 +313,40 @@ function Sidebar() {
               return (
                 <button
                   onClick={() => setConnectedOpen(o => !o)}
-                  className="flex items-center justify-between w-full px-3 py-2 mb-1 rounded-xl border border-gray-100 bg-white hover:bg-gray-50 shadow-sm transition-all group"
+                  className="w-full flex items-center justify-between px-3 py-2 mb-1 rounded-xl border border-gray-100 bg-white hover:bg-gray-50 shadow-sm transition-all group"
                 >
-                  <div className="flex items-center gap-2.5">
-                    {/* Stacked platform icons Ã¢â‚¬â€ hidden when dropdown is open */}
-                    {!connectedOpen && (
-                      <div className="flex -space-x-2">
+                  {connectedOpen ? (
+                    /* Expanded: just label + count + chevron */
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-700">Connected</span>
+                      <span className="bg-indigo-100 text-indigo-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{connected.length}</span>
+                    </div>
+                  ) : (
+                    /* Collapsed: stacked icons + label + count */
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex -space-x-2.5">
                         {connected.slice(0, 3).map(p => (
-                          <div key={p.id} className="w-6 h-6 rounded-full bg-white border-2 border-white shadow-sm flex items-center justify-center overflow-hidden ring-1 ring-gray-100">
-                            <div className="scale-75">{p.icon}</div>
+                          <div key={p.id} className="w-7 h-7 rounded-full bg-white border-2 border-white shadow-sm flex items-center justify-center overflow-hidden ring-1 ring-gray-200">
+                            <div className="scale-[0.7] flex items-center justify-center">{p.icon}</div>
                           </div>
                         ))}
                         {connected.length > 3 && (
-                          <div className="w-6 h-6 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-[9px] font-bold text-gray-500 ring-1 ring-gray-100">
+                          <div className="w-7 h-7 rounded-full bg-indigo-50 border-2 border-white flex items-center justify-center text-[9px] font-bold text-indigo-500 ring-1 ring-indigo-100">
                             +{connected.length - 3}
                           </div>
                         )}
                       </div>
-                    )}
-                    <span className="text-sm font-semibold text-gray-700">Connected</span>
-                    <span className="bg-indigo-100 text-indigo-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                      {connected.length}
-                    </span>
-                  </div>
-                  <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform group-hover:text-gray-600 ${connectedOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <span className="text-sm font-semibold text-gray-700">Connected</span>
+                      <span className="bg-indigo-100 text-indigo-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{connected.length}</span>
+                    </div>
+                  )}
+                  <svg className={
+`
+w-3.5 h-3.5 text-gray-400 transition-transform group-hover:text-gray-600 
+$
+{connectedOpen ? 'rotate-180' : ''}
+`
+} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
