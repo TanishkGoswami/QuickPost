@@ -169,21 +169,44 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
         }
       }
 
-      // Reddit Video
-      if (channels.includes('reddit')) {
-        if (tokens.reddit) {
-          platformPromises.push(
-            postToReddit(userId, caption, mediaUrl, tokens.reddit, platData?.reddit)
-              .then(result => ({ platform: 'reddit', result }))
-          );
+      // Bluesky Video
+      if (channels.includes('bluesky')) {
+        console.log('🦋 Bluesky selected for video, checking tokens...');
+        if (tokens.bluesky) {
+          const did = tokens.bluesky.did;
+          if (did) {
+            console.log('🦋 Posting video to Bluesky...');
+            let videoBlob = null;
+            if (uploadedFilePath) {
+              videoBlob = fs.readFileSync(uploadedFilePath);
+            }
+            platformPromises.push(
+              postToBluesky(tokens.bluesky.accessToken, did, caption, mediaUrl, videoBlob, true)
+                .then(result => ({ platform: 'bluesky', result }))
+            );
+          } else {
+            console.log('❌ No Bluesky DID found');
+            results.bluesky = { success: false, platform: 'Bluesky', error: 'No Bluesky DID found' };
+          }
         } else {
-          results.reddit = { success: false, platform: 'Reddit', error: 'No Reddit token found' };
+          console.log('❌ No Bluesky token found');
+          results.bluesky = { success: false, platform: 'Bluesky', error: 'No Bluesky token found' };
         }
       }
     } else if (isImage && channels && channels.length > 0) {
       // Image: Process selected channels
       console.log('🎯 Processing image for selected channels:', channels);
       
+      // YouTube Image
+      if (channels.includes('youtube')) {
+        console.log('📺 YouTube selected for image, but API does not support Community Posts...');
+        results.youtube = { 
+          success: false, 
+          platform: 'YouTube', 
+          error: 'YouTube Data API only supports uploading Videos. It does not support creating Image or Community Posts.' 
+        };
+      }
+
       // Pinterest
       if (channels.includes('pinterest')) {
         if (tokens.pinterest) {

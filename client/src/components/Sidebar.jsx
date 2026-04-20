@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -31,8 +31,6 @@ function Sidebar() {
   const [connectedOpen, setConnectedOpen] = useState(true);
   const [showMoreUnconnected, setShowMoreUnconnected] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const handleLogout = () => {
-    if (confirm('Are you sure you want to log out?')) {
   const handleLogout = async () => {
     const confirmed = await confirm('Logout', 'Are you sure you want to log out?', { 
       intent: 'logout', 
