@@ -27,11 +27,17 @@ const fileFilter = (req, file, cb) => {
     'video/mpeg',
     'video/quicktime',
     'video/x-msvideo',
+    'video/x-matroska',
+    'video/webm',
+    'video/avi',
     // Images
     'image/jpeg',
     'image/jpg',
+    'image/pjpeg',
     'image/png',
+    'image/x-png',
     'image/webp',
+    'image/heic',
     'image/gif'
   ];
 

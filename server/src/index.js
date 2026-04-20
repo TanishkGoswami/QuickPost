@@ -8,6 +8,7 @@ import broadcastRouter from './routes/broadcast.js';
 import authRouter from './routes/auth.js';
 import broadcastsRouter from './routes/broadcasts.js';
 import onboardingRouter from './routes/onboarding.js';
+import jobsRouter from './routes/jobs.js';
 
 // dotenv.config(); // Removed duplicate call below
 
@@ -35,6 +36,7 @@ app.use('/api/auth', authRouter);
 app.use('/api', broadcastRouter);
 app.use('/api', broadcastsRouter);
 app.use('/api', onboardingRouter);
+app.use('/api', jobsRouter);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -76,7 +78,7 @@ app.use((req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log('╔══════════════════════════════════════╗');
   console.log('║     QuickPost API Server             ║');
   console.log('╚══════════════════════════════════════╝');
@@ -85,5 +87,9 @@ app.listen(PORT, () => {
   console.log(`📁 Uploads directory: ${path.join(__dirname, '../uploads')}`);
   console.log(`\n✨ Ready to broadcast!\n`);
 });
+
+// Set server timeout to 5 minutes for large uploads
+server.timeout = 300000;
+server.keepAliveTimeout = 300000;
 
 export default app;

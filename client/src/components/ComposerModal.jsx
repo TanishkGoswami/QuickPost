@@ -3,6 +3,8 @@ import apiClient from '../utils/apiClient';
 import { X, Upload, Loader2, Sparkles, Eye, ChevronDown, Image as ImageIcon, GripVertical, Monitor, Smartphone, Square, RectangleVertical } from 'lucide-react';
 import { Reorder, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useUploadJobs } from '../context/UploadJobContext';
+import { useDialog } from '../context/DialogContext';
 import ChannelSelector from './ChannelSelector';
 import PlatformCustomization from './PlatformCustomization';
 
@@ -110,7 +112,7 @@ function LinkedInIcon({ className }) {
 }
 
 /* ── Platform Preview Panel ── */
-function PlatformPreviewPanel({ selectedChannels, caption, mediaFiles, mediaType, selectedRatio }) {
+function PlatformPreviewPanel({ selectedChannels, caption, mediaFiles, mediaType, selectedRatio, youtubeThumbnail }) {
   const [activeId, setActiveId] = React.useState(null);
 
   // Keep activeId in sync with selectedChannels
@@ -165,9 +167,9 @@ function PlatformPreviewPanel({ selectedChannels, caption, mediaFiles, mediaType
             <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
               {/* Thumbnail */}
               <div className={`relative w-full ${currentAspect} bg-gray-900 group`}>
-                {mediaUrl ? (
-                  mediaType === 'image'
-                    ? <img src={mediaUrl} alt="Thumbnail" className="w-full h-full object-cover" />
+                {youtubeThumbnail || mediaUrl ? (
+                  mediaType === 'image' || youtubeThumbnail
+                    ? <img src={youtubeThumbnail ? URL.createObjectURL(youtubeThumbnail) : mediaUrl} alt="Thumbnail" className="w-full h-full object-cover" />
                     : <video src={mediaUrl} className="w-full h-full object-cover" muted playsInline />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100">
@@ -431,6 +433,8 @@ function PlatformPreviewPanel({ selectedChannels, caption, mediaFiles, mediaType
 function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
   const { connectedAccounts } = useAuth();
+  const { addJob } = useUploadJobs();
+  const { confirm } = useDialog();
   const [caption, setCaption] = useState('');
   const [mediaFiles, setMediaFiles] = useState([]);
   const [selectedChannels, setSelectedChannels] = useState([]);
@@ -441,6 +445,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     reddit: { subreddit: '' },
   });
   const [customizationExpanded, setCustomizationExpanded] = useState(false);
+  const [youtubeThumbnail, setYoutubeThumbnail] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dragActive, setDragActive] = useState(false);
@@ -573,6 +578,20 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
       return;
     }
 
+    // ── YouTube Thumbnail Warning ─────────────────────────────────────────
+    if (selectedChannels.includes('youtube') && !youtubeThumbnail) {
+      const proceed = await confirm(
+        'Missing YouTube Thumbnail',
+        "You haven't selected a custom thumbnail for your YouTube video. You can proceed without one, but it may affect performance.",
+        {
+          confirmText: 'Post Anyway',
+          cancelText: 'Go Back',
+          intent: 'warning'
+        }
+      );
+      if (!proceed) return;
+    }
+
     setLoading(true);
 
     try {
@@ -584,12 +603,31 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
       formData.append('caption', caption);
       formData.append('selectedChannels', JSON.stringify(selectedChannels));
       formData.append('platformData', JSON.stringify(platformData));
+      if (youtubeThumbnail && selectedChannels.includes('youtube')) {
+        formData.append('youtubeThumbnail', youtubeThumbnail);
+      }
 
+      // ── POST and get jobId back immediately (< 1 second) ──────────────
       const response = await apiClient.post('/api/broadcast', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      onPostCreated(response.data);
+
+      const { jobId } = response.data;
+
+      if (jobId) {
+        // Register the job in the Upload Manager Panel
+        addJob(jobId, {
+          caption,
+          channels: selectedChannels,
+          mediaType: mediaFiles[0]?.file?.type?.startsWith('video/') ? 'video' : 'image',
+          fileCount: mediaFiles.length,
+          previewUrl: null, // will be updated by polling once Cloudinary upload completes
+        }, onPostCreated); // onPostCreated is called when the job completes
+      }
+
+      // Close modal immediately — UI is unblocked!
       handleClose();
+
     } catch (error) {
       console.error('Broadcast error:', error);
       setError(error.response?.data?.error || 'Failed to broadcast. Please try again.');
@@ -608,6 +646,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
       youtube: {},
       reddit: { subreddit: '' },
     });
+    setYoutubeThumbnail(null);
     setCustomizationExpanded(false);
     setError(null);
     onClose();
@@ -902,6 +941,8 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
               onPlatformDataChange={setPlatformData}
               expanded={customizationExpanded}
               onToggleExpanded={() => setCustomizationExpanded(!customizationExpanded)}
+              youtubeThumbnail={youtubeThumbnail}
+              onYoutubeThumbnailChange={setYoutubeThumbnail}
             />
 
             {/* Error Display */}
@@ -932,6 +973,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                 mediaFiles={mediaFiles}
                 mediaType={mediaType}
                 selectedRatio={selectedRatio}
+                youtubeThumbnail={youtubeThumbnail}
               />
             )}
           </div>

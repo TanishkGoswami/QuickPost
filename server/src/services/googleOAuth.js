@@ -108,8 +108,10 @@ class GoogleOAuthService {
    */
   async refreshAccessToken(refreshToken) {
     try {
+      console.log('🔄 [GOOGLE_OAUTH] Refreshing access token...');
       this.oauth2Client.setCredentials({ refresh_token: refreshToken });
       const { credentials } = await this.oauth2Client.refreshAccessToken();
+      console.log('✅ [GOOGLE_OAUTH] Access token refreshed');
 
       return {
         accessToken: credentials.access_token,
@@ -128,12 +130,14 @@ class GoogleOAuthService {
    */
   async getValidAccessToken(userId) {
     try {
+      console.log(`🔍 [GOOGLE_OAUTH] Fetching tokens for user ${userId} from DB...`);
       const { data, error } = await supabase
         .from('social_tokens')
         .select('*')
         .eq('user_id', userId)
         .eq('provider', 'youtube')
         .single();
+      console.log('✅ [GOOGLE_OAUTH] DB fetch complete. Token found:', !!data);
 
       if (error || !data) {
         throw new Error('YouTube account not connected');

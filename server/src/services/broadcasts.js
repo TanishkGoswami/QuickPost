@@ -5,6 +5,7 @@ import { default as supabase } from './supabase.js';
  */
 export async function saveBroadcast(userId, caption, mediaFilenames, results, mediaType = 'image', platformData = {}) {
   try {
+    const thumbnailUrl = results.thumbnailUrl || null;
     // Handle both single string and array for filenames
     const filenames = Array.isArray(mediaFilenames) ? mediaFilenames : [mediaFilenames].filter(Boolean);
     const mediaUrls = Array.isArray(results.mediaUrls) ? results.mediaUrls : [results.mediaUrl].filter(Boolean);
@@ -17,6 +18,7 @@ export async function saveBroadcast(userId, caption, mediaFilenames, results, me
       posted_at: new Date().toISOString(),
       media_type: mediaType,
       media_url: mediaUrls[0] || null, // Primary public URL
+      thumbnail_url: thumbnailUrl,     // Preview thumbnail URL
       
       // Instagram results
       instagram_success: results.instagram?.success || false,
