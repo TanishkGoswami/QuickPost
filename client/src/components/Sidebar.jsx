@@ -1,4 +1,5 @@
 ﻿import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Settings, CheckCircle2, HelpCircle, PanelLeftClose, Clock, LogOut } from 'lucide-react';
@@ -57,7 +58,7 @@ function Sidebar() {
   };
 
   const handleConnectX = () => {
-    console.log('ð• Initiating X connection...');
+    console.log('Ã°Ââ€¢Â Initiating X connection...');
     setConnectingPlatform('x');
     const token = localStorage.getItem('quickpost_token');
     window.location.href = `${API_BASE_URL}/api/auth/x?token=${token}`;
@@ -258,7 +259,7 @@ function Sidebar() {
   return (
     <aside className={`${isCollapsed ? 'w-[72px]' : 'w-64'} bg-white border-r border-gray-100 flex flex-col h-screen fixed left-0 top-0 transition-all duration-300 shadow-sm`}>
 
-      {/* â”€â”€ Logo â”€â”€ */}
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Logo Ã¢â€â‚¬Ã¢â€â‚¬ */}
       <div className={`flex items-center ${isCollapsed ? 'justify-center px-0 py-4' : 'justify-between px-5 py-4'} border-b border-gray-100`}>
         {isCollapsed ? (
           <button onClick={() => setIsCollapsed(false)} title="Expand">
@@ -281,7 +282,7 @@ function Sidebar() {
         )}
       </div>
 
-      {/* â”€â”€ Scrollable Body â”€â”€ */}
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Scrollable Body Ã¢â€â‚¬Ã¢â€â‚¬ */}
       <div className="flex-1 overflow-y-auto custom-scrollbar py-3">
         <div className="px-3 mb-1">
           <Link
@@ -304,7 +305,7 @@ function Sidebar() {
           </Link>
         </div>
 
-        {/* â”€â”€ Connected Section â”€â”€ */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Connected Section Ã¢â€â‚¬Ã¢â€â‚¬ */}
         {platforms.filter(p => p.connected).length > 0 && (
           <div className="px-3 mt-3">
             {!isCollapsed && (() => {
@@ -315,7 +316,7 @@ function Sidebar() {
                   className="flex items-center justify-between w-full px-3 py-2 mb-1 rounded-xl border border-gray-100 bg-white hover:bg-gray-50 shadow-sm transition-all group"
                 >
                   <div className="flex items-center gap-2.5">
-                    {/* Stacked platform icons â€” hidden when dropdown is open */}
+                    {/* Stacked platform icons Ã¢â‚¬â€ hidden when dropdown is open */}
                     {!connectedOpen && (
                       <div className="flex -space-x-2">
                         {connected.slice(0, 3).map(p => (
@@ -348,7 +349,7 @@ function Sidebar() {
                   <div
                     key={platform.id}
                     className={`group flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'} py-2.5 rounded-xl hover:bg-gray-50 transition-all cursor-default`}
-                    title={isCollapsed ? `${user?.name || user?.email} â€” ${platform.name}` : ''}
+                    title={isCollapsed ? `${user?.name || user?.email} Ã¢â‚¬â€ ${platform.name}` : ''}
                   >
                     <div className="relative flex-shrink-0">
                       <div className="w-8 h-8 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center">
@@ -369,7 +370,7 @@ function Sidebar() {
                           title="Disconnect"
                         >
                           {disconnectingPlatform === platform.id
-                            ? <span className="text-xs">â€¦</span>
+                            ? <span className="text-xs">Ã¢â‚¬Â¦</span>
                             : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                           }
                         </button>
@@ -382,7 +383,7 @@ function Sidebar() {
           </div>
         )}
 
-        {/* â”€â”€ Add Channels Section â”€â”€ */}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Add Channels Section Ã¢â€â‚¬Ã¢â€â‚¬ */}
         {!isCollapsed && (() => {
           const unconnected = platforms.filter(p => !p.connected);
           const visible = unconnected.slice(0, 3);
@@ -411,7 +412,7 @@ function Sidebar() {
                       <span className={`text-sm transition-all ${
                         isConnecting ? 'text-gray-700 font-medium' : 'text-gray-400 group-hover:text-gray-700'
                       }`}>
-                        {isConnecting ? 'Connectingâ€¦' : platform.name}
+                        {isConnecting ? 'ConnectingÃ¢â‚¬Â¦' : platform.name}
                       </span>
                       {!isConnecting && (
                         <span className="ml-auto opacity-0 group-hover:opacity-100 text-[10px] text-indigo-500 font-semibold bg-indigo-50 px-1.5 py-0.5 rounded-full transition-opacity">
@@ -453,7 +454,7 @@ function Sidebar() {
         })()}
       </div>
 
-      {/* â”€â”€ Footer â”€â”€ */}
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Footer Ã¢â€â‚¬Ã¢â€â‚¬ */}
       <div className="px-3 py-3 border-t border-gray-100">
         {!isCollapsed && user && (
           <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-gray-50 mb-2">
@@ -488,15 +489,12 @@ function Sidebar() {
         </div>
       </div>
 
-      {/* â”€â”€ Settings Modal â”€â”€ */}
-      {showSettings && (
+
+      {/* Settings Modal via Portal */}
+      {showSettings && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center" onClick={() => setShowSettings(false)}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div
-            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Modal header */}
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div className="flex items-center gap-2">
                 <Settings className="w-5 h-5 text-indigo-500" />
@@ -506,8 +504,6 @@ function Sidebar() {
                 <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
               </button>
             </div>
-
-            {/* Connected Platforms section */}
             <div className="px-6 py-4">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Connected Platforms</p>
               {platforms.filter(p => p.connected).length === 0 ? (
@@ -516,32 +512,25 @@ function Sidebar() {
                 <div className="space-y-2">
                   {platforms.filter(p => p.connected).map(p => (
                     <div key={p.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
-                      <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
-                        {p.icon}
-                      </div>
+                      <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">{p.icon}</div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-900">{p.name}</p>
                         <p className="text-[10px] text-green-500 font-medium">Connected</p>
                       </div>
-                      <button
-                        onClick={() => { handleDisconnect(p.id); }}
-                        disabled={disconnectingPlatform === p.id}
-                        className="text-[11px] font-semibold px-3 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
-                      >
-                        {disconnectingPlatform === p.id ? 'Removingâ€¦' : 'Disconnect'}
+                      <button onClick={() => { handleDisconnect(p.id); }} disabled={disconnectingPlatform === p.id} className="text-[11px] font-semibold px-3 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50">
+                        {disconnectingPlatform === p.id ? 'Removing...' : 'Disconnect'}
                       </button>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-
-            {/* Footer */}
             <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
               <button onClick={() => setShowSettings(false)} className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors">Close</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Instagram Business Setup Modal */}
