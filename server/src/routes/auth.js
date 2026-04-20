@@ -12,6 +12,7 @@ import mastodonOAuth from '../services/mastodonOAuth.js';
 import tiktokOAuth from '../services/tiktokOAuth.js';
 import threadsOAuth from '../services/threadsOAuth.js';
 import xOAuth from '../services/xOAuth.js';
+import redditOAuth from '../services/redditOAuth.js';
 
 import supabase, { createOrUpdateUser, getConnectedAccounts } from '../services/supabase.js';
 import { authenticateUser, generateToken } from '../middleware/authenticateUser.js';
@@ -524,6 +525,51 @@ router.get('/x/callback', async (req, res) => {
   }
 });
 
+/* ---------------- REDDIT ---------------- */
+
+router.get('/reddit', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.redirect(`${CLIENT_URL}/dashboard?error=missing_token`);
+
+    let userId;
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      userId = decoded.userId;
+    } catch (e) {
+      return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token`);
+    }
+
+    const state = redditOAuth.makeState(userId);
+    const authUrl = redditOAuth.getAuthorizationUrl(state);
+    return res.redirect(authUrl);
+  } catch (error) {
+    console.error('Reddit init error:', error);
+    res.redirect(`${CLIENT_URL}/dashboard?error=reddit_oauth_failed`);
+  }
+});
+
+router.get('/reddit/callback', async (req, res) => {
+  const { code, error, state } = req.query;
+
+  if (error) return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied`);
+  if (!code || !state) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
+
+  const parsed = decodeState(state);
+  if (!parsed?.userId) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
+
+  try {
+    const tokenData = await redditOAuth.exchangeCodeForToken(code);
+    await redditOAuth.storeTokens(parsed.userId, tokenData);
+
+    console.log(`✅ [AUTH] Reddit connected successfully for user ${parsed.userId}`);
+    res.redirect(`${CLIENT_URL}/dashboard?success=reddit_connected`);
+  } catch (err) {
+    console.error('❌ Reddit callback error:', err.message);
+    res.redirect(`${CLIENT_URL}/dashboard?error=reddit_connection_failed&message=${encodeURIComponent(err.message)}`);
+  }
+});
+
 // LinkedIn manual connection with access token
 router.post('/linkedin/connect', authenticateUser, async (req, res) => {
   try {
@@ -675,7 +721,7 @@ router.get('/accounts', authenticateUser, async (req, res) => {
 router.delete('/disconnect/:provider', authenticateUser, async (req, res) => {
   try {
     const { provider } = req.params;
-    const validProviders = ['youtube', 'instagram', 'pinterest', 'facebook', 'bluesky', 'linkedin', 'mastodon', 'tiktok', 'threads', 'x'];
+    const validProviders = ['youtube', 'instagram', 'pinterest', 'facebook', 'bluesky', 'linkedin', 'mastodon', 'tiktok', 'threads', 'x', 'reddit'];
     if (!validProviders.includes(provider)) {
       return res.status(400).json({ success: false, error: 'Invalid provider' });
     }

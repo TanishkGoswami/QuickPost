@@ -11,6 +11,7 @@ import mastodon from '../services/mastodon.js';
 import tiktok from '../services/tiktok.js';
 import { postToThreads } from '../services/threads.js';
 import { broadcastToX } from '../services/x.js';
+import { postToReddit } from '../services/reddit.js';
 import { authenticateUser } from '../middleware/authenticateUser.js';
 import { saveBroadcast } from '../services/broadcasts.js';
 import { uploadToCloudinary, isCloudinaryConfigured } from '../services/cloudinary.js';
@@ -88,7 +89,8 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
       mastodon: { success: false, platform: 'Mastodon', error: 'Not selected' },
       tiktok: { success: false, platform: 'TikTok', error: 'Not selected' },
       threads: { success: false, platform: 'Threads', error: 'Not selected' },
-      x: { success: false, platform: 'X', error: 'Not selected' }
+      x: { success: false, platform: 'X', error: 'Not selected' },
+      reddit: { success: false, platform: 'Reddit', error: 'Not selected' }
     };
 
     if (isVideo && channels && channels.length > 0) {
@@ -164,6 +166,18 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
           );
         } else {
           results.x = { success: false, platform: 'X', error: 'No X token found' };
+        }
+      }
+
+      // Reddit Video
+      if (channels.includes('reddit')) {
+        if (tokens.reddit) {
+          platformPromises.push(
+            postToReddit(userId, caption, mediaUrl, tokens.reddit, platData?.reddit)
+              .then(result => ({ platform: 'reddit', result }))
+          );
+        } else {
+          results.reddit = { success: false, platform: 'Reddit', error: 'No Reddit token found' };
         }
       }
     } else if (isImage && channels && channels.length > 0) {
@@ -311,6 +325,21 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
           results.x = { success: false, platform: 'X', error: 'No X token found' };
         }
       }
+
+      // Reddit Image
+      if (channels.includes('reddit')) {
+        console.log('🤖 Reddit selected, checking tokens...');
+        if (tokens.reddit) {
+          console.log('🤖 Posting to Reddit...');
+          platformPromises.push(
+            postToReddit(userId, caption, mediaUrl, tokens.reddit, platData?.reddit)
+              .then(result => ({ platform: 'reddit', result }))
+          );
+        } else {
+          console.log('❌ No Reddit token found');
+          results.reddit = { success: false, platform: 'Reddit', error: 'No Reddit token found' };
+        }
+      }
     }
 
     // Broadcast concurrently
@@ -339,6 +368,7 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
     if (results.tiktok?.success !== undefined) console.log('TikTok:', results.tiktok.success ? '✅ Success' : '❌ Failed');
     if (results.threads?.success !== undefined) console.log('Threads:', results.threads.success ? '✅ Success' : '❌ Failed');
     if (results.x?.success !== undefined) console.log('X:', results.x.success ? '✅ Success' : '❌ Failed');
+    if (results.reddit?.success !== undefined) console.log('Reddit:', results.reddit.success ? '✅ Success' : '❌ Failed');
 
     // Save broadcast to database
     try {
@@ -369,7 +399,8 @@ router.post('/broadcast', authenticateUser, upload.single('media'), handleUpload
                           results.mastodon?.success ||
                           results.tiktok?.success ||
                           results.threads?.success ||
-                          results.x?.success;
+                          results.x?.success ||
+                          results.reddit?.success;
     
     return res.status(overallSuccess ? 200 : 500).json({
       success: overallSuccess,

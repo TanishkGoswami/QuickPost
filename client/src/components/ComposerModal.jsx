@@ -14,6 +14,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     pinterest: { title: '', link: '', boardId: '' },
     instagram: { firstComment: '' },
     youtube: {},
+    reddit: { subreddit: '' },
   });
   const [customizationExpanded, setCustomizationExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -30,6 +31,8 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
       if (connectedAccounts.pinterest) connected.push('pinterest');
       if (connectedAccounts.facebook) connected.push('facebook');
       if (connectedAccounts.threads) connected.push('threads');
+      if (connectedAccounts.x) connected.push('x');
+      if (connectedAccounts.reddit) connected.push('reddit');
       setSelectedChannels(connected);
     }
   }, [isOpen, connectedAccounts]);
