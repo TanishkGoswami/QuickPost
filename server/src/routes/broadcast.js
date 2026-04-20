@@ -25,12 +25,13 @@ router.post('/broadcast', authenticateUser, upload.array('media', 10), handleUpl
       });
     }
 
-    const { caption, selectedChannels, platformData, scheduledAt } = req.body;
+    const { caption, selectedChannels, platformData, scheduledAt, isScheduled: isScheduledField } = req.body;
     const userId = req.user.userId;
 
     const channels = typeof selectedChannels === 'string' ? JSON.parse(selectedChannels) : selectedChannels;
     const platData = typeof platformData === 'string' ? JSON.parse(platformData) : platformData;
-    const isScheduled = !!scheduledAt;
+    const isScheduled = isScheduledField === 'true' || !!scheduledAt;
+
 
     uploadedFiles = req.files;
     const filenames = uploadedFiles.map(f => f.filename);

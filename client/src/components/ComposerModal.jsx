@@ -579,21 +579,27 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
     try {
       const formData = new FormData();
-      // Append each file with the same key 'media'
-      mediaFiles.forEach(m => {
-        formData.append('media', m.file);
-      });
+      // Important: Append text fields BEFORE files for some multipart parsers
       formData.append('caption', caption);
       formData.append('selectedChannels', JSON.stringify(selectedChannels));
       formData.append('platformData', JSON.stringify(platformData));
+      formData.append('isScheduled', isScheduled ? 'true' : 'false');
       
       if (isScheduled && scheduledAt) {
-        formData.append('scheduledAt', scheduledAt);
+        // Convert local datetime-local string to UTC ISO string
+        const scheduledDate = new Date(scheduledAt);
+        formData.append('scheduledAt', scheduledDate.toISOString());
       }
+
+
+      mediaFiles.forEach(m => {
+        formData.append('media', m.file);
+      });
 
       const response = await apiClient.post('/api/broadcast', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+
       onPostCreated(response.data);
       handleClose();
     } catch (error) {
@@ -673,7 +679,9 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
               <ChannelSelector
                 selectedChannels={selectedChannels}
                 onChannelToggle={handleChannelToggle}
+                onBulkSelect={setSelectedChannels}
               />
+
             </div>
 
             {/* Main Caption */}
