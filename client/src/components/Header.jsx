@@ -4,13 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { LogOut, User, ChevronDown } from 'lucide-react';
 
 function Header() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const { user } = useAuth();
 
   if (!user) return null;
 
@@ -29,19 +23,8 @@ function Header() {
             </div>
             <div className="text-sm">
               <p className="font-medium text-gray-900">{user.name}</p>
-              <p className="text-xs text-gray-500">{user.email}</p>
             </div>
-            <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
           </div>
-
-          {/* Logout button */}
-          <button
-            onClick={handleLogout}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600 hover:text-gray-900"
-            title="Logout"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
         </div>
       </div>
     </header>
