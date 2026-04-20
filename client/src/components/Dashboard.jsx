@@ -28,6 +28,11 @@ function getPlatformIcon(id) {
         <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.294 19.497h2.039L6.482 3.239H4.293L17.607 20.65z"/>
       </svg>
     );
+    case 'reddit': return (
+      <svg className="w-4 h-4 text-[#FF4500]" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M24 11.5c0-1.65-1.35-3-3-3-.41 0-.8.08-1.15.22C18.21 7.27 15.71 6.5 13 6.5c-.01 0-.02 0-.03.01l1.32-4.19c.01-.03 0-.07-.02-.1-.02-.03-.05-.05-.08-.05l-4.44.93c-.15-.47-.59-.81-1.11-.81-.66 0-1.2.54-1.2 1.2s.54 1.2 1.2 1.2c.5 0 .93-.31 1.1-.74l3.87-.81-1.1 3.5c-2.73.04-5.24.81-6.85 2.23-.35-.14-.74-.22-1.15-.22-1.65 0-3 1.35-3 3 0 1.25.77 2.32 1.86 2.76-.04.24-.06.49-.06.74 0 3.31 4.03 6 9 6s9-2.69 9-6c0-.25-.02-.5-.06-.74 1.09-.44 1.86-1.51 1.86-2.76zM7.5 14c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5zm10.5 4.5c-1.84 0-3.48-.96-4.5-2.5-.1-.14-.07-.34.07-.44.15-.1.35-.07.45.07.9 1.37 2.37 2.22 3.98 2.22s3.08-.85 3.98-2.22c.1-.14.3-.17.44-.07.14.1.17.3.07.44-1.02 1.54-2.66 2.5-4.5 2.5zm1.5-3c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+      </svg>
+    );
     default: return <Share2 className="w-4 h-4" />;
   }
 }
@@ -44,6 +49,7 @@ function buildPlatforms(post) {
     { id: 'pinterest', name: 'Pinterest', success: post.pinterest_success, error: post.pinterest_error, url: post.pinterest_url },
     { id: 'threads',   name: 'Threads',   success: post.threads_success,   error: post.threads_error,   url: post.threads_url },
     { id: 'x',         name: 'X',         success: post.x_success,         error: post.x_error,         url: post.x_url },
+    { id: 'reddit',    name: 'Reddit',    success: post.reddit_success,    error: post.reddit_error,    url: post.reddit_url },
   ].filter(p => p.success || (p.error && p.error !== 'Not selected'));
 }
 
@@ -188,10 +194,19 @@ function Dashboard() {
   const [selectedPost, setSelectedPost] = useState(null);
 
   const tabs = [
-    { id: 'queue',   label: 'Queue',   count: 0 },
-    { id: 'drafts',  label: 'Drafts',  count: 0 },
-    { id: 'sent',    label: 'Sent',    count: activeTab === 'sent'    ? broadcasts.length : 0 },
-    { id: 'history', label: 'History', count: activeTab === 'history' ? broadcasts.length : 0 },
+    {
+      id: "sent",
+      label: "Sent",
+      count: activeTab === "sent" ? broadcasts.length : 0,
+    },
+
+    { id: "queue", label: "Queue", count: 0 },
+    { id: "drafts", label: "Drafts", count: 0 },
+    {
+      id: "history",
+      label: "History",
+      count: activeTab === "history" ? broadcasts.length : 0,
+    },
   ];
 
   useEffect(() => {

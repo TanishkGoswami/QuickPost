@@ -136,6 +136,15 @@ export async function getTokensForUser(userId) {
           accountId: row.account_id
         };
       }
+
+      if (row.provider === 'reddit') {
+        tokens.reddit = {
+          accessToken: row.access_token,
+          refreshToken: row.refresh_token,
+          tokenExpiry: row.token_expiry,
+          accountId: row.account_id
+        };
+      }
     }
 
     return tokens;
@@ -239,7 +248,7 @@ export async function getConnectedAccounts(userId) {
       throw error;
     }
 
-    const providers = ['youtube', 'instagram', 'facebook', 'pinterest', 'bluesky', 'linkedin', 'mastodon', 'tiktok', 'threads', 'x'];
+    const providers = ['youtube', 'instagram', 'facebook', 'pinterest', 'bluesky', 'linkedin', 'mastodon', 'tiktok', 'threads', 'x', 'reddit'];
     const result = {};
     for (const p of providers) result[p] = { connected: false };
 
