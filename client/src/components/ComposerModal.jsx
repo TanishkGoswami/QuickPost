@@ -492,6 +492,12 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
       }
     }
 
+    // Validate YouTube media type
+    if (selectedChannels.includes('youtube') && mediaFile && mediaFile.type.startsWith('image/')) {
+      setError('Posting on YouTube via app is not possible for images. You can only upload video.');
+      return false;
+    }
+
     return true;
   };
 
