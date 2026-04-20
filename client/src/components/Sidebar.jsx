@@ -15,7 +15,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, connectedAccounts, refreshAccounts } = useAuth();
+  const { user, connectedAccounts, refreshAccounts, logout } = useAuth();
   const [showBusinessSetupModal, setShowBusinessSetupModal] = useState(false);
   const [showBlueskyModal, setShowBlueskyModal] = useState(false);
   const [showPinterestModal, setShowPinterestModal] = useState(false);
@@ -25,6 +25,12 @@ function Sidebar() {
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
   const [connectingPlatform, setConnectingPlatform] = useState(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const handleLogout = () => {
+    if (confirm('Are you sure you want to log out?')) {
+      logout();
+      navigate('/login');
+    }
+  };
 
   const handleConnectInstagram = () => {
     // Show setup modal first to ensure user has business account
@@ -368,6 +374,14 @@ function Sidebar() {
         >
           <Settings className="w-4 h-4" />
           {!isCollapsed && <span>Settings</span>}
+        </button>
+        <button 
+          onClick={handleLogout}
+          className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg w-full text-red-600 hover:bg-red-50 text-sm mt-1`}
+          title={isCollapsed ? "Logout" : ""}
+        >
+          <LogOut className="w-4 h-4" />
+          {!isCollapsed && <span>Logout</span>}
         </button>
       </div>
 
