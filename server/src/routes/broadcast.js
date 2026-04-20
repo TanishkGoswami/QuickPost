@@ -36,7 +36,7 @@ router.post('/broadcast', authenticateUser, (req, res, next) => {
     next();
   });
 }, async (req, res) => {
-  console.log('📥 [BROADCAST] Async job request received');
+  console.log('📥 [BROADCAST] Sync job request received');
 
   try {
     // ── Validate request ──────────────────────────────────────────────────
@@ -44,11 +44,12 @@ router.post('/broadcast', authenticateUser, (req, res, next) => {
       return res.status(400).json({ success: false, error: 'No media files uploaded' });
     }
 
-    const { caption, selectedChannels, platformData } = req.body;
+    const { caption, selectedChannels, platformData, scheduledAt, isScheduled: isScheduledField } = req.body;
     const userId = req.user.userId;
 
     const channels = typeof selectedChannels === 'string' ? JSON.parse(selectedChannels) : selectedChannels;
     const platData = typeof platformData === 'string' ? JSON.parse(platformData) : platformData;
+    const isScheduled = isScheduledField === 'true' || !!scheduledAt;
 
     const uploadedFiles = req.files['media'] || [];
     const thumbnailFile = req.files['youtubeThumbnail'] ? req.files['youtubeThumbnail'][0] : null;
@@ -62,10 +63,7 @@ router.post('/broadcast', authenticateUser, (req, res, next) => {
     const mediaType = isVideo ? 'video' : 'image';
     const primaryVideoPath = videos.length > 0 ? videos[0].path : null;
 
-    // ── Grab a lightweight preview URL for the UI ─────────────────────────
-    // We use the first file's Cloudinary URL — set after cloud upload in the worker.
-    // For immediate feedback, use a local URL if available.
-    const localPreviewUrl = null; // Will be set by worker after Cloudinary upload
+    console.log(`🚀 Broadcast job queued. Type: ${mediaType}, User: ${userId}, Scheduled: ${isScheduled ? scheduledAt : 'Immediate'}`);
 
     // ── Create the job ────────────────────────────────────────────────────
     const jobId = createJob(userId, {
@@ -75,6 +73,8 @@ router.post('/broadcast', authenticateUser, (req, res, next) => {
       filenames,
       fileCount: uploadedFiles.length,
       hasThumbnail: !!thumbnailFile,
+      isScheduled,
+      scheduledAt
     });
 
     // ── Respond immediately — UI unblocked ────────────────────────────────
@@ -94,6 +94,8 @@ router.post('/broadcast', authenticateUser, (req, res, next) => {
       isVideo,
       mediaType,
       primaryVideoPath,
+      isScheduled,
+      scheduledAt
     }).catch(err => {
       console.error(`❌ [BROADCAST_JOB] Unhandled error in job ${jobId}:`, err);
       failJob(jobId, err.message || 'Unknown error');
@@ -121,6 +123,7 @@ async function processBroadcastJob({
   jobId, userId, caption, channels, platData,
   uploadedFiles, filePaths, filenames,
   thumbnailFile, isVideo, mediaType, primaryVideoPath,
+  isScheduled, scheduledAt
 }) {
   console.log(`\n🚀 [JOB:${jobId}] Starting background broadcast for user: ${userId}`);
 
@@ -167,18 +170,14 @@ async function processBroadcastJob({
         const thumbUpload = await uploadToCloudinary(thumbnailFile.path, 'image');
         finalThumbnailUrl = thumbUpload.url;
       } else if (mediaType === 'video' && !finalThumbnailUrl && mediaUrls[0]) {
-        // Cloudinary auto-thumbnail for videos: change extension to .jpg or use /video/upload/ to /image/upload/
-        // Efficient way: Cloudinary allows requesting .jpg for a video resource
         finalThumbnailUrl = mediaUrls[0].replace(/\.[^/.]+$/, ".jpg");
         console.log(`🎬 [JOB:${jobId}] Generated auto-thumbnail for video:`, finalThumbnailUrl);
       }
 
-      // Store preview URL in job meta for the UI
       updateJob(jobId, {
         progress: 30,
-        step: 'Cloud upload complete. Publishing to platforms…',
+        step: isScheduled ? 'Media ready. Scheduling...' : 'Cloud upload complete. Publishing...',
         meta: {
-          // merge with existing meta
           ...(getJob_internal(jobId)?.meta || {}),
           previewUrl: finalThumbnailUrl || mediaUrls[0] || null,
         },
@@ -186,14 +185,12 @@ async function processBroadcastJob({
 
       console.log(`✓ [JOB:${jobId}] All files uploaded. URLs:`, mediaUrls);
     } else {
-      // No Cloudinary — use local server URLs
+      // Fallback to local URLs if No Cloudinary
       const serverPublicUrl = process.env.SERVER_PUBLIC_URL || 'http://localhost:5000';
       mediaUrls = filenames.map(name => `${serverPublicUrl}/uploads/${name}`);
-
       const firstImageIdx = uploadedFiles.findIndex(f => f.mimetype.startsWith('image/'));
       if (firstImageIdx !== -1) autoCoverImageUrl = mediaUrls[firstImageIdx];
       finalThumbnailUrl = autoCoverImageUrl;
-
       updateJob(jobId, { progress: 30, step: 'Publishing to platforms…' });
     }
   } catch (uploadErr) {
@@ -203,7 +200,36 @@ async function processBroadcastJob({
     return;
   }
 
-  // ── Phase 2: Calling platform APIs (30 → 85%) ──────────────────────────
+  // ── Phase 2: Decision - Schedule or Broadcast ───────────────────────────
+  if (isScheduled) {
+    updateJob(jobId, { progress: 80, step: 'Saving schedule to database…' });
+    try {
+      await saveBroadcast(
+        userId, 
+        caption, 
+        filenames, 
+        { mediaUrls, thumbnailUrl: finalThumbnailUrl }, 
+        mediaType, 
+        { ...platData, selectedChannels: channels, filePaths }, // Store filePaths for scheduler cleanup later
+        'scheduled', 
+        scheduledAt
+      );
+      
+      updateJob(jobId, {
+        status: 'completed',
+        progress: 100,
+        step: `Post scheduled for ${new Date(scheduledAt).toLocaleString()}!`,
+      });
+      console.log(`📅 [JOB:${jobId}] Broadcast successfully scheduled.`);
+      return; // Stop here, scheduler will pick it up
+    } catch (dbErr) {
+      failJob(jobId, `Scheduling failed: ${dbErr.message}`);
+      cleanupFiles(filePaths, thumbnailFile);
+      return;
+    }
+  }
+
+  // ── Phase 3: Immediate Broadcast (Platform APIs) ────────────────────────
   const primaryMediaUrl = mediaUrls[0];
   const youtubeThumbnailPath = thumbnailFile ? thumbnailFile.path :
     (uploadedFiles.findIndex(f => f.mimetype.startsWith('image/')) !== -1
@@ -294,7 +320,9 @@ async function processBroadcastJob({
   // X (Twitter)
   if (channels.includes('x') && tokens.x) {
     platformPromises.push(
-      broadcastToX(caption, mediaUrls, tokens.x, userId).then(r => onChannelComplete('X', r))
+      broadcastToX(caption, mediaUrls, tokens.x, userId)
+        .then(r => typeof r === 'object' ? r : { success: true, result: r }) // ensure object response
+        .then(r => onChannelComplete('X', r))
     );
   }
 
@@ -302,7 +330,6 @@ async function processBroadcastJob({
   if (channels.includes('youtube') && isVideo && tokens.youtube && primaryVideoPath) {
     platformPromises.push(
       (async () => {
-        console.log(`📺 [JOB:${jobId}] Ensuring valid YouTube token...`);
         const validAccessToken = await googleOAuth.getValidAccessToken(userId);
         const ytTokens = { ...tokens.youtube, accessToken: validAccessToken };
         updateJob(jobId, { step: 'Uploading video to YouTube…' });
@@ -310,46 +337,26 @@ async function processBroadcastJob({
         if (result.success && result.videoId && youtubeThumbnailPath) {
           const thumbResult = await setVideoThumbnail(result.videoId, youtubeThumbnailPath, ytTokens);
           result.thumbnailSuccess = thumbResult.success;
-          if (!thumbResult.success) result.thumbnailError = thumbResult.error;
         }
         return onChannelComplete('YouTube', result);
       })()
     );
   }
 
-  // TikTok
+  // TikTok, Mastodon, Reddit, Threads... 
   if (channels.includes('tiktok') && tokens.tiktok && primaryVideoPath) {
-    platformPromises.push(
-      tiktok.publishVideo(tokens.tiktok.accessToken, primaryVideoPath, caption)
-        .then(r => onChannelComplete('TikTok', r))
-    );
+    platformPromises.push(tiktok.publishVideo(tokens.tiktok.accessToken, primaryVideoPath, caption).then(r => onChannelComplete('TikTok', r)));
   }
-
-  // Mastodon
   if (channels.includes('mastodon') && tokens.mastodon) {
-    platformPromises.push(
-      mastodon.postStatus(tokens.mastodon.accessToken, tokens.mastodon.instanceUrl, caption, filePaths)
-        .then(r => onChannelComplete('Mastodon', r))
-    );
+    platformPromises.push(mastodon.postStatus(tokens.mastodon.accessToken, tokens.mastodon.instanceUrl, caption, filePaths).then(r => onChannelComplete('Mastodon', r)));
   }
-
-  // Reddit
   if (channels.includes('reddit') && tokens.reddit) {
-    platformPromises.push(
-      postToReddit(userId, caption, primaryMediaUrl, tokens.reddit, platData?.reddit)
-        .then(r => onChannelComplete('Reddit', r))
-    );
+    platformPromises.push(postToReddit(userId, caption, primaryMediaUrl, tokens.reddit, platData?.reddit).then(r => onChannelComplete('Reddit', r)));
   }
-
-  // Threads
   if (channels.includes('threads') && tokens.threads) {
-    platformPromises.push(
-      postToThreads(tokens.threads.accessToken, tokens.threads.account_id, caption, primaryMediaUrl, mediaType)
-        .then(r => onChannelComplete('Threads', r))
-    );
+    platformPromises.push(postToThreads(tokens.threads.accessToken, tokens.threads.account_id, caption, primaryMediaUrl, mediaType).then(r => onChannelComplete('Threads', r)));
   }
 
-  // ── Run all platform calls concurrently ────────────────────────────────
   updateJob(jobId, { progress: 31, step: `Publishing to ${selectedChannelCount} platform(s)…` });
   const platformResults = await Promise.allSettled(platformPromises);
 
@@ -357,61 +364,40 @@ async function processBroadcastJob({
     if (promiseResult.status === 'fulfilled') {
       const { platform, result } = promiseResult.value;
       results[platform.toLowerCase()] = result;
-    } else {
-      console.error(`❌ [JOB:${jobId}] Platform promise rejected:`, promiseResult.reason?.message);
     }
   }
 
-  // ── Phase 3: Save to DB (85 → 95%) ────────────────────────────────────
+  // ── Phase 4: Save to DB (85 → 95%) ────────────────────────────────────
   updateJob(jobId, { progress: 87, step: 'Saving broadcast record…' });
-
   try {
-    await saveBroadcast(userId, caption, filenames, results, mediaType, platData);
+    await saveBroadcast(userId, caption, filenames, results, mediaType, platData, 'sent');
     console.log(`✅ [JOB:${jobId}] Broadcast saved to database`);
   } catch (dbErr) {
-    console.error(`⚠️ [JOB:${jobId}] DB save failed (non-fatal):`, dbErr.message);
+    console.error(`⚠️ [JOB:${jobId}] DB save failed:`, dbErr.message);
   }
 
-  // ── Phase 4: Cleanup (95 → 100%) ──────────────────────────────────────
-  updateJob(jobId, { progress: 95, step: 'Cleaning up temporary files…' });
+  // ── Phase 5: Cleanup (95 → 100%) ──────────────────────────────────────
+  updateJob(jobId, { progress: 95, step: 'Cleaning up…' });
+  setTimeout(() => cleanupFiles(filePaths, thumbnailFile), 10000);
 
-  setTimeout(() => {
-    cleanupFiles(filePaths, thumbnailFile);
-  }, 10000);
-
-  // ── Done ──────────────────────────────────────────────────────────────
   updateJob(jobId, {
     status: 'completed',
     progress: 100,
     step: 'Broadcast complete!',
     result: results,
   });
-
   console.log(`🎉 [JOB:${jobId}] Broadcast job completed successfully.`);
 }
 
-/** Internal helper to read job state within the worker */
-function getJob_internal(jobId) {
-  return getJob(jobId);
-}
+function getJob_internal(jobId) { return getJob(jobId); }
 
-/** Delete temp files after a delay */
 function cleanupFiles(filePaths, thumbnailFile) {
   try {
-    if (filePaths?.length > 0) {
-      filePaths.forEach(p => {
-        if (p && fs.existsSync(p)) {
-          try { fs.unlinkSync(p); } catch (e) { console.warn(`Could not delete ${p}:`, e.message); }
-        }
-      });
-    }
-    if (thumbnailFile?.path && fs.existsSync(thumbnailFile.path)) {
-      try { fs.unlinkSync(thumbnailFile.path); } catch (e) { console.warn(`Could not delete thumbnail:`, e.message); }
-    }
+    filePaths?.forEach(p => { if (p && fs.existsSync(p)) fs.unlinkSync(p); });
+    if (thumbnailFile?.path && fs.existsSync(thumbnailFile.path)) fs.unlinkSync(thumbnailFile.path);
     console.log('✅ [CLEANUP] Temp files removed.');
-  } catch (err) {
-    console.error('❌ [CLEANUP] Error:', err);
-  }
+  } catch (err) { console.error('❌ [CLEANUP] Error:', err); }
 }
 
 export default router;
+

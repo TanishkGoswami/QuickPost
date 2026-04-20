@@ -59,7 +59,7 @@ const PLATFORMS = [
   },
 ];
 
-function ChannelSelector({ selectedChannels, onChannelToggle }) {
+function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect }) {
   const { connectedAccounts } = useAuth();
   const [connectedOpen, setConnectedOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -81,6 +81,10 @@ function ChannelSelector({ selectedChannels, onChannelToggle }) {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
+
+  const connectedIds = connectedPlatforms.map(p => p.id);
+  const selectedConnectedCount = selectedChannels.filter(id => connectedIds.includes(id)).length;
+  const isAllSelected = selectedConnectedCount === connectedPlatforms.length;
 
   return (
     <div className="mb-2">
@@ -108,42 +112,62 @@ function ChannelSelector({ selectedChannels, onChannelToggle }) {
                 )}
               </div>
               <span>Connected</span>
-              {selectedChannels.filter(id => connectedPlatforms.some(p => p.id === id)).length > 0 && (
+              {selectedConnectedCount > 0 && (
                 <span className="bg-indigo-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                  {selectedChannels.filter(id => connectedPlatforms.some(p => p.id === id)).length}
+                  {selectedConnectedCount}
                 </span>
               )}
               <ChevronDown className={`w-3.5 h-3.5 transition-transform ${connectedOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {connectedOpen && (
-              <div className="absolute top-full left-0 mt-1.5 w-52 bg-white rounded-xl border border-gray-200 shadow-lg z-50 overflow-hidden">
-                <div className="px-3 py-2 border-b border-gray-100">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Connected Accounts</p>
-                </div>
-                {connectedPlatforms.map(p => {
-                  const isSelected = selectedChannels.includes(p.id);
-                  return (
+              <div className="absolute top-full left-0 mt-1.5 w-60 bg-white rounded-xl border border-gray-200 shadow-lg z-50 overflow-hidden">
+                <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Connected Accounts</p>
+                  <div className="flex gap-2">
                     <button
-                      key={p.id}
                       type="button"
-                      onClick={() => onChannelToggle(p.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 transition-colors ${isSelected ? 'bg-indigo-50' : ''}`}
+                      onClick={() => onBulkSelect(connectedIds)}
+                      className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 uppercase tracking-tighter"
                     >
-                      <div className="w-7 h-7 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center flex-shrink-0">
-                        {p.icon}
-                      </div>
-                      <span className={`text-sm flex-1 text-left font-medium ${isSelected ? 'text-indigo-700' : 'text-gray-700'}`}>
-                        {p.name}
-                      </span>
-                      {isSelected && <Check className="w-4 h-4 text-indigo-500" />}
+                      All
                     </button>
-                  );
-                })}
+                    <span className="text-gray-300">|</span>
+                    <button
+                      type="button"
+                      onClick={() => onBulkSelect([])}
+                      className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase tracking-tighter"
+                    >
+                      None
+                    </button>
+                  </div>
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {connectedPlatforms.map(p => {
+                    const isSelected = selectedChannels.includes(p.id);
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => onChannelToggle(p.id)}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 transition-colors ${isSelected ? 'bg-indigo-50/30' : ''}`}
+                      >
+                        <div className="w-7 h-7 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          {p.icon}
+                        </div>
+                        <span className={`text-sm flex-1 text-left font-medium ${isSelected ? 'text-indigo-700' : 'text-gray-700'}`}>
+                          {p.name}
+                        </span>
+                        {isSelected && <Check className="w-4 h-4 text-indigo-500" strokeWidth={3} />}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
         )}
+
 
         {/* ── Divider if both exist ── */}
         {connectedPlatforms.length > 0 && unconnectedPlatforms.length > 0 && (
