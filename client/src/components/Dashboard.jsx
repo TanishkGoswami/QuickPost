@@ -100,12 +100,7 @@ function GridCard({ post, onOpen, formatDate }) {
             {successCount} platform{successCount > 1 ? 's' : ''}
           </div>
         )}
-        {/* Hover overlay hint */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
-          <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 text-gray-800 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-            View Preview →
-          </span>
-        </div>
+
       </div>
       <div className="p-4 flex flex-col flex-1">
         <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">
