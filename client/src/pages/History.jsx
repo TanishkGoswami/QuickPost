@@ -174,12 +174,20 @@ function History() {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2 text-[10px] text-gray-400 font-bold uppercase tracking-widest">
                         <Calendar className="w-3.5 h-3.5" />
-                        {formatDate(post.posted_at)}
+                        {post.status === 'scheduled' ? `Scheduled for ${formatDate(post.scheduled_for)}` : formatDate(post.posted_at || post.created_at)}
                       </div>
-                      <div className="p-1 bg-gray-50 rounded-full">
-                        {expandedId === post.id ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                      <div className="flex items-center gap-2">
+                        {post.status === 'scheduled' && (
+                          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[9px] font-bold uppercase tracking-tighter border border-indigo-200 shadow-sm animate-pulse">
+                            Scheduled
+                          </span>
+                        )}
+                        <div className="p-1 bg-gray-50 rounded-full">
+                          {expandedId === post.id ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                        </div>
                       </div>
                     </div>
+
                     
                     <h3 className="text-lg font-bold text-gray-900 line-clamp-1 mb-3 pr-8">
                       {post.caption || 'Untitled Broadcast'}
