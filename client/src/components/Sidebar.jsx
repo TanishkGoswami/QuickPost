@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Settings, Zap, CheckCircle2, HelpCircle, PanelLeftClose, Clock } from 'lucide-react';
+import { Plus, Settings, CheckCircle2, HelpCircle, PanelLeftClose, Clock } from 'lucide-react';
+import logo from '/logo.png';
 import InstagramBusinessSetupModal from './InstagramBusinessSetupModal';
 import BlueskyConnectModal from './BlueskyConnectModal';
 import PinterestConnectModal from './PinterestConnectModal';
@@ -70,7 +71,7 @@ function Sidebar() {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         await refreshAccounts();
       } else {
@@ -251,15 +252,11 @@ function Sidebar() {
       <div className="p-4 border-b border-gray-200">
         {isCollapsed ? (
           <div className="flex items-center justify-center">
-            <div className="p-1.5 bg-blue-600 rounded-lg">
-              <Zap className="w-4 h-4 text-white" />
-            </div>
+            <img src={logo} alt="QuickPost" className="h-8 w-8 object-contain" />
           </div>
         ) : (
           <Link to="/dashboard" className="flex items-center gap-2">
-            <div className="p-1.5 bg-blue-600 rounded-lg">
-              <Zap className="w-4 h-4 text-white" />
-            </div>
+            <img src={logo} alt="QuickPost" className="h-8 w-8 object-contain" />
             <span className="text-lg font-bold text-gray-900">QuickPost</span>
           </Link>
         )}
@@ -270,7 +267,7 @@ function Sidebar() {
         <div className="p-4">
           <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} mb-3`}>
             {!isCollapsed && <h3 className="text-sm font-semibold text-gray-700">Channels</h3>}
-            <button 
+            <button
               onClick={() => setIsCollapsed(!isCollapsed)}
               className="p-1 hover:bg-gray-100 rounded"
               title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -295,26 +292,6 @@ function Sidebar() {
             {!isCollapsed && (
               <div className="flex-1">
                 <div className="text-sm font-medium">All Channels</div>
-              </div>
-            )}
-          </Link>
-
-          {/* History */}
-          <Link
-            to="/dashboard/history"
-            className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg mb-2 transition-colors ${
-              location.pathname === '/dashboard/history'
-                ? 'bg-gray-100 text-gray-700'
-                : 'text-gray-700 hover:bg-gray-50'
-            }`}
-            title={isCollapsed ? "Post History" : ""}
-          >
-            <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
-              <Clock className="w-5 h-5 text-blue-600" />
-            </div>
-            {!isCollapsed && (
-              <div className="flex-1">
-                <div className="text-sm font-medium">Post History</div>
               </div>
             )}
           </Link>
@@ -385,7 +362,7 @@ function Sidebar() {
 
       {/* Footer Actions */}
       <div className="p-4 border-t border-gray-200">
-        <button 
+        <button
           className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg w-full text-gray-700 hover:bg-gray-50 text-sm`}
           title={isCollapsed ? "Settings" : ""}
         >

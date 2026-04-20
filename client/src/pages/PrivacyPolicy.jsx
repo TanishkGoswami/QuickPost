@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { LandingNav } from '../features/landing';
-import { 
-  ChevronRight, 
-  Shield, 
-  Lock, 
-  Eye, 
-  FileText, 
-  ExternalLink, 
-  Mail, 
+import logo from '/logo.png';
+import {
+  ChevronRight,
+  Shield,
+  Lock,
+  Eye,
+  FileText,
+  ExternalLink,
+  Mail,
   AlertCircle,
   Trash2,
   UserCheck,
@@ -76,10 +77,10 @@ export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans">
       <LandingNav />
-      
+
       <main className="flex-grow container mx-auto px-4 md:px-6 py-12 lg:py-24 max-w-7xl">
         <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
-          
+
           {/* Sidebar */}
           <aside className="lg:w-72 flex-shrink-0">
             <div className="sticky top-24 space-y-6">
@@ -95,8 +96,8 @@ export default function PrivacyPolicy() {
                       key={section.id}
                       onClick={() => scrollToSection(section.id)}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left text-[13px] font-bold transition-all ${
-                        activeSection === section.id 
-                          ? 'bg-blue-600 text-white shadow-md' 
+                        activeSection === section.id
+                          ? 'bg-blue-600 text-white shadow-md'
                           : 'text-gray-600 hover:bg-gray-50'
                       }`}
                     >
@@ -119,10 +120,10 @@ export default function PrivacyPolicy() {
           {/* Content */}
           <article className="flex-1 bg-white border border-gray-200 rounded-[2.5rem] shadow-xl shadow-gray-200/40 p-8 md:p-16 lg:p-20 overflow-hidden relative">
             <div className="absolute top-0 right-0 w-64 h-64 bg-blue-50 rounded-full -mr-32 -mt-32 blur-3xl opacity-50"></div>
-            
+
             <header className="mb-16 border-b border-gray-100 pb-12 relative z-10">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-200">QP</div>
+                <img src={logo} alt="QuickPost" className="w-12 h-12 object-contain" />
                 <div className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest">Privacy First</div>
               </div>
               <h1 className="text-4xl md:text-6xl font-black text-gray-900 mb-6 tracking-tight">Privacy Policy</h1>
@@ -133,7 +134,7 @@ export default function PrivacyPolicy() {
             </header>
 
             <div className="space-y-16 relative z-10">
-              
+
               <section id="introduction" className="scroll-mt-32">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
@@ -218,7 +219,7 @@ export default function PrivacyPolicy() {
                   </div>
                   <h2 className="text-2xl font-black text-gray-900">4. Platform Specifics</h2>
                 </div>
-                
+
                 <div className="space-y-6">
                   <div className="p-8 border border-blue-100 bg-blue-50/20 rounded-[2rem] relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -340,7 +341,7 @@ export default function PrivacyPolicy() {
       <footer className="bg-white py-12 border-t border-gray-100 mt-auto">
         <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2 text-gray-900 font-black text-lg">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white text-xs">QP</div>
+            <img src={logo} alt="QuickPost" className="w-8 h-8 object-contain" />
             QuickPost
           </div>
           <div className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">

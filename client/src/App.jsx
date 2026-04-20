@@ -13,6 +13,7 @@ import LandingPage from './pages/LandingPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import History from './pages/History';
+import Onboarding from './components/Onboarding';
 import { useAuth } from './context/AuthContext';
 
 function AppContent() {
@@ -24,8 +25,13 @@ function AppContent() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfService />} />
-      <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
+      <Route path="/login" element={
+        isAuthenticated
+          ? (localStorage.getItem('qp_onboarding_done') ? <Navigate to="/dashboard" replace /> : <Navigate to="/onboarding" replace />)
+          : <Login />
+      } />
       <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/onboarding" element={isAuthenticated ? <Onboarding /> : <Navigate to="/login" replace />} />
 
       {/* Protected Dashboard Routes */}
       <Route
@@ -52,14 +58,7 @@ function AppContent() {
                         </ProtectedRoute>
                       } 
                     />
-                    <Route 
-                      path="/history" 
-                      element={
-                        <ProtectedRoute>
-                          <History />
-                        </ProtectedRoute>
-                      } 
-                    />
+
                     <Route 
                       path="/compose" 
                       element={

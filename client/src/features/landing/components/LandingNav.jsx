@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, X, Zap } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
+import logo from '/logo.png';
 
 export default function LandingNav() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -33,9 +34,7 @@ export default function LandingNav() {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 group">
-            <div className="p-2 rounded-lg group-hover:scale-110 transition-transform" style={{ background: '#8E4CFB' }}>
-              <Zap className="w-6 h-6 text-white" />
-            </div>
+            <img src={logo} alt="QuickPost" className="h-9 w-9 object-contain group-hover:scale-110 transition-transform" />
             <span className="text-xl md:text-2xl font-bold text-gray-900">
               Quick<span className="gradient-text">Post</span>
             </span>

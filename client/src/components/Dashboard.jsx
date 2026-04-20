@@ -1,75 +1,245 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { 
-  Plus, List, Calendar, ChevronDown, ExternalLink, Instagram, Youtube, Clock, 
-  Linkedin, Facebook, Share2, CheckCircle2, XCircle, Video, Image as ImageIcon,
-  Hash as HashIcon
+import {
+  Plus, Search, Calendar, ChevronDown, ChevronUp, ExternalLink,
+  Instagram, Youtube, Clock, Linkedin, Facebook, Share2, CheckCircle2,
+  XCircle, Video, Image as ImageIcon, Hash as HashIcon, LayoutGrid, List
 } from 'lucide-react';
 import apiClient from '../utils/apiClient';
 import ComposerModal from './ComposerModal';
+import PostPreviewModal from './PostPreviewModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+/* ── Platform helpers ──────────────────────────────────────────────────── */
+function getPlatformIcon(id) {
+  switch (id) {
+    case 'linkedin':  return <Linkedin  className="w-4 h-4 text-[#0A66C2]" />;
+    case 'youtube':   return <Youtube   className="w-4 h-4 text-[#FF0000]" />;
+    case 'instagram': return <Instagram className="w-4 h-4 text-[#E4405F]" />;
+    case 'facebook':  return <Facebook  className="w-4 h-4 text-[#1877F2]" />;
+    case 'tiktok':    return <Share2    className="w-4 h-4 text-black"      />;
+    case 'mastodon':  return <HashIcon  className="w-4 h-4 text-[#6364FF]" />;
+    case 'bluesky':   return <Share2    className="w-4 h-4 text-[#0085FF]" />;
+    case 'pinterest': return <Share2    className="w-4 h-4 text-[#BD081C]" />;
+    case 'threads':   return <ThreadsIcon className="w-4 h-4" />;
+    case 'x': return (
+      <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.294 19.497h2.039L6.482 3.239H4.293L17.607 20.65z"/>
+      </svg>
+    );
+    default: return <Share2 className="w-4 h-4" />;
+  }
+}
+
+function buildPlatforms(post) {
+  return [
+    { id: 'linkedin',  name: 'LinkedIn',  success: post.linkedin_success,  error: post.linkedin_error,  url: post.linkedin_url },
+    { id: 'youtube',   name: 'YouTube',   success: post.youtube_success,   error: post.youtube_error,   url: post.youtube_shorts_url || post.youtube_url },
+    { id: 'instagram', name: 'Instagram', success: post.instagram_success, error: post.instagram_error, url: post.instagram_url },
+    { id: 'facebook',  name: 'Facebook',  success: post.facebook_success,  error: post.facebook_error,  url: post.facebook_url },
+    { id: 'tiktok',    name: 'TikTok',    success: post.tiktok_success,    error: post.tiktok_error,    url: null },
+    { id: 'mastodon',  name: 'Mastodon',  success: post.mastodon_success,  error: post.mastodon_error,  url: post.mastodon_url },
+    { id: 'bluesky',   name: 'Bluesky',   success: post.bluesky_success,   error: post.bluesky_error,   url: post.bluesky_url },
+    { id: 'pinterest', name: 'Pinterest', success: post.pinterest_success, error: post.pinterest_error, url: post.pinterest_url },
+    { id: 'threads',   name: 'Threads',   success: post.threads_success,   error: post.threads_error,   url: post.threads_url },
+    { id: 'x',         name: 'X',         success: post.x_success,         error: post.x_error,         url: post.x_url },
+  ].filter(p => p.success || (p.error && p.error !== 'Not selected'));
+}
+
+function MediaThumb({ post, className = '' }) {
+  const isImage = post.media_type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || '');
+  return (
+    <div className={`bg-gray-100 overflow-hidden ${className}`}>
+      {post.media_url ? (
+        <img src={post.media_url} alt="Preview" className="w-full h-full object-cover"
+          onError={e => { e.target.src = 'https://via.placeholder.com/300?text=Preview'; }} />
+      ) : isImage ? (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-blue-50">
+          <ImageIcon className="w-8 h-8 text-blue-200 mb-1" />
+          <span className="text-[10px] text-blue-300 font-bold uppercase tracking-widest">Image</span>
+        </div>
+      ) : (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900">
+          <Video className="w-8 h-8 text-white/40 mb-1" />
+          <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Video</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlatformBadge({ platform }) {
+  return (
+    <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold border ${
+      platform.success ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'
+    }`}>
+      {getPlatformIcon(platform.id)}
+      <span>{platform.name}</span>
+      {platform.success ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+    </div>
+  );
+}
+
+/* ── Grid Card (click → modal) ────────────────────────────────────────── */
+function GridCard({ post, onOpen, formatDate }) {
+  const platforms = buildPlatforms(post);
+  const successCount = platforms.filter(p => p.success).length;
+  return (
+    <div
+      onClick={onOpen}
+      className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer group"
+    >
+      <div className="relative">
+        <MediaThumb post={post} className="w-full h-44" />
+        <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+          {post.media_type || 'media'}
+        </div>
+        {successCount > 0 && (
+          <div className="absolute bottom-2 left-2 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+            {successCount} platform{successCount > 1 ? 's' : ''}
+          </div>
+        )}
+        {/* Hover overlay hint */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
+          <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 text-gray-800 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+            View Preview →
+          </span>
+        </div>
+      </div>
+      <div className="p-4 flex flex-col flex-1">
+        <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">
+          <Calendar className="w-3 h-3" />{formatDate(post.posted_at)}
+        </div>
+        <p className="text-sm font-bold text-gray-900 line-clamp-2 mb-3 leading-snug flex-1">
+          {post.caption || <span className="text-gray-300 italic">No caption</span>}
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {platforms.map(p => <PlatformBadge key={p.id} platform={p} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── List Row ──────────────────────────────────────────────────────────── */
+function ListRow({ post, expanded, onToggle, formatDate }) {
+  const platforms = buildPlatforms(post);
+  return (
+    <div className={`bg-white rounded-2xl border overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 ${
+      expanded ? 'border-blue-200 ring-1 ring-blue-100' : 'border-gray-100'
+    }`}>
+      <div className="p-5 flex items-start gap-5 cursor-pointer" onClick={onToggle}>
+        <MediaThumb post={post} className="w-20 h-20 rounded-xl flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+              <Calendar className="w-3 h-3" />{formatDate(post.posted_at)}
+            </div>
+            {expanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+          </div>
+          <h3 className="text-sm font-bold text-gray-900 line-clamp-1 mb-2">{post.caption || 'Untitled Broadcast'}</h3>
+          <div className="flex flex-wrap gap-1.5">{platforms.map(p => <PlatformBadge key={p.id} platform={p} />)}</div>
+        </div>
+      </div>
+      {expanded && (
+        <div className="border-t border-gray-100 bg-gray-50/30 px-5 pb-5 pt-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+            {platforms.map(p => (
+              <div key={p.id} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">{getPlatformIcon(p.id)}<span className="text-xs font-bold text-gray-800">{p.name}</span></div>
+                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
+                    p.success ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'
+                  }`}>{p.success ? 'Success' : 'Failed'}</span>
+                </div>
+                {p.success && p.url ? (
+                  <a href={p.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[11px] text-blue-600 font-bold hover:text-blue-800">
+                    View Live Post <ExternalLink className="w-3 h-3" />
+                  </a>
+                ) : !p.success ? (
+                  <p className="text-[10px] text-red-500 italic">{p.error || 'API error'}</p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+          {post.caption && (
+            <div className="p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Caption</p>
+              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{post.caption}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Main Dashboard ────────────────────────────────────────────────────── */
 function Dashboard() {
-  const { user, connectedAccounts, refreshAccounts } = useAuth();
+  const { user, refreshAccounts } = useAuth();
   const [activeTab, setActiveTab] = useState('sent');
   const [broadcasts, setBroadcasts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState('grid');
+  const [selectedPost, setSelectedPost] = useState(null);
 
   const tabs = [
-    { id: 'queue', label: 'Queue', count: 0 },
-    { id: 'drafts', label: 'Drafts', count: 0 },
-    { id: 'sent', label: 'Sent', count: broadcasts.length },
+    { id: 'queue',   label: 'Queue',   count: 0 },
+    { id: 'drafts',  label: 'Drafts',  count: 0 },
+    { id: 'sent',    label: 'Sent',    count: activeTab === 'sent'    ? broadcasts.length : 0 },
+    { id: 'history', label: 'History', count: activeTab === 'history' ? broadcasts.length : 0 },
   ];
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const success = params.get('success');
-    if (success) {
+    if (params.get('success')) {
       refreshAccounts();
       window.history.replaceState({}, '', '/dashboard');
     }
   }, [refreshAccounts]);
 
-  useEffect(() => {
-    fetchBroadcasts();
-  }, [activeTab]);
+  useEffect(() => { fetchBroadcasts(); }, [activeTab]);
 
   const fetchBroadcasts = async () => {
     try {
       setLoading(true);
+      // 'history' fetches all broadcasts; 'sent' filters by status
       const params = activeTab === 'sent' ? { status: 'sent' } : {};
       const response = await apiClient.get('/api/broadcasts', { params });
       setBroadcasts(response.data.broadcasts || []);
-    } catch (error) {
-      console.error('Failed to fetch broadcasts:', error);
+    } catch (err) {
+      console.error('Failed to fetch broadcasts:', err);
       setBroadcasts([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffMins < 60) return `${diffMins} mins ago`;
-    if (diffMins < 1440) return `${Math.floor(diffMins / 60)} hours ago`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
+  const formatDate = (dateString) =>
+    new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric',
+      year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+
+  const toggleExpand = (id) => setExpandedId(prev => prev === id ? null : id);
+
+  const filtered = broadcasts.filter(b =>
+    b.caption?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top Header Bar */}
+
+      {/* ── Top Header ── */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-gray-900 tracking-tight">Post Analytics</h1>
           </div>
-
           <div className="flex items-center gap-3">
             <button
               onClick={() => setComposerOpen(true)}
@@ -82,10 +252,10 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* ── Tabs ── */}
       <div className="bg-white border-b border-gray-200 px-6">
         <div className="flex items-center gap-8">
-          {tabs.map((tab) => (
+          {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -106,116 +276,123 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="p-8">
-        <div className="max-w-4xl mx-auto">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-20">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
-              <p className="text-gray-500 text-sm font-medium">Syncing data...</p>
+      {/* ── Sent Tab: search + view toggle ── */}
+      {(activeTab === 'sent' || activeTab === 'history') && !loading && broadcasts.length > 0 && (
+        <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-blue-500" />
+              <span className="text-sm font-bold text-gray-700">{broadcasts.length}</span>
+              <span className="text-xs text-gray-400">total posts</span>
             </div>
-          ) : activeTab === 'sent' && broadcasts.length > 0 ? (
-            <div className="space-y-6">
-              {broadcasts.map((broadcast) => {
-                const platforms = [
-                  { id: 'linkedin', success: broadcast.linkedin_success, name: 'LinkedIn', error: broadcast.linkedin_error, icon: <Linkedin className="w-4 h-4" /> },
-                  { id: 'youtube', success: broadcast.youtube_success, name: 'YouTube', error: broadcast.youtube_error, icon: <Youtube className="w-4 h-4" /> },
-                  { id: 'instagram', success: broadcast.instagram_success, name: 'Instagram', error: broadcast.instagram_error, icon: <Instagram className="w-4 h-4" /> },
-                  { id: 'facebook', success: broadcast.facebook_success, name: 'Facebook', error: broadcast.facebook_error, icon: <Facebook className="w-4 h-4" /> },
-                  { id: 'tiktok', success: broadcast.tiktok_success, name: 'TikTok', error: broadcast.tiktok_error, icon: <Share2 className="w-4 h-4" /> },
-                  { id: 'mastodon', success: broadcast.mastodon_success, name: 'Mastodon', error: broadcast.mastodon_error, icon: <HashIcon className="w-4 h-4" /> },
-                  { id: 'bluesky', success: broadcast.bluesky_success, name: 'Bluesky', error: broadcast.bluesky_error, icon: <Share2 className="w-4 h-4" /> },
-                  { id: 'pinterest', success: broadcast.pinterest_success, name: 'Pinterest', error: broadcast.pinterest_error, icon: <Share2 className="w-4 h-4" /> },
-                  { id: 'threads', success: broadcast.threads_success, name: 'Threads', error: broadcast.threads_error, icon: <ThreadsIcon className="w-4 h-4" /> }
-                ].filter(p => p.success || (p.error && p.error !== 'Not selected'));
+            <div className="w-px h-4 bg-gray-200" />
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-green-500" />
+              <span className="text-sm font-bold text-gray-700">
+                {broadcasts.filter(b => buildPlatforms(b).some(p => p.success)).length}
+              </span>
+              <span className="text-xs text-gray-400">successful</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search posts..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-52 text-sm transition-all"
+              />
+            </div>
+            <div className="flex items-center bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
+                title="Grid view"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
+                title="List view"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-                const isImageFile = broadcast.video_filename && /\.(jpg|jpeg|png|gif|webp)$/i.test(broadcast.video_filename);
-                const isExplicitImage = broadcast.media_type === 'image';
-                const showImage = isExplicitImage || isImageFile;
-
-                return (
-                  <div key={broadcast.id} className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-all group">
-                    <div className="flex gap-6">
-                      {/* Media (Left) */}
-                      <div className="w-32 h-32 rounded-xl bg-gray-50 overflow-hidden flex-shrink-0 border border-gray-100 relative shadow-inner">
-                        {showImage ? (
-                          broadcast.media_url ? (
-                            <img 
-                              src={broadcast.media_url} 
-                              alt="Post" 
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                              onError={(e) => { e.target.src = 'https://via.placeholder.com/150?text=Preview'; }}
-                            />
-                          ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-blue-50 group-hover:bg-blue-100 transition-colors">
-                              <ImageIcon className="w-10 h-10 text-blue-200 mb-1" />
-                              <span className="text-[10px] text-blue-300 font-bold uppercase tracking-widest">Image</span>
-                            </div>
-                          )
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900 group-hover:bg-gray-800 transition-colors">
-                            <Video className="w-10 h-10 text-white/40 mb-1" />
-                            <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Video</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Info (Right) */}
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <div className="flex items-center justify-between mb-3">
-                           <div className="flex items-center gap-2">
-                             <div className="w-6 h-6 rounded-full bg-blue-50 flex items-center justify-center text-[10px] font-bold text-blue-600 border border-blue-100">
-                               {user?.name?.charAt(0) || 'U'}
-                             </div>
-                             <p className="text-sm font-bold text-gray-800 tracking-tight">{user?.name || user?.email}</p>
-                           </div>
-                           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{formatDate(broadcast.posted_at)}</span>
-                        </div>
-
-                        <p className="text-gray-600 text-sm line-clamp-2 mb-4 leading-relaxed font-medium">
-                          {broadcast.caption || <span className="italic text-gray-300">No caption provided</span>}
-                        </p>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                          {platforms.map(p => (
-                            <div key={p.id} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border shadow-sm ${
-                              p.success ? 'bg-green-50 border-green-100 text-green-700' : 'bg-red-50 border-red-100 text-red-700'
-                            }`}>
-                              {p.icon}
-                              <span className="text-[10px] font-bold">{p.name}</span>
-                              {p.success ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+      {/* ── Main Content ── */}
+      <div className="p-6">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4" />
+            <p className="text-gray-500 text-sm font-medium">Syncing data...</p>
+          </div>
+        ) : (activeTab === 'sent' || activeTab === 'history') && filtered.length > 0 ? (
+          viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {filtered.map(post => (
+                <GridCard
+                  key={post.id}
+                  post={post}
+                  onOpen={() => setSelectedPost(post)}
+                  formatDate={formatDate}
+                />
+              ))}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-20 text-center shadow-sm">
-              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Share2 className="w-8 h-8 text-gray-300" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2 font-display">Ready for your first boost?</h3>
-              <p className="text-gray-500 text-sm mb-8 max-w-xs mx-auto">Create a post and broadcast it across your social channels to see real-time analytics here.</p>
+            <div className="space-y-4 max-w-4xl mx-auto">
+              {filtered.map(post => (
+                <div key={post.id} onClick={() => setSelectedPost(post)} className="cursor-pointer">
+                  <ListRow
+                    post={post}
+                    expanded={expandedId === post.id}
+                    onToggle={(e) => { e?.stopPropagation(); toggleExpand(post.id); }}
+                    formatDate={formatDate}
+                  />
+                </div>
+              ))}
+            </div>
+          )
+        ) : (
+          <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-20 text-center shadow-sm">
+            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Share2 className="w-8 h-8 text-gray-300" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2 font-display">
+              {activeTab === 'queue' ? 'Your queue is empty'
+                : activeTab === 'drafts' ? 'No drafts yet'
+                : activeTab === 'history' ? 'No broadcast history yet'
+                : 'Ready for your first boost?'}
+            </h3>
+            <p className="text-gray-500 text-sm mb-8 max-w-xs mx-auto">
+              {activeTab === 'sent' || activeTab === 'history'
+                ? 'Create a post and broadcast it across your social channels to see analytics here.'
+                : 'Schedule posts to see them appear here.'}
+            </p>
+            {(activeTab === 'sent' || activeTab === 'history') && (
               <button
                 onClick={() => setComposerOpen(true)}
                 className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-blue-200"
               >
                 Launch your first post
               </button>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       <ComposerModal isOpen={composerOpen} onClose={() => setComposerOpen(false)} onPostCreated={fetchBroadcasts} />
+      <PostPreviewModal post={selectedPost} onClose={() => setSelectedPost(null)} />
     </div>
   );
 }
 
+/* ── Threads icon ──────────────────────────────────────────────────────── */
 function ThreadsIcon({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
