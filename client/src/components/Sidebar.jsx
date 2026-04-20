@@ -32,12 +32,12 @@ function Sidebar() {
   const [showMoreUnconnected, setShowMoreUnconnected] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const handleLogout = async () => {
-    const confirmed = await confirm('Logout', 'Are you sure you want to log out?', { 
-      intent: 'logout', 
+    const confirmed = await confirm('Logout', 'Are you sure you want to log out?', {
+      intent: 'logout',
       confirmText: 'Logout',
       cancelText: 'Stay logged in'
     });
-    
+
     if (confirmed) {
       logout();
       navigate('/login');
@@ -242,10 +242,16 @@ function Sidebar() {
 
   return (
     <aside className="w-60 bg-white border-r border-gray-100 flex flex-col h-screen fixed left-0 top-0 transition-all duration-300 shadow-sm">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-        <Link to="/dashboard" className="flex items-center gap-2.5">
-          <img src={logo} alt="GAP Social-pilot" className="h-10 w-10 object-contain" />
-          <span className="text-[19px] font-bold text-gray-900">GAP Social-pilot</span>
+      <div className="flex items-center justify-between px-5 py-6 border-b border-gray-100">
+        <Link to="/dashboard" className="flex items-center gap-3 group">
+          <div className="relative">
+            <img src={logo} alt="GAP" className="h-10 w-10 object-contain transition-transform duration-500 group-hover:scale-110" />
+            <div className="absolute -inset-1 bg-indigo-500/10 rounded-xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[22px] font-black text-gray-900 leading-[0.9] tracking-tight">GAP</span>
+            <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-[0.15em] mt-0.5 opacity-80">Social-pilot</span>
+          </div>
         </Link>
       </div>
 
@@ -309,7 +315,7 @@ function Sidebar() {
                       )}
                     </AnimatePresence>
                   </motion.div>
-                  
+
                   <motion.div layout className="flex items-center gap-1.5 ml-auto">
                     <AnimatePresence>
                       {!connectedOpen && (

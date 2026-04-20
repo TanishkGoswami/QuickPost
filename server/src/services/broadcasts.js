@@ -1,33 +1,47 @@
-import { default as supabase } from './supabase.js';
+import { default as supabase } from "./supabase.js";
 
 /**
  * Save broadcast record to database
  */
-export async function saveBroadcast(userId, caption, mediaFilenames, results, mediaType = 'image', platformData = {}, status = 'sent', scheduledFor = null) {
+export async function saveBroadcast(
+  userId,
+  caption,
+  mediaFilenames,
+  results,
+  mediaType = "image",
+  platformData = {},
+  status = "sent",
+  scheduledFor = null,
+) {
   try {
     // Handle both single string and array for filenames
-    const filenames = Array.isArray(mediaFilenames) ? mediaFilenames : [mediaFilenames].filter(Boolean);
-    const mediaUrls = Array.isArray(results.mediaUrls) ? results.mediaUrls : [results.mediaUrl].filter(Boolean);
+    const filenames = Array.isArray(mediaFilenames)
+      ? mediaFilenames
+      : [mediaFilenames].filter(Boolean);
+    const mediaUrls = Array.isArray(results.mediaUrls)
+      ? results.mediaUrls
+      : [results.mediaUrl].filter(Boolean);
 
     const broadcastData = {
       user_id: userId,
       caption: caption,
       video_filename: filenames[0] || null, // Primary file
       status: status,
-      posted_at: status === 'sent' ? new Date().toISOString() : null,
+      posted_at: status === "sent" ? new Date().toISOString() : null,
       scheduled_for: scheduledFor,
       media_type: mediaType,
       media_url: mediaUrls[0] || null, // Primary public URL
       media_urls: mediaUrls, // Store all URLs
       selected_channels: platformData.selectedChannels || [],
       platform_data: platformData,
-      
+
       // Instagram results
       instagram_success: results.instagram?.success || false,
       instagram_post_id: results.instagram?.mediaId || null,
-      instagram_url: results.instagram?.url || results.instagram?.permalink || null,
+      instagram_url:
+        results.instagram?.url || results.instagram?.permalink || null,
       instagram_error: results.instagram?.error || null,
-      
+
       // YouTube results
       youtube_success: results.youtube?.success || false,
       youtube_video_id: results.youtube?.videoId || null,
@@ -46,7 +60,7 @@ export async function saveBroadcast(userId, caption, mediaFilenames, results, me
       facebook_post_id: results.facebook?.postId || null,
       facebook_url: results.facebook?.postUrl || null,
       facebook_error: results.facebook?.error || null,
-      
+
       // LinkedIn results
       linkedin_success: results.linkedin?.success || false,
       linkedin_post_id: results.linkedin?.postId || null,
@@ -63,7 +77,7 @@ export async function saveBroadcast(userId, caption, mediaFilenames, results, me
       tiktok_success: results.tiktok?.success || false,
       tiktok_publish_id: results.tiktok?.publishId || null,
       tiktok_error: results.tiktok?.error || null,
-      
+
       // Bluesky results
       bluesky_success: results.bluesky?.success || false,
       bluesky_post_id: results.bluesky?.uri || results.bluesky?.id || null,
@@ -84,24 +98,31 @@ export async function saveBroadcast(userId, caption, mediaFilenames, results, me
     };
 
     const { data, error } = await supabase
-      .from('broadcasts')
+      .from("broadcasts")
       .insert([broadcastData])
       .select();
 
     if (error) {
-      console.error('❌ [SUPABASE] Error saving broadcast record:', error.message);
+      console.error(
+        "❌ [SUPABASE] Error saving broadcast record:",
+        error.message,
+      );
       return null;
     }
 
     const savedRecord = data?.[0];
     if (savedRecord) {
-      console.log('✅ Broadcast saved to database:', savedRecord.id, `Status: ${status}`);
+      console.log(
+        "✅ Broadcast saved to database:",
+        savedRecord.id,
+        `Status: ${status}`,
+      );
       return savedRecord;
     }
-    
+
     return null;
   } catch (error) {
-    console.error('💥 Failed to save broadcast:', error.message || error);
+    console.error("💥 Failed to save broadcast:", error.message || error);
     return null;
   }
 }
@@ -109,18 +130,23 @@ export async function saveBroadcast(userId, caption, mediaFilenames, results, me
 /**
  * Update broadcast status and results
  */
-export async function updateBroadcastResults(broadcastId, results, status = 'sent') {
+export async function updateBroadcastResults(
+  broadcastId,
+  results,
+  status = "sent",
+) {
   try {
     const updateData = {
       status: status,
-      posted_at: status === 'sent' ? new Date().toISOString() : null,
-      
+      posted_at: status === "sent" ? new Date().toISOString() : null,
+
       // Instagram results
       instagram_success: results.instagram?.success || false,
       instagram_post_id: results.instagram?.mediaId || null,
-      instagram_url: results.instagram?.url || results.instagram?.permalink || null,
+      instagram_url:
+        results.instagram?.url || results.instagram?.permalink || null,
       instagram_error: results.instagram?.error || null,
-      
+
       // YouTube results
       youtube_success: results.youtube?.success || false,
       youtube_video_id: results.youtube?.videoId || null,
@@ -139,7 +165,7 @@ export async function updateBroadcastResults(broadcastId, results, status = 'sen
       facebook_post_id: results.facebook?.postId || null,
       facebook_url: results.facebook?.postUrl || null,
       facebook_error: results.facebook?.error || null,
-      
+
       // LinkedIn results
       linkedin_success: results.linkedin?.success || false,
       linkedin_post_id: results.linkedin?.postId || null,
@@ -156,7 +182,7 @@ export async function updateBroadcastResults(broadcastId, results, status = 'sen
       tiktok_success: results.tiktok?.success || false,
       tiktok_publish_id: results.tiktok?.publishId || null,
       tiktok_error: results.tiktok?.error || null,
-      
+
       // Bluesky results
       bluesky_success: results.bluesky?.success || false,
       bluesky_post_id: results.bluesky?.uri || results.bluesky?.id || null,
@@ -177,15 +203,18 @@ export async function updateBroadcastResults(broadcastId, results, status = 'sen
     };
 
     const { data, error } = await supabase
-      .from('broadcasts')
+      .from("broadcasts")
       .update(updateData)
-      .eq('id', broadcastId)
+      .eq("id", broadcastId)
       .select();
 
     if (error) throw error;
     return data?.[0];
   } catch (error) {
-    console.error(`❌ Failed to update broadcast ${broadcastId}:`, error.message);
+    console.error(
+      `❌ Failed to update broadcast ${broadcastId}:`,
+      error.message,
+    );
     return null;
   }
 }
@@ -196,25 +225,25 @@ export async function updateBroadcastResults(broadcastId, results, status = 'sen
 export async function getBroadcasts(userId, status = null) {
   try {
     let query = supabase
-      .from('broadcasts')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .from("broadcasts")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
 
     if (status) {
-      query = query.eq('status', status);
+      query = query.eq("status", status);
     }
 
     const { data, error } = await query;
 
     if (error) {
-      console.error('Error fetching broadcasts:', error);
+      console.error("Error fetching broadcasts:", error);
       throw error;
     }
 
     return data || [];
   } catch (error) {
-    console.error('Failed to fetch broadcasts:', error);
+    console.error("Failed to fetch broadcasts:", error);
     throw error;
   }
 }
@@ -226,15 +255,15 @@ export async function getDueScheduledBroadcasts() {
   try {
     const now = new Date().toISOString();
     const { data, error } = await supabase
-      .from('broadcasts')
-      .select('*')
-      .eq('status', 'scheduled')
-      .lte('scheduled_for', now);
+      .from("broadcasts")
+      .select("*")
+      .eq("status", "scheduled")
+      .lte("scheduled_for", now);
 
     if (error) throw error;
     return data || [];
   } catch (error) {
-    console.error('Failed to fetch due scheduled broadcasts:', error);
+    console.error("Failed to fetch due scheduled broadcasts:", error);
     return [];
   }
 }
@@ -245,15 +274,15 @@ export async function getDueScheduledBroadcasts() {
 export async function getBroadcastById(broadcastId) {
   try {
     const { data, error } = await supabase
-      .from('broadcasts')
-      .select('*')
-      .eq('id', broadcastId)
+      .from("broadcasts")
+      .select("*")
+      .eq("id", broadcastId)
       .single();
 
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Failed to fetch broadcast:', error);
+    console.error("Failed to fetch broadcast:", error);
     throw error;
   }
 }
@@ -264,15 +293,14 @@ export async function getBroadcastById(broadcastId) {
 export async function deleteBroadcast(broadcastId) {
   try {
     const { error } = await supabase
-      .from('broadcasts')
+      .from("broadcasts")
       .delete()
-      .eq('id', broadcastId);
+      .eq("id", broadcastId);
 
     if (error) throw error;
     return true;
   } catch (error) {
-    console.error('Failed to delete broadcast:', error);
+    console.error("Failed to delete broadcast:", error);
     throw error;
   }
 }
-
