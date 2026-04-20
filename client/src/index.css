@@ -4,6 +4,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Default site zoom set to 85% for better layout fitting on desktops */
+@media screen and (min-width: 1024px) {
+  html {
+    zoom: 0.85;
+    background-color: #f9fafb; /* Matches bg-gray-50 to prevent white gaps */
+    min-height: 117.65vh; /* Fill physical viewport (100 / 0.85) */
+  }
+
+  /* Compensate vh units for the 85% zoom level (100 / 0.85 = 117.65) */
+  .h-screen {
+    height: 117.65vh !important;
+  }
+  .min-h-screen {
+    min-height: 117.65vh !important;
+  }
+}
+
 @layer base {
   body {
     @apply bg-gray-50 text-gray-900 font-sans;

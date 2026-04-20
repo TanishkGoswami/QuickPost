@@ -16,13 +16,13 @@ function Login() {
         {/* Logo/Brand */}
         <div className="text-center mb-8 animate-fade-in">
           <div className="inline-flex items-center justify-center mb-4">
-            <img src={logo} alt="QuickPost" className="w-20 h-20 object-contain" />
+            <img src={logo} alt="GAP Social-pilot" className="w-24 h-24 object-contain" />
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Welcome to QuickPost
+            Welcome to GAP Social-pilot
           </h1>
           <p className="text-gray-600">
-            Broadcast your content to Instagram and YouTube in one click
+            Broadcast your content to Instagram, YouTube, and beyond in one click
           </p>
         </div>
 

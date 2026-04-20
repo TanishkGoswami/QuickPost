@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -27,7 +28,6 @@ function Sidebar() {
   const [showTikTokModal, setShowTikTokModal] = useState(false);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
   const [connectingPlatform, setConnectingPlatform] = useState(null);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [connectedOpen, setConnectedOpen] = useState(true);
   const [showMoreUnconnected, setShowMoreUnconnected] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -136,7 +136,7 @@ function Sidebar() {
       id: 'facebook',
       name: 'Facebook',
       connected: connectedAccounts.facebook,
-      icon: <img src="/icons/facebook-round-color-icon.svg" className="w-5 h-5 object-contain" alt="Facebook" />,
+      icon: <img src="/icons/facebook-round-color-icon.svg" className="w-6 h-6 object-contain" alt="Facebook" />,
       connectText: 'Connect Facebook',
       onConnect: handleConnectFacebook,
     },
@@ -144,7 +144,7 @@ function Sidebar() {
       id: 'instagram',
       name: 'Instagram',
       connected: connectedAccounts.instagram,
-      icon: <img src="/icons/ig-instagram-icon.svg" className="w-5 h-5 object-contain" alt="Instagram" />,
+      icon: <img src="/icons/ig-instagram-icon.svg" className="w-6 h-6 object-contain" alt="Instagram" />,
       connectText: 'Connect Instagram',
       onConnect: handleConnectInstagram,
     },
@@ -152,7 +152,7 @@ function Sidebar() {
       id: 'x',
       name: 'X',
       connected: connectedAccounts.x,
-      icon: <img src="/icons/x-social-media-round-icon.svg" className="w-5 h-5 object-contain" alt="X" />,
+      icon: <img src="/icons/x-social-media-round-icon.svg" className="w-6 h-6 object-contain" alt="X" />,
       connectText: 'Connect X',
       onConnect: handleConnectX,
     },
@@ -160,7 +160,7 @@ function Sidebar() {
       id: 'linkedin',
       name: 'LinkedIn',
       connected: connectedAccounts.linkedin,
-      icon: <img src="/icons/linkedin-icon.svg" className="w-5 h-5 object-contain" alt="LinkedIn" />,
+      icon: <img src="/icons/linkedin-icon.svg" className="w-6 h-6 object-contain" alt="LinkedIn" />,
       connectText: 'Connect LinkedIn',
       onConnect: handleConnectLinkedIn,
     },
@@ -168,7 +168,7 @@ function Sidebar() {
       id: 'tiktok',
       name: 'TikTok',
       connected: connectedAccounts.tiktok,
-      icon: <img src="/icons/tiktok-circle-icon.svg" className="w-5 h-5 object-contain" alt="TikTok" />,
+      icon: <img src="/icons/tiktok-circle-icon.svg" className="w-6 h-6 object-contain" alt="TikTok" />,
       connectText: 'Connect TikTok',
       onConnect: handleConnectTikTok,
     },
@@ -176,7 +176,7 @@ function Sidebar() {
       id: 'youtube',
       name: 'YouTube',
       connected: connectedAccounts.youtube,
-      icon: <img src="/icons/youtube-color-icon.svg" className="w-5 h-5 object-contain" alt="YouTube" />,
+      icon: <img src="/icons/youtube-color-icon.svg" className="w-6 h-6 object-contain" alt="YouTube" />,
       connectText: 'Connect YouTube',
       onConnect: () => alert('YouTube is connected via Google sign-in'),
     },
@@ -184,7 +184,7 @@ function Sidebar() {
       id: 'pinterest',
       name: 'Pinterest',
       connected: connectedAccounts.pinterest,
-      icon: <img src="/icons/pinterest-round-color-icon.svg" className="w-5 h-5 object-contain" alt="Pinterest" />,
+      icon: <img src="/icons/pinterest-round-color-icon.svg" className="w-6 h-6 object-contain" alt="Pinterest" />,
       connectText: 'Connect Pinterest',
       onConnect: handleConnectPinterest,
     },
@@ -192,7 +192,7 @@ function Sidebar() {
       id: 'threads',
       name: 'Threads',
       connected: connectedAccounts.threads,
-      icon: <img src="/icons/threads-icon.svg" className="w-5 h-5 object-contain" alt="Threads" />,
+      icon: <img src="/icons/threads-icon.svg" className="w-6 h-6 object-contain" alt="Threads" />,
       connectText: 'Connect Threads',
       onConnect: handleConnectThreads,
     },
@@ -200,7 +200,7 @@ function Sidebar() {
       id: 'mastodon',
       name: 'Mastodon',
       connected: connectedAccounts.mastodon,
-      icon: <img src="/icons/mastodon-round-icon.svg" className="w-5 h-5 object-contain" alt="Mastodon" />,
+      icon: <img src="/icons/mastodon-round-icon.svg" className="w-6 h-6 object-contain" alt="Mastodon" />,
       connectText: 'Connect Mastodon',
       onConnect: handleConnectMastodon,
     },
@@ -208,7 +208,7 @@ function Sidebar() {
       id: 'bluesky',
       name: 'Bluesky',
       connected: connectedAccounts.bluesky,
-      icon: <img src="/icons/bluesky-circle-color-icon.svg" className="w-5 h-5 object-contain" alt="Bluesky" />,
+      icon: <img src="/icons/bluesky-circle-color-icon.svg" className="w-6 h-6 object-contain" alt="Bluesky" />,
       connectText: 'Connect Bluesky',
       onConnect: () => setShowBlueskyModal(true),
     },
@@ -216,7 +216,7 @@ function Sidebar() {
       id: 'google-business',
       name: 'Google Business',
       connected: connectedAccounts.googleBusiness,
-      icon: <img src="/icons/google-icon.svg" className="w-5 h-5 object-contain" alt="Google" />,
+      icon: <img src="/icons/google-icon.svg" className="w-6 h-6 object-contain" alt="Google" />,
       connectText: 'Connect Google Business',
       onConnect: () => alert('Google Business Profile integration coming soon!'),
     },
@@ -224,7 +224,7 @@ function Sidebar() {
       id: 'reddit',
       name: 'Reddit',
       connected: connectedAccounts.reddit,
-      icon: <img src="/icons/reddit-icon.svg" className="w-5 h-5 object-contain" alt="Reddit" />,
+      icon: <img src="/icons/reddit-icon.svg" className="w-6 h-6 object-contain" alt="Reddit" />,
       connectText: 'Coming Soon',
       onConnect: () => alert('Coming Soon', 'Reddit integration is currently awaiting API approval. It will be available shortly!', { intent: 'warning' }),
       disabled: true
@@ -233,7 +233,7 @@ function Sidebar() {
       id: 'snapchat',
       name: 'Snapchat',
       connected: false,
-      icon: <img src="/icons/snapchat-square-color-icon.svg" className="w-5 h-5 object-contain" alt="Snapchat" />,
+      icon: <img src="/icons/snapchat-square-color-icon.svg" className="w-6 h-6 object-contain" alt="Snapchat" />,
       connectText: 'Coming Soon',
       onConnect: () => alert('Coming Soon', 'Snapchat integration is in development!', { intent: 'warning' }),
       disabled: true
@@ -241,41 +241,23 @@ function Sidebar() {
   ];
 
   return (
-    <aside className={`${isCollapsed ? 'w-[72px]' : 'w-64'} bg-white border-r border-gray-100 flex flex-col h-screen fixed left-0 top-0 transition-all duration-300 shadow-sm`}>
-
-  
-      <div className={`flex items-center ${isCollapsed ? 'justify-center px-0 py-4' : 'justify-between px-5 py-4'} border-b border-gray-100`}>
-        {isCollapsed ? (
-          <button onClick={() => setIsCollapsed(false)} title="Expand">
-            <img src={logo} alt="QuickPost" className="h-8 w-8 object-contain" />
-          </button>
-        ) : (
-          <>
-            <Link to="/dashboard" className="flex items-center gap-2.5">
-              <img src={logo} alt="QuickPost" className="h-8 w-8 object-contain" />
-              <span className="text-[17px] font-bold text-gray-900 tracking-tight">QuickPost</span>
-            </Link>
-            <button
-              onClick={() => setIsCollapsed(true)}
-              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Collapse sidebar"
-            >
-              <PanelLeftClose className="w-4 h-4 text-gray-400" />
-            </button>
-          </>
-        )}
+    <aside className="w-60 bg-white border-r border-gray-100 flex flex-col h-screen fixed left-0 top-0 transition-all duration-300 shadow-sm">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <Link to="/dashboard" className="flex items-center gap-2.5">
+          <img src={logo} alt="GAP Social-pilot" className="h-10 w-10 object-contain" />
+          <span className="text-[19px] font-bold text-gray-900 tracking-tight">GAP Social-pilot</span>
+        </Link>
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar py-3">
-        <div className="px-3 mb-1">
+        <div className="px-3 mb-1 space-y-1">
           <Link
             to="/dashboard"
-            className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all ${
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
               location.pathname === '/dashboard'
                 ? 'bg-indigo-50 text-indigo-700'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
             }`}
-            title={isCollapsed ? 'All Channels' : ''}
           >
             <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
               location.pathname === '/dashboard' ? 'bg-indigo-100' : 'bg-gray-100'
@@ -284,90 +266,137 @@ function Sidebar() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
               </svg>
             </div>
-            {!isCollapsed && <span className="text-sm font-semibold">All Channels</span>}
+            <span className="text-sm font-semibold">All Channels</span>
+          </Link>
+
+          <Link
+            to="/dashboard/history"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+              location.pathname === '/dashboard/history'
+                ? 'bg-indigo-50 text-indigo-700'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}
+          >
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
+              location.pathname === '/dashboard/history' ? 'bg-indigo-100' : 'bg-gray-100'
+            }`}>
+              <Clock className={`w-4 h-4 ${location.pathname === '/dashboard/history' ? 'text-indigo-600' : 'text-gray-500'}`} />
+            </div>
+            <span className="text-sm font-semibold">Post History</span>
           </Link>
         </div>
 
-        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Connected Section Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {/* Connected Section */}
         {platforms.filter(p => p.connected).length > 0 && (
           <div className="px-3 mt-3">
-            {!isCollapsed && (() => {
+            {(() => {
               const connected = platforms.filter(p => p.connected);
               return (
                 <button
                   onClick={() => setConnectedOpen(o => !o)}
-                  className="flex items-center justify-between w-full px-3 py-2 mb-1 rounded-xl border border-gray-100 bg-white hover:bg-gray-50 shadow-sm transition-all group"
+                  className="flex items-center justify-between w-full pl-2 pr-4 py-2 mb-1 rounded-full border border-gray-100 bg-white hover:bg-gray-50 shadow-sm transition-all group overflow-hidden"
                 >
-                  <div className="flex items-center gap-2.5">
-                    {/* Stacked platform icons Ã¢â‚¬â€ hidden when dropdown is open */}
-                    {!connectedOpen && (
-                      <div className="flex -space-x-2">
-                        {connected.slice(0, 3).map(p => (
-                          <div key={p.id} className="w-6 h-6 rounded-full bg-white border-2 border-white shadow-sm flex items-center justify-center overflow-hidden ring-1 ring-gray-100">
-                            <div className="scale-75">{p.icon}</div>
-                          </div>
-                        ))}
-                        {connected.length > 3 && (
-                          <div className="w-6 h-6 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-[9px] font-bold text-gray-500 ring-1 ring-gray-100">
-                            +{connected.length - 3}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    <span className="text-sm font-semibold text-gray-700">Connected</span>
-                    <span className="bg-indigo-100 text-indigo-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                      {connected.length}
-                    </span>
-                  </div>
-                  <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform group-hover:text-gray-600 ${connectedOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <motion.div layout className="flex items-center gap-3">
+                    <AnimatePresence mode="wait">
+                      {!connectedOpen ? (
+                        <motion.div
+                          key="icons"
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          className="flex -space-x-4"
+                        >
+                          {connected.slice(0, 3).map((p, idx) => (
+                            <div key={p.id} className="w-7 h-7 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center overflow-hidden" style={{ zIndex: 10 - idx }}>
+                              <div className="scale-90">{p.icon}</div>
+                            </div>
+                          ))}
+                        </motion.div>
+                      ) : (
+                        <motion.span
+                          key="text-left"
+                          initial={{ opacity: 0, x: 10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 10 }}
+                          className="text-sm font-semibold text-gray-600 tracking-tight"
+                        >
+                          Connected
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
+                  
+                  <motion.div layout className="flex items-center gap-1.5 ml-auto">
+                    <AnimatePresence>
+                      {!connectedOpen && (
+                        <motion.span
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          className="text-sm font-semibold text-gray-600 tracking-tight"
+                        >
+                          Connected
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                    <motion.div
+                      animate={{ rotate: connectedOpen ? 180 : 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <svg className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </motion.div>
+                  </motion.div>
                 </button>
               );
             })()}
 
-            {(connectedOpen || isCollapsed) && (
-              <div className="space-y-0.5">
-                {platforms.filter(p => p.connected).map((platform) => (
-                  <div
-                    key={platform.id}
-                    className={`group flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'} py-2.5 rounded-xl hover:bg-gray-50 transition-all cursor-default`}
-                    title={isCollapsed ? `${user?.name || user?.email} Ã¢â‚¬â€ ${platform.name}` : ''}
-                  >
-                    <div className="relative flex-shrink-0">
-                      <div className="w-8 h-8 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center">
-                        {platform.icon}
-                      </div>
-                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
-                    </div>
-                    {!isCollapsed && (
-                      <>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-semibold text-gray-800 truncate leading-tight">{platform.name}</div>
-                          <div className="text-[11px] text-gray-400 truncate leading-tight">{user?.name || user?.email}</div>
+            <AnimatePresence>
+              {connectedOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  className="overflow-hidden space-y-0.5"
+                >
+                  {platforms.filter(p => p.connected).map((platform) => (
+                    <div
+                      key={platform.id}
+                      className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-all cursor-default"
+                    >
+                      <div className="relative flex-shrink-0">
+                        <div className="w-8 h-8 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+                          {platform.icon}
                         </div>
-                        <button
-                          onClick={() => handleDisconnect(platform.id)}
-                          disabled={disconnectingPlatform === platform.id}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                          title="Disconnect"
-                        >
-                          {disconnectingPlatform === platform.id
-                            ? <span className="text-xs">Ã¢â‚¬Â¦</span>
-                            : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                          }
-                        </button>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-semibold text-gray-800 truncate leading-tight">{platform.name}</div>
+                        <div className="text-[11px] text-gray-400 truncate leading-tight">{user?.name || user?.email}</div>
+                      </div>
+                      <button
+                        onClick={() => handleDisconnect(platform.id)}
+                        disabled={disconnectingPlatform === platform.id}
+                        className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                        title="Disconnect"
+                      >
+                        {disconnectingPlatform === platform.id
+                          ? <span className="text-xs">...</span>
+                          : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        }
+                      </button>
+                    </div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
 
-        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Add Channels Section Ã¢â€â‚¬Ã¢â€â‚¬ */}
-        {!isCollapsed && (() => {
+        {/* Add Channels Section */}
+        {(() => {
           const unconnected = platforms.filter(p => !p.connected);
           const visible = unconnected.slice(0, 3);
           const hidden = unconnected.slice(3);
@@ -395,7 +424,7 @@ function Sidebar() {
                       <span className={`text-sm transition-all ${
                         isConnecting ? 'text-gray-700 font-medium' : 'text-gray-400 group-hover:text-gray-700'
                       }`}>
-                        {isConnecting ? 'ConnectingÃ¢â‚¬Â¦' : platform.name}
+                        {isConnecting ? 'Connecting...' : platform.name}
                       </span>
                       {!isConnecting && (
                         <span className="ml-auto opacity-0 group-hover:opacity-100 text-[10px] text-indigo-500 font-semibold bg-indigo-50 px-1.5 py-0.5 rounded-full transition-opacity">
@@ -437,9 +466,9 @@ function Sidebar() {
         })()}
       </div>
 
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Footer Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      {/* Footer */}
       <div className="px-3 py-3 border-t border-gray-100">
-        {!isCollapsed && user && (
+        {user && (
           <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-gray-50 mb-2">
             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
               {(user.name || user.email || 'U')[0].toUpperCase()}
@@ -452,22 +481,22 @@ function Sidebar() {
         )}
 
         {/* Settings + Sign out row */}
-        <div className={`flex ${isCollapsed ? 'flex-col items-center gap-1' : 'items-center gap-1'}`}>
+        <div className="flex items-center gap-1">
           <button
             onClick={() => setShowSettings(true)}
-            className={`flex items-center ${isCollapsed ? 'justify-center w-10 h-10' : 'gap-2.5 px-3 flex-1'} py-2 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all`}
+            className="flex items-center gap-2.5 px-3 flex-1 py-2 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all"
             title="Settings"
           >
             <Settings className="w-4 h-4 flex-shrink-0" />
-            {!isCollapsed && <span className="text-xs font-semibold">Settings</span>}
+            <span className="text-xs font-semibold">Settings</span>
           </button>
           <button
             onClick={handleLogout}
-            className={`flex items-center ${isCollapsed ? 'justify-center w-10 h-10' : 'gap-2.5 px-3 flex-1'} py-2 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 transition-all`}
+            className="flex items-center gap-2.5 px-3 flex-1 py-2 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 transition-all"
             title="Sign out"
           >
             <LogOut className="w-4 h-4 flex-shrink-0" />
-            {!isCollapsed && <span className="text-xs font-semibold">Sign out</span>}
+            <span className="text-xs font-semibold">Sign out</span>
           </button>
         </div>
       </div>

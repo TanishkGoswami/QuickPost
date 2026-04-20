@@ -123,7 +123,7 @@ export default function PrivacyPolicy() {
 
             <header className="mb-16 border-b border-gray-100 pb-12 relative z-10">
               <div className="flex items-center gap-3 mb-6">
-                <img src={logo} alt="QuickPost" className="w-12 h-12 object-contain" />
+                <img src={logo} alt="GAP Social-pilot" className="w-14 h-14 object-contain" />
                 <div className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest">Privacy First</div>
               </div>
               <h1 className="text-4xl md:text-6xl font-black text-gray-900 mb-6 tracking-tight">Privacy Policy</h1>
@@ -143,7 +143,7 @@ export default function PrivacyPolicy() {
                   <h2 className="text-2xl font-black text-gray-900">1. Introduction</h2>
                 </div>
                 <div className="text-gray-700 leading-relaxed space-y-4 font-medium">
-                  <p>Welcome to <strong>QuickPost</strong>. We are a social publishing tool that allows you to connect your social media accounts and broadcast content. We are committed to protecting your personal information and your right to privacy.</p>
+                  <p>Welcome to <strong>GAP Social-pilot</strong>. We are a social publishing tool that allows you to connect your social media accounts and broadcast content. We are committed to protecting your personal information and your right to privacy.</p>
                   <p>When you visit our website and use our services, you trust us with your personal information. This privacy policy describes what information we collect, how we use it, and what rights you have in relation to it.</p>
                 </div>
               </section>
@@ -229,7 +229,7 @@ export default function PrivacyPolicy() {
                       <Youtube className="w-4 h-4" /> Google & YouTube
                     </div>
                     <p className="text-gray-700 text-sm font-bold leading-relaxed relative z-10">
-                      QuickPost uses YouTube API Services. By using our tool, you agree to the <a href="https://policies.google.com/privacy" className="text-blue-600 underline">Google Privacy Policy</a> and <a href="https://www.youtube.com/t/terms" className="text-blue-600 underline">YouTube Terms of Service</a>. We only access data you explicitly grant during authorization.
+                      GAP Social-pilot uses YouTube API Services. By using our tool, you agree to the <a href="https://policies.google.com/privacy" className="text-blue-600 underline">Google Privacy Policy</a> and <a href="https://www.youtube.com/t/terms" className="text-blue-600 underline">YouTube Terms of Service</a>. We only access data you explicitly grant during authorization.
                     </p>
                   </div>
 
@@ -341,11 +341,11 @@ export default function PrivacyPolicy() {
       <footer className="bg-white py-12 border-t border-gray-100 mt-auto">
         <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2 text-gray-900 font-black text-lg">
-            <img src={logo} alt="QuickPost" className="w-8 h-8 object-contain" />
-            QuickPost
+            <img src={logo} alt="GAP Social-pilot" className="w-10 h-10 object-contain" />
+            GAP Social-pilot
           </div>
           <div className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">
-            © 2026 QuickPost - SECURE BROADCASTING SYSTEM
+            © 2026 GAP Social-pilot - SECURE BROADCASTING SYSTEM
           </div>
           <div className="flex gap-6">
              <Link to="/terms" className="text-[10px] font-bold text-gray-400 hover:text-blue-600 uppercase tracking-widest">Terms</Link>
