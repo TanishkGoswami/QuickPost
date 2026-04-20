@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Settings, CheckCircle2, HelpCircle, PanelLeftClose, Clock } from 'lucide-react';
+import { Plus, Settings, CheckCircle2, HelpCircle, PanelLeftClose, Clock, LogOut } from 'lucide-react';
 import logo from '/logo.png';
 import InstagramBusinessSetupModal from './InstagramBusinessSetupModal';
 import BlueskyConnectModal from './BlueskyConnectModal';

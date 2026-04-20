@@ -7,16 +7,17 @@ const BLUESKY_API_URL = 'https://bsky.social/xrpc';
  * @param {string} accessJwt - Access token
  * @param {string} did - Decentralized Identifier
  * @param {string} text - Post text (max 300 characters)
- * @param {string} imageUrl - Optional: URL to image
- * @param {Object} imageBlob - Optional: Image blob data if imageUrl is provided
+ * @param {string} mediaUrl - Optional: URL to media
+ * @param {Object} mediaBlob - Optional: Media blob data if mediaUrl is provided
+ * @param {boolean} isVideo - Optional: Is the media a video
  * @returns {Object} Result with post URI
  */
-async function postToBluesky(accessJwt, did, text, imageUrl = null, imageBlob = null) {
+async function postToBluesky(accessJwt, did, text, mediaUrl = null, mediaBlob = null, isVideo = false) {
   try {
     console.log('\n🦋 Posting to Bluesky...');
     console.log('DID:', did);
     console.log('Text length:', text?.length || 0);
-    console.log('Image:', imageUrl ? 'provided' : 'none');
+    console.log('Media:', mediaUrl ? 'provided' : 'none');
 
     // Bluesky has a 300 character limit
     if (text && text.length > 300) {
@@ -30,18 +31,26 @@ async function postToBluesky(accessJwt, did, text, imageUrl = null, imageBlob = 
       $type: 'app.bsky.feed.post'
     };
 
-    // Handle image upload if provided
-    if (imageUrl && imageBlob) {
-      console.log('📸 Uploading image to Bluesky...');
-      const uploadedImage = await uploadImage(accessJwt, imageBlob);
+    // Handle media upload if provided
+    if (mediaUrl && mediaBlob) {
+      console.log(`📸 Uploading ${isVideo ? 'video' : 'image'} to Bluesky...`);
       
-      record.embed = {
-        $type: 'app.bsky.embed.images',
-        images: [{
-          alt: text.substring(0, 100) || 'Image',
-          image: uploadedImage.blob
-        }]
-      };
+      if (isVideo) {
+        const uploadedMedia = await uploadVideoToBlueskyService(accessJwt, did, mediaBlob);
+        record.embed = {
+          $type: 'app.bsky.embed.video',
+          video: uploadedMedia.blob
+        };
+      } else {
+        const uploadedMedia = await uploadMedia(accessJwt, mediaBlob, 'image/jpeg');
+        record.embed = {
+          $type: 'app.bsky.embed.images',
+          images: [{
+            alt: text.substring(0, 100) || 'Media',
+            image: uploadedMedia.blob
+          }]
+        };
+      }
     }
 
     // Detect and format URLs, mentions, and hashtags
@@ -90,29 +99,126 @@ async function postToBluesky(accessJwt, did, text, imageUrl = null, imageBlob = 
 }
 
 /**
- * Upload image to Bluesky
+ * Upload media to Bluesky
  * @param {string} accessJwt - Access token
- * @param {Buffer} imageBlob - Image data
+ * @param {Buffer} mediaBlob - Media data
+ * @param {string} contentType - MIME type of the media
  * @returns {Object} Uploaded blob reference
  */
-async function uploadImage(accessJwt, imageBlob) {
+async function uploadMedia(accessJwt, mediaBlob, contentType = 'image/jpeg') {
   try {
     const response = await axios.post(
       `${BLUESKY_API_URL}/com.atproto.repo.uploadBlob`,
-      imageBlob,
+      mediaBlob,
       {
         headers: {
           'Authorization': `Bearer ${accessJwt}`,
-          'Content-Type': 'image/jpeg'
+          'Content-Type': contentType
         }
       }
     );
 
-    console.log('✅ Image uploaded to Bluesky');
+    console.log(`✅ Media uploaded to Bluesky (${contentType})`);
     return response.data;
   } catch (error) {
-    console.error('❌ Bluesky image upload error:', error.response?.data || error.message);
-    throw new Error('Failed to upload image to Bluesky');
+    console.error('❌ Bluesky media upload error:', error.response?.data || error.message);
+    throw new Error('Failed to upload media to Bluesky');
+  }
+}
+
+/**
+ * Upload video utilizing Bluesky's dedicated video service
+ */
+async function uploadVideoToBlueskyService(accessJwt, did, videoBlob) {
+  try {
+    console.log('🎬 Resolving user PDS DID from DID document...');
+    let pdsDid = 'did:web:bsky.social'; // Default fallback
+    try {
+      let didDocUrl = `https://plc.directory/${did}`;
+      if (did.startsWith('did:web:')) {
+        const host = did.split(':')[2];
+        didDocUrl = `https://${host}/.well-known/did.json`;
+      }
+      
+      const didDocRes = await axios.get(didDocUrl);
+      const pdsService = didDocRes.data.service?.find(s => s.id === '#atproto_pds');
+      if (pdsService && pdsService.serviceEndpoint) {
+        const serviceEndpoint = pdsService.serviceEndpoint;
+        const describeRes = await axios.get(`${serviceEndpoint}/xrpc/com.atproto.server.describeServer`);
+        if (describeRes.data && describeRes.data.did) {
+          pdsDid = describeRes.data.did;
+          console.log(`🎬 Found PDS DID: ${pdsDid}`);
+        } else {
+          pdsDid = `did:web:${new URL(serviceEndpoint).hostname}`;
+        }
+      }
+    } catch (err) {
+      console.warn('⚠️ Could not resolve PDS DID explicitly, will try fallback.', err.message);
+    }
+
+    console.log('🎬 Getting service auth for video upload...');
+    const authRes = await axios.get(`${BLUESKY_API_URL}/com.atproto.server.getServiceAuth`, {
+      params: {
+        aud: pdsDid,
+        lxm: 'com.atproto.repo.uploadBlob',
+        exp: Math.floor(Date.now() / 1000) + 1800
+      },
+      headers: {
+        'Authorization': `Bearer ${accessJwt}`
+      }
+    });
+    
+    const serviceAuthToken = authRes.data.token;
+    
+    console.log('🎬 Uploading video payload to video.bsky.app...');
+    const uploadRes = await axios.post(`https://video.bsky.app/xrpc/app.bsky.video.uploadVideo`, videoBlob, {
+      params: {
+        did: did,
+        name: 'video.mp4'
+      },
+      headers: {
+        'Authorization': `Bearer ${serviceAuthToken}`,
+        'Content-Type': 'video/mp4'
+      }
+    });
+    
+    const jobId = uploadRes.data.jobId;
+    console.log(`🎬 Video uploaded, jobId: ${jobId}, waiting for processing...`);
+    
+    // Poll for status
+    let jobStatus = null;
+    let completed = false;
+    for (let i = 0; i < 60; i++) { // Poll up to ~2 minutes
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const statusRes = await axios.get(`https://video.bsky.app/xrpc/app.bsky.video.getJobStatus`, {
+        params: { jobId },
+        // Often auth is not required for getJobStatus, but passing service auth is safe
+        headers: {
+          'Authorization': `Bearer ${serviceAuthToken}`
+        }
+      });
+      
+      jobStatus = statusRes.data.jobStatus;
+      console.log(`Job status: ${jobStatus.state}`);
+      
+      if (jobStatus.state === 'JOB_STATE_COMPLETED') {
+        completed = true;
+        break;
+      } else if (jobStatus.state === 'JOB_STATE_FAILED') {
+        throw new Error(jobStatus.error || 'Video processing failed on Bluesky');
+      }
+    }
+    
+    if (!completed) {
+      throw new Error('Video processing timed out');
+    }
+    
+    console.log('✅ Video successfully processed by Bluesky');
+    
+    return { blob: jobStatus.blob };
+  } catch (error) {
+    console.error('❌ Bluesky video upload error:', error.response?.data || error.message);
+    throw new Error(error.message || 'Failed to upload video to Bluesky');
   }
 }
 
@@ -254,4 +360,4 @@ async function deleteBlueskyPost(accessJwt, did, rkey) {
   }
 }
 
-export { postToBluesky, uploadImage, getBlueskyProfile, deleteBlueskyPost };
+export { postToBluesky, uploadMedia as uploadImage, getBlueskyProfile, deleteBlueskyPost };
