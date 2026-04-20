@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Settings, Zap, CheckCircle2, HelpCircle, PanelLeftClose, Clock, LogOut } from 'lucide-react';
+import { Settings, LogOut } from 'lucide-react';
 import { useDialog } from '../context/DialogContext';
 import logo from '/logo.png';
 import InstagramBusinessSetupModal from './InstagramBusinessSetupModal';
@@ -267,22 +267,6 @@ function Sidebar() {
               </svg>
             </div>
             <span className="text-sm font-semibold">All Channels</span>
-          </Link>
-
-          <Link
-            to="/dashboard/history"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-              location.pathname === '/dashboard/history'
-                ? 'bg-indigo-50 text-indigo-700'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-            }`}
-          >
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
-              location.pathname === '/dashboard/history' ? 'bg-indigo-100' : 'bg-gray-100'
-            }`}>
-              <Clock className={`w-4 h-4 ${location.pathname === '/dashboard/history' ? 'text-indigo-600' : 'text-gray-500'}`} />
-            </div>
-            <span className="text-sm font-semibold">Post History</span>
           </Link>
         </div>
 

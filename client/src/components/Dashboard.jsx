@@ -148,13 +148,19 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
                     p.success ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'
                   }`}>{p.success ? 'Success' : 'Failed'}</span>
                 </div>
-                {p.success && p.url ? (
-                  <a href={p.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[11px] text-blue-600 font-bold hover:text-blue-800">
-                    View Live Post <ExternalLink className="w-3 h-3" />
-                  </a>
-                ) : !p.success ? (
-                  <p className="text-[10px] text-red-500 italic">{p.error || 'API error'}</p>
-                ) : null}
+                {p.success ? (
+                  p.url ? (
+                    <a href={p.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[11px] text-blue-600 font-bold hover:text-blue-800 transition-colors">
+                      View Live Post <ExternalLink className="w-3 h-3" />
+                    </a>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold">
+                      <Clock className="w-3 h-3 animate-pulse" /> Pending Sync
+                    </div>
+                  )
+                ) : (
+                  <p className="text-[10px] text-red-500 italic font-medium">{p.error || 'API error'}</p>
+                )}
               </div>
             ))}
           </div>
