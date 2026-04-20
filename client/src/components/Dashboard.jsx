@@ -194,10 +194,19 @@ function Dashboard() {
   const [selectedPost, setSelectedPost] = useState(null);
 
   const tabs = [
-    { id: 'queue',   label: 'Queue',   count: 0 },
-    { id: 'drafts',  label: 'Drafts',  count: 0 },
-    { id: 'sent',    label: 'Sent',    count: activeTab === 'sent'    ? broadcasts.length : 0 },
-    { id: 'history', label: 'History', count: activeTab === 'history' ? broadcasts.length : 0 },
+    {
+      id: "sent",
+      label: "Sent",
+      count: activeTab === "sent" ? broadcasts.length : 0,
+    },
+
+    { id: "queue", label: "Queue", count: 0 },
+    { id: "drafts", label: "Drafts", count: 0 },
+    {
+      id: "history",
+      label: "History",
+      count: activeTab === "history" ? broadcasts.length : 0,
+    },
   ];
 
   useEffect(() => {

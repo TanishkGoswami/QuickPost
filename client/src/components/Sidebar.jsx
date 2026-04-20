@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Settings, Zap, CheckCircle2, HelpCircle, PanelLeftClose, Clock, LogOut } from 'lucide-react';
@@ -27,6 +28,11 @@ function Sidebar() {
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
   const [connectingPlatform, setConnectingPlatform] = useState(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [connectedOpen, setConnectedOpen] = useState(true);
+  const [showMoreUnconnected, setShowMoreUnconnected] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const handleLogout = () => {
+    if (confirm('Are you sure you want to log out?')) {
   const handleLogout = async () => {
     const confirmed = await confirm('Logout', 'Are you sure you want to log out?', { 
       intent: 'logout', 
@@ -62,7 +68,7 @@ function Sidebar() {
   };
 
   const handleConnectX = () => {
-    console.log('𝕏 Initiating X connection...');
+    console.log('Ã°Ââ€¢Â Initiating X connection...');
     setConnectingPlatform('x');
     const token = localStorage.getItem('quickpost_token');
     window.location.href = `${API_BASE_URL}/api/auth/x?token=${token}`;
@@ -301,137 +307,281 @@ function Sidebar() {
   ];
 
   return (
-    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} bg-white border-r border-gray-200 flex flex-col h-screen fixed left-0 top-0 transition-all duration-300`}>
-      {/* Logo */}
-      <div className="p-4 border-b border-gray-200">
+    <aside className={`${isCollapsed ? 'w-[72px]' : 'w-64'} bg-white border-r border-gray-100 flex flex-col h-screen fixed left-0 top-0 transition-all duration-300 shadow-sm`}>
+
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Logo Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      <div className={`flex items-center ${isCollapsed ? 'justify-center px-0 py-4' : 'justify-between px-5 py-4'} border-b border-gray-100`}>
         {isCollapsed ? (
-          <div className="flex items-center justify-center">
+          <button onClick={() => setIsCollapsed(false)} title="Expand">
             <img src={logo} alt="QuickPost" className="h-8 w-8 object-contain" />
-          </div>
+          </button>
         ) : (
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <img src={logo} alt="QuickPost" className="h-8 w-8 object-contain" />
-            <span className="text-lg font-bold text-gray-900">QuickPost</span>
-          </Link>
+          <>
+            <Link to="/dashboard" className="flex items-center gap-2.5">
+              <img src={logo} alt="QuickPost" className="h-8 w-8 object-contain" />
+              <span className="text-[17px] font-bold text-gray-900 tracking-tight">QuickPost</span>
+            </Link>
+            <button
+              onClick={() => setIsCollapsed(true)}
+              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Collapse sidebar"
+            >
+              <PanelLeftClose className="w-4 h-4 text-gray-400" />
+            </button>
+          </>
         )}
       </div>
 
-      {/* Channels Section */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="p-4">
-          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} mb-3`}>
-            {!isCollapsed && <h3 className="text-sm font-semibold text-gray-700">Channels</h3>}
-            <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="p-1 hover:bg-gray-100 rounded"
-              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              <PanelLeftClose className="w-4 h-4 text-gray-500" />
-            </button>
-          </div>
-
-          {/* All Channels */}
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Scrollable Body Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar py-3">
+        <div className="px-3 mb-1">
           <Link
             to="/dashboard"
-            className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg mb-2 transition-colors ${
+            className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all ${
               location.pathname === '/dashboard'
-                ? 'bg-gray-100 text-gray-700'
-                : 'text-gray-700 hover:bg-gray-50'
+                ? 'bg-indigo-50 text-indigo-700'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
             }`}
-            title={isCollapsed ? "All Channels" : ""}
+            title={isCollapsed ? 'All Channels' : ''}
           >
-            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-              <span className="text-lg">📊</span>
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
+              location.pathname === '/dashboard' ? 'bg-indigo-100' : 'bg-gray-100'
+            }`}>
+              <svg className={`w-4 h-4 ${location.pathname === '/dashboard' ? 'text-indigo-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
             </div>
-            {!isCollapsed && (
-              <div className="flex-1">
-                <div className="text-sm font-medium">All Channels</div>
+            {!isCollapsed && <span className="text-sm font-semibold">All Channels</span>}
+          </Link>
+        </div>
+
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Connected Section Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {platforms.filter(p => p.connected).length > 0 && (
+          <div className="px-3 mt-3">
+            {!isCollapsed && (() => {
+              const connected = platforms.filter(p => p.connected);
+              return (
+                <button
+                  onClick={() => setConnectedOpen(o => !o)}
+                  className="flex items-center justify-between w-full px-3 py-2 mb-1 rounded-xl border border-gray-100 bg-white hover:bg-gray-50 shadow-sm transition-all group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    {/* Stacked platform icons Ã¢â‚¬â€ hidden when dropdown is open */}
+                    {!connectedOpen && (
+                      <div className="flex -space-x-2">
+                        {connected.slice(0, 3).map(p => (
+                          <div key={p.id} className="w-6 h-6 rounded-full bg-white border-2 border-white shadow-sm flex items-center justify-center overflow-hidden ring-1 ring-gray-100">
+                            <div className="scale-75">{p.icon}</div>
+                          </div>
+                        ))}
+                        {connected.length > 3 && (
+                          <div className="w-6 h-6 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-[9px] font-bold text-gray-500 ring-1 ring-gray-100">
+                            +{connected.length - 3}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <span className="text-sm font-semibold text-gray-700">Connected</span>
+                    <span className="bg-indigo-100 text-indigo-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                      {connected.length}
+                    </span>
+                  </div>
+                  <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform group-hover:text-gray-600 ${connectedOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              );
+            })()}
+
+            {(connectedOpen || isCollapsed) && (
+              <div className="space-y-0.5">
+                {platforms.filter(p => p.connected).map((platform) => (
+                  <div
+                    key={platform.id}
+                    className={`group flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'} py-2.5 rounded-xl hover:bg-gray-50 transition-all cursor-default`}
+                    title={isCollapsed ? `${user?.name || user?.email} Ã¢â‚¬â€ ${platform.name}` : ''}
+                  >
+                    <div className="relative flex-shrink-0">
+                      <div className="w-8 h-8 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+                        {platform.icon}
+                      </div>
+                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                    </div>
+                    {!isCollapsed && (
+                      <>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-gray-800 truncate leading-tight">{platform.name}</div>
+                          <div className="text-[11px] text-gray-400 truncate leading-tight">{user?.name || user?.email}</div>
+                        </div>
+                        <button
+                          onClick={() => handleDisconnect(platform.id)}
+                          disabled={disconnectingPlatform === platform.id}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                          title="Disconnect"
+                        >
+                          {disconnectingPlatform === platform.id
+                            ? <span className="text-xs">Ã¢â‚¬Â¦</span>
+                            : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                          }
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
-          </Link>
+          </div>
+        )}
 
-          {/* Connected Channels */}
-          {platforms.filter(p => p.connected).map((platform) => (
-            <div
-              key={platform.id}
-              className={`group flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg mb-2 text-gray-700 hover:bg-gray-50`}
-              title={isCollapsed ? `${user?.name || user?.email} - ${platform.name}` : ""}
-            >
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                {platform.icon}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Add Channels Section Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {!isCollapsed && (() => {
+          const unconnected = platforms.filter(p => !p.connected);
+          const visible = unconnected.slice(0, 3);
+          const hidden = unconnected.slice(3);
+          if (unconnected.length === 0) return null;
+          return (
+            <div className="px-3 mt-4">
+              <div className="flex items-center gap-2 px-2 py-1.5 mb-1">
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Add Channels</span>
               </div>
-              {!isCollapsed && (
-                <>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{user?.name || user?.email}</div>
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                      <CheckCircle2 className="w-3 h-3 text-green-600" />
-                      <span>{platform.name}</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleDisconnect(platform.id)}
-                    disabled={disconnectingPlatform === platform.id}
-                    className="opacity-0 group-hover:opacity-100 px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded transition-opacity disabled:opacity-50"
-                    title="Disconnect"
-                  >
-                    {disconnectingPlatform === platform.id ? '...' : '×'}
-                  </button>
-                </>
-              )}
+              <div className="space-y-0.5">
+                {visible.map((platform) => {
+                  const isConnecting = connectingPlatform === platform.id;
+                  return (
+                    <button
+                      key={platform.id}
+                      onClick={platform.onConnect}
+                      disabled={isConnecting}
+                      className="group flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-left hover:bg-gray-50 transition-all disabled:cursor-wait"
+                    >
+                      <div className={`w-8 h-8 rounded-xl bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center flex-shrink-0 transition-all ${
+                        isConnecting ? 'opacity-100 animate-pulse' : 'opacity-50 group-hover:opacity-100 group-hover:border-gray-300'
+                      }`}>
+                        {platform.icon}
+                      </div>
+                      <span className={`text-sm transition-all ${
+                        isConnecting ? 'text-gray-700 font-medium' : 'text-gray-400 group-hover:text-gray-700'
+                      }`}>
+                        {isConnecting ? 'ConnectingÃ¢â‚¬Â¦' : platform.name}
+                      </span>
+                      {!isConnecting && (
+                        <span className="ml-auto opacity-0 group-hover:opacity-100 text-[10px] text-indigo-500 font-semibold bg-indigo-50 px-1.5 py-0.5 rounded-full transition-opacity">
+                          Connect
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+                {hidden.length > 0 && (
+                  <>
+                    {showMoreUnconnected && hidden.map((platform) => (
+                      <button
+                        key={platform.id}
+                        onClick={platform.onConnect}
+                        className="group flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-left hover:bg-gray-50 transition-all"
+                      >
+                        <div className="w-8 h-8 rounded-xl bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center flex-shrink-0 opacity-50 group-hover:opacity-100 group-hover:border-gray-300 transition-all">
+                          {platform.icon}
+                        </div>
+                        <span className="text-sm text-gray-400 group-hover:text-gray-700 transition-colors">{platform.name}</span>
+                        <span className="ml-auto opacity-0 group-hover:opacity-100 text-[10px] text-indigo-500 font-semibold bg-indigo-50 px-1.5 py-0.5 rounded-full transition-opacity">Connect</span>
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setShowMoreUnconnected(o => !o)}
+                      className="flex items-center gap-1.5 px-3 py-2 text-xs text-gray-400 hover:text-indigo-500 transition-colors w-full rounded-xl hover:bg-indigo-50"
+                    >
+                      <svg className={`w-3.5 h-3.5 transition-transform ${showMoreUnconnected ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                      <span className="font-medium">{showMoreUnconnected ? 'Show less' : `${hidden.length} more platforms`}</span>
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-          ))}
+          );
+        })()}
+      </div>
 
-          {/* Connect Buttons */}
-          {!isCollapsed && (
-            <div className="mt-4 pt-4 border-t border-gray-200 space-y-1">
-              {platforms.filter(p => !p.connected).map((platform) => {
-                const isConnecting = connectingPlatform === platform.id;
-                return (
-                  <button
-                    key={platform.id}
-                    onClick={platform.onConnect}
-                    disabled={isConnecting}
-                    className={`group flex items-center gap-3 px-3 py-2 rounded-lg w-full text-left transition-all ${
-                      isConnecting ? 'bg-gray-50 cursor-wait' : 'text-gray-600 hover:bg-gray-100 active:bg-gray-200'
-                    }`}
-                  >
-                    <div className={`w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center transition-opacity ${
-                      isConnecting ? 'opacity-100 animate-pulse' : 'opacity-40 group-hover:opacity-100'
-                    }`}>
-                      {platform.icon}
-                    </div>
-                    <span className={`text-sm transition-opacity ${
-                      isConnecting ? 'opacity-100 font-medium' : 'opacity-70 group-hover:opacity-100'
-                    }`}>
-                      {isConnecting ? `Connecting ${platform.name}...` : platform.connectText}
-                    </span>
-                  </button>
-                );
-              })}
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Footer Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      <div className="px-3 py-3 border-t border-gray-100">
+        {!isCollapsed && user && (
+          <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-gray-50 mb-2">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+              {(user.name || user.email || 'U')[0].toUpperCase()}
             </div>
-          )}
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-semibold text-gray-800 truncate">{user.name || 'My Account'}</div>
+              <div className="text-[10px] text-gray-400 truncate">{user.email}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Settings + Sign out row */}
+        <div className={`flex ${isCollapsed ? 'flex-col items-center gap-1' : 'items-center gap-1'}`}>
+          <button
+            onClick={() => setShowSettings(true)}
+            className={`flex items-center ${isCollapsed ? 'justify-center w-10 h-10' : 'gap-2.5 px-3 flex-1'} py-2 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all`}
+            title="Settings"
+          >
+            <Settings className="w-4 h-4 flex-shrink-0" />
+            {!isCollapsed && <span className="text-xs font-semibold">Settings</span>}
+          </button>
+          <button
+            onClick={handleLogout}
+            className={`flex items-center ${isCollapsed ? 'justify-center w-10 h-10' : 'gap-2.5 px-3 flex-1'} py-2 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 transition-all`}
+            title="Sign out"
+          >
+            <LogOut className="w-4 h-4 flex-shrink-0" />
+            {!isCollapsed && <span className="text-xs font-semibold">Sign out</span>}
+          </button>
         </div>
       </div>
 
-      {/* Footer Actions */}
-      <div className="p-4 border-t border-gray-200">
-        <button
-          className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg w-full text-gray-700 hover:bg-gray-50 text-sm`}
-          title={isCollapsed ? "Settings" : ""}
-        >
-          <Settings className="w-4 h-4" />
-          {!isCollapsed && <span>Settings</span>}
-        </button>
-        <button 
-          onClick={handleLogout}
-          className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg w-full text-red-600 hover:bg-red-50 text-sm mt-1`}
-          title={isCollapsed ? "Logout" : ""}
-        >
-          <LogOut className="w-4 h-4" />
-          {!isCollapsed && <span>Logout</span>}
-        </button>
-      </div>
+
+      {/* Settings Modal via Portal */}
+      {showSettings && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center" onClick={() => setShowSettings(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-indigo-500" />
+                <h2 className="text-base font-bold text-gray-900">Settings</h2>
+              </div>
+              <button onClick={() => setShowSettings(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div className="px-6 py-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Connected Platforms</p>
+              {platforms.filter(p => p.connected).length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-4">No platforms connected yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {platforms.filter(p => p.connected).map(p => (
+                    <div key={p.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                      <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">{p.icon}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900">{p.name}</p>
+                        <p className="text-[10px] text-green-500 font-medium">Connected</p>
+                      </div>
+                      <button onClick={() => { handleDisconnect(p.id); }} disabled={disconnectingPlatform === p.id} className="text-[11px] font-semibold px-3 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50">
+                        {disconnectingPlatform === p.id ? 'Removing...' : 'Disconnect'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
+              <button onClick={() => setShowSettings(false)} className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors">Close</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Instagram Business Setup Modal */}
       <InstagramBusinessSetupModal
