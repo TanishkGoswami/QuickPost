@@ -12,11 +12,6 @@ import {
   Calendar,
   ChevronDown,
   ChevronUp,
-  Linkedin,
-  Youtube,
-  Instagram,
-  Facebook,
-  Hash,
   Share2
 } from 'lucide-react';
 import apiClient from '../utils/apiClient';
@@ -61,23 +56,21 @@ function History() {
     });
   };
 
-  const getPlatformIcon = (platform) => {
-    switch (platform.toLowerCase()) {
-      case 'linkedin': return <Linkedin className="w-5 h-5 text-[#0A66C2]" />;
-      case 'youtube': return <Youtube className="w-5 h-5 text-[#FF0000]" />;
-      case 'instagram': return <Instagram className="w-5 h-5 text-[#E4405F]" />;
-      case 'facebook': return <Facebook className="w-5 h-5 text-[#1877F2]" />;
-      case 'tiktok': return <Share2 className="w-5 h-5 text-black" />;
-      case 'mastodon': return <Hash className="w-5 h-5 text-[#6364FF]" />;
-      case 'bluesky': return <Share2 className="w-5 h-5 text-[#0085FF]" />;
-      case 'pinterest': return <Share2 className="w-5 h-5 text-[#BD081C]" />;
-      case 'threads': return <ThreadsIcon className="w-5 h-5" />;
-      case 'x': return (
-        <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.294 19.497h2.039L6.482 3.239H4.293L17.607 20.65z"/>
-        </svg>
-      );
-      default: return <Share2 className="w-5 h-5" />;
+  const getPlatformIcon = (id) => {
+    const iconClass = "w-4 h-4 object-contain";
+    switch (id.toLowerCase()) {
+      case 'facebook':  return <img src="/icons/facebook-round-color-icon.svg" className={iconClass} alt="Facebook" />;
+      case 'instagram': return <img src="/icons/ig-instagram-icon.svg" className={iconClass} alt="Instagram" />;
+      case 'x':         return <img src="/icons/x-social-media-round-icon.svg" className={iconClass} alt="X" />;
+      case 'linkedin':  return <img src="/icons/linkedin-icon.svg" className={iconClass} alt="LinkedIn" />;
+      case 'tiktok':    return <img src="/icons/tiktok-circle-icon.svg" className={iconClass} alt="TikTok" />;
+      case 'youtube':   return <img src="/icons/youtube-color-icon.svg" className={iconClass} alt="YouTube" />;
+      case 'pinterest': return <img src="/icons/pinterest-round-color-icon.svg" className={iconClass} alt="Pinterest" />;
+      case 'threads':   return <img src="/icons/threads-icon.svg" className={iconClass} alt="Threads" />;
+      case 'mastodon':  return <img src="/icons/mastodon-round-icon.svg" className={iconClass} alt="Mastodon" />;
+      case 'bluesky':   return <img src="/icons/bluesky-circle-color-icon.svg" className={iconClass} alt="Bluesky" />;
+      case 'reddit':    return <img src="/icons/reddit-icon.svg" className={iconClass} alt="Reddit" />;
+      default: return <Share2 className="w-4 h-4" />;
     }
   };
 
@@ -136,7 +129,8 @@ function History() {
               { id: 'bluesky', success: post.bluesky_success, name: 'Bluesky', error: post.bluesky_error, url: post.bluesky_url },
               { id: 'pinterest', success: post.pinterest_success, name: 'Pinterest', error: post.pinterest_error, url: post.pinterest_url },
               { id: 'threads', success: post.threads_success, name: 'Threads', error: post.threads_error, url: post.threads_url },
-              { id: 'x', success: post.x_success, name: 'X', error: post.x_error, url: post.x_url }
+              { id: 'x', success: post.x_success, name: 'X', error: post.x_error, url: post.x_url },
+              { id: 'reddit', success: post.reddit_success, name: 'Reddit', error: post.reddit_error, url: post.reddit_url }
             ].filter(p => p.success || (p.error && p.error !== 'Not selected')); // FILTER OUT NOT SELECTED
 
             return (
@@ -159,7 +153,7 @@ function History() {
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = 'https://via.placeholder.com/150?text=Invalid+Image';
+                          e.target.src = 'https://placehold.co/150x150?text=Invalid+Image';
                         }}
                       />
                     ) : post.media_type === 'image' || (post.video_filename && /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename)) ? (
@@ -278,14 +272,6 @@ function History() {
         </div>
       )}
     </div>
-  );
-}
-
-function ThreadsIcon({ className }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.781 3.631 2.695 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142c-.126-.742-.375-1.332-.74-1.763-.507-.598-1.256-.918-2.228-.952-1.281-.046-2.345.335-3.265 1.169l-1.207-1.555c1.319-1.025 2.971-1.531 4.915-1.504 1.5.054 2.682.567 3.513 1.525.799.921 1.276 2.13 1.427 3.598.433.086.838.186 1.212.298 1.438.433 2.455 1.098 3.026 1.977.638 1 .76 2.352.35 3.908-.54 2.055-1.906 3.753-3.838 4.781-1.558.828-3.394 1.256-5.462 1.277z" />
-    </svg>
   );
 }
 

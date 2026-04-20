@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import apiClient from '../utils/apiClient';
 import { X, Upload, Loader2, Sparkles, Eye, ChevronDown, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -9,53 +9,53 @@ import PlatformCustomization from './PlatformCustomization';
 /* â”€â”€ Platform meta â”€â”€ */
 const PLATFORM_META = {
   instagram: {
-    label: 'Instagram', icon: 'https://cdn.simpleicons.org/instagram/E4405F',
+    label: 'Instagram', icon: '/icons/ig-instagram-icon.svg',
     headerBg: 'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)',
     bodyBg: '#fff', textColor: '#fff', imgAspect: 'aspect-square',
     actions: ['â¤ï¸', 'ðŸ’¬', 'âœˆï¸', 'ðŸ”–'],
   },
   facebook: {
-    label: 'Facebook', icon: 'https://cdn.simpleicons.org/facebook/1877F2',
+    label: 'Facebook', icon: '/icons/facebook-round-color-icon.svg',
     headerBg: '#1877F2', bodyBg: '#f0f2f5', textColor: '#fff', imgAspect: 'aspect-video',
     actions: ['ðŸ‘ Like', 'ðŸ’¬ Comment', 'â†—ï¸ Share'],
   },
   x: {
-    label: 'X', icon: null,
+    label: 'X', icon: '/icons/x-social-media-round-icon.svg',
     headerBg: '#000', bodyBg: '#fff', textColor: '#fff', imgAspect: 'aspect-video',
     actions: ['ðŸ’¬', 'ðŸ”', 'â¤ï¸', 'ðŸ“Š'],
   },
   linkedin: {
-    label: 'LinkedIn', icon: null,
+    label: 'LinkedIn', icon: '/icons/linkedin-icon.svg',
     headerBg: '#0A66C2', bodyBg: '#f3f2ef', textColor: '#fff', imgAspect: 'aspect-[1.91/1]',
     actions: ['ðŸ‘ Like', 'ðŸ’¬ Comment', 'â†—ï¸ Share'],
   },
   youtube: {
-    label: 'YouTube', icon: 'https://cdn.simpleicons.org/youtube/FF0000',
+    label: 'YouTube', icon: '/icons/youtube-color-icon.svg',
     headerBg: '#FF0000', bodyBg: '#0f0f0f', textColor: '#fff', imgAspect: 'aspect-video',
     actions: ['ðŸ‘', 'ðŸ‘Ž', 'â†—ï¸ Share', 'â¬‡ï¸ Save'],
   },
   tiktok: {
-    label: 'TikTok', icon: 'https://cdn.simpleicons.org/tiktok/000',
+    label: 'TikTok', icon: '/icons/tiktok-circle-icon.svg',
     headerBg: '#000', bodyBg: '#000', textColor: '#fff', imgAspect: 'aspect-[9/16]',
     actions: ['â¤ï¸', 'ðŸ’¬', 'ðŸ”–', 'â†—ï¸'],
   },
   threads: {
-    label: 'Threads', icon: 'https://cdn.simpleicons.org/threads/000',
+    label: 'Threads', icon: '/icons/threads-icon.svg',
     headerBg: '#000', bodyBg: '#fff', textColor: '#fff', imgAspect: 'aspect-square',
     actions: ['â¤ï¸', 'ðŸ’¬', 'ðŸ”', 'â†—ï¸'],
   },
   pinterest: {
-    label: 'Pinterest', icon: 'https://cdn.simpleicons.org/pinterest/BD081C',
+    label: 'Pinterest', icon: '/icons/pinterest-round-color-icon.svg',
     headerBg: '#BD081C', bodyBg: '#fff', textColor: '#fff', imgAspect: 'aspect-[2/3]',
     actions: ['Save'],
   },
   bluesky: {
-    label: 'Bluesky', icon: 'https://cdn.simpleicons.org/bluesky/0085FF',
+    label: 'Bluesky', icon: '/icons/bluesky-circle-color-icon.svg',
     headerBg: '#0085FF', bodyBg: '#fff', textColor: '#fff', imgAspect: 'aspect-video',
     actions: ['â¤ï¸', 'ðŸ”', 'ðŸ’¬', 'â†—ï¸'],
   },
   mastodon: {
-    label: 'Mastodon', icon: 'https://cdn.simpleicons.org/mastodon/6364FF',
+    label: 'Mastodon', icon: '/icons/mastodon-round-icon.svg',
     headerBg: '#6364FF', bodyBg: '#191b22', textColor: '#fff', imgAspect: 'aspect-video',
     actions: ['â†©ï¸ Reply', 'ðŸ” Boost', 'â­ Fav', 'â†—ï¸'],
   },
@@ -110,12 +110,7 @@ function PlatformPreviewPanel({ selectedChannels, caption, mediaFile, mediaType 
                 isActive ? 'bg-gray-100 ring-2 ring-indigo-400 ring-offset-1' : 'hover:bg-gray-50'
               }`}
             >
-              {id === 'x'
-                ? <XIcon className="w-4 h-4 text-black" />
-                : id === 'linkedin'
-                  ? <LinkedInIcon className="w-5 h-5 text-[#0A66C2]" />
-                  : <img src={m.icon} alt={m.label} className="w-5 h-5 object-contain" />
-              }
+              <img src={m.icon} alt={m.label} className="w-5 h-5 object-contain" />
             </button>
           );
         })}
@@ -346,7 +341,7 @@ function PlatformPreviewPanel({ selectedChannels, caption, mediaFile, mediaType 
           ) : (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="flex items-center gap-2 px-3 py-2" style={{ background: meta.headerBg }}>
-                {activeId === 'x' ? <XIcon className="w-4 h-4 text-white" /> : activeId === 'linkedin' ? <LinkedInIcon className="w-4 h-4 text-white" /> : <img src={meta.icon} alt={meta.label} className="w-4 h-4 object-contain brightness-200" />}
+                <img src={meta.icon} alt={meta.label} className="w-4 h-4 object-contain brightness-200" />
                 <span className="text-[11px] font-bold tracking-wide" style={{ color: meta.textColor }}>{meta.label}</span>
               </div>
               <div style={{ background: meta.bodyBg }}>
