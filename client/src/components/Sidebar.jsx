@@ -245,7 +245,7 @@ function Sidebar() {
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
         <Link to="/dashboard" className="flex items-center gap-2.5">
           <img src={logo} alt="GAP Social-pilot" className="h-10 w-10 object-contain" />
-          <span className="text-[19px] font-bold text-gray-900 tracking-tight">GAP Social-pilot</span>
+          <span className="text-[19px] font-bold text-gray-900">GAP Social-pilot</span>
         </Link>
       </div>
 
@@ -302,7 +302,7 @@ function Sidebar() {
                           initial={{ opacity: 0, x: 10 }}
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: 10 }}
-                          className="text-sm font-semibold text-gray-600 tracking-tight"
+                          className="text-sm font-semibold text-gray-600"
                         >
                           Connected
                         </motion.span>
@@ -317,7 +317,7 @@ function Sidebar() {
                           initial={{ opacity: 0, scale: 0.9 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.9 }}
-                          className="text-sm font-semibold text-gray-600 tracking-tight"
+                          className="text-sm font-semibold text-gray-600"
                         >
                           Connected
                         </motion.span>

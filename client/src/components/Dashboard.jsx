@@ -106,7 +106,7 @@ function GridCard({ post, onOpen, formatDate }) {
         <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">
           <Calendar className="w-3 h-3" />{formatDate(post.posted_at)}
         </div>
-        <p className="text-sm font-bold text-gray-900 line-clamp-2 mb-3 leading-snug flex-1">
+        <p className="text-sm font-bold text-gray-900 line-clamp-2 mb-3 leading-normal flex-1">
           {post.caption || <span className="text-gray-300 italic">No caption</span>}
         </p>
         <div className="flex flex-wrap gap-1.5">
@@ -133,7 +133,7 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
             </div>
             {expanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
           </div>
-          <h3 className="text-sm font-bold text-gray-900 line-clamp-1 mb-2">{post.caption || 'Untitled Broadcast'}</h3>
+          <h3 className="text-sm font-bold text-gray-900 line-clamp-1 mb-2 leading-normal">{post.caption || 'Untitled Broadcast'}</h3>
           <div className="flex flex-wrap gap-1.5">{platforms.map(p => <PlatformBadge key={p.id} platform={p} />)}</div>
         </div>
       </div>
@@ -312,7 +312,7 @@ function Dashboard() {
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Post Analytics</h1>
+            <h1 className="text-xl font-bold text-gray-900">Post Analytics</h1>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -470,3 +470,4 @@ function Dashboard() {
 }
 
 export default Dashboard;
+
