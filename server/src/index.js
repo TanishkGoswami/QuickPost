@@ -1,14 +1,15 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import 'dotenv/config'; // Load variables before other imports
+
 import broadcastRouter from './routes/broadcast.js';
 import authRouter from './routes/auth.js';
 import broadcastsRouter from './routes/broadcasts.js';
+import onboardingRouter from './routes/onboarding.js';
 
-// Load environment variables
-dotenv.config();
+// dotenv.config(); // Removed duplicate call below
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,6 +34,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/auth', authRouter);
 app.use('/api', broadcastRouter);
 app.use('/api', broadcastsRouter);
+app.use('/api', onboardingRouter);
 
 // Root endpoint
 app.get('/', (req, res) => {

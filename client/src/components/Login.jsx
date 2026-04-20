@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { LogIn } from 'lucide-react';
+import logo from '/logo.png';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -14,10 +15,8 @@ function Login() {
       <div className="max-w-md w-full">
         {/* Logo/Brand */}
         <div className="text-center mb-8 animate-fade-in">
-          <div className="inline-flex items-center justify-center p-3 bg-gray-700 rounded-xl mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+          <div className="inline-flex items-center justify-center mb-4">
+            <img src={logo} alt="QuickPost" className="w-20 h-20 object-contain" />
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
             Welcome to QuickPost

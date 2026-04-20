@@ -1,24 +1,48 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Settings, Zap, CheckCircle2, HelpCircle, PanelLeftClose } from 'lucide-react';
+import { Plus, Settings, Zap, CheckCircle2, HelpCircle, PanelLeftClose, Clock, LogOut } from 'lucide-react';
+import { useDialog } from '../context/DialogContext';
+import logo from '/logo.png';
 import InstagramBusinessSetupModal from './InstagramBusinessSetupModal';
 import BlueskyConnectModal from './BlueskyConnectModal';
 import PinterestConnectModal from './PinterestConnectModal';
 import LinkedInConnectModal from './LinkedInConnectModal';
+import MastodonConnectModal from './MastodonConnectModal';
+import TikTokConnectModal from './TikTokConnectModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, connectedAccounts, refreshAccounts } = useAuth();
+  const { user, connectedAccounts, refreshAccounts, logout } = useAuth();
+  const { confirm, alert } = useDialog();
   const [showBusinessSetupModal, setShowBusinessSetupModal] = useState(false);
   const [showBlueskyModal, setShowBlueskyModal] = useState(false);
   const [showPinterestModal, setShowPinterestModal] = useState(false);
   const [showLinkedInModal, setShowLinkedInModal] = useState(false);
+  const [showMastodonModal, setShowMastodonModal] = useState(false);
+  const [showTikTokModal, setShowTikTokModal] = useState(false);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
+  const [connectingPlatform, setConnectingPlatform] = useState(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [connectedOpen, setConnectedOpen] = useState(true);
+  const [showMoreUnconnected, setShowMoreUnconnected] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const handleLogout = async () => {
+    const confirmed = await confirm('Logout', 'Are you sure you want to log out?', { 
+      intent: 'logout', 
+      confirmText: 'Logout',
+      cancelText: 'Stay logged in'
+    });
+    
+    if (confirmed) {
+      logout();
+      navigate('/login');
+    }
+  };
 
   const handleConnectInstagram = () => {
     // Show setup modal first to ensure user has business account
@@ -36,10 +60,33 @@ function Sidebar() {
     window.location.href = `${API_BASE_URL}/api/auth/facebook?token=${token}`;
   };
 
+  const handleConnectThreads = () => {
+    const token = localStorage.getItem('quickpost_token');
+    window.location.href = `${API_BASE_URL}/api/auth/threads?token=${token}`;
+  };
+
+  const handleConnectX = () => {
+    console.log('Ã°Ââ€¢Â Initiating X connection...');
+    setConnectingPlatform('x');
+    const token = localStorage.getItem('quickpost_token');
+    window.location.href = `${API_BASE_URL}/api/auth/x?token=${token}`;
+  };
+
+  const handleConnectReddit = () => {
+    console.log('🤖 Initiating Reddit connection...');
+    setConnectingPlatform('reddit');
+    const token = localStorage.getItem('quickpost_token');
+    window.location.href = `${API_BASE_URL}/api/auth/reddit?token=${token}`;
+  };
+
   const handleDisconnect = async (platform) => {
-    if (!confirm(`Are you sure you want to disconnect ${platform}?`)) {
-      return;
-    }
+    const confirmed = await confirm('Disconnect Account', `Are you sure you want to disconnect your ${platform} account? This will stop all scheduled posts to this channel.`, {
+      intent: 'danger',
+      confirmText: 'Disconnect',
+      cancelText: 'Keep Connected'
+    });
+
+    if (!confirmed) return;
 
     setDisconnectingPlatform(platform);
     try {
@@ -53,15 +100,16 @@ function Sidebar() {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         await refreshAccounts();
+        alert('Success', `Successfully disconnected from ${platform}`, { intent: 'primary' });
       } else {
-        alert(`Failed to disconnect: ${data.error}`);
+        alert('Error', `Failed to disconnect: ${data.error}`, { intent: 'danger' });
       }
     } catch (error) {
       console.error('Disconnect error:', error);
-      alert('Failed to disconnect account');
+      alert('Error', 'Failed to disconnect account. Please try again.', { intent: 'danger' });
     } finally {
       setDisconnectingPlatform(null);
     }
@@ -73,6 +121,14 @@ function Sidebar() {
 
   const handleConnectLinkedIn = () => {
     setShowLinkedInModal(true);
+  };
+
+  const handleConnectMastodon = () => {
+    setShowMastodonModal(true);
+  };
+
+  const handleConnectTikTok = () => {
+    setShowTikTokModal(true);
   };
 
   const platforms = [
@@ -108,16 +164,16 @@ function Sidebar() {
       onConnect: handleConnectInstagram,
     },
     {
-      id: 'twitter',
-      name: 'X (Twitter)',
-      connected: connectedAccounts.twitter,
+      id: 'x',
+      name: 'X',
+      connected: connectedAccounts.x,
       icon: (
         <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.294 19.497h2.039L6.482 3.239H4.293L17.607 20.65z"/>
         </svg>
       ),
       connectText: 'Connect X',
-      onConnect: () => alert('X (Twitter) integration coming soon!'),
+      onConnect: handleConnectX,
     },
     {
       id: 'linkedin',
@@ -141,7 +197,7 @@ function Sidebar() {
         </svg>
       ),
       connectText: 'Connect TikTok',
-      onConnect: () => alert('TikTok integration coming soon!'),
+      onConnect: handleConnectTikTok,
     },
     {
       id: 'youtube',
@@ -177,7 +233,7 @@ function Sidebar() {
         </svg>
       ),
       connectText: 'Connect Threads',
-      onConnect: () => alert('Threads integration coming soon!'),
+      onConnect: handleConnectThreads,
     },
     {
       id: 'mastodon',
@@ -189,7 +245,7 @@ function Sidebar() {
         </svg>
       ),
       connectText: 'Connect Mastodon',
-      onConnect: () => alert('Mastodon integration coming soon!'),
+      onConnect: handleConnectMastodon,
     },
     {
       id: 'bluesky',
@@ -218,124 +274,312 @@ function Sidebar() {
       connectText: 'Connect Google Business',
       onConnect: () => alert('Google Business Profile integration coming soon!'),
     },
+    {
+      id: 'reddit',
+      name: 'Reddit',
+      connected: connectedAccounts.reddit,
+      icon: (
+        <svg className="w-5 h-5 text-[#FF4500]" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M24 11.5c0-1.65-1.35-3-3-3-.41 0-.8.08-1.15.22C18.21 7.27 15.71 6.5 13 6.5c-.01 0-.02 0-.03.01l1.32-4.19c.01-.03 0-.07-.02-.1-.02-.03-.05-.05-.08-.05l-4.44.93c-.15-.47-.59-.81-1.11-.81-.66 0-1.2.54-1.2 1.2s.54 1.2 1.2 1.2c.5 0 .93-.31 1.1-.74l3.87-.81-1.1 3.5c-2.73.04-5.24.81-6.85 2.23-.35-.14-.74-.22-1.15-.22-1.65 0-3 1.35-3 3 0 1.25.77 2.32 1.86 2.76-.04.24-.06.49-.06.74 0 3.31 4.03 6 9 6s9-2.69 9-6c0-.25-.02-.5-.06-.74 1.09-.44 1.86-1.51 1.86-2.76zM7.5 14c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5zm10.5 4.5c-1.84 0-3.48-.96-4.5-2.5-.1-.14-.07-.34.07-.44.15-.1.35-.07.45.07.9 1.37 2.37 2.22 3.98 2.22s3.08-.85 3.98-2.22c.1-.14.3-.17.44-.07.14.1.17.3.07.44-1.02 1.54-2.66 2.5-4.5 2.5zm1.5-3c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
+        </svg>
+      ),
+      connectText: 'Coming Soon',
+      onConnect: () => alert('Coming Soon', 'Reddit integration is currently awaiting API approval. It will be available shortly!', { intent: 'warning' }),
+      disabled: true
+    },
+    {
+      id: 'snapchat',
+      name: 'Snapchat',
+      connected: false,
+      icon: (
+        <svg className="w-5 h-5 text-[#FFFC00]" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2.4c.6 0 1.2.1 1.8.2.4.1.8.3 1.1.5.3.2.6.4.8.7.2.3.4.6.5.9.1.3.2.6.2.9 0 .4-.1.7-.2 1.1-.1.3-.3.6-.5.9-.2.3-.5.5-.8.7-.3.2-.7.4-1.1.5-.6.2-1.2.2-1.8.2-3.3 0-6 2.7-6 6s2.7 6 6 6c.6 0 1.2-.1 1.8-.2.4-.1.8-.3 1.1-.5.3-.2.6-.4.8-.7.2-.3.4-.6.5-.9.1-.3.2-.6.2-.9 0-.4-.1-.7-.2-1.1-.1-.3-.3-.6-.5-.9-.2-.3-.5-.5-.8-.7-.3-.2-.7-.4-1.1-.5-.6-.2-1.2-.2-1.8-.2-3.3 0-6-2.7-6-6s2.7-6 6-6z"/>
+          {/* Simplified Ghost shape for Snapchat */}
+          <path d="M12 2c4.418 0 8 3.582 8 8 0 1.341-.331 2.603-.913 3.712.593.456 1.413 1.288 1.413 2.288 0 .5-.1.9-.3 1.2-.2.3-.5.5-.9.7-.4.2-.9.3-1.4.3-.5 0-1-.1-1.4-.3-.4-.2-.7-.4-.9-.7l-.4-.6c-1 1-2.3 1.6-3.8 1.6-1.5 0-2.8-.6-3.8-1.6l-.4.6c-.2.3-.5.5-.9.7l-1.4.3c-.5 0-1-.1-1.4-.3-.4-.2-.7-.4-.9-.7-.2-.3-.3-.7-.3-1.2 0-1 1.18-2.168 1.413-2.288C2.331 12.603 2 11.341 2 10c0-4.418 3.582-8 8-8z"/>
+        </svg>
+      ),
+      connectText: 'Coming Soon',
+      onConnect: () => alert('Coming Soon', 'Snapchat integration is in development!', { intent: 'warning' }),
+      disabled: true
+    }
   ];
 
   return (
-    <aside className={`${isCollapsed ? 'w-20' : 'w-64'} bg-white border-r border-gray-200 flex flex-col h-screen fixed left-0 top-0 transition-all duration-300`}>
-      {/* Logo */}
-      <div className="p-4 border-b border-gray-200">
+    <aside className={`${isCollapsed ? 'w-[72px]' : 'w-64'} bg-white border-r border-gray-100 flex flex-col h-screen fixed left-0 top-0 transition-all duration-300 shadow-sm`}>
+
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Logo Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      <div className={`flex items-center ${isCollapsed ? 'justify-center px-0 py-4' : 'justify-between px-5 py-4'} border-b border-gray-100`}>
         {isCollapsed ? (
-          <div className="flex items-center justify-center">
-            <div className="p-1.5 bg-blue-600 rounded-lg">
-              <Zap className="w-4 h-4 text-white" />
-            </div>
-          </div>
+          <button onClick={() => setIsCollapsed(false)} title="Expand">
+            <img src={logo} alt="QuickPost" className="h-8 w-8 object-contain" />
+          </button>
         ) : (
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <div className="p-1.5 bg-blue-600 rounded-lg">
-              <Zap className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-lg font-bold text-gray-900">QuickPost</span>
-          </Link>
+          <>
+            <Link to="/dashboard" className="flex items-center gap-2.5">
+              <img src={logo} alt="QuickPost" className="h-8 w-8 object-contain" />
+              <span className="text-[17px] font-bold text-gray-900 tracking-tight">QuickPost</span>
+            </Link>
+            <button
+              onClick={() => setIsCollapsed(true)}
+              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Collapse sidebar"
+            >
+              <PanelLeftClose className="w-4 h-4 text-gray-400" />
+            </button>
+          </>
         )}
       </div>
 
-      {/* Channels Section */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="p-4">
-          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'} mb-3`}>
-            {!isCollapsed && <h3 className="text-sm font-semibold text-gray-700">Channels</h3>}
-            <button 
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="p-1 hover:bg-gray-100 rounded"
-              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              <PanelLeftClose className="w-4 h-4 text-gray-500" />
-            </button>
-          </div>
-
-          {/* All Channels */}
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Scrollable Body Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar py-3">
+        <div className="px-3 mb-1">
           <Link
             to="/dashboard"
-            className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg mb-2 transition-colors ${
+            className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 rounded-xl transition-all ${
               location.pathname === '/dashboard'
-                ? 'bg-gray-100 text-gray-700'
-                : 'text-gray-700 hover:bg-gray-50'
+                ? 'bg-indigo-50 text-indigo-700'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
             }`}
-            title={isCollapsed ? "All Channels" : ""}
+            title={isCollapsed ? 'All Channels' : ''}
           >
-            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-              <span className="text-lg">📊</span>
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
+              location.pathname === '/dashboard' ? 'bg-indigo-100' : 'bg-gray-100'
+            }`}>
+              <svg className={`w-4 h-4 ${location.pathname === '/dashboard' ? 'text-indigo-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
             </div>
-            {!isCollapsed && (
-              <div className="flex-1">
-                <div className="text-sm font-medium">All Channels</div>
+            {!isCollapsed && <span className="text-sm font-semibold">All Channels</span>}
+          </Link>
+        </div>
+
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Connected Section Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {platforms.filter(p => p.connected).length > 0 && (
+          <div className="px-3 mt-3">
+            {!isCollapsed && (() => {
+              const connected = platforms.filter(p => p.connected);
+              return (
+                <button
+                  onClick={() => setConnectedOpen(o => !o)}
+                  className="flex items-center justify-between w-full px-3 py-2 mb-1 rounded-xl border border-gray-100 bg-white hover:bg-gray-50 shadow-sm transition-all group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    {/* Stacked platform icons Ã¢â‚¬â€ hidden when dropdown is open */}
+                    {!connectedOpen && (
+                      <div className="flex -space-x-2">
+                        {connected.slice(0, 3).map(p => (
+                          <div key={p.id} className="w-6 h-6 rounded-full bg-white border-2 border-white shadow-sm flex items-center justify-center overflow-hidden ring-1 ring-gray-100">
+                            <div className="scale-75">{p.icon}</div>
+                          </div>
+                        ))}
+                        {connected.length > 3 && (
+                          <div className="w-6 h-6 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-[9px] font-bold text-gray-500 ring-1 ring-gray-100">
+                            +{connected.length - 3}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <span className="text-sm font-semibold text-gray-700">Connected</span>
+                    <span className="bg-indigo-100 text-indigo-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                      {connected.length}
+                    </span>
+                  </div>
+                  <svg className={`w-3.5 h-3.5 text-gray-400 transition-transform group-hover:text-gray-600 ${connectedOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              );
+            })()}
+
+            {(connectedOpen || isCollapsed) && (
+              <div className="space-y-0.5">
+                {platforms.filter(p => p.connected).map((platform) => (
+                  <div
+                    key={platform.id}
+                    className={`group flex items-center ${isCollapsed ? 'justify-center px-0' : 'gap-3 px-3'} py-2.5 rounded-xl hover:bg-gray-50 transition-all cursor-default`}
+                    title={isCollapsed ? `${user?.name || user?.email} Ã¢â‚¬â€ ${platform.name}` : ''}
+                  >
+                    <div className="relative flex-shrink-0">
+                      <div className="w-8 h-8 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+                        {platform.icon}
+                      </div>
+                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                    </div>
+                    {!isCollapsed && (
+                      <>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-gray-800 truncate leading-tight">{platform.name}</div>
+                          <div className="text-[11px] text-gray-400 truncate leading-tight">{user?.name || user?.email}</div>
+                        </div>
+                        <button
+                          onClick={() => handleDisconnect(platform.id)}
+                          disabled={disconnectingPlatform === platform.id}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                          title="Disconnect"
+                        >
+                          {disconnectingPlatform === platform.id
+                            ? <span className="text-xs">Ã¢â‚¬Â¦</span>
+                            : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                          }
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
-          </Link>
+          </div>
+        )}
 
-          {/* Connected Channels */}
-          {platforms.filter(p => p.connected).map((platform) => (
-            <div
-              key={platform.id}
-              className={`group flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg mb-2 text-gray-700 hover:bg-gray-50`}
-              title={isCollapsed ? `${user?.name || user?.email} - ${platform.name}` : ""}
-            >
-              <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                {platform.icon}
+        {/* Ã¢â€â‚¬Ã¢â€â‚¬ Add Channels Section Ã¢â€â‚¬Ã¢â€â‚¬ */}
+        {!isCollapsed && (() => {
+          const unconnected = platforms.filter(p => !p.connected);
+          const visible = unconnected.slice(0, 3);
+          const hidden = unconnected.slice(3);
+          if (unconnected.length === 0) return null;
+          return (
+            <div className="px-3 mt-4">
+              <div className="flex items-center gap-2 px-2 py-1.5 mb-1">
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Add Channels</span>
               </div>
-              {!isCollapsed && (
-                <>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium truncate">{user?.name || user?.email}</div>
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                      <CheckCircle2 className="w-3 h-3 text-green-600" />
-                      <span>{platform.name}</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleDisconnect(platform.id)}
-                    disabled={disconnectingPlatform === platform.id}
-                    className="opacity-0 group-hover:opacity-100 px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded transition-opacity disabled:opacity-50"
-                    title="Disconnect"
-                  >
-                    {disconnectingPlatform === platform.id ? '...' : '×'}
-                  </button>
-                </>
-              )}
+              <div className="space-y-0.5">
+                {visible.map((platform) => {
+                  const isConnecting = connectingPlatform === platform.id;
+                  return (
+                    <button
+                      key={platform.id}
+                      onClick={platform.onConnect}
+                      disabled={isConnecting}
+                      className="group flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-left hover:bg-gray-50 transition-all disabled:cursor-wait"
+                    >
+                      <div className={`w-8 h-8 rounded-xl bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center flex-shrink-0 transition-all ${
+                        isConnecting ? 'opacity-100 animate-pulse' : 'opacity-50 group-hover:opacity-100 group-hover:border-gray-300'
+                      }`}>
+                        {platform.icon}
+                      </div>
+                      <span className={`text-sm transition-all ${
+                        isConnecting ? 'text-gray-700 font-medium' : 'text-gray-400 group-hover:text-gray-700'
+                      }`}>
+                        {isConnecting ? 'ConnectingÃ¢â‚¬Â¦' : platform.name}
+                      </span>
+                      {!isConnecting && (
+                        <span className="ml-auto opacity-0 group-hover:opacity-100 text-[10px] text-indigo-500 font-semibold bg-indigo-50 px-1.5 py-0.5 rounded-full transition-opacity">
+                          Connect
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+                {hidden.length > 0 && (
+                  <>
+                    {showMoreUnconnected && hidden.map((platform) => (
+                      <button
+                        key={platform.id}
+                        onClick={platform.onConnect}
+                        className="group flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-left hover:bg-gray-50 transition-all"
+                      >
+                        <div className="w-8 h-8 rounded-xl bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center flex-shrink-0 opacity-50 group-hover:opacity-100 group-hover:border-gray-300 transition-all">
+                          {platform.icon}
+                        </div>
+                        <span className="text-sm text-gray-400 group-hover:text-gray-700 transition-colors">{platform.name}</span>
+                        <span className="ml-auto opacity-0 group-hover:opacity-100 text-[10px] text-indigo-500 font-semibold bg-indigo-50 px-1.5 py-0.5 rounded-full transition-opacity">Connect</span>
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setShowMoreUnconnected(o => !o)}
+                      className="flex items-center gap-1.5 px-3 py-2 text-xs text-gray-400 hover:text-indigo-500 transition-colors w-full rounded-xl hover:bg-indigo-50"
+                    >
+                      <svg className={`w-3.5 h-3.5 transition-transform ${showMoreUnconnected ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                      <span className="font-medium">{showMoreUnconnected ? 'Show less' : `${hidden.length} more platforms`}</span>
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-          ))}
+          );
+        })()}
+      </div>
 
-          {/* Connect Buttons */}
-          {!isCollapsed && (
-            <div className="mt-4 pt-4 border-t border-gray-200 space-y-1">
-              {platforms.filter(p => !p.connected).map((platform) => (
-                <button
-                  key={platform.id}
-                  onClick={platform.onConnect}
-                  className="group flex items-center gap-3 px-3 py-2 rounded-lg w-full text-left text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-all"
-                >
-                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity">
-                    {platform.icon}
-                  </div>
-                  <span className="text-sm opacity-70 group-hover:opacity-100 transition-opacity">{platform.connectText}</span>
-                </button>
-              ))}
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Footer Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      <div className="px-3 py-3 border-t border-gray-100">
+        {!isCollapsed && user && (
+          <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-gray-50 mb-2">
+            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+              {(user.name || user.email || 'U')[0].toUpperCase()}
             </div>
-          )}
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-semibold text-gray-800 truncate">{user.name || 'My Account'}</div>
+              <div className="text-[10px] text-gray-400 truncate">{user.email}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Settings + Sign out row */}
+        <div className={`flex ${isCollapsed ? 'flex-col items-center gap-1' : 'items-center gap-1'}`}>
+          <button
+            onClick={() => setShowSettings(true)}
+            className={`flex items-center ${isCollapsed ? 'justify-center w-10 h-10' : 'gap-2.5 px-3 flex-1'} py-2 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all`}
+            title="Settings"
+          >
+            <Settings className="w-4 h-4 flex-shrink-0" />
+            {!isCollapsed && <span className="text-xs font-semibold">Settings</span>}
+          </button>
+          <button
+            onClick={handleLogout}
+            className={`flex items-center ${isCollapsed ? 'justify-center w-10 h-10' : 'gap-2.5 px-3 flex-1'} py-2 rounded-xl text-red-500 hover:bg-red-50 hover:text-red-600 transition-all`}
+            title="Sign out"
+          >
+            <LogOut className="w-4 h-4 flex-shrink-0" />
+            {!isCollapsed && <span className="text-xs font-semibold">Sign out</span>}
+          </button>
         </div>
       </div>
 
-      {/* Footer Actions */}
-      <div className="p-4 border-t border-gray-200">
-        <button 
-          className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg w-full text-gray-700 hover:bg-gray-50 text-sm`}
-          title={isCollapsed ? "Settings" : ""}
-        >
-          <Settings className="w-4 h-4" />
-          {!isCollapsed && <span>Settings</span>}
-        </button>
-      </div>
+
+      {/* Settings Modal via Portal */}
+      {showSettings && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center" onClick={() => setShowSettings(false)}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-indigo-500" />
+                <h2 className="text-base font-bold text-gray-900">Settings</h2>
+              </div>
+              <button onClick={() => setShowSettings(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div className="px-6 py-4">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Connected Platforms</p>
+              {platforms.filter(p => p.connected).length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-4">No platforms connected yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {platforms.filter(p => p.connected).map(p => (
+                    <div key={p.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
+                      <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">{p.icon}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900">{p.name}</p>
+                        <p className="text-[10px] text-green-500 font-medium">Connected</p>
+                      </div>
+                      <button onClick={() => { handleDisconnect(p.id); }} disabled={disconnectingPlatform === p.id} className="text-[11px] font-semibold px-3 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50">
+                        {disconnectingPlatform === p.id ? 'Removing...' : 'Disconnect'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
+              <button onClick={() => setShowSettings(false)} className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors">Close</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Instagram Business Setup Modal */}
       <InstagramBusinessSetupModal
@@ -362,6 +606,20 @@ function Sidebar() {
       <LinkedInConnectModal
         isOpen={showLinkedInModal}
         onClose={() => setShowLinkedInModal(false)}
+        onSuccess={refreshAccounts}
+      />
+
+      {/* Mastodon Connect Modal */}
+      <MastodonConnectModal
+        isOpen={showMastodonModal}
+        onClose={() => setShowMastodonModal(false)}
+        onSuccess={refreshAccounts}
+      />
+
+      {/* TikTok Connect Modal */}
+      <TikTokConnectModal
+        isOpen={showTikTokModal}
+        onClose={() => setShowTikTokModal(false)}
         onSuccess={refreshAccounts}
       />
     </aside>

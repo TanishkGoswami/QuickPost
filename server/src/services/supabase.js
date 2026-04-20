@@ -45,7 +45,11 @@ export async function getTokensForUser(userId) {
       facebook: null,
       youtube: null,
       pinterest: null,
-      bluesky: null
+      bluesky: null,
+      linkedin: null,
+      mastodon: null,
+      tiktok: null,
+      x: null
     };
 
     for (const row of data) {
@@ -89,6 +93,56 @@ export async function getTokensForUser(userId) {
           did: row.bluesky_did,
           handle: row.bluesky_handle,
           tokenExpiry: row.token_expiry
+        };
+      }
+
+      if (row.provider === 'linkedin') {
+        tokens.linkedin = {
+          accessToken: row.access_token,
+          profileData: row.profile_data,
+          tokenExpiry: row.expires_at
+        };
+      }
+
+      if (row.provider === 'mastodon') {
+        tokens.mastodon = {
+          accessToken: row.access_token,
+          instanceUrl: row.mastodon_instance,
+          profileData: row.profile_data
+        };
+      }
+
+      if (row.provider === 'tiktok') {
+        tokens.tiktok = {
+          accessToken: row.access_token,
+          refreshToken: row.refresh_token,
+          openId: row.account_id,
+          tokenExpiry: row.expires_at
+        };
+      }
+
+      if (row.provider === 'threads') {
+        tokens.threads = {
+          accessToken: row.access_token,
+          account_id: row.account_id
+        };
+      }
+      
+      if (row.provider === 'x') {
+        tokens.x = {
+          accessToken: row.access_token,
+          refreshToken: row.refresh_token,
+          tokenExpiry: row.token_expiry,
+          accountId: row.account_id
+        };
+      }
+
+      if (row.provider === 'reddit') {
+        tokens.reddit = {
+          accessToken: row.access_token,
+          refreshToken: row.refresh_token,
+          tokenExpiry: row.token_expiry,
+          accountId: row.account_id
         };
       }
     }
@@ -183,22 +237,18 @@ export async function createOrUpdateUser(email, name, googleId = null, profilePi
  */
 export async function getConnectedAccounts(userId) {
   try {
-    console.log('--- ACCOUNTS DEBUG ---');
-    console.log('Fetching accounts for userId:', userId);
-    
     const { data, error } = await supabase
       .from('social_tokens')
-      .select('provider, updated_at, token_expiry, page_id, instagram_business_id, account_id, bluesky_did, bluesky_handle')
+      .select('provider, updated_at, token_expiry, page_id, instagram_business_id, account_id, bluesky_did, bluesky_handle, profile_data, mastodon_instance')
       .eq('user_id', userId);
 
+    console.log(`\n📊 [SUPABASE] Raw social_tokens for user ${userId}:`, data?.map(d => d.provider));
+
     if (error) {
-      console.error('Supabase fetch error:', error);
       throw error;
     }
 
-    console.log('Raw accounts data from DB:', data);
-
-    const providers = ['youtube', 'instagram', 'facebook', 'pinterest', 'bluesky'];
+    const providers = ['youtube', 'instagram', 'facebook', 'pinterest', 'bluesky', 'linkedin', 'mastodon', 'tiktok', 'threads', 'x', 'reddit'];
     const result = {};
     for (const p of providers) result[p] = { connected: false };
 
@@ -215,6 +265,7 @@ export async function getConnectedAccounts(userId) {
       };
     }
 
+    console.log(`✅ [SUPABASE] Final connected status:`, Object.keys(result).filter(k => result[k].connected));
     return result;
   } catch (err) {
     console.error('💥 [SUPABASE] getConnectedAccounts error:', err?.message || err);
@@ -224,7 +275,11 @@ export async function getConnectedAccounts(userId) {
       facebook: { connected: false },
       youtube: { connected: false },
       pinterest: { connected: false },
-      bluesky: { connected: false }
+      bluesky: { connected: false },
+      linkedin: { connected: false },
+      mastodon: { connected: false },
+      tiktok: { connected: false },
+      threads: { connected: false }
     };
   }
 }
