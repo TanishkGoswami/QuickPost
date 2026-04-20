@@ -3,16 +3,20 @@ import { default as supabase } from './supabase.js';
 /**
  * Save broadcast record to database
  */
-export async function saveBroadcast(userId, caption, videoFilename, results, mediaType = 'video', platformData = {}) {
+export async function saveBroadcast(userId, caption, mediaFilenames, results, mediaType = 'image', platformData = {}) {
   try {
+    // Handle both single string and array for filenames
+    const filenames = Array.isArray(mediaFilenames) ? mediaFilenames : [mediaFilenames].filter(Boolean);
+    const mediaUrls = Array.isArray(results.mediaUrls) ? results.mediaUrls : [results.mediaUrl].filter(Boolean);
+
     const broadcastData = {
       user_id: userId,
       caption: caption,
-      video_filename: videoFilename,
+      video_filename: filenames[0] || null, // Primary file
       status: 'sent',
       posted_at: new Date().toISOString(),
       media_type: mediaType,
-      media_url: results.mediaUrl || null, // Capture the public URL if provided in results
+      media_url: mediaUrls[0] || null, // Primary public URL
       
       // Instagram results
       instagram_success: results.instagram?.success || false,
