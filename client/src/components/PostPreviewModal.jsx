@@ -182,9 +182,17 @@ export default function PostPreviewModal({ post, onClose }) {
   const [activePlatformIdx, setActivePlatformIdx] = useState(0);
   const [activeFormatIdx, setActiveFormatIdx] = useState(0);
 
+  // ⚠️ useEffect MUST be before any early return (Rules of Hooks)
+  useEffect(() => {
+    if (!post) return;
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose, post]);
+
   if (!post) return null;
 
-  // Build list of platforms that were actually posted
+  // ── Derived values (after early return, safe — not hooks) ──
   const postedPlatforms = Object.entries(PLATFORM_CONFIG)
     .map(([id, cfg]) => ({
       id,
@@ -198,27 +206,14 @@ export default function PostPreviewModal({ post, onClose }) {
   const activePlatform = postedPlatforms[activePlatformIdx];
   const activeFormat   = activePlatform?.formats?.[activeFormatIdx] || activePlatform?.formats?.[0];
 
-  const handlePlatformChange = (idx) => {
-    setActivePlatformIdx(idx);
-    setActiveFormatIdx(0);
-  };
+  const handlePlatformChange = (idx) => { setActivePlatformIdx(idx); setActiveFormatIdx(0); };
+  const handleBackdrop = (e) => { if (e.target === e.currentTarget) onClose(); };
 
   const isImage = post.media_type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || '');
-
   const formatDate = (d) => new Date(d).toLocaleDateString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
     hour: '2-digit', minute: '2-digit'
   });
-
-  // Close on backdrop click
-  const handleBackdrop = (e) => { if (e.target === e.currentTarget) onClose(); };
-
-  // Close on Escape
-  useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
 
   return (
     <div
