@@ -1,83 +1,134 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { ArrowRight, Check } from 'lucide-react';
+import {
+  ArrowRight, Check,
+  Monitor, BarChart2, Wrench, Target, Bot, MoreHorizontal,
+  User, Store, Building2, Briefcase, Megaphone, Heart,
+  Zap
+} from 'lucide-react';
 import apiClient from '../utils/apiClient';
-
-/* ── Floating social icons for welcome screen ── */
-const FLOAT_ICONS = [
-  { src: 'https://cdn.simpleicons.org/youtube/FF0000',   style: { top: '18%',  left: '6%',   opacity: 0.35, width: 36 } },
-  { src: 'https://cdn.simpleicons.org/x/000000',        style: { top: '35%',  left: '14%',  opacity: 0.30, width: 28 } },
-  { src: 'https://cdn.simpleicons.org/instagram/E4405F',style: { top: '65%',  left: '8%',   opacity: 0.35, width: 32 } },
-  { src: 'https://cdn.simpleicons.org/pinterest/BD081C',style: { top: '80%',  left: '90%',  opacity: 0.35, width: 34 } },
-  { src: 'https://cdn.simpleicons.org/bluesky/0085FF',  style: { top: '25%',  right: '8%',  opacity: 0.30, width: 30 } },
-  { src: 'https://cdn.simpleicons.org/mastodon/6364FF', style: { top: '55%',  right: '12%', opacity: 0.30, width: 32 } },
-  { src: 'https://cdn.simpleicons.org/tiktok/000000',   style: { bottom:'18%',left: '18%',  opacity: 0.25, width: 28 } },
-  { src: 'https://cdn.simpleicons.org/linkedin/0A66C2', style: { bottom:'30%',right: '20%', opacity: 0.25, width: 28 } },
-];
+import logo from '/logo.png';
 
 /* ── Platform data ── */
 const PLATFORMS = [
-  { id: 'instagram', label: 'Instagram', icon: 'https://cdn.simpleicons.org/instagram/E4405F' },
-  { id: 'facebook',  label: 'Facebook',  icon: 'https://cdn.simpleicons.org/facebook/1877F2' },
-  { id: 'x',         label: 'Twitter / X', icon: 'https://cdn.simpleicons.org/x/000000' },
-  { id: 'linkedin',  label: 'LinkedIn',  icon: 'https://cdn.simpleicons.org/linkedin/0A66C2' },
-  { id: 'tiktok',    label: 'TikTok',    icon: 'https://cdn.simpleicons.org/tiktok/000000' },
-  { id: 'youtube',   label: 'YouTube',   icon: 'https://cdn.simpleicons.org/youtube/FF0000' },
-  { id: 'pinterest', label: 'Pinterest', icon: 'https://cdn.simpleicons.org/pinterest/BD081C' },
-  { id: 'threads',   label: 'Threads',   icon: 'https://cdn.simpleicons.org/threads/000000' },
-  { id: 'bluesky',   label: 'Bluesky',   icon: 'https://cdn.simpleicons.org/bluesky/0085FF' },
-  { id: 'mastodon',  label: 'Mastodon',  icon: 'https://cdn.simpleicons.org/mastodon/6364FF' },
-  { id: 'google',    label: 'Google Business', icon: 'https://cdn.simpleicons.org/google/4285F4' },
+  { id: 'instagram', label: 'Instagram',       icon: 'https://cdn.simpleicons.org/instagram/E4405F' },
+  { id: 'facebook',  label: 'Facebook',         icon: 'https://cdn.simpleicons.org/facebook/1877F2' },
+  { id: 'x',         label: 'X / Twitter',      icon: 'https://cdn.simpleicons.org/x/000000' },
+  { id: 'linkedin',  label: 'LinkedIn',         icon: 'https://cdn.simpleicons.org/linkedin/0A66C2' },
+  { id: 'tiktok',    label: 'TikTok',           icon: 'https://cdn.simpleicons.org/tiktok/000000' },
+  { id: 'youtube',   label: 'YouTube',          icon: 'https://cdn.simpleicons.org/youtube/FF0000' },
+  { id: 'pinterest', label: 'Pinterest',        icon: 'https://cdn.simpleicons.org/pinterest/BD081C' },
+  { id: 'threads',   label: 'Threads',          icon: 'https://cdn.simpleicons.org/threads/000000' },
+  { id: 'bluesky',   label: 'Bluesky',          icon: 'https://cdn.simpleicons.org/bluesky/0085FF' },
+  { id: 'mastodon',  label: 'Mastodon',         icon: 'https://cdn.simpleicons.org/mastodon/6364FF' },
+  { id: 'google',    label: 'Google Business',  icon: 'https://cdn.simpleicons.org/google/4285F4' },
 ];
 
 /* ── Tools data ── */
 const TOOLS = [
-  { id: 'none',     label: 'None – I post to social platforms directly', sub: null,                          emoji: '🖥️', bg: '#EDE9FF' },
-  { id: 'meta',     label: 'Meta Business Suite',                        sub: null,                          emoji: '🔵', bg: '#E8F0FF' },
-  { id: 'smm',      label: 'An existing Social Media Management tool',   sub: 'e.g. Hootsuite, Sprout Social, Later', emoji: '🔧', bg: '#E8FFF0' },
-  { id: 'specific', label: 'Tools that focus on specific social platform(s)', sub: 'e.g. Typefully, Hypefury', emoji: '🎯', bg: '#FFF3E8' },
-  { id: 'ai',       label: 'AI Platforms',                               sub: 'ChatGPT/Claude/etc.',         emoji: '🤖', bg: '#FFF0F5' },
-  { id: 'other',    label: 'Other',                                      sub: null,                          emoji: '✨', bg: '#FFF8E8' },
+  { id: 'none',     label: 'I post directly to each platform',   sub: null,                                Icon: Monitor   },
+  { id: 'meta',     label: 'Meta Business Suite',                 sub: null,                                Icon: BarChart2 },
+  { id: 'smm',      label: 'Social Media Management tool',        sub: 'Hootsuite, Sprout Social, Later…',  Icon: Wrench    },
+  { id: 'specific', label: 'Platform-specific tools',             sub: 'Typefully, Hypefury…',              Icon: Target    },
+  { id: 'ai',       label: 'AI Platforms',                        sub: 'ChatGPT, Claude…',                  Icon: Bot       },
+  { id: 'other',    label: 'Other',                               sub: null,                                Icon: MoreHorizontal },
 ];
 
 /* ── User types ── */
 const USER_TYPES = [
-  { id: 'solo',      label: 'Solo creator',                  emoji: '🔥' },
-  { id: 'small_biz', label: 'Small business owner',          emoji: '🤝' },
-  { id: 'marketing', label: 'Part of a company marketing team', emoji: '🎨' },
-  { id: 'freelance', label: 'Freelancer/consultant',         emoji: '⭐' },
-  { id: 'agency',    label: 'Marketing agency',              emoji: '🎯' },
-  { id: 'nonprofit', label: 'Non-profit organization',       emoji: '💝' },
-  { id: 'other',     label: 'Other',                         emoji: '🦄' },
+  { id: 'solo',      label: 'Solo creator',                    Icon: User        },
+  { id: 'small_biz', label: 'Small business owner',            Icon: Store       },
+  { id: 'marketing', label: 'Part of a marketing team',        Icon: Building2   },
+  { id: 'freelance', label: 'Freelancer / consultant',         Icon: Briefcase   },
+  { id: 'agency',    label: 'Marketing agency',                Icon: Megaphone   },
+  { id: 'nonprofit', label: 'Non-profit organization',         Icon: Heart       },
+  { id: 'other',     label: 'Other',                           Icon: MoreHorizontal },
 ];
 
-/* ── Step indicator ── */
-function StepDots({ current, total }) {
+const STEPS = [
+  { num: 1, title: 'Your platforms',   desc: 'Which social channels do you want to manage with QuickPost?' },
+  { num: 2, title: 'Your workflow',    desc: 'What tools are you currently using to manage social media?' },
+  { num: 3, title: 'About you',        desc: 'Help us tailor your experience to your needs.' },
+];
+
+/* ── Left Panel ── */
+function LeftPanel({ step }) {
+  const s = STEPS[step - 1];
   return (
-    <div className="flex items-center gap-2 mb-10">
-      {Array.from({ length: total }).map((_, i) => (
-        <div key={i} className={`rounded-full transition-all duration-300 ${
-          i === current ? 'w-6 h-2 bg-green-500' : i < current ? 'w-2 h-2 bg-green-300' : 'w-2 h-2 bg-gray-200'
-        }`} />
-      ))}
+    <div className="hidden lg:flex flex-col justify-between w-80 xl:w-96 flex-shrink-0 bg-gradient-to-br from-indigo-50 via-white to-violet-50 border-r border-gray-100 px-10 py-12">
+      {/* Logo */}
+      <div className="flex items-center gap-2.5">
+        <img src={logo} alt="QuickPost" className="h-7 w-7 object-contain" />
+        <span className="text-base font-bold text-gray-900 tracking-tight">QuickPost</span>
+      </div>
+
+      {/* Step info */}
+      <div>
+        <div className="inline-flex items-center gap-2 bg-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full mb-6 uppercase tracking-wider">
+          Step {step} of 3
+        </div>
+        <h2 className="text-3xl font-extrabold text-gray-900 mb-3 leading-tight">{s.title}</h2>
+        <p className="text-sm text-gray-500 leading-relaxed">{s.desc}</p>
+
+        {/* Steps list */}
+        <div className="mt-10 space-y-4">
+          {STEPS.map(st => (
+            <div key={st.num} className={`flex items-center gap-3 transition-all ${st.num === step ? 'opacity-100' : 'opacity-35'}`}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 flex-shrink-0 ${
+                st.num < step
+                  ? 'bg-indigo-600 border-indigo-600 text-white'
+                  : st.num === step
+                  ? 'border-indigo-600 text-indigo-600 bg-white'
+                  : 'border-gray-300 text-gray-400 bg-white'
+              }`}>
+                {st.num < step ? <Check className="w-3.5 h-3.5" /> : st.num}
+              </div>
+              <span className={`text-sm font-semibold ${st.num === step ? 'text-gray-900' : 'text-gray-400'}`}>
+                {st.title}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom hint */}
+      <p className="text-xs text-gray-400">You can always update these later in settings.</p>
     </div>
   );
 }
 
-/* ── Continue button ── */
-function ContinueBtn({ onClick, disabled, active }) {
+/* ── Progress bar (mobile) ── */
+function MobileProgress({ step }) {
+  return (
+    <div className="lg:hidden px-6 pt-6 pb-2">
+      <div className="flex items-center gap-2 mb-1">
+        <img src={logo} alt="QuickPost" className="h-5 w-5 object-contain" />
+        <span className="text-sm font-bold text-gray-900">QuickPost</span>
+        <span className="ml-auto text-xs text-gray-400 font-medium">Step {step}/3</span>
+      </div>
+      <div className="h-1 bg-gray-100 rounded-full">
+        <div
+          className="h-1 bg-indigo-600 rounded-full transition-all duration-500"
+          style={{ width: `${(step / 3) * 100}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ── Continue Button ── */
+function ContinueBtn({ onClick, active, label = 'Continue' }) {
   return (
     <button
       onClick={onClick}
-      disabled={disabled}
-      className={`flex items-center justify-center gap-2 w-72 py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 ${
+      className={`flex items-center justify-center gap-2 h-12 px-8 rounded-xl font-bold text-sm transition-all duration-200 ${
         active
-          ? 'bg-green-400 hover:bg-green-500 text-white shadow-md shadow-green-200 cursor-pointer'
-          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+          ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 hover:shadow-indigo-300 cursor-pointer'
+          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
       }`}
     >
-      Continue <ArrowRight className="w-4 h-4" />
+      {label} {active && <ArrowRight className="w-4 h-4" />}
     </button>
   );
 }
@@ -86,18 +137,13 @@ function ContinueBtn({ onClick, disabled, active }) {
 export default function Onboarding() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [step, setStep] = useState(0); // 0=welcome, 1=channels, 2=tools, 3=usertype
-
-  // Step 1 state
+  const [step, setStep] = useState(0);
   const [selectedChannels, setSelectedChannels] = useState([]);
-  // Step 2 state
-  const [selectedTools, setSelectedTools] = useState([]);
-  // Step 3 state
-  const [selectedType, setSelectedType] = useState(null);
+  const [selectedTools, setSelectedTools]       = useState([]);
+  const [selectedType, setSelectedType]         = useState(null);
 
   const firstName = user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
 
-  // Check DB on mount — if already completed, skip to dashboard
   useEffect(() => {
     const check = async () => {
       try {
@@ -106,11 +152,8 @@ export default function Onboarding() {
           localStorage.setItem('qp_onboarding_done', 'true');
           navigate('/dashboard', { replace: true });
         }
-      } catch (e) {
-        // If API fails, fall back to localStorage
-        if (localStorage.getItem('qp_onboarding_done')) {
-          navigate('/dashboard', { replace: true });
-        }
+      } catch {
+        if (localStorage.getItem('qp_onboarding_done')) navigate('/dashboard', { replace: true });
       }
     };
     check();
@@ -119,13 +162,11 @@ export default function Onboarding() {
   const finish = async (finalType = selectedType) => {
     try {
       await apiClient.post('/api/onboarding', {
-        channels:  selectedChannels,
-        tools:     selectedTools,
-        user_type: finalType,
-        completed: true,
+        channels: selectedChannels, tools: selectedTools,
+        user_type: finalType, completed: true,
       });
     } catch (e) {
-      console.error('Failed to save onboarding:', e);
+      console.error('Onboarding save failed:', e);
     } finally {
       localStorage.setItem('qp_onboarding_done', 'true');
       navigate('/dashboard', { replace: true });
@@ -135,29 +176,56 @@ export default function Onboarding() {
   const skip = () => finish(null);
 
   const toggleChannel = (id) =>
-    setSelectedChannels(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setSelectedChannels(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 
   const toggleTool = (id) =>
-    setSelectedTools(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setSelectedTools(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 
   /* ── WELCOME ── */
   if (step === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: '#F5F2ED' }}>
-        {FLOAT_ICONS.map((icon, i) => (
-          <img key={i} src={icon.src} alt="" style={{ position: 'absolute', ...icon.style, pointerEvents: 'none', filter: 'grayscale(20%)' }} />
-        ))}
-        <div className="text-center z-10 px-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">
-            Hey there {firstName} 👋
+      <div className="min-h-screen flex items-center justify-center bg-white relative overflow-hidden">
+        {/* Decorative blobs */}
+        <div className="absolute top-0 left-0 w-72 h-72 bg-indigo-100 rounded-full blur-3xl opacity-50 -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-violet-100 rounded-full blur-3xl opacity-50 translate-x-1/3 translate-y-1/3" />
+
+        {/* Floating platform icons */}
+        <div className="absolute inset-0 pointer-events-none">
+          {[
+            { src: 'https://cdn.simpleicons.org/instagram/E4405F', style: { top:'15%', left:'8%',   opacity:0.2, width:40 } },
+            { src: 'https://cdn.simpleicons.org/youtube/FF0000',   style: { top:'60%', left:'5%',   opacity:0.2, width:36 } },
+            { src: 'https://cdn.simpleicons.org/x/000000',         style: { top:'30%', left:'18%',  opacity:0.15,width:28 } },
+            { src: 'https://cdn.simpleicons.org/tiktok/000000',    style: { bottom:'20%',left:'14%',opacity:0.15,width:30 } },
+            { src: 'https://cdn.simpleicons.org/bluesky/0085FF',   style: { top:'20%', right:'8%',  opacity:0.2, width:32 } },
+            { src: 'https://cdn.simpleicons.org/pinterest/BD081C', style: { top:'55%', right:'5%',  opacity:0.2, width:36 } },
+            { src: 'https://cdn.simpleicons.org/linkedin/0A66C2',  style: { bottom:'22%',right:'15%',opacity:0.15,width:30 } },
+            { src: 'https://cdn.simpleicons.org/mastodon/6364FF',  style: { top:'42%', right:'20%', opacity:0.15,width:28 } },
+          ].map((icon, i) => (
+            <img key={i} src={icon.src} alt="" style={{ position:'absolute', ...icon.style, filter:'saturate(0.6)' }} />
+          ))}
+        </div>
+
+        <div className="relative z-10 text-center px-6 max-w-md">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white shadow-xl shadow-indigo-100 border border-gray-100 mb-8">
+            <img src={logo} alt="QuickPost" className="w-9 h-9 object-contain" />
+          </div>
+          <h1 className="text-4xl font-extrabold text-gray-900 mb-2 tracking-tight">
+            Welcome, {firstName}
           </h1>
-          <p className="text-2xl font-bold text-gray-900 mb-8">Welcome to QuickPost</p>
+          <p className="text-gray-500 text-base mb-10 leading-relaxed">
+            Let's get QuickPost set up for you. <br />It only takes a minute.
+          </p>
           <button
             onClick={() => setStep(1)}
-            className="flex items-center gap-2 mx-auto bg-green-400 hover:bg-green-500 text-white font-semibold px-6 py-3 rounded-xl shadow-md shadow-green-200 transition-all"
+            className="inline-flex items-center gap-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg shadow-indigo-200 transition-all hover:shadow-indigo-300 hover:-translate-y-0.5"
           >
-            Let's start <ArrowRight className="w-4 h-4" />
+            Get started <ArrowRight className="w-4 h-4" />
           </button>
+          <div className="mt-5">
+            <button onClick={skip} className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+              Skip setup
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -166,31 +234,42 @@ export default function Onboarding() {
   /* ── STEP 1: Social Channels ── */
   if (step === 1) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ background: '#F5F2ED' }}>
-        <StepDots current={0} total={3} />
-        <h1 className="text-2xl font-bold text-gray-900 mb-10 text-center">
-          What social channel(s) are in focus?
-        </h1>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 mb-10 max-w-3xl w-full justify-items-center">
-          {PLATFORMS.map(p => {
-            const sel = selectedChannels.includes(p.id);
-            return (
-              <button
-                key={p.id}
-                onClick={() => toggleChannel(p.id)}
-                className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 bg-white transition-all w-24 h-24 justify-center hover:shadow-md ${
-                  sel ? 'border-gray-800 shadow-md' : 'border-transparent shadow-sm'
-                }`}
-              >
-                <img src={p.icon} alt={p.label} className="w-9 h-9 object-contain" />
-                <span className="text-[11px] font-medium text-gray-700 text-center leading-tight">{p.label}</span>
-              </button>
-            );
-          })}
-        </div>
-        <div className="flex flex-col items-center gap-3">
-          <ContinueBtn onClick={() => setStep(2)} active={selectedChannels.length > 0} disabled={false} />
-          <button onClick={skip} className="text-sm font-semibold text-gray-500 hover:text-gray-700 underline-offset-2 hover:underline">Skip</button>
+      <div className="min-h-screen flex bg-white">
+        <LeftPanel step={1} />
+        <div className="flex-1 flex flex-col overflow-y-auto">
+          <MobileProgress step={1} />
+          <div className="flex-1 px-8 py-12 max-w-2xl mx-auto w-full">
+            <h1 className="text-2xl font-extrabold text-gray-900 mb-1">Which channels are you active on?</h1>
+            <p className="text-sm text-gray-400 mb-8">Select all that apply. You can connect accounts after setup.</p>
+
+            <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-10">
+              {PLATFORMS.map(p => {
+                const sel = selectedChannels.includes(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => toggleChannel(p.id)}
+                    className={`relative flex flex-col items-center gap-2.5 p-4 rounded-2xl border-2 bg-white transition-all hover:shadow-md ${
+                      sel ? 'border-indigo-500 shadow-sm shadow-indigo-100 bg-indigo-50/30' : 'border-gray-100 shadow-sm'
+                    }`}
+                  >
+                    {sel && (
+                      <div className="absolute top-2 right-2 w-4 h-4 bg-indigo-600 rounded-full flex items-center justify-center">
+                        <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                      </div>
+                    )}
+                    <img src={p.icon} alt={p.label} className="w-8 h-8 object-contain" />
+                    <span className="text-[11px] font-semibold text-gray-700 text-center leading-tight">{p.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-4">
+              <ContinueBtn onClick={() => setStep(2)} active={selectedChannels.length > 0} />
+              <button onClick={skip} className="text-sm text-gray-400 hover:text-gray-600 transition-colors font-medium">Skip</button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -199,41 +278,49 @@ export default function Onboarding() {
   /* ── STEP 2: Tools ── */
   if (step === 2) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ background: '#F5F2ED' }}>
-        <StepDots current={1} total={3} />
-        <h1 className="text-2xl font-bold text-gray-900 mb-10 text-center max-w-sm">
-          What tools do you use to manage your social media?
-        </h1>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-10 w-full max-w-xl">
-          {TOOLS.map(t => {
-            const sel = selectedTools.includes(t.id);
-            return (
-              <button
-                key={t.id}
-                onClick={() => toggleTool(t.id)}
-                className={`flex items-start gap-3 p-4 rounded-2xl bg-white border-2 text-left transition-all hover:shadow-md ${
-                  sel ? 'border-gray-800' : 'border-transparent shadow-sm'
-                }`}
-              >
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0" style={{ background: t.bg }}>
-                  {t.emoji}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 leading-snug">{t.label}</p>
-                  {t.sub && <p className="text-xs text-gray-400 mt-0.5">{t.sub}</p>}
-                </div>
-                <div className={`w-4 h-4 rounded border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition-all ${
-                  sel ? 'bg-gray-800 border-gray-800' : 'border-gray-300'
-                }`}>
-                  {sel && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        <div className="flex flex-col items-center gap-3">
-          <ContinueBtn onClick={() => setStep(3)} active={selectedTools.length > 0} disabled={false} />
-          <button onClick={skip} className="text-sm font-semibold text-gray-500 hover:text-gray-700 underline-offset-2 hover:underline">Skip</button>
+      <div className="min-h-screen flex bg-white">
+        <LeftPanel step={2} />
+        <div className="flex-1 flex flex-col overflow-y-auto">
+          <MobileProgress step={2} />
+          <div className="flex-1 px-8 py-12 max-w-2xl mx-auto w-full">
+            <h1 className="text-2xl font-extrabold text-gray-900 mb-1">What's your current setup?</h1>
+            <p className="text-sm text-gray-400 mb-8">Select all tools you currently use to manage social media.</p>
+
+            <div className="space-y-3 mb-10">
+              {TOOLS.map(t => {
+                const sel = selectedTools.includes(t.id);
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => toggleTool(t.id)}
+                    className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl border-2 text-left transition-all ${
+                      sel ? 'border-indigo-500 bg-indigo-50/40' : 'border-gray-100 bg-white hover:border-gray-200 hover:shadow-sm'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
+                      sel ? 'bg-indigo-600' : 'bg-gray-100'
+                    }`}>
+                      <t.Icon className={`w-5 h-5 ${sel ? 'text-white' : 'text-gray-500'}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-gray-900">{t.label}</p>
+                      {t.sub && <p className="text-xs text-gray-400 mt-0.5">{t.sub}</p>}
+                    </div>
+                    <div className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                      sel ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'
+                    }`}>
+                      {sel && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-4">
+              <ContinueBtn onClick={() => setStep(3)} active={selectedTools.length > 0} />
+              <button onClick={skip} className="text-sm text-gray-400 hover:text-gray-600 transition-colors font-medium">Skip</button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -241,33 +328,46 @@ export default function Onboarding() {
 
   /* ── STEP 3: User Type ── */
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6" style={{ background: '#F5F2ED' }}>
-      <StepDots current={2} total={3} />
-      <h1 className="text-2xl font-bold text-gray-900 mb-10 text-center">
-        How would you describe yourself?
-      </h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-10 w-full max-w-xl">
-        {USER_TYPES.map(u => {
-          const sel = selectedType === u.id;
-          return (
-            <button
-              key={u.id}
-              onClick={() => setSelectedType(u.id)}
-              className={`flex items-center gap-3 p-4 rounded-2xl bg-white border-2 text-left transition-all hover:shadow-md ${
-                sel ? 'border-gray-800 shadow-md' : 'border-transparent shadow-sm'
-              }`}
-            >
-              <div className="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-xl flex-shrink-0">
-                {u.emoji}
-              </div>
-              <span className="text-sm font-semibold text-gray-800">{u.label}</span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="flex flex-col items-center gap-3">
-        <ContinueBtn onClick={() => finish(selectedType)} active={!!selectedType} disabled={false} />
-        <button onClick={skip} className="text-sm font-semibold text-gray-500 hover:text-gray-700 underline-offset-2 hover:underline">Skip</button>
+    <div className="min-h-screen flex bg-white">
+      <LeftPanel step={3} />
+      <div className="flex-1 flex flex-col overflow-y-auto">
+        <MobileProgress step={3} />
+        <div className="flex-1 px-8 py-12 max-w-2xl mx-auto w-full">
+          <h1 className="text-2xl font-extrabold text-gray-900 mb-1">How would you describe yourself?</h1>
+          <p className="text-sm text-gray-400 mb-8">Choose the option that best fits your role.</p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-10">
+            {USER_TYPES.map(u => {
+              const sel = selectedType === u.id;
+              return (
+                <button
+                  key={u.id}
+                  onClick={() => setSelectedType(u.id)}
+                  className={`flex items-center gap-4 px-5 py-4 rounded-2xl border-2 text-left transition-all ${
+                    sel ? 'border-indigo-500 bg-indigo-50/40' : 'border-gray-100 bg-white hover:border-gray-200 hover:shadow-sm'
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${
+                    sel ? 'bg-indigo-600' : 'bg-gray-100'
+                  }`}>
+                    <u.Icon className={`w-5 h-5 ${sel ? 'text-white' : 'text-gray-500'}`} />
+                  </div>
+                  <span className="text-sm font-bold text-gray-900">{u.label}</span>
+                  {sel && (
+                    <div className="ml-auto w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
+                      <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-4">
+            <ContinueBtn onClick={() => finish(selectedType)} active={!!selectedType} label="Finish setup" />
+            <button onClick={skip} className="text-sm text-gray-400 hover:text-gray-600 transition-colors font-medium">Skip</button>
+          </div>
+        </div>
       </div>
     </div>
   );
