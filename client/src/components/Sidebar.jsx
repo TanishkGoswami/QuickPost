@@ -533,47 +533,60 @@ function Sidebar() {
         document.body
       )}
 
-      {/* Instagram Business Setup Modal */}
-      <InstagramBusinessSetupModal
-        isOpen={showBusinessSetupModal}
-        onClose={() => setShowBusinessSetupModal(false)}
-        onProceed={handleProceedToConnect}
-      />
+      {/* Platform connect modals via portal (avoid sidebar layout constraints) */}
+      {showBusinessSetupModal && createPortal(
+        <InstagramBusinessSetupModal
+          isOpen={showBusinessSetupModal}
+          onClose={() => setShowBusinessSetupModal(false)}
+          onProceed={handleProceedToConnect}
+        />,
+        document.body
+      )}
 
-      {/* Bluesky Connect Modal */}
-      <BlueskyConnectModal
-        isOpen={showBlueskyModal}
-        onClose={() => setShowBlueskyModal(false)}
-        onSuccess={refreshAccounts}
-      />
+      {showBlueskyModal && createPortal(
+        <BlueskyConnectModal
+          isOpen={showBlueskyModal}
+          onClose={() => setShowBlueskyModal(false)}
+          onSuccess={refreshAccounts}
+        />,
+        document.body
+      )}
 
-      {/* Pinterest Connect Modal */}
-      <PinterestConnectModal
-        isOpen={showPinterestModal}
-        onClose={() => setShowPinterestModal(false)}
-        onSuccess={refreshAccounts}
-      />
+      {showPinterestModal && createPortal(
+        <PinterestConnectModal
+          isOpen={showPinterestModal}
+          onClose={() => setShowPinterestModal(false)}
+          onSuccess={refreshAccounts}
+        />,
+        document.body
+      )}
 
-      {/* LinkedIn Connect Modal */}
-      <LinkedInConnectModal
-        isOpen={showLinkedInModal}
-        onClose={() => setShowLinkedInModal(false)}
-        onSuccess={refreshAccounts}
-      />
+      {showLinkedInModal && createPortal(
+        <LinkedInConnectModal
+          isOpen={showLinkedInModal}
+          onClose={() => setShowLinkedInModal(false)}
+          onSuccess={refreshAccounts}
+        />,
+        document.body
+      )}
 
-      {/* Mastodon Connect Modal */}
-      <MastodonConnectModal
-        isOpen={showMastodonModal}
-        onClose={() => setShowMastodonModal(false)}
-        onSuccess={refreshAccounts}
-      />
+      {showMastodonModal && createPortal(
+        <MastodonConnectModal
+          isOpen={showMastodonModal}
+          onClose={() => setShowMastodonModal(false)}
+          onSuccess={refreshAccounts}
+        />,
+        document.body
+      )}
 
-      {/* TikTok Connect Modal */}
-      <TikTokConnectModal
-        isOpen={showTikTokModal}
-        onClose={() => setShowTikTokModal(false)}
-        onSuccess={refreshAccounts}
-      />
+      {showTikTokModal && createPortal(
+        <TikTokConnectModal
+          isOpen={showTikTokModal}
+          onClose={() => setShowTikTokModal(false)}
+          onSuccess={refreshAccounts}
+        />,
+        document.body
+      )}
     </aside>
   );
 }
