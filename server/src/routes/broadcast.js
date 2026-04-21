@@ -400,4 +400,3 @@ function cleanupFiles(filePaths, thumbnailFile) {
 }
 
 export default router;
-
