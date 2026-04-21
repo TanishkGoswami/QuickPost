@@ -13,6 +13,7 @@ import {
   Smartphone,
   Square,
   RectangleVertical,
+  AtSign,
 } from "lucide-react";
 import { Reorder, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
@@ -329,6 +330,7 @@ function PlatformPreviewPanel({
   youtubeThumbnail,
   activePlatform,
   onActivePlatformChange,
+  connectedAccounts,
 }) {
   const activeId = activePlatform || selectedChannels[0] || null;
 
@@ -345,12 +347,29 @@ function PlatformPreviewPanel({
     return URL.createObjectURL(mediaFiles[0].file);
   }, [mediaFiles]);
 
+  const resolveMentions = (text, platform) => {
+    if (!text) return text;
+    const username = connectedAccounts[platform]?.username || "your_account";
+    const prefix = ["facebook", "linkedin", "youtube"].includes(platform)
+      ? ""
+      : "@";
+    return text.replaceAll("{{MENTION_SELF}}", `${prefix}${username}`);
+  };
+
+  const resolvedCaption = useMemo(
+    () => resolveMentions(caption, activeId),
+    [caption, activeId, connectedAccounts]
+  );
+
   const truncatedCaption =
-    caption?.length > 120 ? caption.slice(0, 120) + "…" : caption;
+    resolvedCaption?.length > 120
+      ? resolvedCaption.slice(0, 120) + "…"
+      : resolvedCaption;
   const videoTitle =
-    caption?.length > 60
-      ? caption.slice(0, 60) + "…"
-      : caption || "Your Video Title";
+    resolvedCaption?.length > 60
+      ? resolvedCaption.slice(0, 60) + "…"
+      : resolvedCaption || "Your Video Title";
+  const platformUsername = connectedAccounts[activeId]?.username || "your_account";
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
@@ -433,7 +452,7 @@ function PlatformPreviewPanel({
                       {videoTitle || "Your Video Title"}
                     </h3>
                     <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-medium">
-                      <span>Your Channel</span>
+                      <span>{platformUsername}</span>
                       <span className="w-0.5 h-0.5 rounded-full bg-gray-400" />
                       <span>1.2K views</span>
                       <span className="w-0.5 h-0.5 rounded-full bg-gray-400" />
@@ -481,7 +500,7 @@ function PlatformPreviewPanel({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1">
                     <span className="text-[12px] font-semibold text-gray-900 leading-tight">
-                      your_account
+                      {platformUsername}
                     </span>
                     <svg
                       className="w-3 h-3 flex-shrink-0"
@@ -603,7 +622,7 @@ function PlatformPreviewPanel({
                 </p>
                 {caption && (
                   <p className="text-[11px] text-gray-900 mt-1 leading-relaxed">
-                    <span className="font-semibold mr-1">your_account</span>
+                    <span className="font-semibold mr-1">{platformUsername}</span>
                     {truncatedCaption}
                   </p>
                 )}
@@ -621,7 +640,7 @@ function PlatformPreviewPanel({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[12px] font-semibold text-gray-900 leading-tight">
-                    Your Account
+                    {platformUsername}
                   </p>
                   <div className="flex items-center gap-1">
                     <span className="text-[10px] text-gray-500">Just now</span>
@@ -714,7 +733,7 @@ function PlatformPreviewPanel({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[12px] font-semibold text-gray-900 leading-tight">
-                    Your Account
+                    {platformUsername}
                   </p>
                   <p className="text-[10px] text-gray-500">Your Title · 1st</p>
                   <div className="flex items-center gap-1">
@@ -811,7 +830,7 @@ function PlatformPreviewPanel({
                 <div className="flex-1 min-w-0 pb-2">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[12px] font-semibold text-gray-900">
-                      your_account
+                      {platformUsername}
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-gray-400">1m</span>
@@ -969,7 +988,7 @@ function PlatformPreviewPanel({
                             : "#111",
                       }}
                     >
-                      Your Account
+                      {platformUsername}
                     </p>
                     <p
                       className="text-[9px]"
@@ -1538,12 +1557,23 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                     Quick Ideas
                   </p>
                   {caption && (
-                    <button
-                      onClick={() => setCaption("")}
-                      className="text-[10px] text-gray-400 hover:text-red-500 transition-colors uppercase tracking-wider font-bold"
-                    >
-                      Clear all
-                    </button>
+                    <div className="flex items-center gap-2">
+                       <button
+                        type="button"
+                        onClick={() => setCaption((prev) => prev ? `${prev} {{MENTION_SELF}}` : "{{MENTION_SELF}}")}
+                        className="text-[10px] text-indigo-500 hover:text-indigo-600 transition-colors uppercase tracking-wider font-bold flex items-center gap-1"
+                        title="Inserts a dynamic handle that resolves to each platform's username"
+                      >
+                        <AtSign size={10} />
+                        Mention Me
+                      </button>
+                      <button
+                        onClick={() => setCaption("")}
+                        className="text-[10px] text-gray-400 hover:text-red-500 transition-colors uppercase tracking-wider font-bold"
+                      >
+                        Clear all
+                      </button>
+                    </div>
                   )}
                 </div>
                 <div
@@ -1647,7 +1677,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                 />
                 <p className="text-gray-600 text-sm mb-1">
                   Drag & drop or{" "}
-                  <label className="text-buffer-blue hover:text-buffer-blueDark cursor-pointer font-medium">
+                  <label className="text-link hover:underline cursor-pointer font-medium">
                     select multiple files
                     <input
                       ref={fileInputRef}
@@ -1945,6 +1975,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                 youtubeThumbnail={youtubeThumbnail}
                 activePlatform={activePreviewPlatform}
                 onActivePlatformChange={setActivePreviewPlatform}
+                connectedAccounts={connectedAccounts}
               />
             )}
           </div>

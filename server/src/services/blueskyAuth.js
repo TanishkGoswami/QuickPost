@@ -132,6 +132,7 @@ class BlueskyAuth {
             refresh_token: sessionData.refreshJwt,
             bluesky_did: sessionData.did,
             bluesky_handle: sessionData.handle,
+            username: sessionData.handle,
             updated_at: new Date().toISOString()
           },
           { onConflict: 'user_id,provider' }

@@ -49,6 +49,21 @@ class GoogleOAuthService {
       const oauth2 = google.oauth2({ version: 'v2', auth: this.oauth2Client });
       const { data: userInfo } = await oauth2.userinfo.get();
 
+      // Get YouTube Channel info (to get the channel name/handle)
+      const youtube = google.youtube({ version: 'v3', auth: this.oauth2Client });
+      let channelTitle = userInfo.name; // Fallback to Google name
+      try {
+        const channelRes = await youtube.channels.list({
+          part: 'snippet',
+          mine: true
+        });
+        if (channelRes.data.items && channelRes.data.items.length > 0) {
+          channelTitle = channelRes.data.items[0].snippet.title;
+        }
+      } catch (err) {
+        console.warn('⚠️ [GOOGLE_OAUTH] Failed to fetch YT channel info:', err.message);
+      }
+
       return {
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,
@@ -57,7 +72,8 @@ class GoogleOAuthService {
           email: userInfo.email,
           name: userInfo.name,
           picture: userInfo.picture,
-          googleId: userInfo.id
+          googleId: userInfo.id,
+          username: channelTitle
         }
       };
     } catch (error) {
@@ -83,6 +99,7 @@ class GoogleOAuthService {
           access_token: tokenData.accessToken,
           refresh_token: tokenData.refreshToken,
           token_expiry: expiryDate.toISOString(),
+          username: tokenData.userInfo?.username,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id,provider'
