@@ -1080,10 +1080,21 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
   const [error, setError] = useState(null);
   const [dragActive, setDragActive] = useState(false);
   const [selectedSizePreset, setSelectedSizePreset] =
-    useState("ig-feed-square");
+    useState("ig-post-square");
   const [activePreviewPlatform, setActivePreviewPlatform] =
     useState("instagram");
   const fileInputRef = useRef(null);
+
+  const availableSizePresets = useMemo(() => {
+    const targetPlatform =
+      selectedChannels.length > 0 ? activePreviewPlatform : "instagram";
+
+    return getPresetsForPlatform(targetPlatform).map((preset) => ({
+      ...preset,
+      matchedPlatforms: [targetPlatform],
+      matchCount: 1,
+    }));
+  }, [selectedChannels, activePreviewPlatform]);
 
   // Min datetime for scheduling = now + 2 minutes
   const minScheduleDateTime = React.useMemo(() => {
