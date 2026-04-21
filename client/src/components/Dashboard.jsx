@@ -211,19 +211,23 @@ function buildPlatforms(post) {
   ].filter((p) => p.success || (p.error && p.error !== "Not selected"));
 }
 
-function MediaThumb({ post, className = '' }) {
-  const isImage = post.media_type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || '');
+function MediaThumb({ post, className = "" }) {
+  const isImage =
+    post.media_type === "image" ||
+    /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || "");
   const displayUrl = post.thumbnail_url || (isImage ? post.media_url : null);
-  
+
   return (
     <div className={`bg-gray-100 overflow-hidden relative group ${className}`}>
       {displayUrl ? (
         <div className="w-full h-full">
-          <img 
-            src={displayUrl} 
-            alt="Preview" 
+          <img
+            src={displayUrl}
+            alt="Preview"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            onError={e => { e.target.src = 'https://placehold.co/300x300?text=Preview'; }} 
+            onError={(e) => {
+              e.target.src = "https://placehold.co/300x300?text=Preview";
+            }}
           />
           {post.youtube_success && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-all duration-300">
@@ -295,12 +299,17 @@ function GridCard({ post, onOpen, formatDate }) {
       <div className="p-4 flex flex-col flex-1">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-            <Calendar className="w-3 h-3" />{formatDate(post.posted_at)}
+            <Calendar className="w-3 h-3" />
+            {formatDate(post.posted_at)}
           </div>
           {post.youtube_success && (
             <div className="flex items-center gap-2 text-[9px] font-bold text-gray-400 opacity-60">
-              <span className="flex items-center gap-0.5"><ThumbsUp className="w-2.5 h-2.5" /> 12</span>
-              <span className="flex items-center gap-0.5"><Eye className="w-2.5 h-2.5" /> 2.4k</span>
+              <span className="flex items-center gap-0.5">
+                <ThumbsUp className="w-2.5 h-2.5" /> 12
+              </span>
+              <span className="flex items-center gap-0.5">
+                <Eye className="w-2.5 h-2.5" /> 2.4k
+              </span>
             </div>
           )}
         </div>
