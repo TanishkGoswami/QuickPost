@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   Plus,
@@ -411,6 +412,7 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
 /* ── Main Dashboard ────────────────────────────────────────────────────── */
 function Dashboard() {
   const { user, refreshAccounts } = useAuth();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("sent");
   const [broadcasts, setBroadcasts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -494,9 +496,27 @@ function Dashboard() {
   const toggleExpand = (id) =>
     setExpandedId((prev) => (prev === id ? null : id));
 
-  const filtered = broadcasts.filter((b) =>
-    b.caption?.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const selectedPlatform = searchParams.get("platform") || "all";
+
+  const filtered = broadcasts.filter((b) => {
+    const matchesSearch = (b.caption || "")
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+
+    if (selectedPlatform === "all") {
+      return matchesSearch;
+    }
+
+    const matchesPlatform = buildPlatforms(b).some(
+      (platform) => platform.id === selectedPlatform,
+    );
+
+    return matchesSearch && matchesPlatform;
+  });
+
+  const successfulCount = filtered.filter((b) =>
+    buildPlatforms(b).some((p) => p.success),
+  ).length;
 
   // Pagination Logic
   const totalItems = filtered.length;
@@ -614,7 +634,7 @@ function Dashboard() {
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-blue-500" />
                 <span className="text-sm font-bold text-gray-700">
-                  {broadcasts.length}
+                  {filtered.length}
                 </span>
                 <span className="text-xs text-gray-400">
                   {activeTab === "queue" ? "scheduled" : "total"} posts
@@ -625,11 +645,7 @@ function Dashboard() {
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
                   <span className="text-sm font-bold text-gray-700">
-                    {
-                      broadcasts.filter((b) =>
-                        buildPlatforms(b).some((p) => p.success),
-                      ).length
-                    }
+                    {successfulCount}
                   </span>
                   <span className="text-xs text-gray-400">successful</span>
                 </div>

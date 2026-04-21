@@ -18,6 +18,10 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const selectedDashboardPlatform =
+    location.pathname === '/dashboard'
+      ? new URLSearchParams(location.search).get('platform')
+      : null;
   const { user, connectedAccounts, refreshAccounts, logout } = useAuth();
   const { confirm, alert } = useDialog();
   const [showBusinessSetupModal, setShowBusinessSetupModal] = useState(false);
@@ -354,7 +358,12 @@ function Sidebar() {
                   {platforms.filter(p => p.connected).map((platform) => (
                     <div
                       key={platform.id}
-                      className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-all cursor-default"
+                      onClick={() => navigate(`/dashboard?platform=${platform.id}`)}
+                      className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
+                        selectedDashboardPlatform === platform.id
+                          ? 'bg-indigo-50 border border-indigo-100'
+                          : 'hover:bg-gray-50 border border-transparent'
+                      }`}
                     >
                       <div className="relative flex-shrink-0">
                         <div className="w-8 h-8 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center">
@@ -367,7 +376,10 @@ function Sidebar() {
                         <div className="text-[11px] text-gray-400 truncate leading-tight">{user?.name || user?.email}</div>
                       </div>
                       <button
-                        onClick={() => handleDisconnect(platform.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDisconnect(platform.id);
+                        }}
                         disabled={disconnectingPlatform === platform.id}
                         className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                         title="Disconnect"
