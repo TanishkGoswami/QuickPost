@@ -87,7 +87,7 @@ function CustomDialog({ type, title, message, confirmText, cancelText, intent, o
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
       <div 
         className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in"
         onClick={(e) => e.stopPropagation()}

@@ -25,6 +25,11 @@ const OrbitalArc = () => (
 function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const selectedDashboardPlatform =
+    location.pathname === '/dashboard'
+      ? new URLSearchParams(location.search).get('platform')
+      : null;
+
   const { user, connectedAccounts, refreshAccounts, logout } = useAuth();
   const { confirm, alert } = useDialog();
   const [showBusinessSetupModal, setShowBusinessSetupModal] = useState(false);
@@ -259,38 +264,53 @@ function Sidebar() {
                   transition={{ duration: 0.25, ease: 'easeInOut' }}
                   style={{ overflow: 'hidden' }}
                 >
-                  {platforms.filter(p => p.connected).map(platform => (
-                    <div
-                      key={platform.id}
-                      className="group"
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 'var(--r-btn)', marginBottom: 2, cursor: 'default', transition: 'background 0.15s' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(20,20,19,0.04)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <div style={{ position: 'relative', flexShrink: 0 }}>
-                        <div style={{ width: 30, height: 30, borderRadius: 'var(--r-sm)', background: 'var(--canvas-lifted)', border: '1px solid rgba(20,20,19,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {platform.icon}
-                        </div>
-                        <span style={{ position: 'absolute', bottom: -2, right: -2, width: 10, height: 10, background: '#22c55e', borderRadius: '50%', border: '2px solid var(--canvas)' }} />
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{platform.name}</div>
-                        <div style={{ fontSize: 10, color: 'var(--slate)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>{user?.name || user?.email}</div>
-                      </div>
-                      <button
-                        onClick={() => handleDisconnect(platform.id)}
-                        disabled={disconnectingPlatform === platform.id}
-                        style={{ opacity: 0, padding: '3px 6px', borderRadius: 6, border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', transition: 'opacity 0.2s' }}
-                        className="group-hover:opacity-100"
-                        title="Disconnect"
+                  {platforms.filter(p => p.connected).map(platform => {
+                    const isSelected = selectedDashboardPlatform === platform.id && location.pathname === '/dashboard';
+                    return (
+                      <div
+                        key={platform.id}
+                        onClick={() => navigate(`/dashboard?platform=${platform.id}`)}
+                        className="group"
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: 10, 
+                          padding: '8px 10px', 
+                          borderRadius: 'var(--r-btn)', 
+                          marginBottom: 2, 
+                          cursor: 'pointer', 
+                          transition: 'background 0.15s, border-color 0.15s',
+                          background: isSelected ? 'rgba(20,20,19,0.06)' : 'transparent',
+                          border: isSelected ? '1px solid rgba(20,20,19,0.08)' : '1px solid transparent'
+                        }}
+                        onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(20,20,19,0.04)'; }}
+                        onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
                       >
-                        {disconnectingPlatform === platform.id
-                          ? <span style={{ fontSize: 9 }}>...</span>
-                          : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                        }
-                      </button>
-                    </div>
-                  ))}
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                          <div style={{ width: 30, height: 30, borderRadius: 'var(--r-sm)', background: 'var(--canvas-lifted)', border: '1px solid rgba(20,20,19,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {platform.icon}
+                          </div>
+                          <span style={{ position: 'absolute', bottom: -2, right: -2, width: 10, height: 10, background: '#22c55e', borderRadius: '50%', border: '2px solid var(--canvas)' }} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{platform.name}</div>
+                          <div style={{ fontSize: 10, color: 'var(--slate)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>{user?.name || user?.email}</div>
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDisconnect(platform.id); }}
+                          disabled={disconnectingPlatform === platform.id}
+                          style={{ opacity: 0, padding: '3px 6px', borderRadius: 6, border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', transition: 'opacity 0.2s' }}
+                          className="group-hover:opacity-100"
+                          title="Disconnect"
+                        >
+                          {disconnectingPlatform === platform.id
+                            ? <span style={{ fontSize: 9 }}>...</span>
+                            : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                          }
+                        </button>
+                      </div>
+                    );
+                  })}
                 </motion.div>
               )}
             </AnimatePresence>

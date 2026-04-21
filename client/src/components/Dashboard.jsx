@@ -1,16 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  Plus, Search, Calendar, ChevronDown, ChevronUp, ExternalLink,
-  Clock, Share2, CheckCircle2, XCircle, Video, Image as ImageIcon,
-  LayoutGrid, List, ChevronLeft, ChevronRight, Play, ThumbsUp, Eye
-} from 'lucide-react';
-import apiClient from '../utils/apiClient';
-import ComposerModal from './ComposerModal';
-import PostPreviewModal from './PostPreviewModal';
+  Plus,
+  Search,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Clock,
+  Share2,
+  CheckCircle2,
+  XCircle,
+  Video,
+  Image as ImageIcon,
+  LayoutGrid,
+  List,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Eye,
+  ThumbsUp,
+  X
+} from "lucide-react";
+import apiClient from "../utils/apiClient";
+import ComposerModal from "./ComposerModal";
+import PostPreviewModal from "./PostPreviewModal";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 /* ── token shortcuts ── */
 const css = {
@@ -42,24 +59,91 @@ function getPlatformIcon(id) {
     case 'mastodon':  return <img src="/icons/mastodon-round-icon.svg" style={s} alt="Mastodon" />;
     case 'bluesky':   return <img src="/icons/bluesky-circle-color-icon.svg" style={s} alt="Bluesky" />;
     case 'reddit':    return <img src="/icons/reddit-icon.svg" style={s} alt="Reddit" />;
+    case 'google-business': return <img src="/icons/google-icon.svg" style={s} alt="Google" />;
     default:          return <Share2 size={16} />;
   }
 }
 
 function buildPlatforms(post) {
   return [
-    { id: 'linkedin',  name: 'LinkedIn',  success: post.linkedin_success,  error: post.linkedin_error,  url: post.linkedin_url },
-    { id: 'youtube',   name: 'YouTube',   success: post.youtube_success,   error: post.youtube_error,   url: post.youtube_shorts_url || post.youtube_url },
-    { id: 'instagram', name: 'Instagram', success: post.instagram_success, error: post.instagram_error, url: post.instagram_url },
-    { id: 'facebook',  name: 'Facebook',  success: post.facebook_success,  error: post.facebook_error,  url: post.facebook_url },
-    { id: 'tiktok',    name: 'TikTok',    success: post.tiktok_success,    error: post.tiktok_error,    url: null },
-    { id: 'mastodon',  name: 'Mastodon',  success: post.mastodon_success,  error: post.mastodon_error,  url: post.mastodon_url },
-    { id: 'bluesky',   name: 'Bluesky',   success: post.bluesky_success,   error: post.bluesky_error,   url: post.bluesky_url },
-    { id: 'pinterest', name: 'Pinterest', success: post.pinterest_success, error: post.pinterest_error, url: post.pinterest_url },
-    { id: 'threads',   name: 'Threads',   success: post.threads_success,   error: post.threads_error,   url: post.threads_url },
-    { id: 'x',         name: 'X',         success: post.x_success,         error: post.x_error,         url: post.x_url },
-    { id: 'reddit',    name: 'Reddit',    success: post.reddit_success,    error: post.reddit_error,    url: post.reddit_url },
-  ].filter(p => p.success || (p.error && p.error !== 'Not selected'));
+    {
+      id: "linkedin",
+      name: "LinkedIn",
+      success: post.linkedin_success,
+      error: post.linkedin_error,
+      url: post.linkedin_url,
+    },
+    {
+      id: "youtube",
+      name: "YouTube",
+      success: post.youtube_success,
+      error: post.youtube_error,
+      url: post.youtube_shorts_url || post.youtube_url,
+    },
+    {
+      id: "instagram",
+      name: "Instagram",
+      success: post.instagram_success,
+      error: post.instagram_error,
+      url: post.instagram_url,
+    },
+    {
+      id: "facebook",
+      name: "Facebook",
+      success: post.facebook_success,
+      error: post.facebook_error,
+      url: post.facebook_url,
+    },
+    {
+      id: "tiktok",
+      name: "TikTok",
+      success: post.tiktok_success,
+      error: post.tiktok_error,
+      url: null,
+    },
+    {
+      id: "mastodon",
+      name: "Mastodon",
+      success: post.mastodon_success,
+      error: post.mastodon_error,
+      url: post.mastodon_url,
+    },
+    {
+      id: "bluesky",
+      name: "Bluesky",
+      success: post.bluesky_success,
+      error: post.bluesky_error,
+      url: post.bluesky_url,
+    },
+    {
+      id: "pinterest",
+      name: "Pinterest",
+      success: post.pinterest_success,
+      error: post.pinterest_error,
+      url: post.pinterest_url,
+    },
+    {
+      id: "threads",
+      name: "Threads",
+      success: post.threads_success,
+      error: post.threads_error,
+      url: post.threads_url,
+    },
+    {
+      id: "x",
+      name: "X",
+      success: post.x_success,
+      error: post.x_error,
+      url: post.x_url,
+    },
+    {
+      id: "reddit",
+      name: "Reddit",
+      success: post.reddit_success,
+      error: post.reddit_error,
+      url: post.reddit_url,
+    },
+  ].filter((p) => p.success || (p.error && p.error !== "Not selected"));
 }
 
 /* ── Media thumbnail ── */
@@ -83,7 +167,7 @@ function MediaThumb({ post, className = '', style = {} }) {
             </div>
           )}
         </div>
-      ) : isImage ? (
+      ) : post.media_type === 'image' ? (
         <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, background: '#e8e2da' }}>
           <ImageIcon size={28} style={{ color: '#9a9088' }} />
           <span style={{ fontSize: 9, fontWeight: 700, color: '#9a9088', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Image</span>
@@ -121,7 +205,7 @@ function PlatformBadge({ platform }) {
 /* ── Grid card ── */
 function GridCard({ post, onOpen, formatDate }) {
   const platforms = buildPlatforms(post);
-  const successCount = platforms.filter(p => p.success).length;
+  const successCount = platforms.filter((p) => p.success).length;
   return (
     <div
       onClick={onOpen}
@@ -138,10 +222,8 @@ function GridCard({ post, onOpen, formatDate }) {
       onMouseEnter={e => { e.currentTarget.style.boxShadow = css.shadow; e.currentTarget.style.transform = 'translateY(-4px)'; }}
       onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
     >
-      {/* Thumb */}
       <div style={{ position: 'relative' }}>
         <MediaThumb post={post} style={{ width: '100%', height: 176, borderRadius: 0 }} />
-        {/* Media type badge */}
         <div style={{
           position: 'absolute', top: 12, right: 12,
           padding: '3px 10px', borderRadius: css.r_pill,
@@ -150,7 +232,6 @@ function GridCard({ post, onOpen, formatDate }) {
         }}>
           {post.media_type || 'media'}
         </div>
-        {/* Platform count */}
         {successCount > 0 && (
           <div style={{
             position: 'absolute', bottom: 12, left: 12,
@@ -163,18 +244,11 @@ function GridCard({ post, onOpen, formatDate }) {
         )}
       </div>
 
-      {/* Body */}
       <div style={{ padding: '16px 20px 20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: css.slate, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            <Calendar size={10} />{formatDate(post.posted_at)}
+            <Calendar size={10} />{formatDate(post.status === 'scheduled' ? post.scheduled_for : post.posted_at)}
           </div>
-          {post.youtube_success && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 9, color: css.slate }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}><ThumbsUp size={10} /> 12</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}><Eye size={10} /> 2.4k</span>
-            </div>
-          )}
         </div>
         <p style={{ fontSize: 14, fontWeight: 600, color: css.ink, margin: '0 0 12px', lineHeight: 1.4, flex: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {post.caption || <span style={{ color: css.dust, fontStyle: 'italic' }}>No caption</span>}
@@ -204,7 +278,7 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: css.slate, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              <Calendar size={10} />{formatDate(post.posted_at)}
+              <Calendar size={10} />{formatDate(post.status === 'scheduled' ? post.scheduled_for : post.posted_at)}
             </div>
             {expanded ? <ChevronUp size={14} style={{ color: css.slate }} /> : <ChevronDown size={14} style={{ color: css.slate }} />}
           </div>
@@ -251,25 +325,28 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
 
 /* ══════════════════════════════════════════════════════
    MAIN DASHBOARD
-══════════════════════════════════════════════════════ */
+   ══════════════════════════════════════════════════════ */
 function Dashboard() {
   const { user, refreshAccounts } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('sent');
   const [broadcasts, setBroadcasts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [composerOpen, setComposerOpen] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('grid');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState("grid");
   const [selectedPost, setSelectedPost] = useState(null);
   const [queueCount, setQueueCount] = useState(0);
+
+  // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
   const tabs = [
     { id: 'sent',    label: 'Sent',    count: activeTab === 'sent'    ? broadcasts.length : 0 },
-    { id: 'queue',   label: 'Queue',   count: queueCount },
+    { id: 'queue',   label: 'Queue',   count: activeTab === 'queue'   ? broadcasts.length : (activeTab === 'sent' ? queueCount : 0) },
     { id: 'drafts',  label: 'Drafts',  count: 0 },
     { id: 'history', label: 'History', count: activeTab === 'history' ? broadcasts.length : 0 },
   ];
@@ -280,13 +357,24 @@ function Dashboard() {
     apiClient.get('/api/broadcasts/stats').then(r => setQueueCount(r.data.pending || 0)).catch(() => {});
   }, [refreshAccounts]);
 
-  useEffect(() => { fetchBroadcasts(); setCurrentPage(1); }, [activeTab]);
-  useEffect(() => { setCurrentPage(1); }, [searchTerm]);
+  useEffect(() => { 
+    fetchBroadcasts(); 
+    setCurrentPage(1); 
+  }, [activeTab]);
+  
+  useEffect(() => { 
+    setCurrentPage(1); 
+  }, [searchTerm]);
+
+  const resetPagination = () => setCurrentPage(1);
 
   const fetchBroadcasts = async () => {
     try {
       setLoading(true);
-      const params = activeTab === 'sent' ? { status: 'sent' } : {};
+      let params = {};
+      if (activeTab === 'sent') params.status = 'sent';
+      else if (activeTab === 'queue') params.status = 'scheduled';
+
       const response = await apiClient.get('/api/broadcasts', { params });
       setBroadcasts(response.data.broadcasts || []);
     } catch (err) { setBroadcasts([]); }
@@ -297,12 +385,20 @@ function Dashboard() {
     new Date(dateString).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   const toggleExpand = (id) => setExpandedId(prev => prev === id ? null : id);
-  const filtered = broadcasts.filter(b => b.caption?.toLowerCase().includes(searchTerm.toLowerCase()));
+  
+  const selectedPlatform = searchParams.get('platform') || 'all';
+
+  const filtered = broadcasts.filter(b => {
+    const matchesSearch = (b.caption || '').toLowerCase().includes(searchTerm.toLowerCase());
+    if (selectedPlatform === 'all') return matchesSearch;
+    const matchesPlatform = buildPlatforms(b).some(p => p.id === selectedPlatform);
+    return matchesSearch && matchesPlatform;
+  });
+
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
   const handlePageChange = (page) => { setCurrentPage(page); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
-  /* ── Pagination ── */
   const Pagination = () => {
     if (totalPages <= 1) return null;
     const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -331,26 +427,36 @@ function Dashboard() {
 
       {/* ── Top header ── */}
       <div style={{
-        background: css.canon,
+        background: css.lifted,
         borderBottom: '1px solid rgba(20,20,19,0.08)',
         padding: '18px 28px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        background: css.lifted,
       }}>
-        <div>
-          <div className="eyebrow" style={{ marginBottom: 4 }}>Overview</div>
-          <h1 style={{ fontSize: 28, fontWeight: 500, color: css.ink, margin: 0, letterSpacing: '-0.02em', lineHeight: 1 }}>Post Analytics</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          <div>
+            <div className="eyebrow" style={{ marginBottom: 4 }}>Overview</div>
+            <h1 style={{ fontSize: 28, fontWeight: 500, color: css.ink, margin: 0, letterSpacing: '-0.02em', lineHeight: 1 }}>Post Analytics</h1>
+          </div>
+          {selectedPlatform !== 'all' && (
+             <div style={{ padding: '4px 12px', background: 'rgba(20,20,19,0.05)', borderRadius: css.r_btn, border: '1px solid rgba(20,20,19,0.1)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: css.slate, textTransform: 'uppercase' }}>Filtering:</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: css.ink }}>{selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)}</span>
+                <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}><X size={12} /></button>
+             </div>
+          )}
         </div>
-        <button
-          onClick={() => setComposerOpen(true)}
-          className="btn-ink"
-          style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '10px 22px' }}
-        >
-          <Plus size={16} />
-          New Post
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            onClick={() => setComposerOpen(true)}
+            className="btn-ink"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '10px 22px' }}
+          >
+            <Plus size={16} />
+            New Post
+          </button>
+        </div>
       </div>
 
       {/* ── Tabs ── */}
@@ -360,7 +466,7 @@ function Dashboard() {
           return (
             <button
               key={tab.id}
-              onClick={() => { if (tab.id === 'queue') { navigate('/dashboard/queue'); return; } setActiveTab(tab.id); }}
+              onClick={() => { if (tab.id === 'queue' && activeTab !== 'queue') { navigate('/dashboard/queue'); return; } setActiveTab(tab.id); }}
               style={{
                 padding: '14px 0',
                 fontSize: 12,
@@ -398,25 +504,32 @@ function Dashboard() {
       </div>
 
       {/* ── Toolbar ── */}
-      {(activeTab === 'sent' || activeTab === 'history') && !loading && broadcasts.length > 0 && (
+      {(activeTab === 'sent' || activeTab === 'queue' || activeTab === 'history') && !loading && broadcasts.length > 0 && (
         <div style={{ background: css.canvas, borderBottom: '1px solid rgba(20,20,19,0.06)', padding: '12px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <Clock size={14} style={{ color: css.arc }} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: css.ink }}>{broadcasts.length}</span>
-              <span style={{ fontSize: 12, color: css.slate }}>total posts</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: css.ink }}>{filtered.length}</span>
+              <span style={{ fontSize: 12, color: css.slate }}>{activeTab === 'queue' ? 'scheduled' : 'total'} posts</span>
             </div>
             <div style={{ width: 1, height: 16, background: 'rgba(20,20,19,0.12)' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <CheckCircle2 size={14} style={{ color: '#22c55e' }} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: css.ink }}>
-                {broadcasts.filter(b => buildPlatforms(b).some(p => p.success)).length}
-              </span>
-              <span style={{ fontSize: 12, color: css.slate }}>successful</span>
-            </div>
+            {activeTab !== 'queue' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <CheckCircle2 size={14} style={{ color: '#22c55e' }} />
+                <span style={{ fontSize: 13, fontWeight: 700, color: css.ink }}>
+                  {filtered.filter(b => buildPlatforms(b).some(p => p.success)).length}
+                </span>
+                <span style={{ fontSize: 12, color: css.slate }}>successful</span>
+              </div>
+            )}
+            {activeTab === 'queue' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Calendar size={14} style={{ color: css.arc }} />
+                <span style={{ fontSize: 10, color: css.arc, fontWeight: 700, textTransform: 'uppercase' }}>Pending Broadcasts</span>
+              </div>
+            )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {/* Search */}
             <div style={{ position: 'relative' }}>
               <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: css.slate }} />
               <input
@@ -432,11 +545,8 @@ function Dashboard() {
                   fontSize: 13, color: css.ink, fontFamily: 'var(--font)',
                   outline: 'none', width: 200,
                 }}
-                onFocus={e => e.target.style.borderColor = css.ink}
-                onBlur={e => e.target.style.borderColor = 'rgba(20,20,19,0.12)'}
               />
             </div>
-            {/* View toggle */}
             <div style={{ display: 'flex', background: css.lifted, border: '1px solid rgba(20,20,19,0.10)', borderRadius: css.r_pill, padding: 3, gap: 2 }}>
               {[
                 { mode: 'grid', icon: <LayoutGrid size={14} /> },
@@ -456,7 +566,6 @@ function Dashboard() {
       <div style={{ padding: '28px' }}>
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: 16 }}>
-            {/* Mastercard-style spinner: three staggered circles */}
             <div style={{ display: 'flex', gap: 8 }}>
               {[0, 1, 2].map(i => (
                 <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: css.ink, animation: 'mc-float 1.2s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
@@ -464,7 +573,7 @@ function Dashboard() {
             </div>
             <p style={{ fontSize: 13, color: css.slate, margin: 0 }}>Syncing data…</p>
           </div>
-        ) : (activeTab === 'sent' || activeTab === 'history') && filtered.length > 0 ? (
+        ) : (activeTab === "sent" || activeTab === "queue" || activeTab === "history") && filtered.length > 0 ? (
           <>
             {viewMode === 'grid' ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 20 }}>
@@ -495,7 +604,6 @@ function Dashboard() {
             padding: '80px 40px',
             textAlign: 'center',
           }}>
-            {/* Ghost watermark behind the icon */}
             <div style={{ position: 'relative', display: 'inline-block', marginBottom: 24 }}>
               <div className="watermark" style={{ fontSize: 80, position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', whiteSpace: 'nowrap' }}>✦</div>
               <div style={{ position: 'relative', width: 64, height: 64, borderRadius: '50%', background: css.ink, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
