@@ -44,12 +44,24 @@ router.post('/broadcast', authenticateUser, (req, res, next) => {
       return res.status(400).json({ success: false, error: 'No media files uploaded' });
     }
 
-    const { caption, selectedChannels, platformData, scheduledAt, isScheduled: isScheduledField } = req.body;
+    const { caption, selectedChannels, platformData, scheduledAt, isScheduled: isScheduledField, userTimezone } = req.body;
     const userId = req.user.userId;
 
     const channels = typeof selectedChannels === 'string' ? JSON.parse(selectedChannels) : selectedChannels;
     const platData = typeof platformData === 'string' ? JSON.parse(platformData) : platformData;
     const isScheduled = isScheduledField === 'true' || !!scheduledAt;
+
+    // ── Validate scheduled time ───────────────────────────────────────────
+    if (isScheduled && scheduledAt) {
+      const schedTime = new Date(scheduledAt).getTime();
+      const minAllowed = Date.now() + 2 * 60 * 1000; // 2-minute buffer
+      if (isNaN(schedTime)) {
+        return res.status(400).json({ success: false, error: 'Invalid scheduledAt date format.' });
+      }
+      if (schedTime < minAllowed) {
+        return res.status(400).json({ success: false, error: 'Scheduled time must be at least 2 minutes in the future.' });
+      }
+    }
 
     const uploadedFiles = req.files['media'] || [];
     const thumbnailFile = req.files['youtubeThumbnail'] ? req.files['youtubeThumbnail'][0] : null;
@@ -95,7 +107,8 @@ router.post('/broadcast', authenticateUser, (req, res, next) => {
       mediaType,
       primaryVideoPath,
       isScheduled,
-      scheduledAt
+      scheduledAt,
+      userTimezone
     }).catch(err => {
       console.error(`❌ [BROADCAST_JOB] Unhandled error in job ${jobId}:`, err);
       failJob(jobId, err.message || 'Unknown error');
@@ -123,7 +136,7 @@ async function processBroadcastJob({
   jobId, userId, caption, channels, platData,
   uploadedFiles, filePaths, filenames,
   thumbnailFile, isVideo, mediaType, primaryVideoPath,
-  isScheduled, scheduledAt
+  isScheduled, scheduledAt, userTimezone
 }) {
   console.log(`\n🚀 [JOB:${jobId}] Starting background broadcast for user: ${userId}`);
 
@@ -210,7 +223,7 @@ async function processBroadcastJob({
         filenames, 
         { mediaUrls, thumbnailUrl: finalThumbnailUrl }, 
         mediaType, 
-        { ...platData, selectedChannels: channels, filePaths }, // Store filePaths for scheduler cleanup later
+        { ...platData, selectedChannels: channels, filePaths, userTimezone: userTimezone || 'UTC' }, // Store filePaths for scheduler
         'scheduled', 
         scheduledAt
       );
@@ -220,10 +233,14 @@ async function processBroadcastJob({
         progress: 100,
         step: `Post scheduled for ${new Date(scheduledAt).toLocaleString()}!`,
       });
-      console.log(`📅 [JOB:${jobId}] Broadcast successfully scheduled.`);
-      return; // Stop here, scheduler will pick it up
+      console.log(`📅 [JOB:${jobId}] Broadcast successfully scheduled. Files preserved for scheduler.`);
+      // ⚠️ DO NOT cleanup files here — the scheduler needs the local filePaths
+      // to post to YouTube / TikTok / Bluesky when the scheduled time arrives.
+      // Files will be cleaned up by the scheduler after successful posting.
+      return;
     } catch (dbErr) {
       failJob(jobId, `Scheduling failed: ${dbErr.message}`);
+      // Safe to cleanup on DB error — post wasn't saved, nothing to execute
       cleanupFiles(filePaths, thumbnailFile);
       return;
     }

@@ -65,17 +65,17 @@ export default function CookieConsent() {
             }}
           >
             <div style={{
-              background: 'rgba(255,255,255,0.97)',
+              background: '#FCFBFA',
               backdropFilter: 'blur(24px)',
               WebkitBackdropFilter: 'blur(24px)',
-              borderRadius: 18,
-              border: '1px solid rgba(0,0,0,0.07)',
-              boxShadow: '0 24px 60px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.6) inset',
+              borderRadius: 'var(--r-hero)',
+              border: '1px solid rgba(20,20,19,0.08)',
+              boxShadow: '0 24px 60px rgba(20,20,19,0.18)',
               overflow: 'hidden',
-              fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+              fontFamily: "'Sofia Sans', Arial, sans-serif",
             }}>
-              {/* Top accent line */}
-              <div style={{ height: 3, background: 'linear-gradient(90deg, #6366f1, #8b5cf6, #06b6d4)' }} />
+              {/* Top accent line — Signal Orange per Mastercard consent pattern */}
+              <div style={{ height: 3, background: '#F37338' }} />
 
               <div style={{ padding: '20px 22px' }}>
                 {/* Main row */}
@@ -90,15 +90,15 @@ export default function CookieConsent() {
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <h3 style={{ margin: 0, fontSize: 14.5, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
+                    <h3 style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>
                       We use cookies
                     </h3>
-                    <p style={{ margin: '4px 0 0', fontSize: 12.5, color: '#64748b', lineHeight: 1.55, fontWeight: 400 }}>
+                    <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--slate)', lineHeight: 1.55, fontWeight: 450 }}>
                       We use cookies to personalise content, analyse traffic and improve your experience.
                       {' '}
                       <button
                         onClick={() => setShowDetails(d => !d)}
-                        style={{ color: '#6366f1', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                        style={{ color: 'var(--link)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}
                       >
                         {showDetails ? 'Hide details' : 'Cookie settings'}
                       </button>
@@ -117,8 +117,8 @@ export default function CookieConsent() {
                       style={{ overflow: 'hidden' }}
                     >
                       <div style={{
-                        marginTop: 14, padding: 14, borderRadius: 12,
-                        background: '#f8fafc', border: '1px solid #e2e8f0',
+                        marginTop: 14, padding: 14, borderRadius: 'var(--r-btn)',
+                        background: 'var(--canvas)', border: '1px solid rgba(20,20,19,0.08)',
                         display: 'flex', flexDirection: 'column', gap: 10,
                       }}>
                         {/* Essential — always on */}
@@ -170,13 +170,13 @@ export default function CookieConsent() {
                   <button
                     onClick={() => save('decline')}
                     style={{
-                      fontSize: 12.5, fontWeight: 700, color: '#64748b',
-                      background: 'transparent', border: '1.5px solid #e2e8f0',
-                      borderRadius: 10, padding: '8px 16px', cursor: 'pointer',
+                      fontSize: 12.5, fontWeight: 700, color: 'var(--slate)',
+                      background: 'transparent', border: '1.5px solid rgba(20,20,19,0.15)',
+                      borderRadius: 'var(--r-btn)', padding: '8px 16px', cursor: 'pointer',
                       transition: 'all 0.15s', whiteSpace: 'nowrap',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = 'transparent'; }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(20,20,19,0.30)'; e.currentTarget.style.background = 'var(--canvas)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(20,20,19,0.15)'; e.currentTarget.style.background = 'transparent'; }}
                   >
                     Decline all
                   </button>
@@ -185,13 +185,13 @@ export default function CookieConsent() {
                     <button
                       onClick={() => save('custom')}
                       style={{
-                        fontSize: 12.5, fontWeight: 700, color: '#6366f1',
-                        background: 'rgba(99,102,241,0.06)', border: '1.5px solid rgba(99,102,241,0.25)',
-                        borderRadius: 10, padding: '8px 16px', cursor: 'pointer',
+                        fontSize: 12.5, fontWeight: 700, color: 'var(--signal)',
+                        background: 'rgba(207,69,0,0.06)', border: '1.5px solid rgba(207,69,0,0.25)',
+                        borderRadius: 'var(--r-btn)', padding: '8px 16px', cursor: 'pointer',
                         transition: 'all 0.15s', whiteSpace: 'nowrap',
                       }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.12)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(99,102,241,0.06)'}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(207,69,0,0.12)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'rgba(207,69,0,0.06)'}
                     >
                       Save preferences
                     </button>
@@ -201,15 +201,16 @@ export default function CookieConsent() {
                   <button
                     onClick={() => save('all')}
                     style={{
-                      fontSize: 12.5, fontWeight: 800, color: '#fff',
-                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                      border: 'none', borderRadius: 10, padding: '8px 20px',
+                      fontSize: 12.5, fontWeight: 700, color: '#fff',
+                      /* Signal Orange — the Mastercard consent/legal color */
+                      background: 'var(--signal)',
+                      border: 'none', borderRadius: 'var(--r-chip)', padding: '8px 20px',
                       cursor: 'pointer', transition: 'all 0.15s',
-                      boxShadow: '0 4px 14px rgba(99,102,241,0.35)',
+                      boxShadow: '0 4px 14px rgba(207,69,0,0.30)',
                       whiteSpace: 'nowrap',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(99,102,241,0.45)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 4px 14px rgba(99,102,241,0.35)'; }}
+                    onMouseEnter={e => { e.currentTarget.style.opacity = '0.88'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = ''; }}
                   >
                     Accept all
                   </button>
@@ -239,7 +240,7 @@ function CookieRow({ label, desc, checked, onChange, disabled }) {
         style={{
           flexShrink: 0,
           width: 38, height: 21, borderRadius: 99, border: 'none',
-          background: checked ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : '#e2e8f0',
+          background: checked ? 'var(--ink)' : 'rgba(20,20,19,0.12)',
           cursor: disabled ? 'default' : 'pointer',
           position: 'relative', transition: 'background 0.2s',
           outline: 'none', padding: 0,

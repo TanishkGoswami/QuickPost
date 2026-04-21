@@ -1,106 +1,100 @@
-import React from 'react';
-import { Instagram, Youtube, Linkedin, Twitter, Users, TrendingUp, CheckCircle } from 'lucide-react';
-import { FaPinterest } from 'react-icons/fa';
+import { motion } from 'framer-motion';
+
+const TESTIMONIALS = [
+  {
+    quote: "I used to spend 45 minutes posting to each platform individually. Now it's one click and I'm done.",
+    name: 'Sarah K.',
+    title: 'Content Creator · 180K followers',
+  },
+  {
+    quote: "The scheduling is rock-solid. Posts go out at exactly the right time even across different timezones.",
+    name: 'Marcus T.',
+    title: 'Digital Marketing Lead · Agency',
+  },
+  {
+    quote: "Finally a tool that handles YouTube, Instagram, and LinkedIn without me babysitting it.",
+    name: 'Priya M.',
+    title: 'Founder & Solopreneur',
+  },
+];
+
+const PLATFORMS = [
+  '/icons/ig-instagram-icon.svg',
+  '/icons/youtube-color-icon.svg',
+  '/icons/x-social-media-round-icon.svg',
+  '/icons/linkedin-icon.svg',
+  '/icons/tiktok-circle-icon.svg',
+  '/icons/facebook-round-color-icon.svg',
+  '/icons/pinterest-round-color-icon.svg',
+  '/icons/threads-icon.svg',
+  '/icons/bluesky-circle-color-icon.svg',
+  '/icons/mastodon-round-icon.svg',
+];
 
 export default function SocialProof() {
-  const platforms = [
-    { icon: Instagram, name: 'Instagram', color: 'from-purple-500 to-pink-500' },
-    { icon: Youtube, name: 'YouTube', color: 'from-red-500 to-red-600' },
-    { icon: Linkedin, name: 'LinkedIn', color: 'from-blue-600 to-blue-700' },
-    { icon: Twitter, name: 'Twitter', color: 'from-sky-400 to-sky-500' },
-    { icon: FaPinterest, name: 'Pinterest', color: 'from-red-600 to-red-700' }
-  ];
-
-  const stats = [
-    { icon: Users, number: '10K+', label: 'Active Users' },
-    { icon: TrendingUp, number: '500K+', label: 'Posts Published' },
-    { icon: CheckCircle, number: '99.9%', label: 'Success Rate' }
-  ];
-
-  const platformColors = {
-    'from-purple-500 to-pink-500': 'linear-gradient(135deg, rgb(139, 92, 246), rgb(236, 72, 153))',
-    'from-red-500 to-red-600': 'linear-gradient(135deg, rgb(239, 68, 68), rgb(220, 38, 38))',
-    'from-blue-600 to-blue-700': 'linear-gradient(135deg, rgb(37, 99, 235), rgb(29, 78, 216))',
-    'from-sky-400 to-sky-500': 'linear-gradient(135deg, rgb(56, 189, 248), rgb(14, 165, 233))',
-    'from-red-600 to-red-700': 'linear-gradient(135deg, rgb(220, 38, 38), rgb(185, 28, 28))'
-  };
-
   return (
-    <section id="platforms" className="landing-section bg-gray-50">
-      <div className="landing-container">
-        {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
-            One Platform,
-            <span className="gradient-text"> All Networks</span>
+    <section className="landing-section" style={{ padding: '80px 32px', background: 'var(--canvas)' }}>
+      <div className="landing-container" style={{ maxWidth: 1280, margin: '0 auto' }}>
+
+        {/* ── Testimonials ── */}
+        <div style={{ textAlign: 'center', marginBottom: 56 }}>
+          <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: 16 }}>From creators</div>
+          <h2 style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>
+            Real results, real people
           </h2>
-          <p className="text-xl text-gray-600">
-            Connect with billions of users across the world's most popular social media platforms.
-          </p>
         </div>
 
-        {/* Platform Logos */}
-        <div className="platform-grid max-w-4xl mx-auto mb-20">
-          {platforms.map((platform, index) => {
-            const Icon = platform.icon;
-            return (
-              <div
-                key={index}
-                className="platform-logo animate-fade-in-up"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <div 
-                  className="w-full h-full flex items-center justify-center rounded-2xl"
-                  style={{ background: platformColors[platform.color] }}
-                >
-                  <Icon className="w-8 h-8 text-white" />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20, marginBottom: 72 }}>
+          {TESTIMONIALS.map((t, i) => (
+            <motion.div
+              key={t.name}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: i * 0.1 }}
+              style={{
+                background: 'var(--canvas-lifted)',
+                border: '1px solid rgba(20,20,19,0.07)',
+                borderRadius: 'var(--r-hero)',
+                padding: '28px',
+              }}
+            >
+              {/* Quote mark */}
+              <div style={{ fontSize: 48, fontWeight: 500, color: 'var(--arc)', lineHeight: 1, marginBottom: 12, fontFamily: 'Georgia, serif' }}>"</div>
+              <p style={{ fontSize: 15, fontWeight: 450, color: 'var(--ink)', lineHeight: 1.6, margin: '0 0 24px', fontStyle: 'italic' }}>
+                {t.quote}
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {/* Avatar circle */}
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--canvas)', fontSize: 14, fontWeight: 700 }}>
+                  {t.name[0]}
+                </div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{t.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--slate)' }}>{t.title}</div>
                 </div>
               </div>
-            );
-          })}
+            </motion.div>
+          ))}
         </div>
 
-        {/* Stats */}
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
-          {stats.map((stat, index) => {
-            const Icon = stat.icon;
-            return (
-              <div key={index} className="stat-card animate-scale-in" style={{ animationDelay: `${index * 0.1}s` }}>
-                <Icon className="w-12 h-12 mx-auto mb-4" style={{ color: '#8E4CFB' }} />
-                <div className="stat-number">{stat.number}</div>
-                <div className="text-gray-600 text-lg mt-2">{stat.label}</div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Testimonial */}
-        <div className="max-w-4xl mx-auto bg-white border-2 border-gray-200 rounded-2xl p-8 md:p-12 shadow-sm">
-          <div className="flex flex-col md:flex-row items-center gap-8">
-            {/* Avatar */}
-            <div className="flex-shrink-0">
-              <div className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-bold text-white" style={{ background: '#8E4CFB' }}>
-                JD
-              </div>
-            </div>
-
-            {/* Testimonial Content */}
-            <div className="flex-1 text-center md:text-left">
-              <div className="flex items-center justify-center md:justify-start mb-3">
-                {[...Array(5)].map((_, i) => (
-                  <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                ))}
-              </div>
-              <p className="text-lg text-gray-600 mb-4 italic">
-                "GAP Social-pilot has completely transformed my social media workflow. What used to take me hours now takes minutes. The ROI is incredible!"
-              </p>
-              <div>
-                <div className="text-gray-900 font-semibold">Jordan Davis</div>
-                <div className="text-gray-500 text-sm">Digital Marketing Manager</div>
-              </div>
-            </div>
+        {/* ── Platform logos ── */}
+        <div style={{ textAlign: 'center' }}>
+          <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: 24 }}>Broadcasts to</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+            {PLATFORMS.map((src, i) => (
+              <motion.div
+                key={src}
+                initial={{ opacity: 0, scale: 0.85 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.35, delay: i * 0.04 }}
+                className="platform-logo"
+                style={{ width: 56, height: 56 }}
+              >
+                <img src={src} alt="" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+              </motion.div>
+            ))}
           </div>
         </div>
       </div>

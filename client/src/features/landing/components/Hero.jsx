@@ -1,118 +1,149 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowRight, Play, Instagram, Youtube, Linkedin, Twitter, Share2 } from 'lucide-react';
-import '../../../styles/landing.css';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+
+const PLATFORMS = [
+  { src: '/icons/ig-instagram-icon.svg',           label: 'Instagram' },
+  { src: '/icons/youtube-color-icon.svg',          label: 'YouTube' },
+  { src: '/icons/x-social-media-round-icon.svg',  label: 'X' },
+  { src: '/icons/linkedin-icon.svg',              label: 'LinkedIn' },
+  { src: '/icons/tiktok-circle-icon.svg',         label: 'TikTok' },
+  { src: '/icons/facebook-round-color-icon.svg',  label: 'Facebook' },
+  { src: '/icons/pinterest-round-color-icon.svg', label: 'Pinterest' },
+  { src: '/icons/threads-icon.svg',               label: 'Threads' },
+  { src: '/icons/bluesky-circle-color-icon.svg',  label: 'Bluesky' },
+  { src: '/icons/mastodon-round-icon.svg',        label: 'Mastodon' },
+];
 
 export default function Hero() {
+  const navigate = useNavigate();
+
   return (
-    <section className="hero-bg min-h-screen flex items-center justify-center relative overflow-hidden pt-20">
-      {/* Floating Icons */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <Instagram className="absolute top-20 left-10 w-12 h-12 text-purple-300 opacity-30 animate-float" style={{ animationDelay: '0s' }} />
-        <Youtube className="absolute top-40 right-20 w-14 h-14 text-pink-300 opacity-30 animate-float" style={{ animationDelay: '1s' }} />
-        <Linkedin className="absolute bottom-40 left-20 w-10 h-10 text-cyan-300 opacity-30 animate-float" style={{ animationDelay: '2s' }} />
-        <Twitter className="absolute bottom-20 right-32 w-12 h-12 text-purple-300 opacity-30 animate-float" style={{ animationDelay: '0.5s' }} />
-        <Share2 className="absolute top-1/3 right-10 w-10 h-10 text-pink-300 opacity-30 animate-float" style={{ animationDelay: '1.5s' }} />
-      </div>
+    <section className="hero-bg landing-section" style={{ padding: '100px 32px 80px', position: 'relative' }}>
+      {/* Orbital arc SVG — the Mastercard signature connection motif */}
+      <svg
+        aria-hidden="true"
+        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'hidden' }}
+        viewBox="0 0 1400 700"
+        preserveAspectRatio="none"
+      >
+        <path d="M -80 520 Q 360 120 820 480 Q 1060 680 1500 280" stroke="#F37338" strokeWidth="1.5" fill="none" opacity="0.45" />
+        <path d="M 60 650 Q 380 280 940 560" stroke="#F37338" strokeWidth="1" fill="none" opacity="0.25" />
+        <circle cx="820" cy="480" r="5" fill="#F37338" opacity="0.6" />
+        <circle cx="360" cy="120" r="3" fill="#F37338" opacity="0.4" />
+      </svg>
 
-      <div className="landing-container relative z-10">
-        <div className="text-center max-w-5xl mx-auto">
-          {/* Badge */}
-          <div className="inline-flex items-center space-x-2 bg-white border-2 border-purple-100 px-4 py-2 rounded-full mb-8 animate-fade-in-up shadow-sm">
-            <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: '#8E4CFB' }}></span>
-            <span className="text-sm text-gray-700 font-medium">Now supporting 5+ major platforms</span>
-          </div>
-
-          {/* Main Headline */}
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold text-gray-900 mb-6 leading-tight animate-fade-in-up">
-            Broadcast Your Content
-            <br />
-            <span className="gradient-text">Everywhere, Instantly</span>
-          </h1>
-
-          {/* Subheadline */}
-          <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-            Post once, reach millions. GAP Social-pilot automatically publishes your content to Instagram, YouTube, LinkedIn, Twitter, and Pinterest—all at the same time.
-          </p>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
-            <Link
-              to="/login"
-              className="btn-glow text-white font-semibold px-8 py-4 rounded-lg text-lg flex items-center space-x-2 group w-full sm:w-auto justify-center"
-            >
-              <span>Get Started Free</span>
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <button className="bg-white border-2 border-gray-200 text-gray-700 font-semibold px-8 py-4 rounded-lg text-lg flex items-center space-x-2 hover:border-gray-300 hover:shadow-md transition-all w-full sm:w-auto justify-center">
-              <Play className="w-5 h-5" />
-              <span>Watch Demo</span>
-            </button>
-          </div>
-
-          {/* Dashboard Preview Card */}
-          <div className="bg-white border-2 border-gray-200 rounded-2xl p-2 max-w-4xl mx-auto animate-scale-in shadow-xl" style={{ animationDelay: '0.6s' }}>
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6 md:p-8">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              </div>
-              
-              <div className="space-y-4">
-                {/* Composer Preview */}
-                <div className="bg-white rounded-lg p-4 border border-gray-200">
-                  <div className="h-3 bg-gray-300 rounded w-1/4 mb-3"></div>
-                  <div className="h-2 bg-gray-200 rounded w-full mb-2"></div>
-                  <div className="h-2 bg-gray-200 rounded w-3/4"></div>
-                </div>
-
-                {/* Platform Selector Preview */}
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-500 to-lime-500 flex items-center justify-center">
-                    <Instagram className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="w-12 h-12 rounded-full bg-red-500 flex items-center justify-center">
-                    <Youtube className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="w-12 h-12 rounded-full bg-blue-600 flex items-center justify-center">
-                    <Linkedin className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="w-12 h-12 rounded-full bg-sky-500 flex items-center justify-center">
-                    <Twitter className="w-6 h-6 text-white" />
-                  </div>
-                </div>
-
-                {/* Publish Button Preview */}
-                <div className="rounded-lg h-12 flex items-center justify-center" style={{ background: '#8E4CFB' }}>
-                  <span className="text-white font-semibold">Publish to All Platforms</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Trust Indicators */}
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-gray-500 text-sm animate-fade-in-up" style={{ animationDelay: '0.8s' }}>
-            <div className="flex items-center space-x-2">
-              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              <span>No credit card required</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              <span>Free forever plan</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              <span>Cancel anytime</span>
-            </div>
-          </div>
+      <div className="landing-container" style={{ maxWidth: 1280, margin: '0 auto', position: 'relative', zIndex: 2 }}>
+        {/* Ghost watermark */}
+        <div className="watermark" style={{
+          position: 'absolute', top: -40, left: '50%', transform: 'translateX(-50%)',
+          whiteSpace: 'nowrap', fontSize: 'clamp(56px, 8vw, 120px)', opacity: 0.55,
+          userSelect: 'none', pointerEvents: 'none',
+        }}>
+          Broadcast
         </div>
+
+        {/* Main headline */}
+        <div style={{ textAlign: 'center', maxWidth: 820, margin: '0 auto 60px', position: 'relative' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
+          >
+            <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: 20 }}>
+              Social media, simplified
+            </div>
+            <h1 style={{ fontSize: 'clamp(48px, 7vw, 88px)', fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.03em', lineHeight: 1, margin: '0 0 24px' }}>
+              One post.<br />
+              <span style={{ color: 'var(--arc)' }}>Every platform.</span>
+            </h1>
+            <p style={{ fontSize: 'clamp(16px, 2vw, 20px)', fontWeight: 450, color: 'var(--slate)', lineHeight: 1.5, margin: '0 0 40px', maxWidth: 560, marginLeft: 'auto', marginRight: 'auto' }}>
+              GAP Social‑pilot broadcasts your content to Instagram, YouTube, LinkedIn + 8 more — simultaneously, with zero friction.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <button
+                onClick={() => navigate('/login')}
+                className="btn-ink"
+                style={{ fontSize: 16, padding: '13px 32px' }}
+              >
+                Start broadcasting free
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" /></svg>
+              </button>
+              <a
+                href="#how-it-works"
+                className="btn-outline"
+                style={{ fontSize: 16, padding: '13px 28px' }}
+              >
+                See how it works
+              </a>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Platform logos pill strip */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexWrap: 'wrap', gap: 10,
+          }}
+        >
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--slate)', textTransform: 'uppercase', letterSpacing: '0.08em', marginRight: 6 }}>
+            Broadcasts to
+          </span>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 0,
+            background: 'var(--canvas-lifted)', border: '1px solid rgba(20,20,19,0.08)',
+            borderRadius: 'var(--r-pill)', padding: '8px 12px',
+            boxShadow: 'var(--shadow-nav)',
+          }}>
+            {PLATFORMS.map((p, i) => (
+              <div
+                key={p.label}
+                title={p.label}
+                style={{
+                  width: 32, height: 32, borderRadius: '50%',
+                  background: 'var(--white)', border: '2px solid var(--canvas)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  marginLeft: i === 0 ? 0 : -8,
+                  zIndex: PLATFORMS.length - i,
+                  position: 'relative',
+                  transition: 'transform 0.2s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px) scale(1.15)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+              >
+                <img src={p.src} alt={p.label} style={{ width: 20, height: 20, objectFit: 'contain' }} />
+              </div>
+            ))}
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginLeft: 12, whiteSpace: 'nowrap' }}>
+              + more
+            </span>
+          </div>
+        </motion.div>
+
+        {/* Stats row */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55, delay: 0.35 }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap', marginTop: 60 }}
+        >
+          {[
+            { value: '11+', label: 'Platforms' },
+            { value: '1-click', label: 'Broadcast' },
+            { value: '∞', label: 'Scheduling' },
+          ].map(({ value, label }, i) => (
+            <div key={label}>
+              <div style={{
+                background: 'var(--canvas-lifted)',
+                border: '1px solid rgba(20,20,19,0.08)',
+                borderRadius: 'var(--r-hero)',
+                padding: '20px 36px',
+                textAlign: 'center',
+                boxShadow: 'var(--shadow-nav)',
+              }}>
+                <div style={{ fontSize: 36, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.04em', lineHeight: 1 }}>{value}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--slate)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 4 }}>{label}</div>
+              </div>
+            </div>
+          ))}
+        </motion.div>
       </div>
     </section>
   );

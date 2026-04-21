@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Plus, Search, Calendar, ChevronDown, ChevronUp, ExternalLink,
@@ -11,23 +12,37 @@ import PostPreviewModal from './PostPreviewModal';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-/* ── Platform helpers ──────────────────────────────────────────────────── */
+/* ── token shortcuts ── */
+const css = {
+  canvas:  'var(--canvas)',
+  lifted:  'var(--canvas-lifted)',
+  ink:     'var(--ink)',
+  white:   'var(--white)',
+  slate:   'var(--slate)',
+  dust:    'var(--dust)',
+  arc:     'var(--arc)',
+  shadow:  'var(--shadow-card)',
+  r_btn:   'var(--r-btn)',
+  r_hero:  'var(--r-hero)',
+  r_pill:  'var(--r-pill)',
+};
+
+/* ── Platform helpers ── */
 function getPlatformIcon(id) {
-  const iconClass = "w-4 h-4 object-contain";
+  const s = { width: 16, height: 16, objectFit: 'contain' };
   switch (id) {
-    case 'facebook':  return <img src="/icons/facebook-round-color-icon.svg" className={iconClass} alt="Facebook" />;
-    case 'instagram': return <img src="/icons/ig-instagram-icon.svg" className={iconClass} alt="Instagram" />;
-    case 'x':         return <img src="/icons/x-social-media-round-icon.svg" className={iconClass} alt="X" />;
-    case 'linkedin':  return <img src="/icons/linkedin-icon.svg" className={iconClass} alt="LinkedIn" />;
-    case 'tiktok':    return <img src="/icons/tiktok-circle-icon.svg" className={iconClass} alt="TikTok" />;
-    case 'youtube':   return <img src="/icons/youtube-color-icon.svg" className={iconClass} alt="YouTube" />;
-    case 'pinterest': return <img src="/icons/pinterest-round-color-icon.svg" className={iconClass} alt="Pinterest" />;
-    case 'threads':   return <img src="/icons/threads-icon.svg" className={iconClass} alt="Threads" />;
-    case 'mastodon':  return <img src="/icons/mastodon-round-icon.svg" className={iconClass} alt="Mastodon" />;
-    case 'bluesky':   return <img src="/icons/bluesky-circle-color-icon.svg" className={iconClass} alt="Bluesky" />;
-    case 'reddit':    return <img src="/icons/reddit-icon.svg" className={iconClass} alt="Reddit" />;
-    case 'google-business': return <img src="/icons/google-icon.svg" className={iconClass} alt="GoogleProfile" />;
-    default: return <Share2 className="w-4 h-4" />;
+    case 'facebook':  return <img src="/icons/facebook-round-color-icon.svg" style={s} alt="Facebook" />;
+    case 'instagram': return <img src="/icons/ig-instagram-icon.svg" style={s} alt="Instagram" />;
+    case 'x':         return <img src="/icons/x-social-media-round-icon.svg" style={s} alt="X" />;
+    case 'linkedin':  return <img src="/icons/linkedin-icon.svg" style={s} alt="LinkedIn" />;
+    case 'tiktok':    return <img src="/icons/tiktok-circle-icon.svg" style={s} alt="TikTok" />;
+    case 'youtube':   return <img src="/icons/youtube-color-icon.svg" style={s} alt="YouTube" />;
+    case 'pinterest': return <img src="/icons/pinterest-round-color-icon.svg" style={s} alt="Pinterest" />;
+    case 'threads':   return <img src="/icons/threads-icon.svg" style={s} alt="Threads" />;
+    case 'mastodon':  return <img src="/icons/mastodon-round-icon.svg" style={s} alt="Mastodon" />;
+    case 'bluesky':   return <img src="/icons/bluesky-circle-color-icon.svg" style={s} alt="Bluesky" />;
+    case 'reddit':    return <img src="/icons/reddit-icon.svg" style={s} alt="Reddit" />;
+    default:          return <Share2 size={16} />;
   }
 }
 
@@ -47,92 +62,124 @@ function buildPlatforms(post) {
   ].filter(p => p.success || (p.error && p.error !== 'Not selected'));
 }
 
-function MediaThumb({ post, className = '' }) {
+/* ── Media thumbnail ── */
+function MediaThumb({ post, className = '', style = {} }) {
   const isImage = post.media_type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || '');
   const displayUrl = post.thumbnail_url || (isImage ? post.media_url : null);
-  
   return (
-    <div className={`bg-gray-100 overflow-hidden relative group ${className}`}>
+    <div className={className} style={{ background: '#e8e2da', overflow: 'hidden', position: 'relative', ...style }}>
       {displayUrl ? (
-        <div className="w-full h-full">
-          <img 
-            src={displayUrl} 
-            alt="Preview" 
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            onError={e => { e.target.src = 'https://placehold.co/300x300?text=Preview'; }} 
+        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+          <img src={displayUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s', display: 'block' }}
+            onMouseEnter={e => e.target.style.transform = 'scale(1.06)'}
+            onMouseLeave={e => e.target.style.transform = 'scale(1)'}
+            onError={e => { e.target.src = 'https://placehold.co/300x300?text=Preview'; }}
           />
           {post.youtube_success && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-all duration-300">
-              <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center shadow-xl transform scale-90 group-hover:scale-100 transition-all duration-300">
-                <Play className="w-6 h-6 text-white fill-current ml-1" />
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.08)' }}>
+              <div style={{ width: 42, height: 42, background: '#dc2626', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}>
+                <Play size={18} style={{ color: '#fff', fill: '#fff', marginLeft: 3 }} />
               </div>
             </div>
           )}
         </div>
       ) : isImage ? (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-blue-50">
-          <ImageIcon className="w-8 h-8 text-blue-200 mb-1" />
-          <span className="text-[10px] text-blue-300 font-bold uppercase tracking-widest">Image</span>
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, background: '#e8e2da' }}>
+          <ImageIcon size={28} style={{ color: '#9a9088' }} />
+          <span style={{ fontSize: 9, fontWeight: 700, color: '#9a9088', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Image</span>
         </div>
       ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900 border-b border-white/10">
-          <Video className="w-8 h-8 text-white/40 mb-1" />
-          <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Video</span>
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, background: css.ink }}>
+          <Video size={28} style={{ color: 'rgba(243,240,238,0.5)' }} />
+          <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(243,240,238,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Video</span>
         </div>
       )}
     </div>
   );
 }
 
+/* ── Platform badge ── */
 function PlatformBadge({ platform }) {
   return (
-    <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold border ${
-      platform.success ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'
-    }`}>
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px',
+      borderRadius: css.r_pill, fontSize: 10, fontWeight: 700,
+      background: platform.success ? '#e6f4ea' : '#fde8e8',
+      color: platform.success ? '#1a6b34' : '#9b1c1c',
+      border: `1px solid ${platform.success ? '#b7dfc3' : '#f5b8b8'}`,
+    }}>
       {getPlatformIcon(platform.id)}
       <span>{platform.name}</span>
-      {platform.success ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+      {platform.success
+        ? <CheckCircle2 size={10} />
+        : <XCircle size={10} />
+      }
     </div>
   );
 }
 
-/* ── Grid Card (click → modal) ────────────────────────────────────────── */
+/* ── Grid card ── */
 function GridCard({ post, onOpen, formatDate }) {
   const platforms = buildPlatforms(post);
   const successCount = platforms.filter(p => p.success).length;
   return (
     <div
       onClick={onOpen}
-      className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer group"
+      style={{
+        background: css.lifted,
+        borderRadius: css.r_hero,
+        border: '1px solid rgba(20,20,19,0.07)',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'box-shadow 0.25s, transform 0.2s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = css.shadow; e.currentTarget.style.transform = 'translateY(-4px)'; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
     >
-      <div className="relative">
-        <MediaThumb post={post} className="w-full h-44" />
-        <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+      {/* Thumb */}
+      <div style={{ position: 'relative' }}>
+        <MediaThumb post={post} style={{ width: '100%', height: 176, borderRadius: 0 }} />
+        {/* Media type badge */}
+        <div style={{
+          position: 'absolute', top: 12, right: 12,
+          padding: '3px 10px', borderRadius: css.r_pill,
+          background: 'rgba(20,20,19,0.7)', color: css.canvas,
+          fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
+        }}>
           {post.media_type || 'media'}
         </div>
+        {/* Platform count */}
         {successCount > 0 && (
-          <div className="absolute bottom-2 left-2 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+          <div style={{
+            position: 'absolute', bottom: 12, left: 12,
+            padding: '3px 10px', borderRadius: css.r_pill,
+            background: 'rgba(20,20,19,0.82)', color: css.canvas,
+            fontSize: 9, fontWeight: 700,
+          }}>
             {successCount} platform{successCount > 1 ? 's' : ''}
           </div>
         )}
-
       </div>
-      <div className="p-4 flex flex-col flex-1">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-            <Calendar className="w-3 h-3" />{formatDate(post.posted_at)}
+
+      {/* Body */}
+      <div style={{ padding: '16px 20px 20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: css.slate, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <Calendar size={10} />{formatDate(post.posted_at)}
           </div>
           {post.youtube_success && (
-            <div className="flex items-center gap-2 text-[9px] font-bold text-gray-400 opacity-60">
-              <span className="flex items-center gap-0.5"><ThumbsUp className="w-2.5 h-2.5" /> 12</span>
-              <span className="flex items-center gap-0.5"><Eye className="w-2.5 h-2.5" /> 2.4k</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 9, color: css.slate }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}><ThumbsUp size={10} /> 12</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 2 }}><Eye size={10} /> 2.4k</span>
             </div>
           )}
         </div>
-        <p className="text-sm font-bold text-gray-900 line-clamp-2 mb-3 leading-normal flex-1">
-          {post.caption || <span className="text-gray-300 italic">No caption</span>}
+        <p style={{ fontSize: 14, fontWeight: 600, color: css.ink, margin: '0 0 12px', lineHeight: 1.4, flex: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+          {post.caption || <span style={{ color: css.dust, fontStyle: 'italic' }}>No caption</span>}
         </p>
-        <div className="flex flex-wrap gap-1.5">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
           {platforms.map(p => <PlatformBadge key={p.id} platform={p} />)}
         </div>
       </div>
@@ -140,57 +187,60 @@ function GridCard({ post, onOpen, formatDate }) {
   );
 }
 
-/* ── List Row ──────────────────────────────────────────────────────────── */
+/* ── List row ── */
 function ListRow({ post, expanded, onToggle, formatDate }) {
   const platforms = buildPlatforms(post);
   return (
-    <div className={`bg-white rounded-2xl border overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 ${
-      expanded ? 'border-blue-200 ring-1 ring-blue-100' : 'border-gray-100'
-    }`}>
-      <div className="p-5 flex items-start gap-5 cursor-pointer" onClick={onToggle}>
-        <MediaThumb post={post} className="w-20 h-20 rounded-xl flex-shrink-0" />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-1.5">
-            <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-              <Calendar className="w-3 h-3" />{formatDate(post.posted_at)}
+    <div style={{
+      background: css.lifted,
+      borderRadius: css.r_hero,
+      border: `1px solid ${expanded ? 'rgba(20,20,19,0.20)' : 'rgba(20,20,19,0.07)'}`,
+      overflow: 'hidden',
+      transition: 'box-shadow 0.2s',
+      boxShadow: expanded ? css.shadow : 'none',
+    }}>
+      <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'flex-start', gap: 16, cursor: 'pointer' }} onClick={onToggle}>
+        <MediaThumb post={post} style={{ width: 72, height: 72, borderRadius: 'var(--r-btn)', flexShrink: 0 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: css.slate, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              <Calendar size={10} />{formatDate(post.posted_at)}
             </div>
-            {expanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            {expanded ? <ChevronUp size={14} style={{ color: css.slate }} /> : <ChevronDown size={14} style={{ color: css.slate }} />}
           </div>
-          <h3 className="text-sm font-bold text-gray-900 line-clamp-1 mb-2 leading-normal">{post.caption || 'Untitled Broadcast'}</h3>
-          <div className="flex flex-wrap gap-1.5">{platforms.map(p => <PlatformBadge key={p.id} platform={p} />)}</div>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: css.ink, margin: '0 0 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {post.caption || 'Untitled Broadcast'}
+          </h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {platforms.map(p => <PlatformBadge key={p.id} platform={p} />)}
+          </div>
         </div>
       </div>
+
       {expanded && (
-        <div className="border-t border-gray-100 bg-gray-50/30 px-5 pb-5 pt-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+        <div style={{ borderTop: '1px solid rgba(20,20,19,0.07)', background: css.canvas, padding: '16px 20px 20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10, marginBottom: 12 }}>
             {platforms.map(p => (
-              <div key={p.id} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">{getPlatformIcon(p.id)}<span className="text-xs font-bold text-gray-800">{p.name}</span></div>
-                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
-                    p.success ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'
-                  }`}>{p.success ? 'Success' : 'Failed'}</span>
+              <div key={p.id} style={{ background: css.lifted, padding: '12px 14px', borderRadius: css.r_btn, border: '1px solid rgba(20,20,19,0.07)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{getPlatformIcon(p.id)}<span style={{ fontSize: 12, fontWeight: 700, color: css.ink }}>{p.name}</span></div>
+                  <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: css.r_pill, background: p.success ? '#e6f4ea' : '#fde8e8', color: p.success ? '#1a6b34' : '#9b1c1c', border: `1px solid ${p.success ? '#b7dfc3' : '#f5b8b8'}` }}>
+                    {p.success ? 'Success' : 'Failed'}
+                  </span>
                 </div>
-                {p.success ? (
-                  p.url ? (
-                    <a href={p.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[11px] text-blue-600 font-bold hover:text-blue-800 transition-colors">
-                      View Live Post <ExternalLink className="w-3 h-3" />
-                    </a>
-                  ) : (
-                    <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold">
-                      <Clock className="w-3 h-3 animate-pulse" /> Pending Sync
-                    </div>
-                  )
-                ) : (
-                  <p className="text-[10px] text-red-500 italic font-medium">{p.error || 'API error'}</p>
-                )}
+                {p.success
+                  ? p.url
+                    ? <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--link)', fontWeight: 700 }}>View Live Post <ExternalLink size={10} /></a>
+                    : <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: css.slate, fontWeight: 600 }}><Clock size={10} /> Pending Sync</div>
+                  : <p style={{ fontSize: 10, color: '#dc2626', fontStyle: 'italic', margin: 0 }}>{p.error || 'API error'}</p>
+                }
               </div>
             ))}
           </div>
           {post.caption && (
-            <div className="p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Caption</p>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{post.caption}</p>
+            <div style={{ background: css.lifted, padding: '12px 14px', borderRadius: css.r_btn, border: '1px solid rgba(20,20,19,0.07)' }}>
+              <div className="eyebrow" style={{ marginBottom: 6, fontSize: 10 }}>Full Caption</div>
+              <p style={{ fontSize: 13, color: css.ink, whiteSpace: 'pre-wrap', lineHeight: 1.5, margin: 0 }}>{post.caption}</p>
             </div>
           )}
         </div>
@@ -199,9 +249,12 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
   );
 }
 
-/* ── Main Dashboard ────────────────────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════
+   MAIN DASHBOARD
+══════════════════════════════════════════════════════ */
 function Dashboard() {
   const { user, refreshAccounts } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('sent');
   const [broadcasts, setBroadcasts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -210,246 +263,221 @@ function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   const [selectedPost, setSelectedPost] = useState(null);
-  
-  // Pagination State
+  const [queueCount, setQueueCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
 
   const tabs = [
-    {
-      id: "sent",
-      label: "Sent",
-      count: activeTab === "sent" ? broadcasts.length : 0,
-    },
-
-    { id: "queue", label: "Queue", count: 0 },
-    { id: "drafts", label: "Drafts", count: 0 },
-    {
-      id: "history",
-      label: "History",
-      count: activeTab === "history" ? broadcasts.length : 0,
-    },
+    { id: 'sent',    label: 'Sent',    count: activeTab === 'sent'    ? broadcasts.length : 0 },
+    { id: 'queue',   label: 'Queue',   count: queueCount },
+    { id: 'drafts',  label: 'Drafts',  count: 0 },
+    { id: 'history', label: 'History', count: activeTab === 'history' ? broadcasts.length : 0 },
   ];
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('success')) {
-      refreshAccounts();
-      window.history.replaceState({}, '', '/dashboard');
-    }
+    if (params.get('success')) { refreshAccounts(); window.history.replaceState({}, '', '/dashboard'); }
+    apiClient.get('/api/broadcasts/stats').then(r => setQueueCount(r.data.pending || 0)).catch(() => {});
   }, [refreshAccounts]);
 
-  useEffect(() => { fetchBroadcasts(); resetPagination(); }, [activeTab]);
-  useEffect(() => { resetPagination(); }, [searchTerm]);
-
-  const resetPagination = () => setCurrentPage(1);
+  useEffect(() => { fetchBroadcasts(); setCurrentPage(1); }, [activeTab]);
+  useEffect(() => { setCurrentPage(1); }, [searchTerm]);
 
   const fetchBroadcasts = async () => {
     try {
       setLoading(true);
-      // 'history' fetches all broadcasts; 'sent' filters by status
       const params = activeTab === 'sent' ? { status: 'sent' } : {};
       const response = await apiClient.get('/api/broadcasts', { params });
       setBroadcasts(response.data.broadcasts || []);
-    } catch (err) {
-      console.error('Failed to fetch broadcasts:', err);
-      setBroadcasts([]);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { setBroadcasts([]); }
+    finally { setLoading(false); }
   };
 
   const formatDate = (dateString) =>
-    new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'short', month: 'short', day: 'numeric',
-      year: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+    new Date(dateString).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   const toggleExpand = (id) => setExpandedId(prev => prev === id ? null : id);
+  const filtered = broadcasts.filter(b => b.caption?.toLowerCase().includes(searchTerm.toLowerCase()));
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const handlePageChange = (page) => { setCurrentPage(page); window.scrollTo({ top: 0, behavior: 'smooth' }); };
 
-  const filtered = broadcasts.filter(b =>
-    b.caption?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Pagination Logic
-  const totalItems = filtered.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const paginatedItems = filtered.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  /* ── Pagination Component ── */
+  /* ── Pagination ── */
   const Pagination = () => {
     if (totalPages <= 1) return null;
-
-    const pages = [];
-    for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-    }
-
+    const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
     return (
-      <div className="flex items-center justify-center gap-2 mt-10 mb-6">
-        <button
-          onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-          disabled={currentPage === 1}
-          className="p-2 rounded-lg border border-gray-200 bg-white text-gray-400 hover:bg-gray-50 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-        >
-          <ChevronLeft className="w-5 h-5" />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 40, marginBottom: 24 }}>
+        <button onClick={() => handlePageChange(Math.max(1, currentPage - 1))} disabled={currentPage === 1}
+          style={{ padding: 8, borderRadius: css.r_btn, border: '1.5px solid rgba(20,20,19,0.15)', background: css.lifted, cursor: 'pointer', color: css.slate, opacity: currentPage === 1 ? 0.3 : 1, display: 'flex', alignItems: 'center' }}>
+          <ChevronLeft size={16} />
         </button>
-
         {pages.map(page => (
-          <button
-            key={page}
-            onClick={() => handlePageChange(page)}
-            className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${
-              currentPage === page
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                : 'bg-white border border-gray-200 text-gray-500 hover:border-gray-400 hover:text-gray-700'
-            }`}
-          >
+          <button key={page} onClick={() => handlePageChange(page)}
+            style={{ width: 36, height: 36, borderRadius: css.r_btn, border: `1.5px solid ${currentPage === page ? css.ink : 'rgba(20,20,19,0.15)'}`, background: currentPage === page ? css.ink : css.lifted, color: currentPage === page ? css.canvas : css.slate, fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.15s' }}>
             {page}
           </button>
         ))}
-
-        <button
-          onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-          disabled={currentPage === totalPages}
-          className="p-2 rounded-lg border border-gray-200 bg-white text-gray-400 hover:bg-gray-50 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-        >
-          <ChevronRight className="w-5 h-5" />
+        <button onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}
+          style={{ padding: 8, borderRadius: css.r_btn, border: '1.5px solid rgba(20,20,19,0.15)', background: css.lifted, cursor: 'pointer', color: css.slate, opacity: currentPage === totalPages ? 0.3 : 1, display: 'flex', alignItems: 'center' }}>
+          <ChevronRight size={16} />
         </button>
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight: '100vh', background: css.canvas, fontFamily: 'var(--font)' }}>
 
-      {/* ── Top Header ── */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-gray-900">Post Analytics</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setComposerOpen(true)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-all shadow-sm flex items-center gap-2 text-sm"
-            >
-              <Plus className="w-4 h-4" />
-              New Post
-            </button>
-          </div>
+      {/* ── Top header ── */}
+      <div style={{
+        background: css.canon,
+        borderBottom: '1px solid rgba(20,20,19,0.08)',
+        padding: '18px 28px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        background: css.lifted,
+      }}>
+        <div>
+          <div className="eyebrow" style={{ marginBottom: 4 }}>Overview</div>
+          <h1 style={{ fontSize: 28, fontWeight: 500, color: css.ink, margin: 0, letterSpacing: '-0.02em', lineHeight: 1 }}>Post Analytics</h1>
         </div>
+        <button
+          onClick={() => setComposerOpen(true)}
+          className="btn-ink"
+          style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '10px 22px' }}
+        >
+          <Plus size={16} />
+          New Post
+        </button>
       </div>
 
       {/* ── Tabs ── */}
-      <div className="bg-white border-b border-gray-200 px-6">
-        <div className="flex items-center gap-8">
-          {tabs.map(tab => (
+      <div style={{ background: css.lifted, borderBottom: '1px solid rgba(20,20,19,0.08)', padding: '0 28px', display: 'flex', alignItems: 'center', gap: 32 }}>
+        {tabs.map(tab => {
+          const active = activeTab === tab.id;
+          return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`py-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${
-                activeTab === tab.id
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-400 hover:text-gray-600'
-              }`}
+              onClick={() => { if (tab.id === 'queue') { navigate('/dashboard/queue'); return; } setActiveTab(tab.id); }}
+              style={{
+                padding: '14px 0',
+                fontSize: 12,
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: active ? css.ink : css.slate,
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                borderBottom: `2px solid ${active ? css.ink : 'transparent'}`,
+                marginBottom: -1,
+                transition: 'color 0.15s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
             >
               {tab.label}
               {tab.count > 0 && (
-                <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] ${activeTab === tab.id ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                <span style={{
+                  padding: '1px 8px',
+                  borderRadius: css.r_pill,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  background: active ? css.ink : 'rgba(20,20,19,0.07)',
+                  color: active ? css.canvas : css.slate,
+                }}>
                   {tab.count}
                 </span>
               )}
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
-      {/* ── Sent Tab: search + view toggle ── */}
+      {/* ── Toolbar ── */}
       {(activeTab === 'sent' || activeTab === 'history') && !loading && broadcasts.length > 0 && (
-        <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-blue-500" />
-              <span className="text-sm font-bold text-gray-700">{broadcasts.length}</span>
-              <span className="text-xs text-gray-400">total posts</span>
+        <div style={{ background: css.canvas, borderBottom: '1px solid rgba(20,20,19,0.06)', padding: '12px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Clock size={14} style={{ color: css.arc }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: css.ink }}>{broadcasts.length}</span>
+              <span style={{ fontSize: 12, color: css.slate }}>total posts</span>
             </div>
-            <div className="w-px h-4 bg-gray-200" />
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-green-500" />
-              <span className="text-sm font-bold text-gray-700">
+            <div style={{ width: 1, height: 16, background: 'rgba(20,20,19,0.12)' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <CheckCircle2 size={14} style={{ color: '#22c55e' }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: css.ink }}>
                 {broadcasts.filter(b => buildPlatforms(b).some(p => p.success)).length}
               </span>
-              <span className="text-xs text-gray-400">successful</span>
+              <span style={{ fontSize: 12, color: css.slate }}>successful</span>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {/* Search */}
+            <div style={{ position: 'relative' }}>
+              <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: css.slate }} />
               <input
                 type="text"
-                placeholder="Search posts..."
+                placeholder="Search posts…"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-52 text-sm transition-all"
+                style={{
+                  paddingLeft: 32, paddingRight: 16, paddingTop: 8, paddingBottom: 8,
+                  background: css.lifted,
+                  border: '1px solid rgba(20,20,19,0.12)',
+                  borderRadius: css.r_pill,
+                  fontSize: 13, color: css.ink, fontFamily: 'var(--font)',
+                  outline: 'none', width: 200,
+                }}
+                onFocus={e => e.target.style.borderColor = css.ink}
+                onBlur={e => e.target.style.borderColor = 'rgba(20,20,19,0.12)'}
               />
             </div>
-            <div className="flex items-center bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
-                title="Grid view"
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
-                title="List view"
-              >
-                <List className="w-4 h-4" />
-              </button>
+            {/* View toggle */}
+            <div style={{ display: 'flex', background: css.lifted, border: '1px solid rgba(20,20,19,0.10)', borderRadius: css.r_pill, padding: 3, gap: 2 }}>
+              {[
+                { mode: 'grid', icon: <LayoutGrid size={14} /> },
+                { mode: 'list', icon: <List size={14} /> },
+              ].map(({ mode, icon }) => (
+                <button key={mode} onClick={() => setViewMode(mode)} title={`${mode} view`}
+                  style={{ padding: '5px 10px', borderRadius: css.r_pill, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', background: viewMode === mode ? css.ink : 'transparent', color: viewMode === mode ? css.canvas : css.slate, transition: 'all 0.2s' }}>
+                  {icon}
+                </button>
+              ))}
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Main Content ── */}
-      <div className="p-6">
+      {/* ── Main content ── */}
+      <div style={{ padding: '28px' }}>
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4" />
-            <p className="text-gray-500 text-sm font-medium">Syncing data...</p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: 16 }}>
+            {/* Mastercard-style spinner: three staggered circles */}
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: css.ink, animation: 'mc-float 1.2s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
+              ))}
+            </div>
+            <p style={{ fontSize: 13, color: css.slate, margin: 0 }}>Syncing data…</p>
           </div>
         ) : (activeTab === 'sent' || activeTab === 'history') && filtered.length > 0 ? (
           <>
             {viewMode === 'grid' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 20 }}>
                 {paginatedItems.map(post => (
-                  <GridCard
-                    key={post.id}
-                    post={post}
-                    onOpen={() => setSelectedPost(post)}
-                    formatDate={formatDate}
-                  />
+                  <GridCard key={post.id} post={post} onOpen={() => setSelectedPost(post)} formatDate={formatDate} />
                 ))}
               </div>
             ) : (
-              <div className="space-y-4 max-w-4xl mx-auto">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 860, margin: '0 auto' }}>
                 {paginatedItems.map(post => (
-                  <div key={post.id} onClick={() => setSelectedPost(post)} className="cursor-pointer">
-                    <ListRow
-                      post={post}
-                      expanded={expandedId === post.id}
-                      onToggle={(e) => { e?.stopPropagation(); toggleExpand(post.id); }}
+                  <div key={post.id} onClick={() => setSelectedPost(post)} style={{ cursor: 'pointer' }}>
+                    <ListRow post={post} expanded={expandedId === post.id}
+                      onToggle={e => { e?.stopPropagation(); toggleExpand(post.id); }}
                       formatDate={formatDate}
                     />
                   </div>
@@ -459,27 +487,36 @@ function Dashboard() {
             <Pagination />
           </>
         ) : (
-          <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-20 text-center shadow-sm">
-            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Share2 className="w-8 h-8 text-gray-300" />
+          /* ── Empty state ── */
+          <div style={{
+            background: css.lifted,
+            borderRadius: css.r_hero,
+            border: '1px dashed rgba(20,20,19,0.15)',
+            padding: '80px 40px',
+            textAlign: 'center',
+          }}>
+            {/* Ghost watermark behind the icon */}
+            <div style={{ position: 'relative', display: 'inline-block', marginBottom: 24 }}>
+              <div className="watermark" style={{ fontSize: 80, position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', whiteSpace: 'nowrap' }}>✦</div>
+              <div style={{ position: 'relative', width: 64, height: 64, borderRadius: '50%', background: css.ink, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+                <Share2 size={26} style={{ color: css.canvas }} />
+              </div>
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2 font-display">
+            <h3 style={{ fontSize: 22, fontWeight: 500, color: css.ink, margin: '0 0 10px', letterSpacing: '-0.02em' }}>
               {activeTab === 'queue' ? 'Your queue is empty'
                 : activeTab === 'drafts' ? 'No drafts yet'
                 : activeTab === 'history' ? 'No broadcast history yet'
                 : 'Ready for your first boost?'}
             </h3>
-            <p className="text-gray-500 text-sm mb-8 max-w-xs mx-auto">
+            <p style={{ fontSize: 14, color: css.slate, margin: '0 0 28px', maxWidth: 300, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.5 }}>
               {activeTab === 'sent' || activeTab === 'history'
                 ? 'Create a post and broadcast it across your social channels to see analytics here.'
                 : 'Schedule posts to see them appear here.'}
             </p>
             {(activeTab === 'sent' || activeTab === 'history') && (
-              <button
-                onClick={() => setComposerOpen(true)}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-blue-200"
-              >
+              <button className="btn-ink" onClick={() => setComposerOpen(true)} style={{ fontSize: 15, padding: '12px 32px' }}>
                 Launch your first post
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} style={{ marginLeft: 6 }}><path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" /></svg>
               </button>
             )}
           </div>
@@ -493,4 +530,3 @@ function Dashboard() {
 }
 
 export default Dashboard;
-
