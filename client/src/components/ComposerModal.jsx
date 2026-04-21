@@ -285,6 +285,20 @@ const PLATFORM_SHORT_LABELS = {
   mastodon: "Mastodon",
 };
 
+const PLATFORM_POST_TYPES = {
+  instagram: ["post", "story", "reel"],
+  facebook: ["post", "story", "reel"],
+  youtube: ["post", "reel"],
+  tiktok: ["post", "reel"],
+  x: ["post"],
+  linkedin: ["post"],
+  threads: ["post"],
+  pinterest: ["post"],
+  bluesky: ["post"],
+  mastodon: ["post"],
+  reddit: ["post"]
+};
+
 function getPresetsForPlatform(platformId) {
   return PLATFORM_LAYOUT_PRESETS[platformId] || [];
 }
@@ -1065,6 +1079,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
   const [caption, setCaption] = useState("");
   const [mediaFiles, setMediaFiles] = useState([]);
   const [selectedChannels, setSelectedChannels] = useState([]);
+  const [postType, setPostType] = useState("post");
   const [platformData, setPlatformData] = useState({
     pinterest: { title: "", link: "", boardId: "" },
     instagram: { firstComment: "" },
@@ -1096,15 +1111,29 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     }));
   }, [selectedChannels, activePreviewPlatform]);
 
+  const availablePostTypes = useMemo(() => {
+    if (selectedChannels.length === 0) return ["post", "story", "reel"];
+    
+    let common = PLATFORM_POST_TYPES[selectedChannels[0]] || ["post"];
+    for (let i = 1; i < selectedChannels.length; i++) {
+      const types = PLATFORM_POST_TYPES[selectedChannels[i]] || ["post"];
+      common = common.filter(t => types.includes(t));
+    }
+    
+    return common.length > 0 ? common : ["post"];
+  }, [selectedChannels]);
+
+  React.useEffect(() => {
+    if (!availablePostTypes.includes(postType)) {
+      setPostType(availablePostTypes[0] || "post");
+    }
+  }, [availablePostTypes, postType]);
+
   // Min datetime for scheduling = now + 2 minutes
   const minScheduleDateTime = React.useMemo(() => {
     const d = new Date(Date.now() + 2 * 60 * 1000);
     return d.toISOString().slice(0, 16);
   }, []);
-
-  const availableSizePresets = useMemo(() => {
-    return PLATFORM_LAYOUT_PRESETS[activePreviewPlatform] || [];
-  }, [activePreviewPlatform]);
 
   const selectedRatio = useMemo(() => {
     return (
@@ -1354,6 +1383,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
             caption,
             channels: selectedChannels,
             mediaType: isVideo ? "video" : "image",
+            postType,
             fileCount: mediaFiles.length,
             previewUrl: localPreviewUrl,
           },
@@ -1380,6 +1410,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     setCaption("");
     setMediaFiles([]);
     setSelectedChannels([]);
+    setPostType("post");
     setPlatformData({
       pinterest: { title: "", link: "", boardId: "" },
       instagram: { firstComment: "" },
@@ -1465,6 +1496,31 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                 onChannelToggle={handleChannelToggle}
                 onBulkSelect={setSelectedChannels}
               />
+            </div>
+
+            {/* Post Type Selection */}
+            <div className="mb-6">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">Publish As</label>
+              <div className="flex gap-2">
+                {availablePostTypes.includes("post") && (
+                  <label className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "post" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}>
+                    <input type="radio" value="post" checked={postType === "post"} onChange={() => setPostType("post")} className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"/>
+                    <span className="text-[12px] font-semibold text-gray-700">Post</span>
+                  </label>
+                )}
+                {availablePostTypes.includes("story") && (
+                  <label className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "story" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}>
+                    <input type="radio" value="story" checked={postType === "story"} onChange={() => setPostType("story")} className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"/>
+                    <span className="text-[12px] font-semibold text-gray-700">Story</span>
+                  </label>
+                )}
+                {availablePostTypes.includes("reel") && (
+                  <label className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "reel" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}>
+                    <input type="radio" value="reel" checked={postType === "reel"} onChange={() => setPostType("reel")} className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"/>
+                    <span className="text-[12px] font-semibold text-gray-700">Reel / Shorts</span>
+                  </label>
+                )}
+              </div>
             </div>
 
             {/* Main Caption */}
@@ -1705,7 +1761,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                     );
                     if (!ratio) return null;
 
-                    const matches = preset.matchedPlatforms || preset.platforms;
+                    const matches = preset.matchedPlatforms || preset.platforms || [];
 
                     return (
                       <button

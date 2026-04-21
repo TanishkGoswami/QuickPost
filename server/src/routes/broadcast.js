@@ -69,6 +69,7 @@ router.post(
       userTimezone,
       selectedAspectRatio = '1:1',
       selectedPostSizePreset,
+      postType = 'post',
     } = req.body;
     
     const userId = req.user.userId;
@@ -115,6 +116,7 @@ router.post(
       caption,
       channels,
       mediaType,
+      postType,
       filenames,
       fileCount: uploadedFiles.length,
       hasThumbnail: !!thumbnailFile,
@@ -162,6 +164,7 @@ router.post(
       thumbnailFile,
       isVideo,
       mediaType,
+      postType,
       primaryVideoPath,
       platformVariants,
       generatedVariantPaths,
@@ -196,7 +199,7 @@ router.post(
 async function processBroadcastJob({
   jobId, userId, caption, channels, platData,
   uploadedFiles, filePaths, filenames,
-  thumbnailFile, isVideo, mediaType, primaryVideoPath,
+  thumbnailFile, isVideo, mediaType, postType, primaryVideoPath,
   platformVariants, generatedVariantPaths,
   selectedAspectRatio, selectedPostSizePreset,
   isScheduled, scheduledAt, userTimezone
@@ -305,6 +308,7 @@ async function processBroadcastJob({
         mediaType, 
         { 
           ...platData, 
+          postType,
           selectedChannels: channels, 
           filePaths, 
           userTimezone: userTimezone || 'UTC',
@@ -560,6 +564,7 @@ async function processBroadcastJob({
   try {
     await saveBroadcast(userId, caption, filenames, results, mediaType, { 
       ...platData, 
+      postType,
       selected_aspect_ratio: selectedAspectRatio,
       selected_post_size_preset: selectedPostSizePreset
     }, 'sent');

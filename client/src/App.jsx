@@ -22,7 +22,7 @@ import UploadManagerPanel from './components/UploadManagerPanel';
 import CookieConsent from './components/CookieConsent';
 
 import DashboardLayout from './components/DashboardLayout';
-
+import { NotFoundPage } from './components/ui/404-page-not-found';
 function AppContent() {
   const { isAuthenticated } = useAuth();
 
@@ -52,7 +52,7 @@ function AppContent() {
       </Route>
 
       {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

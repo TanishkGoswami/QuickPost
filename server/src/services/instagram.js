@@ -145,9 +145,38 @@ export async function postToInstagram(videoUrl, caption, tokens) {
     const containerId = containerResponse.data.id;
     console.log(`✓ Container created: ${containerId}`);
 
-    // Step 2: Wait for Instagram to process the video
-    console.log('Step 2: Waiting 5 seconds for video processing...');
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    // Step 2: Poll for processing status
+    console.log('Step 2: Polling for video processing status...');
+    let isReady = false;
+    let attempts = 0;
+    const maxAttempts = 12; // Wait up to 60 seconds
+    
+    while (!isReady && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      attempts++;
+      
+      try {
+        const statusRes = await axios.get(
+          `${GRAPH_API_URL}/${containerId}?fields=status_code&access_token=${accessToken}`
+        );
+        const statusCode = statusRes.data.status_code;
+        console.log(`Polling attempt ${attempts}: Status is ${statusCode}`);
+        
+        if (statusCode === 'FINISHED') {
+          isReady = true;
+        } else if (statusCode === 'ERROR') {
+          throw new Error('Instagram failed to process the video container. Check video format requirements.');
+        }
+        // IF IN_PROGRESS, it loops
+      } catch (err) {
+        if (err.message.includes('Instagram failed')) throw err;
+        console.warn(`Polling error at attempt ${attempts}:`, err.message);
+      }
+    }
+
+    if (!isReady) {
+      throw new Error('Video processing timed out on Instagram side. Please try again later.');
+    }
 
     // Step 3: Publish the container
     console.log('Step 3: Publishing media...');
