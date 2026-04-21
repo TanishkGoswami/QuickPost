@@ -30,6 +30,7 @@ export async function saveBroadcast(
       status: status,
       posted_at: status === "sent" ? new Date().toISOString() : null,
       scheduled_for: scheduledFor,
+      user_timezone: platformData.userTimezone || 'UTC',
       media_type: mediaType,
       media_url: mediaUrls[0] || null, // Primary public URL
       media_urls: mediaUrls,           // Store all URLs
@@ -304,5 +305,180 @@ export async function deleteBroadcast(broadcastId) {
   } catch (error) {
     console.error("Failed to delete broadcast:", error);
     throw error;
+  }
+}
+
+/**
+ * Cancel a scheduled broadcast.
+ * Only works if status is 'scheduled' (not yet processing or sent).
+ */
+export async function cancelBroadcast(broadcastId, userId) {
+  try {
+    // First verify ownership and current status
+    const { data: post, error: fetchErr } = await supabase
+      .from('broadcasts')
+      .select('id, status, user_id')
+      .eq('id', broadcastId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchErr || !post) throw new Error('Broadcast not found or access denied');
+
+    if (!['scheduled', 'failed'].includes(post.status)) {
+      throw new Error(`Cannot cancel a post with status '${post.status}'. Only scheduled or failed posts can be cancelled.`);
+    }
+
+    const { data, error } = await supabase
+      .from('broadcasts')
+      .update({
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', broadcastId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    console.log(`✅ [BROADCASTS] Cancelled broadcast ${broadcastId}`);
+    return data;
+  } catch (error) {
+    console.error('Failed to cancel broadcast:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Update a scheduled broadcast (caption, scheduled time, timezone, channels).
+ * Only works if status is 'scheduled'.
+ */
+export async function updateScheduledBroadcast(broadcastId, userId, updates) {
+  try {
+    const { data: post, error: fetchErr } = await supabase
+      .from('broadcasts')
+      .select('id, status, user_id')
+      .eq('id', broadcastId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchErr || !post) throw new Error('Broadcast not found or access denied');
+    if (post.status !== 'scheduled') {
+      throw new Error(`Cannot edit a post with status '${post.status}'. Only scheduled posts can be edited.`);
+    }
+
+    const allowedFields = {};
+    if (updates.caption !== undefined)       allowedFields.caption = updates.caption;
+    if (updates.scheduledFor !== undefined) {
+      // Validate new time is in the future (2 min buffer)
+      const newTime = new Date(updates.scheduledFor);
+      if (newTime.getTime() < Date.now() + 2 * 60 * 1000) {
+        throw new Error('Scheduled time must be at least 2 minutes in the future.');
+      }
+      allowedFields.scheduled_for = newTime.toISOString();
+    }
+    if (updates.userTimezone !== undefined)  allowedFields.user_timezone = updates.userTimezone;
+    if (updates.selectedChannels !== undefined) {
+      allowedFields.selected_channels = updates.selectedChannels;
+      allowedFields.platform_data = { ...((await getBroadcastById(broadcastId))?.platform_data || {}), selectedChannels: updates.selectedChannels };
+    }
+    allowedFields.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from('broadcasts')
+      .update(allowedFields)
+      .eq('id', broadcastId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    console.log(`✅ [BROADCASTS] Updated scheduled broadcast ${broadcastId}`);
+    return data;
+  } catch (error) {
+    console.error('Failed to update broadcast:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Manually retry a failed broadcast.
+ * Resets status to 'scheduled' and clears error state.
+ */
+export async function retryFailedBroadcast(broadcastId, userId) {
+  try {
+    const { data: post, error: fetchErr } = await supabase
+      .from('broadcasts')
+      .select('id, status, user_id, attempt_count')
+      .eq('id', broadcastId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchErr || !post) throw new Error('Broadcast not found or access denied');
+    if (post.status !== 'failed') {
+      throw new Error(`Cannot retry a post with status '${post.status}'. Only failed posts can be retried.`);
+    }
+
+    const { data, error } = await supabase
+      .from('broadcasts')
+      .update({
+        status: 'scheduled',
+        attempt_count: 0,          // Reset retry counter for manual retry
+        last_error: null,
+        processing_started_at: null,
+        scheduled_for: new Date(Date.now() + 30 * 1000).toISOString(), // 30s from now
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', broadcastId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    console.log(`🔄 [BROADCASTS] Queued retry for broadcast ${broadcastId}`);
+    return data;
+  } catch (error) {
+    console.error('Failed to retry broadcast:', error.message);
+    throw error;
+  }
+}
+
+/**
+ * Get scheduled (and recently failed) broadcasts for a user.
+ * Used by the Queue page.
+ */
+export async function getScheduledBroadcasts(userId) {
+  try {
+    const { data, error } = await supabase
+      .from('broadcasts')
+      .select('*')
+      .eq('user_id', userId)
+      .in('status', ['scheduled', 'processing', 'failed', 'cancelled'])
+      .order('scheduled_for', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Failed to fetch scheduled broadcasts:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get queue stats for the dashboard badge.
+ */
+export async function getScheduledStats(userId) {
+  try {
+    const { data, error } = await supabase
+      .from('broadcasts')
+      .select('status')
+      .eq('user_id', userId)
+      .in('status', ['scheduled', 'processing']);
+
+    if (error) throw error;
+    return { pending: (data || []).length };
+  } catch (error) {
+    console.error('Failed to fetch scheduled stats:', error);
+    return { pending: 0 };
   }
 }

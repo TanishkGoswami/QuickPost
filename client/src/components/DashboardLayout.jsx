@@ -25,7 +25,7 @@ const DashboardLayout = () => {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--canvas)' }}>
       {/* Mobile overlay */}
       {!isDesktop && sidebarOpen && (
         <div
