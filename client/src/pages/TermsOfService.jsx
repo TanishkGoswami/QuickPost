@@ -118,7 +118,7 @@ export default function TermsOfService() {
             
             <header className="mb-16 border-b border-gray-100 pb-12 relative z-10">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-200">QP</div>
+                <img src={logo} alt="GAP Social-pilot" className="w-14 h-14 object-contain shadow-lg" />
                 <div className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest">Service Terms</div>
               </div>
               <h1 className="text-4xl md:text-6xl font-black text-gray-900 mb-6 tracking-tight">Terms of Service</h1>
@@ -138,7 +138,7 @@ export default function TermsOfService() {
                   <h2 className="text-2xl font-black text-gray-900">1. Acceptance of Terms</h2>
                 </div>
                 <div className="text-gray-700 leading-relaxed space-y-4 font-medium">
-                  <p>By accessing or using <strong>QuickPost</strong>, you agree to be bound by these Terms of Service. If you do not agree to all of these terms, you are prohibited from using the service.</p>
+                  <p>By accessing or using <strong>GAP Social-pilot</strong>, you agree to be bound by these Terms of Service. If you do not agree to all of these terms, you are prohibited from using the service.</p>
                   <p>We reserve the right to modify these terms at any time. Your continued use of the service after changes are posted constitutes your acceptance of the new terms.</p>
                 </div>
               </section>
@@ -151,7 +151,7 @@ export default function TermsOfService() {
                   <h2 className="text-2xl font-black text-gray-900">2. Service Description</h2>
                 </div>
                 <div className="p-8 bg-gray-50 rounded-3xl border border-gray-100 italic font-medium text-gray-600">
-                   "QuickPost provides a unified platform for multi-channel social media broadcasting, automation, and management across supported platforms including YouTube, Meta, Pinterest, and Bluesky."
+                   "GAP Social-pilot provides a unified platform for multi-channel social media broadcasting, automation, and management across supported platforms including YouTube, Meta, Pinterest, and Bluesky."
                 </div>
               </section>
 
@@ -251,11 +251,11 @@ export default function TermsOfService() {
       <footer className="bg-white py-12 border-t border-gray-100 mt-auto">
         <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2 text-gray-900 font-black text-lg">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white text-xs">QP</div>
-            QuickPost
+            <img src={logo} alt="GAP Social-pilot" className="w-10 h-10 object-contain" />
+            GAP Social-pilot
           </div>
           <div className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">
-            © 2026 QuickPost - LEGAL COMPLIANCE SYSTEM
+            © 2026 GAP Social-pilot - LEGAL COMPLIANCE SYSTEM
           </div>
           <div className="flex gap-6">
              <Link to="/terms" className="text-[10px] font-bold text-gray-900 uppercase tracking-widest">Terms</Link>

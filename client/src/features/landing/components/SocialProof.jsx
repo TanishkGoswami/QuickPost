@@ -94,7 +94,7 @@ export default function SocialProof() {
                 ))}
               </div>
               <p className="text-lg text-gray-600 mb-4 italic">
-                "QuickPost has completely transformed my social media workflow. What used to take me hours now takes minutes. The ROI is incredible!"
+                "GAP Social-pilot has completely transformed my social media workflow. What used to take me hours now takes minutes. The ROI is incredible!"
               </p>
               <div>
                 <div className="text-gray-900 font-semibold">Jordan Davis</div>
