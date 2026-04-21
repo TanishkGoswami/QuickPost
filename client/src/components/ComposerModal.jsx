@@ -174,6 +174,75 @@ const ASPECT_RATIOS = [
   },
 ];
 
+const SIZE_PRESETS = [
+  {
+    id: "yt-landscape",
+    ratio: "16:9",
+    title: "YouTube Video",
+    subtitle: "Long-form / Landscape",
+    platforms: ["youtube", "facebook", "linkedin", "x", "bluesky", "mastodon"],
+  },
+  {
+    id: "yt-shorts",
+    ratio: "9:16",
+    title: "YouTube Shorts",
+    subtitle: "Vertical Short",
+    platforms: ["youtube", "instagram", "facebook", "tiktok", "threads"],
+  },
+  {
+    id: "ig-feed-square",
+    ratio: "1:1",
+    title: "Instagram Feed",
+    subtitle: "Square Post",
+    platforms: ["instagram", "facebook", "threads", "x", "linkedin"],
+  },
+  {
+    id: "ig-feed-landscape",
+    ratio: "16:9",
+    title: "Instagram Feed",
+    subtitle: "Landscape Post",
+    platforms: ["instagram", "facebook", "linkedin", "x"],
+  },
+  {
+    id: "ig-feed-portrait",
+    ratio: "4:5",
+    title: "Instagram Feed",
+    subtitle: "Portrait Post",
+    platforms: ["instagram", "facebook", "linkedin"],
+  },
+  {
+    id: "ig-reel",
+    ratio: "9:16",
+    title: "Instagram Reel",
+    subtitle: "Vertical Video",
+    platforms: ["instagram", "facebook", "youtube", "tiktok", "threads"],
+  },
+  {
+    id: "ig-story",
+    ratio: "9:16",
+    title: "Instagram Story",
+    subtitle: "Story Format",
+    platforms: ["instagram", "facebook", "youtube", "tiktok"],
+  },
+];
+
+const PLATFORM_SHORT_LABELS = {
+  youtube: "YouTube",
+  instagram: "Instagram",
+  facebook: "Facebook",
+  linkedin: "LinkedIn",
+  x: "X",
+  threads: "Threads",
+  tiktok: "TikTok",
+  bluesky: "Bluesky",
+  mastodon: "Mastodon",
+};
+
+const PLATFORM_PRESET_PREFIX = {
+  youtube: "yt-",
+  instagram: "ig-",
+};
+
 function XIcon({ className }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -970,8 +1039,74 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dragActive, setDragActive] = useState(false);
-  const [selectedRatio, setSelectedRatio] = useState("1:1");
+  const [selectedSizePreset, setSelectedSizePreset] = useState("ig-feed-square");
+  const [sizeTargetPlatform, setSizeTargetPlatform] = useState("instagram");
   const fileInputRef = useRef(null);
+
+  const selectedRatio = useMemo(() => {
+    return (
+      SIZE_PRESETS.find((preset) => preset.id === selectedSizePreset)?.ratio ||
+      "1:1"
+    );
+  }, [selectedSizePreset]);
+
+  const availableSizePresets = useMemo(() => {
+    if (selectedChannels.length === 0) {
+      return SIZE_PRESETS.map((preset) => ({
+        ...preset,
+        matchedPlatforms: preset.platforms,
+        matchCount: preset.platforms.length,
+      }));
+    }
+
+    const curatedPrefix = PLATFORM_PRESET_PREFIX[sizeTargetPlatform];
+    if (curatedPrefix) {
+      const curatedPresets = SIZE_PRESETS.filter((preset) =>
+        preset.id.startsWith(curatedPrefix),
+      ).map((preset) => ({
+        ...preset,
+        matchedPlatforms: [sizeTargetPlatform],
+        matchCount: 1,
+      }));
+
+      if (curatedPresets.length > 0) {
+        return curatedPresets;
+      }
+    }
+
+    const platformName =
+      PLATFORM_SHORT_LABELS[sizeTargetPlatform] || sizeTargetPlatform;
+
+    return ASPECT_RATIOS.map((ratio) => ({
+      id: `${sizeTargetPlatform}-${ratio.id}`,
+      ratio: ratio.id,
+      title: `${platformName} ${ratio.label}`,
+      subtitle: "Platform-ready format",
+      platforms: [sizeTargetPlatform],
+      matchedPlatforms: [sizeTargetPlatform],
+      matchCount: 1,
+    }));
+  }, [selectedChannels, sizeTargetPlatform]);
+
+  React.useEffect(() => {
+    if (selectedChannels.length === 0) {
+      setSizeTargetPlatform("instagram");
+      return;
+    }
+
+    if (!selectedChannels.includes(sizeTargetPlatform)) {
+      setSizeTargetPlatform(selectedChannels[0]);
+    }
+  }, [selectedChannels, sizeTargetPlatform]);
+
+  React.useEffect(() => {
+    if (
+      availableSizePresets.length > 0 &&
+      !availableSizePresets.some((preset) => preset.id === selectedSizePreset)
+    ) {
+      setSelectedSizePreset(availableSizePresets[0].id);
+    }
+  }, [availableSizePresets, selectedSizePreset]);
 
   // Auto-select connected channels on mount
   React.useEffect(() => {
@@ -1129,7 +1264,18 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
       // Important: Append text fields BEFORE files for some multipart parsers
       formData.append("caption", caption);
       formData.append("selectedChannels", JSON.stringify(selectedChannels));
-      formData.append("platformData", JSON.stringify(platformData));
+      formData.append(
+        "platformData",
+        JSON.stringify({
+          ...platformData,
+          composer: {
+            sizePreset: selectedSizePreset,
+            aspectRatio: selectedRatio,
+          },
+        }),
+      );
+      formData.append("selectedPostSizePreset", selectedSizePreset);
+      formData.append("selectedAspectRatio", selectedRatio);
       if (youtubeThumbnail && selectedChannels.includes("youtube")) {
         formData.append("youtubeThumbnail", youtubeThumbnail);
       }
@@ -1203,6 +1349,8 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     setCustomizationExpanded(false);
     setIsScheduled(false);
     setScheduledAt("");
+    setSelectedSizePreset("ig-feed-square");
+    setSizeTargetPlatform("instagram");
     setError(null);
     onClose();
   };
@@ -1482,53 +1630,109 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
               {/* Post Format Selection */}
               <div className="mt-8 border-t border-gray-100 pt-6">
-                <div className="flex items-center gap-2 mb-4 ml-1">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em]">
-                    Select Post Size
-                  </p>
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em] mb-1">
+                      Smart Post Size
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      Layouts are shown based on the platform you choose below.
+                    </p>
+                  </div>
+                  {selectedChannels.length > 0 && availableSizePresets[0] && (
+                    <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-1 rounded-full">
+                      {PLATFORM_SHORT_LABELS[sizeTargetPlatform] || sizeTargetPlatform}: {availableSizePresets[0].ratio}
+                    </span>
+                  )}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {ASPECT_RATIOS.map((ratio) => (
+
+                {selectedChannels.length > 1 && (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {selectedChannels.map((platformId) => (
+                      <button
+                        key={`size-target-${platformId}`}
+                        type="button"
+                        onClick={() => setSizeTargetPlatform(platformId)}
+                        className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-all ${
+                          sizeTargetPlatform === platformId
+                            ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+                            : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        {PLATFORM_SHORT_LABELS[platformId] || platformId}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {availableSizePresets.map((preset) => {
+                    const ratio = ASPECT_RATIOS.find((r) => r.id === preset.ratio);
+                    if (!ratio) return null;
+
+                    const matches = preset.matchedPlatforms || preset.platforms;
+
+                    return (
                     <button
-                      key={ratio.id}
+                      key={preset.id}
                       type="button"
-                      onClick={() => setSelectedRatio(ratio.id)}
+                      onClick={() => setSelectedSizePreset(preset.id)}
                       className={`flex flex-col items-center gap-4 p-4 rounded-xl border transition-all duration-300 group ${
-                        selectedRatio === ratio.id
+                        selectedSizePreset === preset.id
                           ? "bg-indigo-50/40 border-indigo-200 shadow-sm ring-1 ring-indigo-200"
                           : "bg-white border-gray-100 hover:border-gray-200 hover:shadow-sm"
                       }`}
                     >
-                      <div
-                        className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-500 ${
-                          selectedRatio === ratio.id
-                            ? "bg-white shadow-md shadow-indigo-100/50 scale-110"
-                            : "bg-gray-50 text-gray-400 group-hover:bg-white group-hover:shadow-sm"
-                        }`}
-                      >
-                        {/* Visual Ratio Preview Box */}
+                      <div className="flex items-center gap-3 w-full">
                         <div
-                          className={`rounded-[3px] transition-all duration-500 ${ratio.preview} ${
-                            selectedRatio === ratio.id
-                              ? "border-indigo-500 bg-indigo-500/10"
-                              : "border-gray-300 bg-gray-50"
+                          className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-500 ${
+                            selectedSizePreset === preset.id
+                              ? "bg-white shadow-md shadow-indigo-100/50 scale-110"
+                              : "bg-gray-50 text-gray-400 group-hover:bg-white group-hover:shadow-sm"
                           }`}
-                        />
+                        >
+                          <div
+                            className={`rounded-[3px] transition-all duration-500 ${ratio.preview} ${
+                              selectedSizePreset === preset.id
+                                ? "border-indigo-500 bg-indigo-500/10"
+                                : "border-gray-300 bg-gray-50"
+                            }`}
+                          />
+                        </div>
+
+                        <div className="text-left flex-1 min-w-0">
+                          <p
+                            className={`text-[11px] font-bold tracking-tight mb-0.5 ${selectedSizePreset === preset.id ? "text-indigo-900" : "text-gray-700"}`}
+                          >
+                            {preset.title}
+                          </p>
+                          <p className="text-[10px] text-gray-500 mb-1">{preset.subtitle}</p>
+                          <p
+                            className={`text-[10px] font-semibold tabular-nums ${selectedSizePreset === preset.id ? "text-indigo-500/80" : "text-gray-400"}`}
+                          >
+                            {preset.ratio}
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-center">
-                        <p
-                          className={`text-[11px] font-bold tracking-tight mb-0.5 ${selectedRatio === ratio.id ? "text-indigo-900" : "text-gray-700"}`}
-                        >
-                          {ratio.label}
-                        </p>
-                        <p
-                          className={`text-[9px] font-semibold tabular-nums ${selectedRatio === ratio.id ? "text-indigo-500/70" : "text-gray-400"}`}
-                        >
-                          {ratio.id}
-                        </p>
+
+                      <div className="w-full flex flex-wrap gap-1 justify-start">
+                        {matches.slice(0, 4).map((platform) => (
+                          <span
+                            key={`${preset.id}-${platform}`}
+                            className="text-[9px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium"
+                          >
+                            {PLATFORM_SHORT_LABELS[platform] || platform}
+                          </span>
+                        ))}
+                        {matches.length > 4 && (
+                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
+                            +{matches.length - 4} more
+                          </span>
+                        )}
                       </div>
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

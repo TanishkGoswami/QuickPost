@@ -17,7 +17,9 @@ import { saveBroadcast } from '../services/broadcasts.js';
 import { uploadToCloudinary, isCloudinaryConfigured } from '../services/cloudinary.js';
 import googleOAuth from '../services/googleOAuth.js';
 import { createJob, updateJob, failJob, getJob } from '../services/jobQueue.js';
+import { generatePlatformMediaVariants } from '../services/mediaProcessing.js';
 import fs from 'fs';
+import path from 'path';
 
 const router = express.Router();
 
@@ -44,7 +46,15 @@ router.post('/broadcast', authenticateUser, (req, res, next) => {
       return res.status(400).json({ success: false, error: 'No media files uploaded' });
     }
 
-    const { caption, selectedChannels, platformData, scheduledAt, isScheduled: isScheduledField } = req.body;
+    const {
+      caption,
+      selectedChannels,
+      platformData,
+      scheduledAt,
+      isScheduled: isScheduledField,
+      selectedAspectRatio = '1:1',
+      selectedPostSizePreset,
+    } = req.body;
     const userId = req.user.userId;
 
     const channels = typeof selectedChannels === 'string' ? JSON.parse(selectedChannels) : selectedChannels;
@@ -62,6 +72,24 @@ router.post('/broadcast', authenticateUser, (req, res, next) => {
     const isVideo = videos.length > 0;
     const mediaType = isVideo ? 'video' : 'image';
     const primaryVideoPath = videos.length > 0 ? videos[0].path : null;
+    const primaryImagePath = uploadedFiles.find(f => f.mimetype.startsWith('image/'))?.path || null;
+    const primaryInputPath = isVideo ? primaryVideoPath : (primaryImagePath || uploadedFiles[0]?.path);
+
+    let platformVariants = {};
+    let generatedVariantPaths = [];
+
+    if (primaryInputPath) {
+      const variantResult = await generatePlatformMediaVariants({
+        inputFilePath: primaryInputPath,
+        mediaType,
+        selectedChannels: channels,
+        selectedAspectRatio,
+        jobId,
+      });
+
+      platformVariants = variantResult.variants || {};
+      generatedVariantPaths = variantResult.generatedFiles || [];
+    }
 
     console.log(`🚀 Broadcast job queued. Type: ${mediaType}, User: ${userId}, Scheduled: ${isScheduled ? scheduledAt : 'Immediate'}`);
 
@@ -74,7 +102,9 @@ router.post('/broadcast', authenticateUser, (req, res, next) => {
       fileCount: uploadedFiles.length,
       hasThumbnail: !!thumbnailFile,
       isScheduled,
-      scheduledAt
+      scheduledAt,
+      selectedAspectRatio,
+      selectedPostSizePreset,
     });
 
     // ── Respond immediately — UI unblocked ────────────────────────────────
@@ -94,6 +124,10 @@ router.post('/broadcast', authenticateUser, (req, res, next) => {
       isVideo,
       mediaType,
       primaryVideoPath,
+      platformVariants,
+      generatedVariantPaths,
+      selectedAspectRatio,
+      selectedPostSizePreset,
       isScheduled,
       scheduledAt
     }).catch(err => {
@@ -123,6 +157,8 @@ async function processBroadcastJob({
   jobId, userId, caption, channels, platData,
   uploadedFiles, filePaths, filenames,
   thumbnailFile, isVideo, mediaType, primaryVideoPath,
+  platformVariants, generatedVariantPaths,
+  selectedAspectRatio, selectedPostSizePreset,
   isScheduled, scheduledAt
 }) {
   console.log(`\n🚀 [JOB:${jobId}] Starting background broadcast for user: ${userId}`);
@@ -137,6 +173,7 @@ async function processBroadcastJob({
   let mediaUrls = [];
   let finalThumbnailUrl = null;
   let autoCoverImageUrl = null;
+  let platformVariantUrls = {};
 
   try {
     if (isCloudinaryConfigured()) {
@@ -174,6 +211,18 @@ async function processBroadcastJob({
         console.log(`🎬 [JOB:${jobId}] Generated auto-thumbnail for video:`, finalThumbnailUrl);
       }
 
+      if (platformVariants && Object.keys(platformVariants).length > 0) {
+        for (const [platform, variant] of Object.entries(platformVariants)) {
+          if (!variant?.path || !fs.existsSync(variant.path)) continue;
+          try {
+            const upload = await uploadToCloudinary(variant.path, mediaType === 'video' ? 'video' : 'image');
+            platformVariantUrls[platform] = upload.url;
+          } catch (variantErr) {
+            console.warn(`⚠️ [JOB:${jobId}] Failed variant upload for ${platform}:`, variantErr.message);
+          }
+        }
+      }
+
       updateJob(jobId, {
         progress: 30,
         step: isScheduled ? 'Media ready. Scheduling...' : 'Cloud upload complete. Publishing...',
@@ -191,12 +240,20 @@ async function processBroadcastJob({
       const firstImageIdx = uploadedFiles.findIndex(f => f.mimetype.startsWith('image/'));
       if (firstImageIdx !== -1) autoCoverImageUrl = mediaUrls[firstImageIdx];
       finalThumbnailUrl = autoCoverImageUrl;
+
+      if (platformVariants && Object.keys(platformVariants).length > 0) {
+        for (const [platform, variant] of Object.entries(platformVariants)) {
+          if (!variant?.path) continue;
+          platformVariantUrls[platform] = `${serverPublicUrl}/uploads/processed/${jobId}/${path.basename(variant.path)}`;
+        }
+      }
+
       updateJob(jobId, { progress: 30, step: 'Publishing to platforms…' });
     }
   } catch (uploadErr) {
     console.error(`❌ [JOB:${jobId}] Cloud upload failed:`, uploadErr.message);
     failJob(jobId, `Cloud upload failed: ${uploadErr.message}`);
-    cleanupFiles(filePaths, thumbnailFile);
+    cleanupFiles(filePaths, thumbnailFile, generatedVariantPaths);
     return;
   }
 
@@ -205,16 +262,16 @@ async function processBroadcastJob({
     updateJob(jobId, { progress: 80, step: 'Saving schedule to database…' });
     try {
       await saveBroadcast(
-        userId, 
-        caption, 
-        filenames, 
-        { mediaUrls, thumbnailUrl: finalThumbnailUrl }, 
-        mediaType, 
+        userId,
+        caption,
+        filenames,
+        { mediaUrls, thumbnailUrl: finalThumbnailUrl },
+        mediaType,
         { ...platData, selectedChannels: channels, filePaths }, // Store filePaths for scheduler cleanup later
-        'scheduled', 
+        'scheduled',
         scheduledAt
       );
-      
+
       updateJob(jobId, {
         status: 'completed',
         progress: 100,
@@ -224,13 +281,14 @@ async function processBroadcastJob({
       return; // Stop here, scheduler will pick it up
     } catch (dbErr) {
       failJob(jobId, `Scheduling failed: ${dbErr.message}`);
-      cleanupFiles(filePaths, thumbnailFile);
+      cleanupFiles(filePaths, thumbnailFile, generatedVariantPaths);
       return;
     }
   }
 
   // ── Phase 3: Immediate Broadcast (Platform APIs) ────────────────────────
   const primaryMediaUrl = mediaUrls[0];
+  const getPlatformMediaUrl = (platform) => platformVariantUrls[platform] || primaryMediaUrl;
   const youtubeThumbnailPath = thumbnailFile ? thumbnailFile.path :
     (uploadedFiles.findIndex(f => f.mimetype.startsWith('image/')) !== -1
       ? filePaths[uploadedFiles.findIndex(f => f.mimetype.startsWith('image/'))]
@@ -268,7 +326,7 @@ async function processBroadcastJob({
   // Pinterest
   if (channels.includes('pinterest') && tokens.pinterest) {
     platformPromises.push(
-      postToPinterest(primaryMediaUrl, platData?.pinterest?.title || caption, tokens.pinterest, platData?.pinterest?.link, platData?.pinterest?.boardId)
+      postToPinterest(getPlatformMediaUrl('pinterest'), platData?.pinterest?.title || caption, tokens.pinterest, platData?.pinterest?.link, platData?.pinterest?.boardId)
         .then(r => onChannelComplete('Pinterest', r))
     );
   }
@@ -280,9 +338,9 @@ async function processBroadcastJob({
       action = postCarouselToInstagram(mediaUrls, caption, tokens.instagram);
     } else if (isVideo) {
       const igTokens = { ...tokens.instagram, coverUrl: autoCoverImageUrl };
-      action = postToInstagram(primaryMediaUrl, caption, igTokens);
+      action = postToInstagram(getPlatformMediaUrl('instagram'), caption, igTokens);
     } else {
-      action = postImageToInstagram(primaryMediaUrl, caption, tokens.instagram);
+      action = postImageToInstagram(getPlatformMediaUrl('instagram'), caption, tokens.instagram);
     }
     platformPromises.push(action.then(r => onChannelComplete('Instagram', r)));
   }
@@ -290,15 +348,15 @@ async function processBroadcastJob({
   // Facebook
   if (channels.includes('facebook') && tokens.facebook?.pageId) {
     const fbAction = isVideo
-      ? postVideoToFacebook(tokens.facebook.accessToken, tokens.facebook.pageId, caption, primaryMediaUrl, autoCoverImageUrl)
-      : postToFacebook(tokens.facebook.accessToken, tokens.facebook.pageId, caption, mediaUrls);
+      ? postVideoToFacebook(tokens.facebook.accessToken, tokens.facebook.pageId, caption, getPlatformMediaUrl('facebook'), autoCoverImageUrl)
+      : postToFacebook(tokens.facebook.accessToken, tokens.facebook.pageId, caption, getPlatformMediaUrl('facebook'));
     platformPromises.push(fbAction.then(r => onChannelComplete('Facebook', r)));
   }
 
   // LinkedIn
   if (channels.includes('linkedin') && tokens.linkedin) {
     platformPromises.push(
-      postToLinkedIn(mediaUrls, caption, tokens.linkedin).then(r => onChannelComplete('LinkedIn', r))
+      postToLinkedIn([getPlatformMediaUrl('linkedin')], caption, tokens.linkedin).then(r => onChannelComplete('LinkedIn', r))
     );
   }
 
@@ -320,7 +378,7 @@ async function processBroadcastJob({
   // X (Twitter)
   if (channels.includes('x') && tokens.x) {
     platformPromises.push(
-      broadcastToX(caption, mediaUrls, tokens.x, userId)
+      broadcastToX(caption, [getPlatformMediaUrl('x')], tokens.x, userId)
         .then(r => typeof r === 'object' ? r : { success: true, result: r }) // ensure object response
         .then(r => onChannelComplete('X', r))
     );
@@ -332,8 +390,11 @@ async function processBroadcastJob({
       (async () => {
         const validAccessToken = await googleOAuth.getValidAccessToken(userId);
         const ytTokens = { ...tokens.youtube, accessToken: validAccessToken };
+        const youtubeVideoPath = platformVariants?.youtube?.path && fs.existsSync(platformVariants.youtube.path)
+          ? platformVariants.youtube.path
+          : primaryVideoPath;
         updateJob(jobId, { step: 'Uploading video to YouTube…' });
-        const result = await postToYouTube(primaryVideoPath, caption, ytTokens);
+        const result = await postToYouTube(youtubeVideoPath, caption, ytTokens);
         if (result.success && result.videoId && youtubeThumbnailPath) {
           const thumbResult = await setVideoThumbnail(result.videoId, youtubeThumbnailPath, ytTokens);
           result.thumbnailSuccess = thumbResult.success;
@@ -343,18 +404,21 @@ async function processBroadcastJob({
     );
   }
 
-  // TikTok, Mastodon, Reddit, Threads... 
+  // TikTok, Mastodon, Reddit, Threads...
   if (channels.includes('tiktok') && tokens.tiktok && primaryVideoPath) {
-    platformPromises.push(tiktok.publishVideo(tokens.tiktok.accessToken, primaryVideoPath, caption).then(r => onChannelComplete('TikTok', r)));
+    const tiktokPath = platformVariants?.tiktok?.path && fs.existsSync(platformVariants.tiktok.path)
+      ? platformVariants.tiktok.path
+      : primaryVideoPath;
+    platformPromises.push(tiktok.publishVideo(tokens.tiktok.accessToken, tiktokPath, caption).then(r => onChannelComplete('TikTok', r)));
   }
   if (channels.includes('mastodon') && tokens.mastodon) {
     platformPromises.push(mastodon.postStatus(tokens.mastodon.accessToken, tokens.mastodon.instanceUrl, caption, filePaths).then(r => onChannelComplete('Mastodon', r)));
   }
   if (channels.includes('reddit') && tokens.reddit) {
-    platformPromises.push(postToReddit(userId, caption, primaryMediaUrl, tokens.reddit, platData?.reddit).then(r => onChannelComplete('Reddit', r)));
+    platformPromises.push(postToReddit(userId, caption, getPlatformMediaUrl('reddit'), tokens.reddit, platData?.reddit).then(r => onChannelComplete('Reddit', r)));
   }
   if (channels.includes('threads') && tokens.threads) {
-    platformPromises.push(postToThreads(tokens.threads.accessToken, tokens.threads.account_id, caption, primaryMediaUrl, mediaType).then(r => onChannelComplete('Threads', r)));
+    platformPromises.push(postToThreads(tokens.threads.accessToken, tokens.threads.account_id, caption, getPlatformMediaUrl('threads'), mediaType).then(r => onChannelComplete('Threads', r)));
   }
 
   updateJob(jobId, { progress: 31, step: `Publishing to ${selectedChannelCount} platform(s)…` });
@@ -364,6 +428,14 @@ async function processBroadcastJob({
     if (promiseResult.status === 'fulfilled') {
       const { platform, result } = promiseResult.value;
       results[platform.toLowerCase()] = result;
+    }
+  }
+
+  if (Object.keys(platformVariantUrls).length > 0) {
+    results.platform_variant_urls = platformVariantUrls;
+    results.selected_aspect_ratio = selectedAspectRatio;
+    if (selectedPostSizePreset) {
+      results.selected_post_size_preset = selectedPostSizePreset;
     }
   }
 
@@ -378,7 +450,7 @@ async function processBroadcastJob({
 
   // ── Phase 5: Cleanup (95 → 100%) ──────────────────────────────────────
   updateJob(jobId, { progress: 95, step: 'Cleaning up…' });
-  setTimeout(() => cleanupFiles(filePaths, thumbnailFile), 10000);
+  setTimeout(() => cleanupFiles(filePaths, thumbnailFile, generatedVariantPaths), 10000);
 
   updateJob(jobId, {
     status: 'completed',
@@ -391,10 +463,11 @@ async function processBroadcastJob({
 
 function getJob_internal(jobId) { return getJob(jobId); }
 
-function cleanupFiles(filePaths, thumbnailFile) {
+function cleanupFiles(filePaths, thumbnailFile, generatedVariantPaths = []) {
   try {
     filePaths?.forEach(p => { if (p && fs.existsSync(p)) fs.unlinkSync(p); });
     if (thumbnailFile?.path && fs.existsSync(thumbnailFile.path)) fs.unlinkSync(thumbnailFile.path);
+    generatedVariantPaths?.forEach(p => { if (p && fs.existsSync(p)) fs.unlinkSync(p); });
     console.log('✅ [CLEANUP] Temp files removed.');
   } catch (err) { console.error('❌ [CLEANUP] Error:', err); }
 }
