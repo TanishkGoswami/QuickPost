@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Settings, LogOut, CalendarClock, Plus, Share2 } from 'lucide-react';
+import { Settings, LogOut, CalendarClock, Plus, Share2, X } from 'lucide-react';
 import { useDialog } from '../context/DialogContext';
 import logo from '/logo.png';
 import InstagramBusinessSetupModal from './InstagramBusinessSetupModal';
