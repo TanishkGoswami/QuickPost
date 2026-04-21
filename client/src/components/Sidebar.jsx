@@ -1,26 +1,26 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { createPortal } from 'react-dom';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { Settings, LogOut } from 'lucide-react';
-import { useDialog } from '../context/DialogContext';
-import logo from '/logo.png';
-import InstagramBusinessSetupModal from './InstagramBusinessSetupModal';
-import BlueskyConnectModal from './BlueskyConnectModal';
-import PinterestConnectModal from './PinterestConnectModal';
-import LinkedInConnectModal from './LinkedInConnectModal';
-import MastodonConnectModal from './MastodonConnectModal';
-import TikTokConnectModal from './TikTokConnectModal';
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { Settings, LogOut } from "lucide-react";
+import { useDialog } from "../context/DialogContext";
+import logo from "/logo.png";
+import InstagramBusinessSetupModal from "./InstagramBusinessSetupModal";
+import BlueskyConnectModal from "./BlueskyConnectModal";
+import PinterestConnectModal from "./PinterestConnectModal";
+import LinkedInConnectModal from "./LinkedInConnectModal";
+import MastodonConnectModal from "./MastodonConnectModal";
+import TikTokConnectModal from "./TikTokConnectModal";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const selectedDashboardPlatform =
-    location.pathname === '/dashboard'
-      ? new URLSearchParams(location.search).get('platform')
+    location.pathname === "/dashboard"
+      ? new URLSearchParams(location.search).get("platform")
       : null;
   const { user, connectedAccounts, refreshAccounts, logout } = useAuth();
   const { confirm, alert } = useDialog();
@@ -36,15 +36,19 @@ function Sidebar() {
   const [showMoreUnconnected, setShowMoreUnconnected] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const handleLogout = async () => {
-    const confirmed = await confirm('Logout', 'Are you sure you want to log out?', {
-      intent: 'logout',
-      confirmText: 'Logout',
-      cancelText: 'Stay logged in'
-    });
+    const confirmed = await confirm(
+      "Logout",
+      "Are you sure you want to log out?",
+      {
+        intent: "logout",
+        confirmText: "Logout",
+        cancelText: "Stay logged in",
+      },
+    );
 
     if (confirmed) {
       logout();
-      navigate('/login');
+      navigate("/login");
     }
   };
 
@@ -55,65 +59,78 @@ function Sidebar() {
 
   const handleProceedToConnect = () => {
     setShowBusinessSetupModal(false);
-    const token = localStorage.getItem('quickpost_token');
+    const token = localStorage.getItem("quickpost_token");
     window.location.href = `${API_BASE_URL}/api/auth/instagram?token=${token}`;
   };
 
   const handleConnectFacebook = () => {
-    const token = localStorage.getItem('quickpost_token');
+    const token = localStorage.getItem("quickpost_token");
     window.location.href = `${API_BASE_URL}/api/auth/facebook?token=${token}`;
   };
 
   const handleConnectThreads = () => {
-    const token = localStorage.getItem('quickpost_token');
+    const token = localStorage.getItem("quickpost_token");
     window.location.href = `${API_BASE_URL}/api/auth/threads?token=${token}`;
   };
 
   const handleConnectX = () => {
-    console.log('Ã°Ââ€¢Â Initiating X connection...');
-    setConnectingPlatform('x');
-    const token = localStorage.getItem('quickpost_token');
+    console.log("Ã°Ââ€¢Â Initiating X connection...");
+    setConnectingPlatform("x");
+    const token = localStorage.getItem("quickpost_token");
     window.location.href = `${API_BASE_URL}/api/auth/x?token=${token}`;
   };
 
   const handleConnectReddit = () => {
-    console.log('🤖 Initiating Reddit connection...');
-    setConnectingPlatform('reddit');
-    const token = localStorage.getItem('quickpost_token');
+    console.log("🤖 Initiating Reddit connection...");
+    setConnectingPlatform("reddit");
+    const token = localStorage.getItem("quickpost_token");
     window.location.href = `${API_BASE_URL}/api/auth/reddit?token=${token}`;
   };
 
   const handleDisconnect = async (platform) => {
-    const confirmed = await confirm('Disconnect Account', `Are you sure you want to disconnect your ${platform} account? This will stop all scheduled posts to this channel.`, {
-      intent: 'danger',
-      confirmText: 'Disconnect',
-      cancelText: 'Keep Connected'
-    });
+    const confirmed = await confirm(
+      "Disconnect Account",
+      `Are you sure you want to disconnect your ${platform} account? This will stop all scheduled posts to this channel.`,
+      {
+        intent: "danger",
+        confirmText: "Disconnect",
+        cancelText: "Keep Connected",
+      },
+    );
 
     if (!confirmed) return;
 
     setDisconnectingPlatform(platform);
     try {
-      const token = localStorage.getItem('quickpost_token');
-      const response = await fetch(`${API_BASE_URL}/api/auth/disconnect/${platform}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+      const token = localStorage.getItem("quickpost_token");
+      const response = await fetch(
+        `${API_BASE_URL}/api/auth/disconnect/${platform}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
       const data = await response.json();
 
       if (data.success) {
         await refreshAccounts();
-        alert('Success', `Successfully disconnected from ${platform}`, { intent: 'primary' });
+        alert("Success", `Successfully disconnected from ${platform}`, {
+          intent: "primary",
+        });
       } else {
-        alert('Error', `Failed to disconnect: ${data.error}`, { intent: 'danger' });
+        alert("Error", `Failed to disconnect: ${data.error}`, {
+          intent: "danger",
+        });
       }
     } catch (error) {
-      console.error('Disconnect error:', error);
-      alert('Error', 'Failed to disconnect account. Please try again.', { intent: 'danger' });
+      console.error("Disconnect error:", error);
+      alert("Error", "Failed to disconnect account. Please try again.", {
+        intent: "danger",
+      });
     } finally {
       setDisconnectingPlatform(null);
     }
@@ -137,111 +154,198 @@ function Sidebar() {
 
   const platforms = [
     {
-      id: 'facebook',
-      name: 'Facebook',
+      id: "facebook",
+      name: "Facebook",
       connected: connectedAccounts.facebook,
-      icon: <img src="/icons/facebook-round-color-icon.svg" className="w-6 h-6 object-contain" alt="Facebook" />,
-      connectText: 'Connect Facebook',
+      icon: (
+        <img
+          src="/icons/facebook-round-color-icon.svg"
+          className="w-6 h-6 object-contain"
+          alt="Facebook"
+        />
+      ),
+      connectText: "Connect Facebook",
       onConnect: handleConnectFacebook,
     },
     {
-      id: 'instagram',
-      name: 'Instagram',
+      id: "instagram",
+      name: "Instagram",
       connected: connectedAccounts.instagram,
-      icon: <img src="/icons/ig-instagram-icon.svg" className="w-6 h-6 object-contain" alt="Instagram" />,
-      connectText: 'Connect Instagram',
+      icon: (
+        <img
+          src="/icons/ig-instagram-icon.svg"
+          className="w-6 h-6 object-contain"
+          alt="Instagram"
+        />
+      ),
+      connectText: "Connect Instagram",
       onConnect: handleConnectInstagram,
     },
     {
-      id: 'x',
-      name: 'X',
+      id: "x",
+      name: "X",
       connected: connectedAccounts.x,
-      icon: <img src="/icons/x-social-media-round-icon.svg" className="w-6 h-6 object-contain" alt="X" />,
-      connectText: 'Connect X',
+      icon: (
+        <img
+          src="/icons/x-social-media-round-icon.svg"
+          className="w-6 h-6 object-contain"
+          alt="X"
+        />
+      ),
+      connectText: "Connect X",
       onConnect: handleConnectX,
     },
     {
-      id: 'linkedin',
-      name: 'LinkedIn',
+      id: "linkedin",
+      name: "LinkedIn",
       connected: connectedAccounts.linkedin,
-      icon: <img src="/icons/linkedin-icon.svg" className="w-6 h-6 object-contain" alt="LinkedIn" />,
-      connectText: 'Connect LinkedIn',
+      icon: (
+        <img
+          src="/icons/linkedin-icon.svg"
+          className="w-6 h-6 object-contain"
+          alt="LinkedIn"
+        />
+      ),
+      connectText: "Connect LinkedIn",
       onConnect: handleConnectLinkedIn,
     },
     {
-      id: 'tiktok',
-      name: 'TikTok',
+      id: "tiktok",
+      name: "TikTok",
       connected: connectedAccounts.tiktok,
-      icon: <img src="/icons/tiktok-circle-icon.svg" className="w-6 h-6 object-contain" alt="TikTok" />,
-      connectText: 'Connect TikTok',
+      icon: (
+        <img
+          src="/icons/tiktok-circle-icon.svg"
+          className="w-6 h-6 object-contain"
+          alt="TikTok"
+        />
+      ),
+      connectText: "Connect TikTok",
       onConnect: handleConnectTikTok,
     },
     {
-      id: 'youtube',
-      name: 'YouTube',
+      id: "youtube",
+      name: "YouTube",
       connected: connectedAccounts.youtube,
-      icon: <img src="/icons/youtube-color-icon.svg" className="w-6 h-6 object-contain" alt="YouTube" />,
-      connectText: 'Connect YouTube',
-      onConnect: () => alert('YouTube is connected via Google sign-in'),
+      icon: (
+        <img
+          src="/icons/youtube-color-icon.svg"
+          className="w-6 h-6 object-contain"
+          alt="YouTube"
+        />
+      ),
+      connectText: "Connect YouTube",
+      onConnect: () => alert("YouTube is connected via Google sign-in"),
     },
     {
-      id: 'pinterest',
-      name: 'Pinterest',
+      id: "pinterest",
+      name: "Pinterest",
       connected: connectedAccounts.pinterest,
-      icon: <img src="/icons/pinterest-round-color-icon.svg" className="w-6 h-6 object-contain" alt="Pinterest" />,
-      connectText: 'Connect Pinterest',
+      icon: (
+        <img
+          src="/icons/pinterest-round-color-icon.svg"
+          className="w-6 h-6 object-contain"
+          alt="Pinterest"
+        />
+      ),
+      connectText: "Connect Pinterest",
       onConnect: handleConnectPinterest,
     },
     {
-      id: 'threads',
-      name: 'Threads',
+      id: "threads",
+      name: "Threads",
       connected: connectedAccounts.threads,
-      icon: <img src="/icons/threads-icon.svg" className="w-6 h-6 object-contain" alt="Threads" />,
-      connectText: 'Connect Threads',
+      icon: (
+        <img
+          src="/icons/threads-icon.svg"
+          className="w-6 h-6 object-contain"
+          alt="Threads"
+        />
+      ),
+      connectText: "Connect Threads",
       onConnect: handleConnectThreads,
     },
     {
-      id: 'mastodon',
-      name: 'Mastodon',
+      id: "mastodon",
+      name: "Mastodon",
       connected: connectedAccounts.mastodon,
-      icon: <img src="/icons/mastodon-round-icon.svg" className="w-6 h-6 object-contain" alt="Mastodon" />,
-      connectText: 'Connect Mastodon',
+      icon: (
+        <img
+          src="/icons/mastodon-round-icon.svg"
+          className="w-6 h-6 object-contain"
+          alt="Mastodon"
+        />
+      ),
+      connectText: "Connect Mastodon",
       onConnect: handleConnectMastodon,
     },
     {
-      id: 'bluesky',
-      name: 'Bluesky',
+      id: "bluesky",
+      name: "Bluesky",
       connected: connectedAccounts.bluesky,
-      icon: <img src="/icons/bluesky-circle-color-icon.svg" className="w-6 h-6 object-contain" alt="Bluesky" />,
-      connectText: 'Connect Bluesky',
+      icon: (
+        <img
+          src="/icons/bluesky-circle-color-icon.svg"
+          className="w-6 h-6 object-contain"
+          alt="Bluesky"
+        />
+      ),
+      connectText: "Connect Bluesky",
       onConnect: () => setShowBlueskyModal(true),
     },
     {
-      id: 'google-business',
-      name: 'Google Business',
+      id: "google-business",
+      name: "Google Business",
       connected: connectedAccounts.googleBusiness,
-      icon: <img src="/icons/google-icon.svg" className="w-6 h-6 object-contain" alt="Google" />,
-      connectText: 'Connect Google Business',
-      onConnect: () => alert('Google Business Profile integration coming soon!'),
+      icon: (
+        <img
+          src="/icons/google-icon.svg"
+          className="w-6 h-6 object-contain"
+          alt="Google"
+        />
+      ),
+      connectText: "Connect Google Business",
+      onConnect: () =>
+        alert("Google Business Profile integration coming soon!"),
     },
     {
-      id: 'reddit',
-      name: 'Reddit',
+      id: "reddit",
+      name: "Reddit",
       connected: connectedAccounts.reddit,
-      icon: <img src="/icons/reddit-icon.svg" className="w-6 h-6 object-contain" alt="Reddit" />,
-      connectText: 'Coming Soon',
-      onConnect: () => alert('Coming Soon', 'Reddit integration is currently awaiting API approval. It will be available shortly!', { intent: 'warning' }),
-      disabled: true
+      icon: (
+        <img
+          src="/icons/reddit-icon.svg"
+          className="w-6 h-6 object-contain"
+          alt="Reddit"
+        />
+      ),
+      connectText: "Coming Soon",
+      onConnect: () =>
+        alert(
+          "Coming Soon",
+          "Reddit integration is currently awaiting API approval. It will be available shortly!",
+          { intent: "warning" },
+        ),
+      disabled: true,
     },
     {
-      id: 'snapchat',
-      name: 'Snapchat',
+      id: "snapchat",
+      name: "Snapchat",
       connected: false,
-      icon: <img src="/icons/snapchat-square-color-icon.svg" className="w-6 h-6 object-contain" alt="Snapchat" />,
-      connectText: 'Coming Soon',
-      onConnect: () => alert('Coming Soon', 'Snapchat integration is in development!', { intent: 'warning' }),
-      disabled: true
-    }
+      icon: (
+        <img
+          src="/icons/snapchat-square-color-icon.svg"
+          className="w-6 h-6 object-contain"
+          alt="Snapchat"
+        />
+      ),
+      connectText: "Coming Soon",
+      onConnect: () =>
+        alert("Coming Soon", "Snapchat integration is in development!", {
+          intent: "warning",
+        }),
+      disabled: true,
+    },
   ];
 
   return (
@@ -249,12 +353,20 @@ function Sidebar() {
       <div className="flex items-center justify-between px-5 py-6 border-b border-gray-100">
         <Link to="/dashboard" className="flex items-center gap-3 group">
           <div className="relative">
-            <img src={logo} alt="GAP" className="h-10 w-10 object-contain transition-transform duration-500 group-hover:scale-110" />
+            <img
+              src={logo}
+              alt="GAP"
+              className="h-10 w-10 object-contain transition-transform duration-500 group-hover:scale-110"
+            />
             <div className="absolute -inset-1 bg-indigo-500/10 rounded-xl blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           </div>
           <div className="flex flex-col">
-            <span className="text-[22px] font-black text-gray-900 leading-[0.9] tracking-tight">GAP</span>
-            <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-[0.15em] mt-0.5 opacity-80">Social-pilot</span>
+            <span className="text-[22px] font-black text-gray-900 leading-[0.9] tracking-tight">
+              GAP
+            </span>
+            <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-[0.15em] mt-0.5 opacity-80">
+              Social-pilot
+            </span>
           </div>
         </Link>
       </div>
@@ -264,16 +376,30 @@ function Sidebar() {
           <Link
             to="/dashboard"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-              location.pathname === '/dashboard'
-                ? 'bg-indigo-50 text-indigo-700'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              location.pathname === "/dashboard"
+                ? "bg-indigo-50 text-indigo-700"
+                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
             }`}
           >
-            <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
-              location.pathname === '/dashboard' ? 'bg-indigo-100' : 'bg-gray-100'
-            }`}>
-              <svg className={`w-4 h-4 ${location.pathname === '/dashboard' ? 'text-indigo-600' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            <div
+              className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                location.pathname === "/dashboard"
+                  ? "bg-indigo-100"
+                  : "bg-gray-100"
+              }`}
+            >
+              <svg
+                className={`w-4 h-4 ${location.pathname === "/dashboard" ? "text-indigo-600" : "text-gray-500"}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                />
               </svg>
             </div>
             <span className="text-sm font-semibold">All Channels</span>
@@ -281,13 +407,13 @@ function Sidebar() {
         </div>
 
         {/* Connected Section */}
-        {platforms.filter(p => p.connected).length > 0 && (
+        {platforms.filter((p) => p.connected).length > 0 && (
           <div className="px-3 mt-3">
             {(() => {
-              const connected = platforms.filter(p => p.connected);
+              const connected = platforms.filter((p) => p.connected);
               return (
                 <button
-                  onClick={() => setConnectedOpen(o => !o)}
+                  onClick={() => setConnectedOpen((o) => !o)}
                   className="flex items-center justify-between w-full pl-2 pr-4 py-2 mb-1 rounded-full border border-gray-100 bg-white hover:bg-gray-50 shadow-sm transition-all group overflow-hidden"
                 >
                   <motion.div layout className="flex items-center gap-3">
@@ -301,7 +427,11 @@ function Sidebar() {
                           className="flex -space-x-4"
                         >
                           {connected.slice(0, 3).map((p, idx) => (
-                            <div key={p.id} className="w-7 h-7 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center overflow-hidden" style={{ zIndex: 10 - idx }}>
+                            <div
+                              key={p.id}
+                              className="w-7 h-7 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center overflow-hidden"
+                              style={{ zIndex: 10 - idx }}
+                            >
                               <div className="scale-90">{p.icon}</div>
                             </div>
                           ))}
@@ -320,7 +450,10 @@ function Sidebar() {
                     </AnimatePresence>
                   </motion.div>
 
-                  <motion.div layout className="flex items-center gap-1.5 ml-auto">
+                  <motion.div
+                    layout
+                    className="flex items-center gap-1.5 ml-auto"
+                  >
                     <AnimatePresence>
                       {!connectedOpen && (
                         <motion.span
@@ -337,8 +470,18 @@ function Sidebar() {
                       animate={{ rotate: connectedOpen ? 180 : 0 }}
                       transition={{ duration: 0.3 }}
                     >
-                      <svg className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                      <svg
+                        className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={3}
+                          d="M19 9l-7 7-7-7"
+                        />
                       </svg>
                     </motion.div>
                   </motion.div>
@@ -350,47 +493,41 @@ function Sidebar() {
               {connectedOpen && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
+                  animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
                   className="overflow-hidden space-y-0.5"
                 >
-                  {platforms.filter(p => p.connected).map((platform) => (
-                    <div
-                      key={platform.id}
-                      onClick={() => navigate(`/dashboard?platform=${platform.id}`)}
-                      className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
-                        selectedDashboardPlatform === platform.id
-                          ? 'bg-indigo-50 border border-indigo-100'
-                          : 'hover:bg-gray-50 border border-transparent'
-                      }`}
-                    >
-                      <div className="relative flex-shrink-0">
-                        <div className="w-8 h-8 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center">
-                          {platform.icon}
-                        </div>
-                        <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-semibold text-gray-800 truncate leading-tight">{platform.name}</div>
-                        <div className="text-[11px] text-gray-400 truncate leading-tight">{user?.name || user?.email}</div>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDisconnect(platform.id);
-                        }}
-                        disabled={disconnectingPlatform === platform.id}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                        title="Disconnect"
-                      >
-                        {disconnectingPlatform === platform.id
-                          ? <span className="text-xs">...</span>
-                          : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  {platforms
+                    .filter((p) => p.connected)
+                    .map((platform) => (
+                      <div
+                        key={platform.id}
+                        onClick={() =>
+                          navigate(`/dashboard?platform=${platform.id}`)
                         }
-                      </button>
-                    </div>
-                  ))}
+                        className={`group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer ${
+                          selectedDashboardPlatform === platform.id
+                            ? "bg-indigo-50 border border-indigo-100"
+                            : "hover:bg-gray-50 border border-transparent"
+                        }`}
+                      >
+                        <div className="relative flex-shrink-0">
+                          <div className="w-8 h-8 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center">
+                            {platform.icon}
+                          </div>
+                          <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-gray-800 truncate leading-tight">
+                            {platform.name}
+                          </div>
+                          <div className="text-[11px] text-gray-400 truncate leading-tight">
+                            {user?.name || user?.email}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -399,14 +536,16 @@ function Sidebar() {
 
         {/* Add Channels Section */}
         {(() => {
-          const unconnected = platforms.filter(p => !p.connected);
+          const unconnected = platforms.filter((p) => !p.connected);
           const visible = unconnected.slice(0, 3);
           const hidden = unconnected.slice(3);
           if (unconnected.length === 0) return null;
           return (
             <div className="px-3 mt-4">
               <div className="flex items-center gap-2 px-2 py-1.5 mb-1">
-                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Add Channels</span>
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                  Add Channels
+                </span>
               </div>
               <div className="space-y-0.5">
                 {visible.map((platform) => {
@@ -418,15 +557,23 @@ function Sidebar() {
                       disabled={isConnecting}
                       className="group flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-left hover:bg-gray-50 transition-all disabled:cursor-wait"
                     >
-                      <div className={`w-8 h-8 rounded-xl bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center flex-shrink-0 transition-all ${
-                        isConnecting ? 'opacity-100 animate-pulse' : 'opacity-50 group-hover:opacity-100 group-hover:border-gray-300'
-                      }`}>
+                      <div
+                        className={`w-8 h-8 rounded-xl bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center flex-shrink-0 transition-all ${
+                          isConnecting
+                            ? "opacity-100 animate-pulse"
+                            : "opacity-50 group-hover:opacity-100 group-hover:border-gray-300"
+                        }`}
+                      >
                         {platform.icon}
                       </div>
-                      <span className={`text-sm transition-all ${
-                        isConnecting ? 'text-gray-700 font-medium' : 'text-gray-400 group-hover:text-gray-700'
-                      }`}>
-                        {isConnecting ? 'Connecting...' : platform.name}
+                      <span
+                        className={`text-sm transition-all ${
+                          isConnecting
+                            ? "text-gray-700 font-medium"
+                            : "text-gray-400 group-hover:text-gray-700"
+                        }`}
+                      >
+                        {isConnecting ? "Connecting..." : platform.name}
                       </span>
                       {!isConnecting && (
                         <span className="ml-auto opacity-0 group-hover:opacity-100 text-[10px] text-indigo-500 font-semibold bg-indigo-50 px-1.5 py-0.5 rounded-full transition-opacity">
@@ -438,27 +585,46 @@ function Sidebar() {
                 })}
                 {hidden.length > 0 && (
                   <>
-                    {showMoreUnconnected && hidden.map((platform) => (
-                      <button
-                        key={platform.id}
-                        onClick={platform.onConnect}
-                        className="group flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-left hover:bg-gray-50 transition-all"
-                      >
-                        <div className="w-8 h-8 rounded-xl bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center flex-shrink-0 opacity-50 group-hover:opacity-100 group-hover:border-gray-300 transition-all">
-                          {platform.icon}
-                        </div>
-                        <span className="text-sm text-gray-400 group-hover:text-gray-700 transition-colors">{platform.name}</span>
-                        <span className="ml-auto opacity-0 group-hover:opacity-100 text-[10px] text-indigo-500 font-semibold bg-indigo-50 px-1.5 py-0.5 rounded-full transition-opacity">Connect</span>
-                      </button>
-                    ))}
+                    {showMoreUnconnected &&
+                      hidden.map((platform) => (
+                        <button
+                          key={platform.id}
+                          onClick={platform.onConnect}
+                          className="group flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-left hover:bg-gray-50 transition-all"
+                        >
+                          <div className="w-8 h-8 rounded-xl bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center flex-shrink-0 opacity-50 group-hover:opacity-100 group-hover:border-gray-300 transition-all">
+                            {platform.icon}
+                          </div>
+                          <span className="text-sm text-gray-400 group-hover:text-gray-700 transition-colors">
+                            {platform.name}
+                          </span>
+                          <span className="ml-auto opacity-0 group-hover:opacity-100 text-[10px] text-indigo-500 font-semibold bg-indigo-50 px-1.5 py-0.5 rounded-full transition-opacity">
+                            Connect
+                          </span>
+                        </button>
+                      ))}
                     <button
-                      onClick={() => setShowMoreUnconnected(o => !o)}
+                      onClick={() => setShowMoreUnconnected((o) => !o)}
                       className="flex items-center gap-1.5 px-3 py-2 text-xs text-gray-400 hover:text-indigo-500 transition-colors w-full rounded-xl hover:bg-indigo-50"
                     >
-                      <svg className={`w-3.5 h-3.5 transition-transform ${showMoreUnconnected ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      <svg
+                        className={`w-3.5 h-3.5 transition-transform ${showMoreUnconnected ? "rotate-180" : ""}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
                       </svg>
-                      <span className="font-medium">{showMoreUnconnected ? 'Show less' : `${hidden.length} more platforms`}</span>
+                      <span className="font-medium">
+                        {showMoreUnconnected
+                          ? "Show less"
+                          : `${hidden.length} more platforms`}
+                      </span>
                     </button>
                   </>
                 )}
@@ -473,11 +639,15 @@ function Sidebar() {
         {user && (
           <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-gray-50 mb-2">
             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-              {(user.name || user.email || 'U')[0].toUpperCase()}
+              {(user.name || user.email || "U")[0].toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold text-gray-800 truncate">{user.name || 'My Account'}</div>
-              <div className="text-[10px] text-gray-400 truncate">{user.email}</div>
+              <div className="text-xs font-semibold text-gray-800 truncate">
+                {user.name || "My Account"}
+              </div>
+              <div className="text-[10px] text-gray-400 truncate">
+                {user.email}
+              </div>
             </div>
           </div>
         )}
@@ -503,91 +673,161 @@ function Sidebar() {
         </div>
       </div>
 
-
       {/* Settings Modal via Portal */}
-      {showSettings && createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center" onClick={() => setShowSettings(false)}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <Settings className="w-5 h-5 text-indigo-500" />
-                <h2 className="text-base font-bold text-gray-900">Settings</h2>
-              </div>
-              <button onClick={() => setShowSettings(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
-                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-              </button>
-            </div>
-            <div className="px-6 py-4">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Connected Platforms</p>
-              {platforms.filter(p => p.connected).length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-4">No platforms connected yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {platforms.filter(p => p.connected).map(p => (
-                    <div key={p.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-100">
-                      <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">{p.icon}</div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900">{p.name}</p>
-                        <p className="text-[10px] text-green-500 font-medium">Connected</p>
-                      </div>
-                      <button onClick={() => { handleDisconnect(p.id); }} disabled={disconnectingPlatform === p.id} className="text-[11px] font-semibold px-3 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50">
-                        {disconnectingPlatform === p.id ? 'Removing...' : 'Disconnect'}
-                      </button>
-                    </div>
-                  ))}
+      {showSettings &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center"
+            onClick={() => setShowSettings(false)}
+          >
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div
+              className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-indigo-500" />
+                  <h2 className="text-base font-bold text-gray-900">
+                    Settings
+                  </h2>
                 </div>
-              )}
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <div className="px-6 py-4">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                  Connected Platforms
+                </p>
+                {platforms.filter((p) => p.connected).length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">
+                    No platforms connected yet.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {platforms
+                      .filter((p) => p.connected)
+                      .map((p) => (
+                        <div
+                          key={p.id}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-50 border border-gray-100"
+                        >
+                          <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
+                            {p.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900">
+                              {p.name}
+                            </p>
+                            <p className="text-[10px] text-green-500 font-medium">
+                              Connected
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              handleDisconnect(p.id);
+                            }}
+                            disabled={disconnectingPlatform === p.id}
+                            className="text-[11px] font-semibold px-3 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors disabled:opacity-50"
+                          >
+                            {disconnectingPlatform === p.id
+                              ? "Removing..."
+                              : "Disconnect"}
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+              <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
-            <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end">
-              <button onClick={() => setShowSettings(false)} className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors">Close</button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body,
+        )}
 
-      {/* Instagram Business Setup Modal */}
-      <InstagramBusinessSetupModal
-        isOpen={showBusinessSetupModal}
-        onClose={() => setShowBusinessSetupModal(false)}
-        onProceed={handleProceedToConnect}
-      />
+      {/* Platform connect modals via portal (avoid sidebar layout constraints) */}
+      {showBusinessSetupModal &&
+        createPortal(
+          <InstagramBusinessSetupModal
+            isOpen={showBusinessSetupModal}
+            onClose={() => setShowBusinessSetupModal(false)}
+            onProceed={handleProceedToConnect}
+          />,
+          document.body,
+        )}
 
-      {/* Bluesky Connect Modal */}
-      <BlueskyConnectModal
-        isOpen={showBlueskyModal}
-        onClose={() => setShowBlueskyModal(false)}
-        onSuccess={refreshAccounts}
-      />
+      {showBlueskyModal &&
+        createPortal(
+          <BlueskyConnectModal
+            isOpen={showBlueskyModal}
+            onClose={() => setShowBlueskyModal(false)}
+            onSuccess={refreshAccounts}
+          />,
+          document.body,
+        )}
 
-      {/* Pinterest Connect Modal */}
-      <PinterestConnectModal
-        isOpen={showPinterestModal}
-        onClose={() => setShowPinterestModal(false)}
-        onSuccess={refreshAccounts}
-      />
+      {showPinterestModal &&
+        createPortal(
+          <PinterestConnectModal
+            isOpen={showPinterestModal}
+            onClose={() => setShowPinterestModal(false)}
+            onSuccess={refreshAccounts}
+          />,
+          document.body,
+        )}
 
-      {/* LinkedIn Connect Modal */}
-      <LinkedInConnectModal
-        isOpen={showLinkedInModal}
-        onClose={() => setShowLinkedInModal(false)}
-        onSuccess={refreshAccounts}
-      />
+      {showLinkedInModal &&
+        createPortal(
+          <LinkedInConnectModal
+            isOpen={showLinkedInModal}
+            onClose={() => setShowLinkedInModal(false)}
+            onSuccess={refreshAccounts}
+          />,
+          document.body,
+        )}
 
-      {/* Mastodon Connect Modal */}
-      <MastodonConnectModal
-        isOpen={showMastodonModal}
-        onClose={() => setShowMastodonModal(false)}
-        onSuccess={refreshAccounts}
-      />
+      {showMastodonModal &&
+        createPortal(
+          <MastodonConnectModal
+            isOpen={showMastodonModal}
+            onClose={() => setShowMastodonModal(false)}
+            onSuccess={refreshAccounts}
+          />,
+          document.body,
+        )}
 
-      {/* TikTok Connect Modal */}
-      <TikTokConnectModal
-        isOpen={showTikTokModal}
-        onClose={() => setShowTikTokModal(false)}
-        onSuccess={refreshAccounts}
-      />
+      {showTikTokModal &&
+        createPortal(
+          <TikTokConnectModal
+            isOpen={showTikTokModal}
+            onClose={() => setShowTikTokModal(false)}
+            onSuccess={refreshAccounts}
+          />,
+          document.body,
+        )}
     </aside>
   );
 }
