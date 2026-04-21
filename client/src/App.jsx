@@ -16,6 +16,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import History from './pages/History';
 import Onboarding from './components/Onboarding';
+import ScheduledQueue from './pages/ScheduledQueue';
 import { useAuth } from './context/AuthContext';
 import UploadManagerPanel from './components/UploadManagerPanel';
 import CookieConsent from './components/CookieConsent';
@@ -47,6 +48,7 @@ function AppContent() {
         <Route index element={<Dashboard />} />
         <Route path="compose" element={<BroadcastForm />} />
         <Route path="history" element={<History />} />
+        <Route path="queue" element={<ScheduledQueue />} />
       </Route>
 
       {/* Fallback */}

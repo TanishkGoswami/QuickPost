@@ -7,29 +7,22 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: {
-          DEFAULT: '#8B5CF6',
-          dark: '#7C3AED',
-          light: '#A78BFA',
-        },
-        secondary: {
-          DEFAULT: '#EC4899',
-          dark: '#DB2777',
-          light: '#F472B6',
-        },
-        buffer: {
-          blue: '#2C4BFF',
-          blueDark: '#2440CC',
-          blueLight: '#5C6BFF',
-        },
+        // Mastercard design system tokens
+        canvas:  '#F3F0EE',
+        lifted:  '#FCFBFA',
+        ink:     '#141413',
+        slate:   '#696969',
+        dust:    '#D1CDC7',
+        signal:  '#CF4500',
+        arc:     '#F37338',
+        link:    '#3860BE',
+        // Kept for semantic utility classes
         accent: {
-          instagram: '#E4405F',
-          youtube: '#FF0000',
-          pinterest: '#E60023',
-          success: '#10B981',
+          success: '#22c55e',
           warning: '#F59E0B',
           error: '#EF4444',
-        }
+          info: '#3860BE',
+        },
       },
       animation: {
         'gradient': 'gradient 8s linear infinite',
