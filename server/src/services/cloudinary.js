@@ -8,8 +8,12 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+// 20 MB chunk size for large video uploads
+const CHUNK_SIZE = 20 * 1024 * 1024;
+
 /**
- * Upload a file to Cloudinary
+ * Upload a file to Cloudinary.
+ * Uses chunked upload_large for videos to avoid 413 errors on large files.
  * @param {string} filePath - Local file path to upload
  * @param {string} resourceType - 'image' or 'video'
  * @returns {Promise<Object>} Cloudinary upload result with secure_url
@@ -17,22 +21,25 @@ cloudinary.config({
 export async function uploadToCloudinary(filePath, resourceType = 'auto') {
   try {
     console.log(`☁️  Uploading ${resourceType} to Cloudinary...`);
-    
+
     const uploadOptions = {
       resource_type: resourceType,
       folder: 'quickpost',
-      // For videos, we might want to optimize
+      use_filename: false,
+      unique_filename: true,
+      // Chunked upload for videos avoids 413 payload-too-large errors
       ...(resourceType === 'video' && {
-        transformation: [
-          { quality: 'auto', fetch_format: 'auto' }
-        ]
-      })
+        chunk_size: CHUNK_SIZE,
+      }),
     };
 
-    const result = await cloudinary.uploader.upload(filePath, uploadOptions);
-    
+    // Use upload_large for videos (handles chunking transparently)
+    const result = resourceType === 'video'
+      ? await cloudinary.uploader.upload_large(filePath, uploadOptions)
+      : await cloudinary.uploader.upload(filePath, uploadOptions);
+
     console.log(`✓ Upload successful: ${result.secure_url}`);
-    
+
     return {
       success: true,
       url: result.secure_url,

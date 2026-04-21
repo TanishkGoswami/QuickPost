@@ -14,6 +14,7 @@ export async function saveBroadcast(
   scheduledFor = null,
 ) {
   try {
+    const thumbnailUrl = results.thumbnailUrl || null;
     // Handle both single string and array for filenames
     const filenames = Array.isArray(mediaFilenames)
       ? mediaFilenames
@@ -31,7 +32,8 @@ export async function saveBroadcast(
       scheduled_for: scheduledFor,
       media_type: mediaType,
       media_url: mediaUrls[0] || null, // Primary public URL
-      media_urls: mediaUrls, // Store all URLs
+      media_urls: mediaUrls,           // Store all URLs
+      thumbnail_url: thumbnailUrl,     // Preview thumbnail URL
       selected_channels: platformData.selectedChannels || [],
       platform_data: platformData,
 

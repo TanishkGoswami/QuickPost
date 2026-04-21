@@ -208,21 +208,28 @@ function buildPlatforms(post) {
   ].filter((p) => p.success || (p.error && p.error !== "Not selected"));
 }
 
-function MediaThumb({ post, className = "" }) {
-  const isImage =
-    post.media_type === "image" ||
-    /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || "");
+function MediaThumb({ post, className = '' }) {
+  const isImage = post.media_type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || '');
+  const displayUrl = post.thumbnail_url || (isImage ? post.media_url : null);
+  
   return (
-    <div className={`bg-gray-100 overflow-hidden ${className}`}>
-      {post.media_url ? (
-        <img
-          src={post.media_url}
-          alt="Preview"
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            e.target.src = "https://placehold.co/300x300?text=Preview";
-          }}
-        />
+    <div className={`bg-gray-100 overflow-hidden relative group ${className}`}>
+      {displayUrl ? (
+        <div className="w-full h-full">
+          <img 
+            src={displayUrl} 
+            alt="Preview" 
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            onError={e => { e.target.src = 'https://placehold.co/300x300?text=Preview'; }} 
+          />
+          {post.youtube_success && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-all duration-300">
+              <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center shadow-xl transform scale-90 group-hover:scale-100 transition-all duration-300">
+                <Play className="w-6 h-6 text-white fill-current ml-1" />
+              </div>
+            </div>
+          )}
+        </div>
       ) : isImage ? (
         <div className="w-full h-full flex flex-col items-center justify-center bg-blue-50">
           <ImageIcon className="w-8 h-8 text-blue-200 mb-1" />
@@ -231,7 +238,7 @@ function MediaThumb({ post, className = "" }) {
           </span>
         </div>
       ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900">
+        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900 border-b border-white/10">
           <Video className="w-8 h-8 text-white/40 mb-1" />
           <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
             Video
@@ -283,11 +290,16 @@ function GridCard({ post, onOpen, formatDate }) {
         )}
       </div>
       <div className="p-4 flex flex-col flex-1">
-        <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">
-          <Calendar className="w-3 h-3" />
-          {post.status === "scheduled"
-            ? formatDate(post.scheduled_for)
-            : formatDate(post.posted_at || post.created_at)}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+            <Calendar className="w-3 h-3" />{formatDate(post.posted_at)}
+          </div>
+          {post.youtube_success && (
+            <div className="flex items-center gap-2 text-[9px] font-bold text-gray-400 opacity-60">
+              <span className="flex items-center gap-0.5"><ThumbsUp className="w-2.5 h-2.5" /> 12</span>
+              <span className="flex items-center gap-0.5"><Eye className="w-2.5 h-2.5" /> 2.4k</span>
+            </div>
+          )}
         </div>
         <p className="text-sm font-bold text-gray-900 line-clamp-2 mb-3 leading-normal flex-1">
           {post.caption || (

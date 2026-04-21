@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { DialogProvider } from './context/DialogContext';
+import { UploadJobProvider } from './context/UploadJobContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -16,6 +17,8 @@ import TermsOfService from './pages/TermsOfService';
 import History from './pages/History';
 import Onboarding from './components/Onboarding';
 import { useAuth } from './context/AuthContext';
+import UploadManagerPanel from './components/UploadManagerPanel';
+import CookieConsent from './components/CookieConsent';
 
 import DashboardLayout from './components/DashboardLayout';
 
@@ -56,9 +59,13 @@ function App() {
   return (
     <AuthProvider>
       <DialogProvider>
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
+        <UploadJobProvider>
+          <BrowserRouter>
+            <AppContent />
+            <UploadManagerPanel />
+            <CookieConsent />
+          </BrowserRouter>
+        </UploadJobProvider>
       </DialogProvider>
     </AuthProvider>
   );

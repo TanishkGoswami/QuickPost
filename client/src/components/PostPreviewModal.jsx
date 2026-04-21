@@ -5,7 +5,7 @@ import {
   MoreHorizontal, MoreVertical, Send,
   Repeat, MessageSquare, Plus, Music2,
   ThumbsUp, ThumbsDown, Play, User,
-  ChevronLeft
+  ChevronLeft, Video
 } from 'lucide-react';
 
 /* ── Platform display config ─────────────────────────────────────────── */
@@ -690,19 +690,43 @@ export default function PostPreviewModal({ post, onClose }) {
                       format={activeFormat}
                       caption={post.caption}
                     >
-                      {post.media_url ? (
-                        <img
-                          src={post.media_url}
-                          alt="Post"
-                          className="w-full h-full object-cover"
-                          onError={e => { e.target.src = 'https://placehold.co/600x600?text=Preview'; }}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900 text-gray-600">
-                          <Play className="w-10 h-10 mb-2 opacity-20" />
-                          <span className="text-[10px] font-bold uppercase tracking-widest">Media Preview</span>
-                        </div>
-                      )}
+                      {(() => {
+                        const isImage = post.media_type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || '');
+                        const displayUrl = post.thumbnail_url || post.media_url;
+
+                        if (displayUrl) {
+                          // If it's a video and we have a media_url but it's the video itself, 
+                          // the img tag might fail unless it's the thumbnail_url.
+                          // Cloudinary thumbnail_url is always an image.
+                          return (
+                            <img
+                              src={displayUrl}
+                              alt="Post Preview"
+                              className="w-full h-full object-cover"
+                              onError={e => { 
+                                if (!isImage && post.media_url && e.target.src !== post.media_url) {
+                                  e.target.src = post.media_url;
+                                } else {
+                                  e.target.src = 'https://placehold.co/600x600?text=Preview+Unavailable';
+                                }
+                              }}
+                            />
+                          );
+                        }
+
+                        return (
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900 text-gray-600">
+                            {post.media_type === 'video' ? (
+                              <Video className="w-10 h-10 mb-2 opacity-20" />
+                            ) : (
+                              <Play className="w-10 h-10 mb-2 opacity-20" />
+                            )}
+                            <span className="text-[10px] font-bold uppercase tracking-widest">
+                              {post.media_type === 'video' ? 'Video Preview' : 'Media Preview'}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </PreviewContainer>
                   </div>
 
