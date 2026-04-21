@@ -11,30 +11,73 @@ function Header({ onMenuClick }) {
     : user.email?.[0]?.toUpperCase() || 'U';
 
   return (
-    <header className="bg-white/90 backdrop-blur-md border-b border-gray-100 h-16 fixed top-0 right-0 z-[39] left-0 lg:left-[240px] transition-all duration-300">
-      <div className="h-full px-4 sm:px-6 flex items-center justify-between">
-        {/* Mobile Menu Toggle */}
-        <button
-          onClick={onMenuClick}
-          className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-xl transition-all active:scale-95"
-          aria-label="Toggle Menu"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+    <header style={{
+      position: 'fixed',
+      top: 0,
+      right: 0,
+      left: 240,
+      zIndex: 39,
+      height: 56,
+      background: 'var(--canvas-lifted)',
+      borderBottom: '1px solid rgba(20,20,19,0.08)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '0 24px',
+      fontFamily: 'var(--font)',
+      backdropFilter: 'blur(8px)',
+    }}>
+      {/* Mobile menu toggle */}
+      <button
+        onClick={onMenuClick}
+        aria-label="Toggle Menu"
+        className="lg:hidden"
+        style={{
+          width: 36, height: 36, borderRadius: 'var(--r-btn)',
+          border: '1px solid rgba(20,20,19,0.10)',
+          background: 'transparent', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'var(--slate)', transition: 'background 0.15s',
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = 'rgba(20,20,19,0.05)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      >
+        <Menu size={16} />
+      </button>
 
-        <div className="flex items-center gap-4 ml-auto">
-          <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-gray-50/50 border border-gray-100 shadow-sm">
-            {user.picture ? (
-              <img src={user.picture} alt={user.name} className="w-7 h-7 rounded-full object-cover ring-2 ring-white" />
-            ) : (
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[10px] font-black">
-                {initials}
-              </div>
-            )}
-            <span className="text-[12px] font-bold text-gray-700 max-w-[120px] truncate pr-1 hidden sm:block">
-              {user.name || 'Account'}
-            </span>
-          </div>
+      {/* Right: user pill */}
+      <div style={{ marginLeft: 'auto' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '5px 12px 5px 5px',
+          borderRadius: 'var(--r-pill)',
+          background: 'var(--canvas)',
+          border: '1px solid rgba(20,20,19,0.10)',
+          boxShadow: 'var(--shadow-nav)',
+        }}>
+          {user.picture ? (
+            <img
+              src={user.picture}
+              alt={user.name}
+              style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--canvas-lifted)' }}
+            />
+          ) : (
+            <div style={{
+              width: 28, height: 28, borderRadius: '50%',
+              background: 'var(--ink)', color: 'var(--canvas)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, fontWeight: 700, flexShrink: 0,
+            }}>
+              {initials}
+            </div>
+          )}
+          <span style={{
+            fontSize: 12, fontWeight: 600, color: 'var(--ink)',
+            maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap', letterSpacing: '-0.01em',
+          }}>
+            {user.name || 'Account'}
+          </span>
         </div>
       </div>
     </header>

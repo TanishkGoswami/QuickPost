@@ -60,14 +60,18 @@ router.post(
           .json({ success: false, error: "No media files uploaded" });
       }
 
-      const {
-        caption,
-        selectedChannels,
-        platformData,
-        scheduledAt,
-        isScheduled: isScheduledField,
-      } = req.body;
-      const userId = req.user.userId;
+    const { 
+      caption, 
+      selectedChannels, 
+      platformData, 
+      scheduledAt, 
+      isScheduled: isScheduledField, 
+      userTimezone,
+      selectedAspectRatio = '1:1',
+      selectedPostSizePreset,
+    } = req.body;
+    
+    const userId = req.user.userId;
 
       const channels =
         typeof selectedChannels === "string"
@@ -79,10 +83,20 @@ router.post(
           : platformData;
       const isScheduled = isScheduledField === "true" || !!scheduledAt;
 
-      const uploadedFiles = req.files["media"] || [];
-      const thumbnailFile = req.files["youtubeThumbnail"]
-        ? req.files["youtubeThumbnail"][0]
-        : null;
+    // ── Validate scheduled time ───────────────────────────────────────────
+    if (isScheduled && scheduledAt) {
+      const schedTime = new Date(scheduledAt).getTime();
+      const minAllowed = Date.now() + 2 * 60 * 1000; // 2-minute buffer
+      if (isNaN(schedTime)) {
+        return res.status(400).json({ success: false, error: 'Invalid scheduledAt date format.' });
+      }
+      if (schedTime < minAllowed) {
+        return res.status(400).json({ success: false, error: 'Scheduled time must be at least 2 minutes in the future.' });
+      }
+    }
+
+    const uploadedFiles = req.files['media'] || [];
+    const thumbnailFile = req.files['youtubeThumbnail'] ? req.files['youtubeThumbnail'][0] : null;
 
       const filePaths = uploadedFiles.map((f) => f.path);
       const filenames = uploadedFiles.map((f) => f.filename);
@@ -95,60 +109,82 @@ router.post(
       const mediaType = isVideo ? "video" : "image";
       const primaryVideoPath = videos.length > 0 ? videos[0].path : null;
 
-      console.log(
-        `🚀 Broadcast job queued. Type: ${mediaType}, User: ${userId}, Scheduled: ${isScheduled ? scheduledAt : "Immediate"}`,
-      );
+    // ── Detect Job ID early for variants ─────────────────────────────────
+    const jobId = createJob(userId, {
+      caption,
+      channels,
+      mediaType,
+      filenames,
+      fileCount: uploadedFiles.length,
+      hasThumbnail: !!thumbnailFile,
+      isScheduled,
+      scheduledAt,
+      selectedAspectRatio,
+      selectedPostSizePreset,
+    });
 
-      // ── Create the job ────────────────────────────────────────────────────
-      const jobId = createJob(userId, {
-        caption,
-        channels,
-        mediaType,
-        filenames,
-        fileCount: uploadedFiles.length,
-        hasThumbnail: !!thumbnailFile,
-        isScheduled,
-        scheduledAt,
-      });
+    let platformVariants = {};
+    let generatedVariantPaths = [];
 
-      // ── Respond immediately — UI unblocked ────────────────────────────────
-      res.status(202).json({ success: true, jobId });
-
-      // ── Background processing (fire-and-forget) ───────────────────────────
-      processBroadcastJob({
-        jobId,
-        userId,
-        caption,
-        channels,
-        platData,
-        uploadedFiles,
-        filePaths,
-        filenames,
-        thumbnailFile,
-        isVideo,
-        mediaType,
-        primaryVideoPath,
-        isScheduled,
-        scheduledAt,
-      }).catch((err) => {
-        console.error(
-          `❌ [BROADCAST_JOB] Unhandled error in job ${jobId}:`,
-          err,
-        );
-        failJob(jobId, err.message || "Unknown error");
-      });
-    } catch (error) {
-      console.error("❌ [BROADCAST] Failed to create job:", error);
-      if (!res.headersSent) {
-        return res.status(500).json({
-          success: false,
-          error: "Failed to queue broadcast job",
-          message: error.message,
+    if (primaryInputPath) {
+      try {
+        const variantResult = await generatePlatformMediaVariants({
+          inputFilePath: primaryInputPath,
+          mediaType,
+          selectedChannels: channels,
+          selectedAspectRatio,
+          jobId,
         });
+
+        platformVariants = variantResult.variants || {};
+        generatedVariantPaths = variantResult.generatedFiles || [];
+      } catch (variantErr) {
+        console.warn(`⚠️ [BROADCAST] Variant generation failed for job ${jobId}:`, variantErr.message);
       }
     }
-  },
-);
+
+    console.log(`🚀 Broadcast job queued. Type: ${mediaType}, User: ${userId}, Scheduled: ${isScheduled ? scheduledAt : 'Immediate'}`);
+
+    // ── Respond immediately — UI unblocked ────────────────────────────────
+    res.status(202).json({ success: true, jobId });
+
+    // ── Background processing (fire-and-forget) ───────────────────────────
+    processBroadcastJob({
+      jobId,
+      userId,
+      caption,
+      channels,
+      platData,
+      uploadedFiles,
+      filePaths,
+      filenames,
+      thumbnailFile,
+      isVideo,
+      mediaType,
+      primaryVideoPath,
+      platformVariants,
+      generatedVariantPaths,
+      selectedAspectRatio,
+      selectedPostSizePreset,
+      isScheduled,
+      scheduledAt,
+      userTimezone
+    }).catch(err => {
+      console.error(`❌ [BROADCAST_JOB] Unhandled error in job ${jobId}:`, err);
+      failJob(jobId, err.message || 'Unknown error');
+    });
+
+  } catch (error) {
+    console.error('❌ [BROADCAST] Failed to create job:', error);
+    if (!res.headersSent) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to queue broadcast job',
+        message: error.message
+      });
+    }
+  }
+});
 
 // ── Background Worker ──────────────────────────────────────────────────────
 
@@ -157,20 +193,12 @@ router.post(
  * Updates job progress as it advances through each phase.
  */
 async function processBroadcastJob({
-  jobId,
-  userId,
-  caption,
-  channels,
-  platData,
-  uploadedFiles,
-  filePaths,
-  filenames,
-  thumbnailFile,
-  isVideo,
-  mediaType,
-  primaryVideoPath,
-  isScheduled,
-  scheduledAt,
+  jobId, userId, caption, channels, platData,
+  uploadedFiles, filePaths, filenames,
+  thumbnailFile, isVideo, mediaType, primaryVideoPath,
+  platformVariants, generatedVariantPaths,
+  selectedAspectRatio, selectedPostSizePreset,
+  isScheduled, scheduledAt, userTimezone
 }) {
   console.log(
     `\n🚀 [JOB:${jobId}] Starting background broadcast for user: ${userId}`,
@@ -269,14 +297,21 @@ async function processBroadcastJob({
     updateJob(jobId, { progress: 80, step: "Saving schedule to database…" });
     try {
       await saveBroadcast(
-        userId,
-        caption,
-        filenames,
-        { mediaUrls, thumbnailUrl: finalThumbnailUrl },
-        mediaType,
-        { ...platData, selectedChannels: channels, filePaths }, // Store filePaths for scheduler cleanup later
-        "scheduled",
-        scheduledAt,
+        userId, 
+        caption, 
+        filenames, 
+        { mediaUrls, thumbnailUrl: finalThumbnailUrl }, 
+        mediaType, 
+        { 
+          ...platData, 
+          selectedChannels: channels, 
+          filePaths, 
+          userTimezone: userTimezone || 'UTC',
+          selectedAspectRatio,
+          selectedPostSizePreset
+        }, // Store filePaths for scheduler
+        'scheduled', 
+        scheduledAt
       );
 
       updateJob(jobId, {
@@ -284,8 +319,9 @@ async function processBroadcastJob({
         progress: 100,
         step: `Post scheduled for ${new Date(scheduledAt).toLocaleString()}!`,
       });
-      console.log(`📅 [JOB:${jobId}] Broadcast successfully scheduled.`);
-      return; // Stop here, scheduler will pick it up
+      console.log(`📅 [JOB:${jobId}] Broadcast successfully scheduled. Files preserved for scheduler.`);
+      // ⚠️ DO NOT cleanup files here — the scheduler needs the local filePaths
+      return;
     } catch (dbErr) {
       failJob(jobId, `Scheduling failed: ${dbErr.message}`);
       cleanupFiles(filePaths, thumbnailFile);
@@ -308,7 +344,7 @@ async function processBroadcastJob({
     tokens = await getTokensForUser(userId);
   } catch (tokenErr) {
     failJob(jobId, `Failed to fetch tokens: ${tokenErr.message}`);
-    cleanupFiles(filePaths, thumbnailFile);
+    cleanupFiles(filePaths, thumbnailFile, generatedVariantPaths);
     return;
   }
 
@@ -521,15 +557,11 @@ async function processBroadcastJob({
   // ── Phase 4: Save to DB (85 → 95%) ────────────────────────────────────
   updateJob(jobId, { progress: 87, step: "Saving broadcast record…" });
   try {
-    await saveBroadcast(
-      userId,
-      caption,
-      filenames,
-      results,
-      mediaType,
-      platData,
-      "sent",
-    );
+    await saveBroadcast(userId, caption, filenames, results, mediaType, { 
+      ...platData, 
+      selected_aspect_ratio: selectedAspectRatio,
+      selected_post_size_preset: selectedPostSizePreset
+    }, 'sent');
     console.log(`✅ [JOB:${jobId}] Broadcast saved to database`);
   } catch (dbErr) {
     console.error(`⚠️ [JOB:${jobId}] DB save failed:`, dbErr.message);

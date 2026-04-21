@@ -11,6 +11,7 @@ import tiktok from './tiktok.js';
 import { postToThreads } from './threads.js';
 import { broadcastToX } from './x.js';
 import { postToReddit } from './reddit.js';
+import googleOAuth from './googleOAuth.js';
 import { updateBroadcastResults } from './broadcasts.js';
 
 /**
@@ -97,19 +98,32 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
       );
     }
 
-    // YouTube
+    // YouTube — always refresh the Google token before posting
+    // Google access tokens expire after 1 hour; scheduled posts may fire much later
     if (channels.includes('youtube') && isVideo && tokens.youtube) {
       const primaryVideoPath = filePaths.find(p => p.includes('video-'));
       if (primaryVideoPath && fs.existsSync(primaryVideoPath)) {
         platformPromises.push(
-          postToYouTube(primaryVideoPath, caption, tokens.youtube)
-            .then(async result => {
-              if (result.success && result.mediaId && coverImagePath && fs.existsSync(coverImagePath)) {
-                await setVideoThumbnail(result.mediaId, coverImagePath, tokens.youtube);
-              }
-              return { platform: 'youtube', result };
-            })
+          (async () => {
+            // Refresh token right before posting (BUG 4 FIX)
+            let ytTokens = tokens.youtube;
+            try {
+              const freshAccessToken = await googleOAuth.getValidAccessToken(userId);
+              ytTokens = { ...tokens.youtube, accessToken: freshAccessToken };
+            } catch (tokenErr) {
+              console.warn(`⚠️ [postingService] Could not refresh YouTube token: ${tokenErr.message}. Using stored token.`);
+            }
+            return postToYouTube(primaryVideoPath, caption, ytTokens)
+              .then(async result => {
+                if (result.success && result.mediaId && coverImagePath && fs.existsSync(coverImagePath)) {
+                  await setVideoThumbnail(result.mediaId, coverImagePath, ytTokens);
+                }
+                return { platform: 'youtube', result };
+              });
+          })()
         );
+      } else {
+        console.warn(`⚠️ [postingService] YouTube video file not found at expected path. Skipping YouTube.`);
       }
     }
     

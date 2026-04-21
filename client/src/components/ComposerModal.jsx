@@ -1075,6 +1075,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
   const [youtubeThumbnail, setYoutubeThumbnail] = useState(null);
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
+  const [userTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dragActive, setDragActive] = useState(false);
@@ -1084,16 +1085,11 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     useState("instagram");
   const fileInputRef = useRef(null);
 
-  const availableSizePresets = useMemo(() => {
-    const target =
-      selectedChannels.length > 0 ? activePreviewPlatform : "instagram";
-    const presets = getPresetsForPlatform(target);
-    return presets.map((preset) => ({
-      ...preset,
-      matchedPlatforms: [target],
-      matchCount: 1,
-    }));
-  }, [selectedChannels, activePreviewPlatform]);
+  // Min datetime for scheduling = now + 2 minutes
+  const minScheduleDateTime = React.useMemo(() => {
+    const d = new Date(Date.now() + 2 * 60 * 1000);
+    return d.toISOString().slice(0, 16);
+  }, []);
 
   const selectedRatio = useMemo(() => {
     return (
@@ -1245,6 +1241,19 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
       return false;
     }
 
+    // Validate scheduling time
+    if (isScheduled) {
+      if (!scheduledAt) {
+        setError("Please select a date and time for scheduling.");
+        return false;
+      }
+      const schedTime = new Date(scheduledAt).getTime();
+      if (schedTime < Date.now() + 2 * 60 * 1000) {
+        setError("Scheduled time must be at least 2 minutes in the future.");
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -1296,6 +1305,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
         formData.append("youtubeThumbnail", youtubeThumbnail);
       }
       formData.append("isScheduled", isScheduled ? "true" : "false");
+      formData.append("userTimezone", userTimezone);
 
       if (isScheduled && scheduledAt) {
         // Convert local datetime-local string to UTC ISO string
@@ -1380,38 +1390,51 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
   return (
     <div className="modal-overlay" onClick={handleClose}>
       <div
-        className="bg-white rounded-lg shadow-xl w-full max-h-[90vh] overflow-hidden"
-        style={{ maxWidth: "1100px" }}
+        style={{
+          background: 'var(--canvas-lifted)',
+          borderRadius: 'var(--r-hero)',
+          boxShadow: 'var(--shadow-deep)',
+          width: '100%',
+          maxWidth: '1100px',
+          maxHeight: '90vh',
+          overflow: 'hidden',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="border-b border-gray-200 px-6 py-3 flex items-center justify-between bg-white">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-semibold text-gray-900">Create Post</h2>
+        <div style={{ borderBottom: '1px solid rgba(20,20,19,0.08)', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--canvas-lifted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>Create Post</h2>
           </div>
-          <div className="flex items-center gap-2">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <button
               type="button"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: 'var(--slate)', background: 'transparent', border: '1px solid rgba(20,20,19,0.10)', borderRadius: 'var(--r-btn)', cursor: 'pointer', fontFamily: 'var(--font)', transition: 'background 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(20,20,19,0.05)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               title="AI Assistant"
             >
-              <Sparkles className="w-4 h-4" />
+              <Sparkles size={13} />
               <span>AI Assistant</span>
             </button>
             <button
               type="button"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: 'var(--slate)', background: 'transparent', border: '1px solid rgba(20,20,19,0.10)', borderRadius: 'var(--r-btn)', cursor: 'pointer', fontFamily: 'var(--font)', transition: 'background 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(20,20,19,0.05)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               title="Preview"
             >
-              <Eye className="w-4 h-4" />
+              <Eye size={13} />
               <span>Preview</span>
             </button>
             <button
               type="button"
               onClick={handleClose}
-              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+              style={{ width: 32, height: 32, borderRadius: '50%', border: '1px solid rgba(20,20,19,0.10)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)', transition: 'background 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(20,20,19,0.05)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
-              <X className="w-5 h-5" />
+              <X size={14} />
             </button>
           </div>
         </div>
@@ -1419,7 +1442,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
         {/* Body - Split Layout */}
         <div className="flex h-[calc(90vh-120px)]">
           {/* Left Panel - Composer */}
-          <div className="flex-1 overflow-y-auto p-6 border-r border-gray-200">
+          <div className="flex-1 overflow-y-auto p-6 border-r" style={{ borderColor: 'rgba(20,20,19,0.08)', background: 'var(--canvas)' }}>
             {/* Channel Selection with Remove Badges */}
             <div className="mb-6">
               <ChannelSelector
@@ -1465,7 +1488,10 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                           prev ? `${prev} ${suggestion}` : suggestion,
                         )
                       }
-                      className="flex-shrink-0 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full text-[11px] text-gray-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all whitespace-nowrap"
+                      style={{ flexShrink: 0, padding: '5px 12px', background: 'var(--canvas-lifted)', border: '1px solid rgba(20,20,19,0.12)', borderRadius: 'var(--r-pill)', fontSize: 11, color: 'var(--slate)', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'var(--font)', fontWeight: 500, transition: 'all 0.15s' }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--ink)'; e.currentTarget.style.color = 'var(--canvas)'; e.currentTarget.style.borderColor = 'var(--ink)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'var(--canvas-lifted)'; e.currentTarget.style.color = 'var(--slate)'; e.currentTarget.style.borderColor = 'rgba(20,20,19,0.12)'; }}
+                      className=""
                     >
                       {suggestion}
                     </button>
@@ -1482,31 +1508,24 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                 </div>
                 <div className="flex flex-col gap-3">
                   {/* Brand Promotion Card */}
-                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-3 border border-indigo-100/50 flex items-center justify-between group hover:shadow-sm transition-all duration-300">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm text-indigo-500">
-                        <Sparkles className="w-4 h-4 animate-pulse" />
+                  <div style={{ background: 'var(--canvas-lifted)', border: '1px solid rgba(20,20,19,0.08)', borderLeft: '3px solid var(--arc)', borderRadius: 'var(--r-btn)', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--canvas)', boxShadow: 'var(--shadow-nav)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--arc)' }}>
+                        <Sparkles size={14} />
                       </div>
                       <div>
-                        <p className="text-[11px] font-bold text-indigo-900 group-hover:text-indigo-600 transition-colors">
-                          Get Featured!
-                        </p>
-                        <p className="text-[10px] text-indigo-500/80">
-                          Use #getaipilot to boost your reach
-                        </p>
+                        <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink)', margin: 0, lineHeight: 1.3 }}>Get Featured!</p>
+                        <p style={{ fontSize: 10, color: 'var(--slate)', margin: 0 }}>Use #getaipilot to boost your reach</p>
                       </div>
                     </div>
                     <button
                       type="button"
-                      onClick={() =>
-                        setCaption((prev) =>
-                          prev ? `${prev} #getaipilot` : "#getaipilot",
-                        )
-                      }
-                      className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold shadow-md shadow-indigo-200 transition-all active:scale-95 flex items-center gap-1.5"
+                      onClick={() => setCaption((prev) => prev ? `${prev} #getaipilot` : "#getaipilot")}
+                      className="btn-signal"
+                      style={{ fontSize: 10, padding: '4px 12px', display: 'flex', alignItems: 'center', gap: 4 }}
                     >
                       <span>#getaipilot</span>
-                      <Sparkles className="w-3 h-3" />
+                      <Sparkles size={10} />
                     </button>
                   </div>
 
@@ -1764,7 +1783,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setIsScheduled(!isScheduled)}
+                  onClick={() => { setIsScheduled(!isScheduled); setScheduledAt(""); }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isScheduled ? "bg-indigo-600" : "bg-gray-300"}`}
                 >
                   <span
@@ -1774,16 +1793,36 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
               </div>
 
               {isScheduled && (
-                <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
                   <input
                     type="datetime-local"
                     value={scheduledAt}
                     onChange={(e) => setScheduledAt(e.target.value)}
-                    min={new Date().toISOString().slice(0, 16)}
+                    min={minScheduleDateTime}
                     className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
                   />
-                  <p className="text-[10px] text-indigo-600 font-medium ml-1">
-                    Posts will be automatically published at the selected time.
+                  {/* Timezone display */}
+                  <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-lg border border-indigo-100">
+                    <svg className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Timezone: </span>
+                      <span className="text-[10px] text-indigo-600 font-medium">{userTimezone}</span>
+                    </div>
+                  </div>
+                  {scheduledAt && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-100">
+                      <svg className="w-3.5 h-3.5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-[10px] text-green-700 font-medium">
+                        Will publish at {new Date(scheduledAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })} ({userTimezone})
+                      </span>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-indigo-500 font-medium ml-1">
+                    ✓ Post is saved server-side and publishes automatically — even if you close the app.
                   </p>
                 </div>
               )}
@@ -1811,11 +1850,9 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
           </div>
 
           {/* Right Panel - Live Platform Previews */}
-          <div className="w-80 bg-gray-50 border-l border-gray-200 flex flex-col overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-200 bg-white">
-              <h3 className="text-sm font-semibold text-gray-900">
-                Post Preview
-              </h3>
+          <div style={{ width: 320, flexShrink: 0, borderLeft: '1px solid rgba(20,20,19,0.08)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--canvas-lifted)' }}>
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(20,20,19,0.08)', background: 'var(--canvas-lifted)' }}>
+              <h3 style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em', margin: 0, textTransform: 'uppercase' }}>Post Preview</h3>
             </div>
 
             {selectedChannels.length === 0 ? (
@@ -1843,11 +1880,13 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 px-6 py-3 bg-white flex items-center justify-between">
+        <div style={{ borderTop: '1px solid rgba(20,20,19,0.08)', padding: '12px 24px', background: 'var(--canvas-lifted)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <button
             type="button"
             onClick={handleClose}
-            className="text-sm text-gray-600 hover:text-gray-800"
+            style={{ fontSize: 13, fontWeight: 500, color: 'var(--slate)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', letterSpacing: '-0.01em' }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--ink)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--slate)'}
           >
             Cancel
           </button>
