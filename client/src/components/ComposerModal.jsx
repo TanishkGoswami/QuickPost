@@ -165,6 +165,22 @@ const ASPECT_RATIOS = [
     preview: "w-4 h-7 border-2",
   },
   {
+    id: "1.91:1",
+    label: "Landscape",
+    desc: "Wide Image",
+    aspect: "aspect-[1.91/1]",
+    icon: Monitor,
+    preview: "w-8 h-4 border-2",
+  },
+  {
+    id: "2:3",
+    label: "Pin",
+    desc: "Pinterest Vertical",
+    aspect: "aspect-[2/3]",
+    icon: RectangleVertical,
+    preview: "w-5 h-7 border-2",
+  },
+  {
     id: "16:9",
     label: "Landscape",
     desc: "Wide",
@@ -174,57 +190,88 @@ const ASPECT_RATIOS = [
   },
 ];
 
-const SIZE_PRESETS = [
-  {
-    id: "yt-landscape",
-    ratio: "16:9",
-    title: "YouTube Video",
-    subtitle: "Long-form / Landscape",
-    platforms: ["youtube", "facebook", "linkedin", "x", "bluesky", "mastodon"],
-  },
-  {
-    id: "yt-shorts",
-    ratio: "9:16",
-    title: "YouTube Shorts",
-    subtitle: "Vertical Short",
-    platforms: ["youtube", "instagram", "facebook", "tiktok", "threads"],
-  },
-  {
-    id: "ig-feed-square",
-    ratio: "1:1",
-    title: "Instagram Feed",
-    subtitle: "Square Post",
-    platforms: ["instagram", "facebook", "threads", "x", "linkedin"],
-  },
-  {
-    id: "ig-feed-landscape",
-    ratio: "16:9",
-    title: "Instagram Feed",
-    subtitle: "Landscape Post",
-    platforms: ["instagram", "facebook", "linkedin", "x"],
-  },
-  {
-    id: "ig-feed-portrait",
-    ratio: "4:5",
-    title: "Instagram Feed",
-    subtitle: "Portrait Post",
-    platforms: ["instagram", "facebook", "linkedin"],
-  },
-  {
-    id: "ig-reel",
-    ratio: "9:16",
-    title: "Instagram Reel",
-    subtitle: "Vertical Video",
-    platforms: ["instagram", "facebook", "youtube", "tiktok", "threads"],
-  },
-  {
-    id: "ig-story",
-    ratio: "9:16",
-    title: "Instagram Story",
-    subtitle: "Story Format",
-    platforms: ["instagram", "facebook", "youtube", "tiktok"],
-  },
-];
+const PLATFORM_LAYOUT_PRESETS = {
+  instagram: [
+    {
+      id: "ig-post-square",
+      ratio: "1:1",
+      title: "Post Square",
+      subtitle: "1080x1080",
+    },
+    {
+      id: "ig-portrait",
+      ratio: "4:5",
+      title: "Portrait",
+      subtitle: "1080x1350",
+    },
+    { id: "ig-reel", ratio: "9:16", title: "Reel", subtitle: "1080x1920" },
+    { id: "ig-story", ratio: "9:16", title: "Story", subtitle: "1080x1920" },
+    {
+      id: "ig-landscape",
+      ratio: "16:9",
+      title: "Landscape Post",
+      subtitle: "16:9",
+    },
+  ],
+  youtube: [
+    { id: "yt-video", ratio: "16:9", title: "Video", subtitle: "1920x1080" },
+    { id: "yt-shorts", ratio: "9:16", title: "Shorts", subtitle: "1080x1920" },
+    {
+      id: "yt-thumbnail",
+      ratio: "16:9",
+      title: "Thumbnail",
+      subtitle: "1280x720",
+    },
+  ],
+  linkedin: [
+    { id: "li-image", ratio: "1.91:1", title: "Image", subtitle: "1200x627" },
+    { id: "li-square", ratio: "1:1", title: "Square", subtitle: "1080x1080" },
+    {
+      id: "li-carousel",
+      ratio: "1:1",
+      title: "Carousel",
+      subtitle: "1080x1080 (PDF pages)",
+    },
+  ],
+  x: [
+    { id: "x-image", ratio: "16:9", title: "Image", subtitle: "1200x675" },
+    { id: "x-square", ratio: "1:1", title: "Square", subtitle: "1080x1080" },
+  ],
+  facebook: [
+    { id: "fb-image", ratio: "1:1", title: "Image", subtitle: "1200x1200" },
+    { id: "fb-reel", ratio: "9:16", title: "Reel", subtitle: "1080x1920" },
+    { id: "fb-story", ratio: "9:16", title: "Story", subtitle: "1080x1920" },
+  ],
+  pinterest: [
+    { id: "pin-standard", ratio: "2:3", title: "Pin", subtitle: "1000x1500" },
+  ],
+  tiktok: [
+    { id: "tt-video", ratio: "9:16", title: "Video", subtitle: "1080x1920" },
+  ],
+  threads: [
+    { id: "threads-post", ratio: "1:1", title: "Post", subtitle: "1080x1080" },
+    {
+      id: "threads-vertical",
+      ratio: "9:16",
+      title: "Vertical",
+      subtitle: "1080x1920",
+    },
+  ],
+  bluesky: [
+    { id: "bluesky-image", ratio: "16:9", title: "Image", subtitle: "16:9" },
+    { id: "bluesky-square", ratio: "1:1", title: "Square", subtitle: "1:1" },
+  ],
+  mastodon: [
+    { id: "mastodon-image", ratio: "16:9", title: "Image", subtitle: "16:9" },
+    { id: "mastodon-square", ratio: "1:1", title: "Square", subtitle: "1:1" },
+  ],
+  whatsapp: [
+    { id: "wa-status", ratio: "9:16", title: "Status", subtitle: "1080x1920" },
+  ],
+  telegram: [
+    { id: "tg-status", ratio: "9:16", title: "Status", subtitle: "1080x1920" },
+  ],
+};
 
 const PLATFORM_SHORT_LABELS = {
   youtube: "YouTube",
@@ -238,10 +285,9 @@ const PLATFORM_SHORT_LABELS = {
   mastodon: "Mastodon",
 };
 
-const PLATFORM_PRESET_PREFIX = {
-  youtube: "yt-",
-  instagram: "ig-",
-};
+function getPresetsForPlatform(platformId) {
+  return PLATFORM_LAYOUT_PRESETS[platformId] || [];
+}
 
 function XIcon({ className }) {
   return (
@@ -267,17 +313,10 @@ function PlatformPreviewPanel({
   mediaType,
   selectedRatio,
   youtubeThumbnail,
+  activePlatform,
+  onActivePlatformChange,
 }) {
-  const [activeId, setActiveId] = React.useState(null);
-
-  // Keep activeId in sync with selectedChannels
-  React.useEffect(() => {
-    if (selectedChannels.length > 0) {
-      setActiveId((prev) =>
-        selectedChannels.includes(prev) ? prev : selectedChannels[0],
-      );
-    }
-  }, [selectedChannels]);
+  const activeId = activePlatform || selectedChannels[0] || null;
 
   const meta = PLATFORM_META[activeId] || PLATFORM_META.instagram;
 
@@ -310,7 +349,7 @@ function PlatformPreviewPanel({
           return (
             <button
               key={id}
-              onClick={() => setActiveId(id)}
+              onClick={() => onActivePlatformChange?.(id)}
               title={m.label}
               className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
                 isActive
@@ -1040,8 +1079,10 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dragActive, setDragActive] = useState(false);
-  const [selectedSizePreset, setSelectedSizePreset] = useState("ig-feed-square");
-  const [sizeTargetPlatform, setSizeTargetPlatform] = useState("instagram");
+  const [selectedSizePreset, setSelectedSizePreset] =
+    useState("ig-feed-square");
+  const [activePreviewPlatform, setActivePreviewPlatform] =
+    useState("instagram");
   const fileInputRef = useRef(null);
 
   // Min datetime for scheduling = now + 2 minutes
@@ -1052,59 +1093,23 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
   const selectedRatio = useMemo(() => {
     return (
-      SIZE_PRESETS.find((preset) => preset.id === selectedSizePreset)?.ratio ||
+      availableSizePresets.find((preset) => preset.id === selectedSizePreset)
+        ?.ratio ||
+      availableSizePresets[0]?.ratio ||
       "1:1"
     );
-  }, [selectedSizePreset]);
-
-  const availableSizePresets = useMemo(() => {
-    if (selectedChannels.length === 0) {
-      return SIZE_PRESETS.map((preset) => ({
-        ...preset,
-        matchedPlatforms: preset.platforms,
-        matchCount: preset.platforms.length,
-      }));
-    }
-
-    const curatedPrefix = PLATFORM_PRESET_PREFIX[sizeTargetPlatform];
-    if (curatedPrefix) {
-      const curatedPresets = SIZE_PRESETS.filter((preset) =>
-        preset.id.startsWith(curatedPrefix),
-      ).map((preset) => ({
-        ...preset,
-        matchedPlatforms: [sizeTargetPlatform],
-        matchCount: 1,
-      }));
-
-      if (curatedPresets.length > 0) {
-        return curatedPresets;
-      }
-    }
-
-    const platformName =
-      PLATFORM_SHORT_LABELS[sizeTargetPlatform] || sizeTargetPlatform;
-
-    return ASPECT_RATIOS.map((ratio) => ({
-      id: `${sizeTargetPlatform}-${ratio.id}`,
-      ratio: ratio.id,
-      title: `${platformName} ${ratio.label}`,
-      subtitle: "Platform-ready format",
-      platforms: [sizeTargetPlatform],
-      matchedPlatforms: [sizeTargetPlatform],
-      matchCount: 1,
-    }));
-  }, [selectedChannels, sizeTargetPlatform]);
+  }, [availableSizePresets, selectedSizePreset]);
 
   React.useEffect(() => {
     if (selectedChannels.length === 0) {
-      setSizeTargetPlatform("instagram");
+      setActivePreviewPlatform("instagram");
       return;
     }
 
-    if (!selectedChannels.includes(sizeTargetPlatform)) {
-      setSizeTargetPlatform(selectedChannels[0]);
+    if (!selectedChannels.includes(activePreviewPlatform)) {
+      setActivePreviewPlatform(selectedChannels[0]);
     }
-  }, [selectedChannels, sizeTargetPlatform]);
+  }, [selectedChannels, activePreviewPlatform]);
 
   React.useEffect(() => {
     if (
@@ -1370,8 +1375,8 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     setCustomizationExpanded(false);
     setIsScheduled(false);
     setScheduledAt("");
-    setSelectedSizePreset("ig-feed-square");
-    setSizeTargetPlatform("instagram");
+    setSelectedSizePreset("ig-post-square");
+    setActivePreviewPlatform("instagram");
     setError(null);
     onClose();
   };
@@ -1666,101 +1671,92 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                       Smart Post Size
                     </p>
                     <p className="text-xs text-gray-600">
-                      Layouts are shown based on the platform you choose below.
+                      Layouts follow the currently selected preview icon.
                     </p>
                   </div>
                   {selectedChannels.length > 0 && availableSizePresets[0] && (
                     <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-1 rounded-full">
-                      {PLATFORM_SHORT_LABELS[sizeTargetPlatform] || sizeTargetPlatform}: {availableSizePresets[0].ratio}
+                      {PLATFORM_SHORT_LABELS[activePreviewPlatform] ||
+                        activePreviewPlatform}
+                      : {availableSizePresets[0].ratio}
                     </span>
                   )}
                 </div>
 
-                {selectedChannels.length > 1 && (
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {selectedChannels.map((platformId) => (
-                      <button
-                        key={`size-target-${platformId}`}
-                        type="button"
-                        onClick={() => setSizeTargetPlatform(platformId)}
-                        className={`px-3 py-1.5 rounded-full text-[11px] font-semibold border transition-all ${
-                          sizeTargetPlatform === platformId
-                            ? "bg-indigo-50 text-indigo-700 border-indigo-200"
-                            : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
-                        }`}
-                      >
-                        {PLATFORM_SHORT_LABELS[platformId] || platformId}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {availableSizePresets.map((preset) => {
-                    const ratio = ASPECT_RATIOS.find((r) => r.id === preset.ratio);
+                    const ratio = ASPECT_RATIOS.find(
+                      (r) => r.id === preset.ratio,
+                    );
                     if (!ratio) return null;
 
                     const matches = preset.matchedPlatforms || preset.platforms;
 
                     return (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => setSelectedSizePreset(preset.id)}
-                      className={`flex flex-col items-center gap-4 p-4 rounded-xl border transition-all duration-300 group ${
-                        selectedSizePreset === preset.id
-                          ? "bg-indigo-50/40 border-indigo-200 shadow-sm ring-1 ring-indigo-200"
-                          : "bg-white border-gray-100 hover:border-gray-200 hover:shadow-sm"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 w-full">
-                        <div
-                          className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-500 ${
-                            selectedSizePreset === preset.id
-                              ? "bg-white shadow-md shadow-indigo-100/50 scale-110"
-                              : "bg-gray-50 text-gray-400 group-hover:bg-white group-hover:shadow-sm"
-                          }`}
-                        >
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => setSelectedSizePreset(preset.id)}
+                        className={`flex flex-col items-center gap-4 p-4 rounded-xl border transition-all duration-300 group ${
+                          selectedSizePreset === preset.id
+                            ? "bg-indigo-50/40 border-indigo-200 shadow-sm ring-1 ring-indigo-200"
+                            : "bg-white border-gray-100 hover:border-gray-200 hover:shadow-sm"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 w-full">
                           <div
-                            className={`rounded-[3px] transition-all duration-500 ${ratio.preview} ${
+                            className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-500 ${
                               selectedSizePreset === preset.id
-                                ? "border-indigo-500 bg-indigo-500/10"
-                                : "border-gray-300 bg-gray-50"
+                                ? "bg-white shadow-md shadow-indigo-100/50 scale-110"
+                                : "bg-gray-50 text-gray-400 group-hover:bg-white group-hover:shadow-sm"
                             }`}
-                          />
+                          >
+                            <div
+                              className={`rounded-[3px] transition-all duration-500 ${ratio.preview} ${
+                                selectedSizePreset === preset.id
+                                  ? "border-indigo-500 bg-indigo-500/10"
+                                  : "border-gray-300 bg-gray-50"
+                              }`}
+                            />
+                          </div>
+
+                          <div className="text-left flex-1 min-w-0">
+                            <p
+                              className={`text-[11px] font-bold tracking-tight mb-0.5 ${selectedSizePreset === preset.id ? "text-indigo-900" : "text-gray-700"}`}
+                            >
+                              {preset.title}
+                            </p>
+                            <p className="text-[10px] text-gray-500 mb-1">
+                              {preset.subtitle}
+                            </p>
+                            <p className="text-[10px] text-gray-400 mb-1">
+                              {preset.ratio}
+                            </p>
+                            <p
+                              className={`text-[10px] font-semibold tabular-nums ${selectedSizePreset === preset.id ? "text-indigo-500/80" : "text-gray-400"}`}
+                            >
+                              {ASPECT_RATIOS.find((r) => r.id === preset.ratio)
+                                ?.desc || "Recommended"}
+                            </p>
+                          </div>
                         </div>
 
-                        <div className="text-left flex-1 min-w-0">
-                          <p
-                            className={`text-[11px] font-bold tracking-tight mb-0.5 ${selectedSizePreset === preset.id ? "text-indigo-900" : "text-gray-700"}`}
-                          >
-                            {preset.title}
-                          </p>
-                          <p className="text-[10px] text-gray-500 mb-1">{preset.subtitle}</p>
-                          <p
-                            className={`text-[10px] font-semibold tabular-nums ${selectedSizePreset === preset.id ? "text-indigo-500/80" : "text-gray-400"}`}
-                          >
-                            {preset.ratio}
-                          </p>
+                        <div className="w-full flex flex-wrap gap-1 justify-start">
+                          {matches.slice(0, 4).map((platform) => (
+                            <span
+                              key={`${preset.id}-${platform}`}
+                              className="text-[9px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium"
+                            >
+                              {PLATFORM_SHORT_LABELS[platform] || platform}
+                            </span>
+                          ))}
+                          {matches.length > 4 && (
+                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
+                              +{matches.length - 4} more
+                            </span>
+                          )}
                         </div>
-                      </div>
-
-                      <div className="w-full flex flex-wrap gap-1 justify-start">
-                        {matches.slice(0, 4).map((platform) => (
-                          <span
-                            key={`${preset.id}-${platform}`}
-                            className="text-[9px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium"
-                          >
-                            {PLATFORM_SHORT_LABELS[platform] || platform}
-                          </span>
-                        ))}
-                        {matches.length > 4 && (
-                          <span className="text-[9px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
-                            +{matches.length - 4} more
-                          </span>
-                        )}
-                      </div>
-                    </button>
+                      </button>
                     );
                   })}
                 </div>
@@ -1876,6 +1872,8 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                 mediaType={mediaType}
                 selectedRatio={selectedRatio}
                 youtubeThumbnail={youtubeThumbnail}
+                activePlatform={activePreviewPlatform}
+                onActivePlatformChange={setActivePreviewPlatform}
               />
             )}
           </div>

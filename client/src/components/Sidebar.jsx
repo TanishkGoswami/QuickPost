@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Settings, LogOut, CalendarClock } from 'lucide-react';
+import { Settings, LogOut, CalendarClock, Plus, Share2 } from 'lucide-react';
 import { useDialog } from '../context/DialogContext';
 import logo from '/logo.png';
 import InstagramBusinessSetupModal from './InstagramBusinessSetupModal';
@@ -41,7 +41,6 @@ function Sidebar() {
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
   const [connectingPlatform, setConnectingPlatform] = useState(null);
   const [connectedOpen, setConnectedOpen] = useState(true);
-  const [showMoreUnconnected, setShowMoreUnconnected] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
   const handleLogout = async () => {
@@ -96,25 +95,20 @@ function Sidebar() {
       alert('Error', 'Failed to disconnect account. Please try again.', { intent: 'danger' });
     } finally { setDisconnectingPlatform(null); }
   };
-  const handleConnectPinterest = () => setShowPinterestModal(true);
-  const handleConnectLinkedIn  = () => setShowLinkedInModal(true);
-  const handleConnectMastodon  = () => setShowMastodonModal(true);
-  const handleConnectTikTok    = () => setShowTikTokModal(true);
 
   const platforms = [
-    { id: 'facebook', name: 'Facebook', connected: connectedAccounts.facebook, icon: <img src="/icons/facebook-round-color-icon.svg" className="w-5 h-5 object-contain" alt="" />, onConnect: handleConnectFacebook },
-    { id: 'instagram', name: 'Instagram', connected: connectedAccounts.instagram, icon: <img src="/icons/ig-instagram-icon.svg" className="w-5 h-5 object-contain" alt="" />, onConnect: handleConnectInstagram },
-    { id: 'x', name: 'X', connected: connectedAccounts.x, icon: <img src="/icons/x-social-media-round-icon.svg" className="w-5 h-5 object-contain" alt="" />, onConnect: handleConnectX },
-    { id: 'linkedin', name: 'LinkedIn', connected: connectedAccounts.linkedin, icon: <img src="/icons/linkedin-icon.svg" className="w-5 h-5 object-contain" alt="" />, onConnect: handleConnectLinkedIn },
-    { id: 'tiktok', name: 'TikTok', connected: connectedAccounts.tiktok, icon: <img src="/icons/tiktok-circle-icon.svg" className="w-5 h-5 object-contain" alt="" />, onConnect: handleConnectTikTok },
-    { id: 'youtube', name: 'YouTube', connected: connectedAccounts.youtube, icon: <img src="/icons/youtube-color-icon.svg" className="w-5 h-5 object-contain" alt="" />, onConnect: () => alert('YouTube is connected via Google sign-in') },
-    { id: 'pinterest', name: 'Pinterest', connected: connectedAccounts.pinterest, icon: <img src="/icons/pinterest-round-color-icon.svg" className="w-5 h-5 object-contain" alt="" />, onConnect: handleConnectPinterest },
-    { id: 'threads', name: 'Threads', connected: connectedAccounts.threads, icon: <img src="/icons/threads-icon.svg" className="w-5 h-5 object-contain" alt="" />, onConnect: handleConnectThreads },
-    { id: 'mastodon', name: 'Mastodon', connected: connectedAccounts.mastodon, icon: <img src="/icons/mastodon-round-icon.svg" className="w-5 h-5 object-contain" alt="" />, onConnect: handleConnectMastodon },
-    { id: 'bluesky', name: 'Bluesky', connected: connectedAccounts.bluesky, icon: <img src="/icons/bluesky-circle-color-icon.svg" className="w-5 h-5 object-contain" alt="" />, onConnect: () => setShowBlueskyModal(true) },
-    { id: 'google-business', name: 'Google Business', connected: connectedAccounts.googleBusiness, icon: <img src="/icons/google-icon.svg" className="w-5 h-5 object-contain" alt="" />, onConnect: () => alert('Google Business Profile integration coming soon!') },
-    { id: 'reddit', name: 'Reddit', connected: connectedAccounts.reddit, icon: <img src="/icons/reddit-icon.svg" className="w-5 h-5 object-contain" alt="" />, onConnect: () => alert('Coming Soon', 'Reddit integration is currently awaiting API approval.', { intent: 'warning' }), disabled: true },
-    { id: 'snapchat', name: 'Snapchat', connected: false, icon: <img src="/icons/snapchat-square-color-icon.svg" className="w-5 h-5 object-contain" alt="" />, onConnect: () => alert('Coming Soon', 'Snapchat integration is in development!', { intent: 'warning' }), disabled: true },
+    { id: 'facebook', name: 'Facebook', connected: connectedAccounts.facebook, icon: <img src="/icons/facebook-round-color-icon.svg" style={{width: 20, height: 20}} alt="" />, onConnect: handleConnectFacebook },
+    { id: 'instagram', name: 'Instagram', connected: connectedAccounts.instagram, icon: <img src="/icons/ig-instagram-icon.svg" style={{width: 20, height: 20}} alt="" />, onConnect: handleConnectInstagram },
+    { id: 'x', name: 'X', connected: connectedAccounts.x, icon: <img src="/icons/x-social-media-round-icon.svg" style={{width: 20, height: 20}} alt="" />, onConnect: handleConnectX },
+    { id: 'linkedin', name: 'LinkedIn', connected: connectedAccounts.linkedin, icon: <img src="/icons/linkedin-icon.svg" style={{width: 20, height: 20}} alt="" />, onConnect: () => setShowLinkedInModal(true) },
+    { id: 'tiktok', name: 'TikTok', connected: connectedAccounts.tiktok, icon: <img src="/icons/tiktok-circle-icon.svg" style={{width: 20, height: 20}} alt="" />, onConnect: () => setShowTikTokModal(true) },
+    { id: 'youtube', name: 'YouTube', connected: connectedAccounts.youtube, icon: <img src="/icons/youtube-color-icon.svg" style={{width: 20, height: 20}} alt="" />, onConnect: () => alert('YouTube is connected via Google sign-in') },
+    { id: 'pinterest', name: 'Pinterest', connected: connectedAccounts.pinterest, icon: <img src="/icons/pinterest-round-color-icon.svg" style={{width: 20, height: 20}} alt="" />, onConnect: () => setShowPinterestModal(true) },
+    { id: 'threads', name: 'Threads', connected: connectedAccounts.threads, icon: <img src="/icons/threads-icon.svg" style={{width: 20, height: 20}} alt="" />, onConnect: handleConnectThreads },
+    { id: 'mastodon', name: 'Mastodon', connected: connectedAccounts.mastodon, icon: <img src="/icons/mastodon-round-icon.svg" style={{width: 20, height: 20}} alt="" />, onConnect: () => setShowMastodonModal(true) },
+    { id: 'bluesky', name: 'Bluesky', connected: connectedAccounts.bluesky, icon: <img src="/icons/bluesky-circle-color-icon.svg" style={{width: 20, height: 20}} alt="" />, onConnect: () => setShowBlueskyModal(true) },
+    { id: 'google-business', name: 'Google Business', connected: connectedAccounts.googleBusiness, icon: <img src="/icons/google-icon.svg" style={{width: 20, height: 20}} alt="" />, onConnect: () => alert('Coming Soon', 'Google Business Profile integration coming soon!', { intent: 'warning' }) },
+    { id: 'reddit', name: 'Reddit', connected: connectedAccounts.reddit, icon: <img src="/icons/reddit-icon.svg" style={{width: 20, height: 20}} alt="" />, onConnect: handleConnectReddit, disabled: true },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -126,6 +120,7 @@ function Sidebar() {
         width: 240,
         background: 'var(--canvas)',
         borderRight: '1px solid rgba(20,20,19,0.08)',
+        zIndex: 50,
       }}
     >
       {/* ── Brand ── */}
@@ -142,16 +137,12 @@ function Sidebar() {
       <div className="flex-1 overflow-y-auto custom-scrollbar" style={{ padding: '12px 12px 0' }}>
 
         {/* ── Primary nav ── */}
-        <div style={{ marginBottom: 8 }}>
+        <div style={{ marginBottom: 20 }}>
           {[
             {
               to: '/dashboard',
               label: 'All Channels',
-              icon: (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
-              ),
+              icon: <Share2 size={16} />,
             },
             {
               to: '/dashboard/queue',
@@ -173,25 +164,10 @@ function Sidebar() {
                   marginBottom: 2,
                   background: active ? 'var(--ink)' : 'transparent',
                   color: active ? 'var(--canvas)' : 'var(--slate)',
-                  fontWeight: 500,
+                  fontWeight: 600,
                   fontSize: 14,
-                  letterSpacing: '-0.01em',
                   textDecoration: 'none',
                   transition: 'background 0.2s, color 0.2s',
-                }}
-                onMouseEnter={e => { 
-                  if (!active) {
-                    e.currentTarget.style.background = 'rgba(20,20,19,0.06)'; 
-                    e.currentTarget.style.color = 'var(--ink)'; 
-                  }
-                }}
-                onMouseLeave={e => { 
-                  if (!active) {
-                    e.currentTarget.style.background = 'transparent'; 
-                    e.currentTarget.style.color = 'var(--slate)'; 
-                  } else {
-                    e.currentTarget.style.color = 'var(--canvas)';
-                  }
                 }}
               >
                 <span style={{ width: 28, height: 28, borderRadius: 'var(--r-sm)', background: active ? 'rgba(255,255,255,0.15)' : 'rgba(20,20,19,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -204,192 +180,78 @@ function Sidebar() {
         </div>
 
         {/* ── Connected platforms ── */}
-        {platforms.filter(p => p.connected).length > 0 && (
-          <div style={{ marginTop: 8 }}>
-            {(() => {
-              const connected = platforms.filter(p => p.connected);
-              return (
-                <button
-                  onClick={() => setConnectedOpen(o => !o)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                    padding: '7px 10px 7px 8px',
-                    marginBottom: 4,
-                    borderRadius: 'var(--r-pill)',
-                    border: '1px solid rgba(20,20,19,0.10)',
-                    background: 'var(--canvas-lifted)',
-                    cursor: 'pointer',
-                    boxShadow: 'var(--shadow-nav)',
-                    transition: 'box-shadow 0.2s',
-                  }}
-                >
-                  <motion.div layout style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <AnimatePresence mode="wait">
-                      {!connectedOpen ? (
-                        <motion.div
-                          key="icons"
-                          initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }}
-                          style={{ display: 'flex', marginLeft: -4 }}
-                        >
-                          {connected.slice(0, 4).map((p, idx) => (
-                            <div key={p.id} style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--white)', border: '1.5px solid rgba(20,20,19,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: idx === 0 ? 0 : -8, zIndex: 10 - idx, flexShrink: 0 }}>
-                              {p.icon}
-                            </div>
-                          ))}
-                        </motion.div>
-                      ) : (
-                        <motion.span key="label" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                          style={{ fontSize: 12, fontWeight: 700, color: 'var(--slate)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          Connected
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-                  <motion.div animate={{ rotate: connectedOpen ? 180 : 0 }} transition={{ duration: 0.25 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </motion.div>
-                </button>
-              );
-            })()}
-
-            <AnimatePresence>
-              {connectedOpen && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.25, ease: 'easeInOut' }}
-                  style={{ overflow: 'hidden' }}
-                >
-                  {platforms.filter(p => p.connected).map(platform => {
-                    const isSelected = selectedDashboardPlatform === platform.id && location.pathname === '/dashboard';
-                    return (
-                      <div
-                        key={platform.id}
-                        onClick={() => navigate(`/dashboard?platform=${platform.id}`)}
-                        className="group"
-                        style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: 10, 
-                          padding: '8px 10px', 
-                          borderRadius: 'var(--r-btn)', 
-                          marginBottom: 2, 
-                          cursor: 'pointer', 
-                          transition: 'background 0.15s, border-color 0.15s',
-                          background: isSelected ? 'rgba(20,20,19,0.06)' : 'transparent',
-                          border: isSelected ? '1px solid rgba(20,20,19,0.08)' : '1px solid transparent'
-                        }}
-                        onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(20,20,19,0.04)'; }}
-                        onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
-                      >
-                        <div style={{ position: 'relative', flexShrink: 0 }}>
-                          <div style={{ width: 30, height: 30, borderRadius: 'var(--r-sm)', background: 'var(--canvas-lifted)', border: '1px solid rgba(20,20,19,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {platform.icon}
-                          </div>
-                          <span style={{ position: 'absolute', bottom: -2, right: -2, width: 10, height: 10, background: '#22c55e', borderRadius: '50%', border: '2px solid var(--canvas)' }} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{platform.name}</div>
-                          <div style={{ fontSize: 10, color: 'var(--slate)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>{user?.name || user?.email}</div>
-                        </div>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDisconnect(platform.id); }}
-                          disabled={disconnectingPlatform === platform.id}
-                          style={{ opacity: 0, padding: '3px 6px', borderRadius: 6, border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer', transition: 'opacity 0.2s' }}
-                          className="group-hover:opacity-100"
-                          title="Disconnect"
-                        >
-                          {disconnectingPlatform === platform.id
-                            ? <span style={{ fontSize: 9 }}>...</span>
-                            : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                          }
-                        </button>
-                      </div>
-                    );
-                  })}
-                </motion.div>
-              )}
-            </AnimatePresence>
+        <div style={{ marginTop: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px', marginBottom: 8 }}>
+             <span className="eyebrow">Connected</span>
+             <button onClick={() => setConnectedOpen(!connectedOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', color: 'var(--slate)' }}>
+                {connectedOpen ? <Settings size={12} /> : <Plus size={12} />}
+             </button>
           </div>
-        )}
-
-        {/* ── Add Channels ── */}
-        {(() => {
-          const unconnected = platforms.filter(p => !p.connected);
-          const visible = unconnected.slice(0, 3);
-          const hidden = unconnected.slice(3);
-          if (unconnected.length === 0) return null;
-          return (
-            <div style={{ marginTop: 16 }}>
-              <div className="eyebrow" style={{ padding: '0 10px', marginBottom: 6 }}>Add Channels</div>
-              <div>
-                {visible.map((platform) => {
-                  const isConnecting = connectingPlatform === platform.id;
+          
+          <AnimatePresence>
+            {connectedOpen && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {platforms.filter(p => p.connected).map(platform => {
+                  const isSelected = selectedDashboardPlatform === platform.id && location.pathname === '/dashboard';
                   return (
-                    <button
+                    <div
                       key={platform.id}
-                      onClick={platform.onConnect}
-                      disabled={isConnecting || platform.disabled}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '8px 10px', borderRadius: 'var(--r-btn)',
-                        width: '100%', textAlign: 'left', border: 'none',
-                        background: 'transparent', cursor: platform.disabled ? 'default' : 'pointer',
-                        marginBottom: 2, transition: 'background 0.15s',
-                        opacity: platform.disabled ? 0.45 : 1,
+                      onClick={() => navigate(`/dashboard?platform=${platform.id}`)}
+                      className="group"
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 10, 
+                        padding: '8px 10px', 
+                        borderRadius: 'var(--r-btn)', 
+                        cursor: 'pointer', 
+                        transition: 'background 0.15s',
+                        background: isSelected ? 'rgba(20,20,19,0.07)' : 'transparent',
                       }}
-                      onMouseEnter={e => { if (!platform.disabled) e.currentTarget.style.background = 'rgba(20,20,19,0.04)'; }}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                      <div style={{ width: 30, height: 30, borderRadius: 'var(--r-sm)', background: 'var(--canvas-lifted)', border: '1px dashed rgba(20,20,19,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {platform.icon}
-                      </div>
-                      <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--slate)' }}>
-                        {isConnecting ? 'Connecting…' : platform.name}
-                        {platform.disabled && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--arc)', marginLeft: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}> Soon</span>}
-                      </span>
-                      <span style={{ marginLeft: 'auto', fontSize: 9, fontWeight: 700, color: 'var(--ink)', background: 'var(--canvas-lifted)', border: '1px solid rgba(20,20,19,0.10)', borderRadius: 'var(--r-pill)', padding: '2px 8px', opacity: 0, transition: 'opacity 0.2s', whiteSpace: 'nowrap' }}
-                        className="group-hover:opacity-100">
-                        + Connect
-                      </span>
-                    </button>
-                  );
-                })}
-                {hidden.length > 0 && (
-                  <>
-                    {showMoreUnconnected && hidden.map(platform => (
-                      <button
-                        key={platform.id}
-                        onClick={platform.onConnect}
-                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 'var(--r-btn)', width: '100%', textAlign: 'left', border: 'none', background: 'transparent', cursor: 'pointer', marginBottom: 2, opacity: platform.disabled ? 0.4 : 1 }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(20,20,19,0.04)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                      >
-                        <div style={{ width: 30, height: 30, borderRadius: 'var(--r-sm)', background: 'var(--canvas-lifted)', border: '1px dashed rgba(20,20,19,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ position: 'relative', flexShrink: 0 }}>
+                        <div style={{ width: 30, height: 30, borderRadius: 'var(--r-sm)', background: 'var(--canvas-lifted)', border: '1px solid rgba(20,20,19,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {platform.icon}
                         </div>
-                        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--slate)' }}>{platform.name}</span>
-                      </button>
-                    ))}
-                    <button
-                      onClick={() => setShowMoreUnconnected(o => !o)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 10px', borderRadius: 'var(--r-btn)', width: '100%', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--slate)', fontSize: 12, fontWeight: 600 }}
-                      onMouseEnter={e => e.currentTarget.style.color = 'var(--ink)'}
-                      onMouseLeave={e => e.currentTarget.style.color = 'var(--slate)'}
-                    >
-                      <svg style={{ transform: showMoreUnconnected ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
-                      {showMoreUnconnected ? 'Show less' : `${hidden.length} more platforms`}
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        })()}
+                        <span style={{ position: 'absolute', bottom: -1, right: -1, width: 8, height: 8, background: '#22c55e', borderRadius: '50%', border: '1.5px solid var(--canvas)' }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{platform.name}</div>
+                        <div style={{ fontSize: 10, color: 'var(--slate)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Active</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* ── Add Channels ── */}
+        <div style={{ marginTop: 24, padding: '0 4px' }}>
+          <div className="eyebrow" style={{ padding: '0 6px', marginBottom: 12 }}>Connect Channels</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+            {platforms.filter(p => !p.connected).map(platform => (
+              <button
+                key={platform.id}
+                onClick={platform.onConnect}
+                title={`Connect ${platform.name}`}
+                style={{
+                  width: 42, height: 42, borderRadius: 'var(--r-btn)',
+                  background: 'var(--canvas-lifted)', border: '1px dashed rgba(20,20,19,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', transition: 'all 0.2s', opacity: platform.disabled ? 0.4 : 1
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ink)'; e.currentTarget.style.background = 'var(--white)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(20,20,19,0.2)'; e.currentTarget.style.background = 'var(--canvas-lifted)'; }}
+              >
+                <div style={{ filter: 'grayscale(1)', opacity: 0.7, transition: 'all 0.2s' }} onMouseEnter={e => { e.target.style.filter = 'none'; e.target.style.opacity = 1; }}>
+                  {platform.icon}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ── Footer ── */}
@@ -406,65 +268,45 @@ function Sidebar() {
           </div>
         )}
         <div style={{ display: 'flex', gap: 4 }}>
-          {[
-            { icon: <Settings size={14} />, label: 'Settings', onClick: () => setShowSettings(true), danger: false },
-            { icon: <LogOut size={14} />, label: 'Sign out', onClick: handleLogout, danger: true },
-          ].map(({ icon, label, onClick, danger }) => (
-            <button key={label} onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, padding: '7px 10px', borderRadius: 'var(--r-btn)', border: 'none', background: 'transparent', cursor: 'pointer', color: danger ? '#dc2626' : 'var(--slate)', fontSize: 12, fontWeight: 600, transition: 'background 0.15s, color 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.background = danger ? '#fef2f2' : 'rgba(20,20,19,0.05)'; e.currentTarget.style.color = danger ? '#dc2626' : 'var(--ink)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = danger ? '#dc2626' : 'var(--slate)'; }}>
-              {icon}{label}
-            </button>
-          ))}
+          <button onClick={() => setShowSettings(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, padding: '8px 10px', borderRadius: 'var(--r-btn)', border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--slate)', fontSize: 12, fontWeight: 600 }}>
+             <Settings size={14} />Settings
+          </button>
+          <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, padding: '8px 10px', borderRadius: 'var(--r-btn)', border: 'none', background: 'transparent', cursor: 'pointer', color: '#dc2626', fontSize: 12, fontWeight: 600 }}>
+             <LogOut size={14} />Logout
+          </button>
         </div>
       </div>
 
-      {/* ── Settings Modal ── */}
+      {/* ── Settings Modal Overlay ── */}
       {showSettings && createPortal(
         <div className="modal-overlay" onClick={() => setShowSettings(false)}>
-          <div className="modal-content" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
-            <div style={{ padding: '28px 32px 20px', borderBottom: '1px solid rgba(20,20,19,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div className="eyebrow" style={{ marginBottom: 4 }}>Account</div>
-                <h2 style={{ fontSize: 24, fontWeight: 500, letterSpacing: '-0.02em', margin: 0 }}>Settings</h2>
+           <div className="modal-content" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
+              <div style={{ padding: '24px 32px', borderBottom: '1px solid rgba(20,20,19,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h2 style={{ fontSize: 20, fontWeight: 500 }}>Settings</h2>
+                <button onClick={() => setShowSettings(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
               </div>
-              <button onClick={() => setShowSettings(false)} style={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid rgba(20,20,19,0.12)', background: 'var(--canvas)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)' }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            <div style={{ padding: '20px 32px' }}>
-              <div className="eyebrow" style={{ marginBottom: 12 }}>Connected Platforms</div>
-              {platforms.filter(p => p.connected).length === 0 ? (
-                <p style={{ color: 'var(--slate)', fontSize: 14, textAlign: 'center', padding: '24px 0' }}>No platforms connected yet.</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {platforms.filter(p => p.connected).map(p => (
-                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 'var(--r-btn)', background: 'var(--canvas)', border: '1px solid rgba(20,20,19,0.08)' }}>
-                      <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{p.icon}</div>
-                      <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', margin: 0 }}>{p.name}</p>
-                        <p style={{ fontSize: 10, color: '#22c55e', fontWeight: 600, margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Connected</p>
+              <div style={{ padding: '24px 32px' }}>
+                 <div className="eyebrow" style={{ marginBottom: 12 }}>Connected Accounts</div>
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {platforms.filter(p => p.connected).map(p => (
+                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 'var(--r-btn)', background: 'var(--canvas)', border: '1px solid rgba(20,20,19,0.08)' }}>
+                        <div style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{p.icon}</div>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', margin: 0 }}>{p.name}</p>
+                        </div>
+                        <button onClick={() => handleDisconnect(p.id)} disabled={disconnectingPlatform === p.id} style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 'var(--r-btn)', border: '1px solid #dc2626', color: '#dc2626', background: 'none', cursor: 'pointer' }}>
+                          {disconnectingPlatform === p.id ? '...' : 'Disconnect'}
+                        </button>
                       </div>
-                      <button onClick={() => handleDisconnect(p.id)} disabled={disconnectingPlatform === p.id}
-                        style={{ fontSize: 11, fontWeight: 700, padding: '4px 14px', borderRadius: 'var(--r-btn)', border: '1.5px solid #dc2626', color: '#dc2626', background: 'transparent', cursor: 'pointer', transition: 'background 0.15s' }}
-                        onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                        {disconnectingPlatform === p.id ? 'Removing…' : 'Disconnect'}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div style={{ padding: '16px 32px 24px', display: 'flex', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowSettings(false)} className="btn-outline" style={{ fontSize: 14 }}>Close</button>
-            </div>
-          </div>
+                    ))}
+                 </div>
+              </div>
+           </div>
         </div>,
         document.body
       )}
 
-      {/* ── Platform Modals ── */}
+      {/* ── Connection Modals ── */}
       {createPortal(
         <>
           <InstagramBusinessSetupModal isOpen={showBusinessSetupModal} onClose={() => setShowBusinessSetupModal(false)} onProceed={handleProceedToConnect} />
