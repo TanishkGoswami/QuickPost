@@ -25,7 +25,7 @@ export default function CallToAction() {
 
           {/* Subheadline */}
           <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-2xl mx-auto">
-            Join thousands of creators and brands already amplifying their reach with QuickPost. Start broadcasting today.
+            Join thousands of creators and brands already amplifying their reach with GAP Social-pilot. Start broadcasting today.
           </p>
 
           {/* CTA Button */}

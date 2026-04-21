@@ -34,9 +34,9 @@ export default function LandingNav() {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 group">
-            <img src={logo} alt="QuickPost" className="h-9 w-9 object-contain group-hover:scale-110 transition-transform" />
+            <img src={logo} alt="GAP Social-pilot" className="h-11 w-11 object-contain group-hover:scale-110 transition-transform" />
             <span className="text-xl md:text-2xl font-bold text-gray-900">
-              Quick<span className="gradient-text">Post</span>
+              GAP <span className="gradient-text">Social-pilot</span>
             </span>
           </Link>
 

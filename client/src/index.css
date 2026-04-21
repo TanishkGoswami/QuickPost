@@ -1,13 +1,49 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Syne:wght@700;800&family=JetBrains+Mono:wght@500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Default site zoom set to 85% for better layout fitting on desktops */
+@media screen and (min-width: 1024px) {
+  html {
+    zoom: 0.85;
+    background-color: #fcfcfd; 
+    min-height: 117.65vh;
+  }
+
+  .h-screen {
+    height: 117.65vh !important;
+  }
+  .min-h-screen {
+    min-height: 117.65vh !important;
+  }
+}
+
 @layer base {
+  :root {
+    --primary: #6366f1;
+    --primary-dark: #4f46e5;
+    --primary-light: #eef2ff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --font-heading: 'Syne', sans-serif;
+    --font-ui: 'Plus Jakarta Sans', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
   body {
-    @apply bg-gray-50 text-gray-900 font-sans;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    @apply bg-[#fcfcfd] text-slate-900;
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+    letter-spacing: normal;
+  }
+
+  h1, h2, h3, .font-heading {
+    font-family: var(--font-heading);
+    line-height: 1.3;
+    letter-spacing: normal;
   }
 }
 
@@ -57,7 +93,7 @@
   /* Composer Textarea */
   .composer-textarea {
     @apply w-full border-none outline-none resize-none text-gray-900 placeholder-gray-400;
-    font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 14px;
     line-height: 1.5;
   }
@@ -66,9 +102,12 @@
     @apply ring-0;
   }
 
-  /* Platform Card */
+  /* Platform Card - Quartz Precision Style */
   .platform-card {
-    @apply bg-gray-50 border border-gray-200 rounded-lg p-4 mb-3 transition-all;
+    @apply bg-white/50 backdrop-blur-sm border border-gray-100 rounded-2xl p-5 mb-4 shadow-sm transition-all duration-300;
+  }
+  .platform-card:hover {
+    @apply border-indigo-100 bg-white shadow-md shadow-indigo-100/20 transform -translate-y-0.5;
   }
 
   /* Animations */
@@ -378,8 +417,46 @@
     background-clip: text;
   }
 
-  /* Smooth Scroll */
-  html {
-    scroll-behavior: smooth;
+  /* Fly-away Send Button */
+  .btn-fly-send {
+    @apply relative flex items-center justify-center bg-[#6366f1] text-white font-bold py-3 px-8 rounded-full overflow-hidden cursor-pointer transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed min-w-[140px] shadow-sm h-[44px];
+  }
+
+  .btn-fly-send span {
+    @apply hidden;
+  }
+
+  .btn-fly-send .svg-wrapper-1 {
+    @apply flex items-center justify-center transition-all duration-500 w-full;
+  }
+
+  .btn-fly-send svg {
+    @apply block transition-all duration-500 ease-in-out text-white fill-white;
+    transform-origin: center center;
+  }
+
+  /* Initial arrow position */
+  .btn-fly-send:not(.sending) svg {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  /* When sending/loading */
+  .btn-fly-send.sending .svg-wrapper {
+    animation: fly-1 0.6s ease-in-out infinite alternate;
+  }
+
+  .btn-fly-send.sending svg {
+    transform: translateX(120px) rotate(30deg) scale(0.5);
+    opacity: 0;
+  }
+
+  .btn-fly-send:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+
+  @keyframes fly-1 {
+    from { transform: translateY(2px); }
+    to { transform: translateY(-2px); }
   }
 }

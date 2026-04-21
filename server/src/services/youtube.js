@@ -98,6 +98,47 @@ export async function postToYouTube(videoPath, caption, tokens) {
 }
 
 /**
+ * Set custom thumbnail for a YouTube video
+ * @param {string} videoId - YouTube video ID
+ * @param {string} imagePath - Local path to the thumbnail image
+ * @param {Object} tokens - YouTube tokens object
+ */
+export async function setVideoThumbnail(videoId, imagePath, tokens) {
+  try {
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_REDIRECT_URI
+    );
+
+    oauth2Client.setCredentials({
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken
+    });
+
+    const youtube = google.youtube({
+      version: 'v3',
+      auth: oauth2Client
+    });
+
+    console.log(`🖼️ Setting custom thumbnail for video ${videoId}...`);
+
+    await youtube.thumbnails.set({
+      videoId: videoId,
+      media: {
+        body: fs.createReadStream(imagePath)
+      }
+    });
+
+    console.log('✓ Thumbnail set successfully');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ Failed to set YouTube thumbnail:', error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
  * Get video details from YouTube
  * @param {string} videoId - YouTube video ID
  * @param {string} accessToken - Access token

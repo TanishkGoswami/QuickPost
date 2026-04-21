@@ -12,17 +12,17 @@ import logo from '/logo.png';
 
 /* ── Platform data ── */
 const PLATFORMS = [
-  { id: 'instagram', label: 'Instagram',       icon: 'https://cdn.simpleicons.org/instagram/E4405F' },
-  { id: 'facebook',  label: 'Facebook',         icon: 'https://cdn.simpleicons.org/facebook/1877F2' },
-  { id: 'x',         label: 'X / Twitter',      icon: 'https://cdn.simpleicons.org/x/000000' },
-  { id: 'linkedin',  label: 'LinkedIn',         icon: 'https://cdn.simpleicons.org/linkedin/0A66C2' },
-  { id: 'tiktok',    label: 'TikTok',           icon: 'https://cdn.simpleicons.org/tiktok/000000' },
-  { id: 'youtube',   label: 'YouTube',          icon: 'https://cdn.simpleicons.org/youtube/FF0000' },
-  { id: 'pinterest', label: 'Pinterest',        icon: 'https://cdn.simpleicons.org/pinterest/BD081C' },
-  { id: 'threads',   label: 'Threads',          icon: 'https://cdn.simpleicons.org/threads/000000' },
-  { id: 'bluesky',   label: 'Bluesky',          icon: 'https://cdn.simpleicons.org/bluesky/0085FF' },
-  { id: 'mastodon',  label: 'Mastodon',         icon: 'https://cdn.simpleicons.org/mastodon/6364FF' },
-  { id: 'google',    label: 'Google Business',  icon: 'https://cdn.simpleicons.org/google/4285F4' },
+  { id: 'instagram', label: 'Instagram',       icon: '/icons/ig-instagram-icon.svg' },
+  { id: 'facebook',  label: 'Facebook',         icon: '/icons/facebook-round-color-icon.svg' },
+  { id: 'x',         label: 'X / Twitter',      icon: '/icons/x-social-media-round-icon.svg' },
+  { id: 'linkedin',  label: 'LinkedIn',         icon: '/icons/linkedin-icon.svg' },
+  { id: 'tiktok',    label: 'TikTok',           icon: '/icons/tiktok-circle-icon.svg' },
+  { id: 'youtube',   label: 'YouTube',          icon: '/icons/youtube-color-icon.svg' },
+  { id: 'pinterest', label: 'Pinterest',        icon: '/icons/pinterest-round-color-icon.svg' },
+  { id: 'threads',   label: 'Threads',          icon: '/icons/threads-icon.svg' },
+  { id: 'bluesky',   label: 'Bluesky',          icon: '/icons/bluesky-circle-color-icon.svg' },
+  { id: 'mastodon',  label: 'Mastodon',         icon: '/icons/mastodon-round-icon.svg' },
+  { id: 'google',    label: 'Google Business',  icon: '/icons/google-icon.svg' },
 ];
 
 /* ── Tools data ── */
@@ -47,7 +47,7 @@ const USER_TYPES = [
 ];
 
 const STEPS = [
-  { num: 1, title: 'Your platforms',   desc: 'Which social channels do you want to manage with QuickPost?' },
+  { num: 1, title: 'Your platforms',   desc: 'Which social channels do you want to manage with GAP Social-pilot?' },
   { num: 2, title: 'Your workflow',    desc: 'What tools are you currently using to manage social media?' },
   { num: 3, title: 'About you',        desc: 'Help us tailor your experience to your needs.' },
 ];
@@ -59,8 +59,8 @@ function LeftPanel({ step }) {
     <div className="hidden lg:flex flex-col justify-between w-80 xl:w-96 flex-shrink-0 bg-gradient-to-br from-indigo-50 via-white to-violet-50 border-r border-gray-100 px-10 py-12">
       {/* Logo */}
       <div className="flex items-center gap-2.5">
-        <img src={logo} alt="QuickPost" className="h-7 w-7 object-contain" />
-        <span className="text-base font-bold text-gray-900 tracking-tight">QuickPost</span>
+        <img src={logo} alt="GAP Social-pilot" className="h-9 w-9 object-contain" />
+        <span className="text-base font-bold text-gray-900 tracking-tight">GAP Social-pilot</span>
       </div>
 
       {/* Step info */}
@@ -103,8 +103,8 @@ function MobileProgress({ step }) {
   return (
     <div className="lg:hidden px-6 pt-6 pb-2">
       <div className="flex items-center gap-2 mb-1">
-        <img src={logo} alt="QuickPost" className="h-5 w-5 object-contain" />
-        <span className="text-sm font-bold text-gray-900">QuickPost</span>
+        <img src={logo} alt="GAP Social-pilot" className="h-7 w-7 object-contain" />
+        <span className="text-sm font-bold text-gray-900">GAP Social-pilot</span>
         <span className="ml-auto text-xs text-gray-400 font-medium">Step {step}/3</span>
       </div>
       <div className="h-1 bg-gray-100 rounded-full">
@@ -192,28 +192,28 @@ export default function Onboarding() {
         {/* Floating platform icons */}
         <div className="absolute inset-0 pointer-events-none">
           {[
-            { src: 'https://cdn.simpleicons.org/instagram/E4405F', style: { top:'15%', left:'8%',   opacity:0.2, width:40 } },
-            { src: 'https://cdn.simpleicons.org/youtube/FF0000',   style: { top:'60%', left:'5%',   opacity:0.2, width:36 } },
-            { src: 'https://cdn.simpleicons.org/x/000000',         style: { top:'30%', left:'18%',  opacity:0.15,width:28 } },
-            { src: 'https://cdn.simpleicons.org/tiktok/000000',    style: { bottom:'20%',left:'14%',opacity:0.15,width:30 } },
-            { src: 'https://cdn.simpleicons.org/bluesky/0085FF',   style: { top:'20%', right:'8%',  opacity:0.2, width:32 } },
-            { src: 'https://cdn.simpleicons.org/pinterest/BD081C', style: { top:'55%', right:'5%',  opacity:0.2, width:36 } },
-            { src: 'https://cdn.simpleicons.org/linkedin/0A66C2',  style: { bottom:'22%',right:'15%',opacity:0.15,width:30 } },
-            { src: 'https://cdn.simpleicons.org/mastodon/6364FF',  style: { top:'42%', right:'20%', opacity:0.15,width:28 } },
+            { src: '/icons/ig-instagram-icon.svg', style: { top:'15%', left:'8%',   opacity:0.2, width:40 } },
+            { src: '/icons/youtube-color-icon.svg',   style: { top:'60%', left:'5%',   opacity:0.2, width:36 } },
+            { src: '/icons/x-social-media-round-icon.svg',         style: { top:'30%', left:'18%',  opacity:0.15,width:28 } },
+            { src: '/icons/tiktok-circle-icon.svg',    style: { bottom:'20%',left:'14%',opacity:0.15,width:30 } },
+            { src: '/icons/bluesky-circle-color-icon.svg',   style: { top:'20%', right:'8%',  opacity:0.2, width:32 } },
+            { src: '/icons/pinterest-round-color-icon.svg', style: { top:'55%', right:'5%',  opacity:0.2, width:36 } },
+            { src: '/icons/linkedin-icon.svg',  style: { bottom:'22%',right:'15%',opacity:0.15,width:30 } },
+            { src: '/icons/mastodon-round-icon.svg',  style: { top:'42%', right:'20%', opacity:0.15,width:28 } },
           ].map((icon, i) => (
             <img key={i} src={icon.src} alt="" style={{ position:'absolute', ...icon.style, filter:'saturate(0.6)' }} />
           ))}
         </div>
 
         <div className="relative z-10 text-center px-6 max-w-md">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white shadow-xl shadow-indigo-100 border border-gray-100 mb-8">
-            <img src={logo} alt="QuickPost" className="w-9 h-9 object-contain" />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white shadow-xl shadow-indigo-100 border border-gray-100 mb-8">
+            <img src={logo} alt="GAP Social-pilot" className="w-12 h-12 object-contain" />
           </div>
           <h1 className="text-4xl font-extrabold text-gray-900 mb-2 tracking-tight">
             Welcome, {firstName}
           </h1>
           <p className="text-gray-500 text-base mb-10 leading-relaxed">
-            Let's get QuickPost set up for you. <br />It only takes a minute.
+            Let's get GAP Social-pilot set up for you. <br />It only takes a minute.
           </p>
           <button
             onClick={() => setStep(1)}
