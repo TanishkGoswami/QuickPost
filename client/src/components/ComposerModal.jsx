@@ -1102,6 +1102,10 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     return d.toISOString().slice(0, 16);
   }, []);
 
+  const availableSizePresets = useMemo(() => {
+    return PLATFORM_LAYOUT_PRESETS[activePreviewPlatform] || [];
+  }, [activePreviewPlatform]);
+
   const selectedRatio = useMemo(() => {
     return (
       availableSizePresets.find((preset) => preset.id === selectedSizePreset)

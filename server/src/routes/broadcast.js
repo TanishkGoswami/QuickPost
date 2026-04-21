@@ -108,6 +108,7 @@ router.post(
       const isVideo = videos.length > 0;
       const mediaType = isVideo ? "video" : "image";
       const primaryVideoPath = videos.length > 0 ? videos[0].path : null;
+      const primaryInputPath = uploadedFiles.length > 0 ? uploadedFiles[0].path : null;
 
     // ── Detect Job ID early for variants ─────────────────────────────────
     const jobId = createJob(userId, {
