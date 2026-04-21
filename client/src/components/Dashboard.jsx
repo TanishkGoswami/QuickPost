@@ -18,6 +18,9 @@ import {
   List,
   ChevronLeft,
   ChevronRight,
+  ThumbsUp,
+  Eye,
+  Play,
 } from "lucide-react";
 import apiClient from "../utils/apiClient";
 import ComposerModal from "./ComposerModal";
