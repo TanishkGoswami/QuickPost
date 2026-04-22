@@ -1187,7 +1187,7 @@ const CalendarView = ({ value, onChange }) => {
   );
 };
 
-const ClockPickerView = ({ value, onChange, onClose }) => {
+const ClockPickerView = ({ value, onChange, onClose, minTime }) => {
   const [h24, minute] = (value || "00:00").split(":");
   const h24Int = parseInt(h24);
   const period = h24Int >= 12 ? "PM" : "AM";
@@ -1200,11 +1200,42 @@ const ClockPickerView = ({ value, onChange, onClose }) => {
   const hours = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
   const minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
-  const handleUpdate = (h12, min, p) => {
+  const minH24 = minTime ? parseInt(minTime.split(":")[0]) : -1;
+  const minMin = minTime ? parseInt(minTime.split(":")[1]) : -1;
+
+  const isHourDisabled = (h12, p) => {
+    if (!minTime) return false;
     let h24Val = parseInt(h12);
     if (p === "PM" && h24Val < 12) h24Val += 12;
     if (p === "AM" && h24Val === 12) h24Val = 0;
-    onChange(`${h24Val.toString().padStart(2, "0")}:${min.padStart(2, "0")}`);
+    return h24Val < minH24;
+  };
+
+  const isMinuteDisabled = (m) => {
+    if (!minTime) return false;
+    return h24Int === minH24 && parseInt(m) < minMin;
+  };
+
+  const isPeriodDisabled = (p) => {
+    if (!minTime) return false;
+    if (p === "AM") return minH24 >= 12;
+    return false; // PM is only fully disabled if minTime is in the next day, which shouldn't happen here
+  };
+
+  const handleUpdate = (h12, min, p) => {
+    if (isHourDisabled(h12, p)) return;
+    
+    let h24Val = parseInt(h12);
+    if (p === "PM" && h24Val < 12) h24Val += 12;
+    if (p === "AM" && h24Val === 12) h24Val = 0;
+    
+    // If hour is at min, ensure minutes aren't past
+    let finalMin = min;
+    if (h24Val === minH24 && parseInt(min) < minMin) {
+      finalMin = minMin.toString().padStart(2, "0");
+    }
+    
+    onChange(`${h24Val.toString().padStart(2, "0")}:${finalMin.padStart(2, "0")}`);
   };
 
   const calculateFromPoint = (e) => {
@@ -1224,11 +1255,16 @@ const ClockPickerView = ({ value, onChange, onClose }) => {
       let h = Math.round(angle / 30);
       if (h === 0) h = 12;
       if (h > 12) h = 1;
-      handleUpdate(h, minute, period);
+      
+      if (!isHourDisabled(h, period)) {
+        handleUpdate(h, minute, period);
+      }
     } else {
       let m = Math.round(angle / 6);
       if (m >= 60) m = 0;
-      handleUpdate(hour12, m.toString(), period);
+      if (!isMinuteDisabled(m)) {
+        handleUpdate(hour12, m.toString(), period);
+      }
     }
   };
 
@@ -1273,20 +1309,25 @@ const ClockPickerView = ({ value, onChange, onClose }) => {
 
   return (
     <div className="p-5 w-[280px] bg-white select-none">
-      {/* Header with AM/PM and View Toggle */}
       <div className="flex flex-col gap-4 mb-6">
         <div className="flex items-center justify-between">
           <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
-            {periods.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => handleUpdate(hour12, minute, p)}
-                className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all ${p === period ? "bg-white text-[#f37338] shadow-sm" : "text-gray-400 hover:text-gray-600"}`}
-              >
-                {p}
-              </button>
-            ))}
+            {periods.map((p) => {
+              const disabled = isPeriodDisabled(p);
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => handleUpdate(hour12, minute, p)}
+                  className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all 
+                    ${disabled ? "opacity-30 cursor-not-allowed" : ""}
+                    ${p === period && !disabled ? "bg-white text-[#f37338] shadow-sm" : "text-gray-400 hover:text-gray-600"}`}
+                >
+                  {p}
+                </button>
+              );
+            })}
           </div>
           <div className="flex items-center gap-2 text-[15px] font-black">
             <button
@@ -1308,26 +1349,25 @@ const ClockPickerView = ({ value, onChange, onClose }) => {
         </div>
       </div>
 
-      {/* Clock Face */}
       <div
         ref={clockRef}
         onMouseDown={handleMouseDown}
         onTouchStart={handleMouseDown}
         className="relative w-52 h-52 mx-auto bg-gray-50 rounded-full border border-gray-100 shadow-inner flex items-center justify-center cursor-crosshair"
       >
-        {/* Center Point */}
         <div className="absolute w-2 h-2 bg-[#f37338] rounded-full z-20" />
 
-        {/* Numbers */}
         {(view === "hours" ? hours : minutes).map((num, i) => {
           const { x, y } = getPosition(i, 12, 80);
           const isSelected =
             view === "hours" ? num === hour12 : parseInt(minute) === num;
+          const disabled = view === "hours" ? isHourDisabled(num, period) : isMinuteDisabled(num);
 
           return (
             <div
               key={num}
-              className={`absolute w-10 h-10 flex items-center justify-center text-[13px] font-bold rounded-full transition-all z-30 pointer-events-none ${isSelected ? "text-white bg-[#f37338] shadow-lg scale-110" : "text-gray-400/60"}`}
+              className={`absolute w-10 h-10 flex items-center justify-center text-[13px] font-bold rounded-full transition-all z-30 pointer-events-none 
+                ${disabled ? "text-gray-200" : isSelected ? "text-white bg-[#f37338] shadow-lg scale-110" : "text-gray-400/60"}`}
               style={{
                 transform: `translate(${x}px, ${y}px)`,
               }}
@@ -1337,7 +1377,6 @@ const ClockPickerView = ({ value, onChange, onClose }) => {
           );
         })}
 
-        {/* Selection Line */}
         <div
           className="absolute w-0.5 bg-[#f37338]/30 origin-bottom z-0 pointer-events-none"
           style={{
@@ -1350,7 +1389,6 @@ const ClockPickerView = ({ value, onChange, onClose }) => {
           }}
         />
 
-        {/* Selected Handle (Visual only) */}
         <div
           className={`absolute w-11 h-11 bg-[#f37338] rounded-full shadow-2xl flex items-center justify-center text-white text-[14px] font-black z-40 pointer-events-none border-2 border-white`}
           style={{
@@ -1367,7 +1405,7 @@ const ClockPickerView = ({ value, onChange, onClose }) => {
 
       <div className="mt-8 flex items-center justify-between">
         <p className="text-[10px] font-medium text-gray-400">
-          Drag to set {view === "hours" ? "hour" : "minutes"}
+          {view === "hours" ? "Select hour" : "Select minutes"}
         </p>
         <button
           type="button"
@@ -1388,6 +1426,7 @@ const CustomSelect = ({
   icon: Icon,
   isCalendar,
   isTime,
+  minTime,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
@@ -1422,7 +1461,14 @@ const CustomSelect = ({
             .map((s) => s.padStart(2, "0"))
             .join(":")
         : val;
-      onChange(formatted);
+      
+      // Check against minTime
+      if (minTime && formatted < minTime) {
+        onChange(minTime);
+        setLocalTime(minTime);
+      } else {
+        onChange(formatted);
+      }
     }
   };
 
@@ -1517,6 +1563,7 @@ const CustomSelect = ({
             ) : isTime ? (
               <ClockPickerView
                 value={value}
+                minTime={minTime}
                 onChange={(val) => {
                   onChange(val);
                 }}
@@ -2646,6 +2693,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                             }
                             icon={Clock}
                             isTime={true}
+                            minTime={getMinimumTimeForDate(scheduledDatePart || minScheduleDate)}
                           />
                         </div>
                       </div>
