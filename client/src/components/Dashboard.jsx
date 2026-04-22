@@ -353,19 +353,28 @@ function PlatformBadge({ platform }) {
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 4,
-        padding: "3px 8px",
-        borderRadius: css.r_pill,
+        gap: 6,
+        padding: "4px 10px",
+        borderRadius: "var(--r-chip)",
         fontSize: 10,
-        fontWeight: 700,
-        background: platform.success ? "#e6f4ea" : "#fde8e8",
-        color: platform.success ? "#1a6b34" : "#9b1c1c",
-        border: `1px solid ${platform.success ? "#b7dfc3" : "#f5b8b8"}`,
+        fontWeight: 600,
+        background: "rgba(20,20,19,0.03)",
+        color: css.ink,
+        border: "1px solid rgba(20,20,19,0.06)",
+        transition: "all 0.2s",
       }}
     >
       {getPlatformIcon(platform.id)}
-      <span>{platform.name}</span>
-      {platform.success ? <CheckCircle2 size={10} /> : <XCircle size={10} />}
+      <span style={{ opacity: 0.8 }}>{platform.name}</span>
+      <div
+        style={{
+          width: 5,
+          height: 5,
+          borderRadius: "50%",
+          background: platform.success ? "#22c55e" : "#ef4444",
+          marginLeft: 2,
+        }}
+      />
     </div>
   );
 }
@@ -373,7 +382,6 @@ function PlatformBadge({ platform }) {
 /* ── Grid card ── */
 function GridCard({ post, onOpen, formatDate }) {
   const platforms = buildPlatforms(post);
-  const successCount = platforms.filter((p) => p.success).length;
   const isScheduled = post.status === "scheduled";
 
   return (
@@ -381,125 +389,126 @@ function GridCard({ post, onOpen, formatDate }) {
       onClick={onOpen}
       style={{
         background: css.lifted,
-        borderRadius: css.r_hero,
-        border: "1.5px solid rgba(20,20,19,0.06)",
+        borderRadius: "var(--r-hero)",
+        border: "1px solid rgba(20,20,19,0.08)",
         overflow: "hidden",
         cursor: "pointer",
         display: "flex",
         flexDirection: "column",
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        boxShadow: "0 8px 30px rgba(0,0,0,0.02)",
+        transition: "all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
+        height: "100%",
+        width: "100%",
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = css.shadow;
-        e.currentTarget.style.transform = "translateY(-6px)";
-        e.currentTarget.style.borderColor = "rgba(243, 115, 56, 0.2)"; // mc arc subtle highlight
+        e.currentTarget.style.boxShadow = "0 20px 40px rgba(0,0,0,0.06)";
+        e.currentTarget.style.transform = "translateY(-4px)";
+        e.currentTarget.style.borderColor = "rgba(20,20,19,0.12)";
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = "0 8px 30px rgba(0,0,0,0.02)";
+        e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.02)";
         e.currentTarget.style.transform = "none";
-        e.currentTarget.style.borderColor = "rgba(20,20,19,0.06)";
+        e.currentTarget.style.borderColor = "rgba(20,20,19,0.08)";
       }}
     >
       <div style={{ position: "relative" }}>
         <MediaThumb
           post={post}
-          style={{ width: "100%", height: 184, borderRadius: 0 }}
+          style={{ width: "100%", height: 180, borderRadius: 0 }}
         />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "1px", background: "rgba(20,20,19,0.03)" }} />
 
-        {/* Modern Label-style Badge (Frosted Glass) */}
+        {/* Media Type Label */}
         <div
           style={{
             position: "absolute",
-            top: 14,
-            right: 14,
-            padding: "4px 12px",
-            borderRadius: css.r_pill,
-            background: "rgba(20,20,19,0.65)",
-            backdropFilter: "blur(10px)",
-            color: css.canvas,
-            border: "1px solid rgba(255,255,255,0.15)",
+            top: 12,
+            right: 12,
+            padding: "4px 10px",
+            borderRadius: "var(--r-chip)",
+            background: "rgba(20,20,19,0.7)",
+            backdropFilter: "blur(8px)",
+            color: "#fff",
             fontSize: 8,
             fontWeight: 800,
             textTransform: "uppercase",
-            letterSpacing: "0.12em",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            letterSpacing: "0.1em",
+            border: "1px solid rgba(255,255,255,0.1)",
           }}
         >
           {post.media_type || "media"}
         </div>
 
-        {/* Count Badge */}
+        {/* Platform Count pill */}
         {platforms.length > 0 && (
           <div
             style={{
               position: "absolute",
-              bottom: 14,
-              left: 14,
-              padding: "4px 12px",
-              borderRadius: css.r_pill,
-              background: "rgba(255,255,255,0.85)",
-              backdropFilter: "blur(8px)",
+              bottom: 12,
+              left: 12,
+              padding: "4px 10px",
+              borderRadius: "var(--r-chip)",
+              background: "rgba(255,255,255,0.92)",
+              backdropFilter: "blur(4px)",
               color: css.ink,
-              border: "1px solid rgba(255,255,255,0.5)",
+              border: "1px solid rgba(0,0,0,0.05)",
               fontSize: 9,
               fontWeight: 700,
-              boxShadow: "0 4px 15px rgba(0,0,0,0.08)",
               display: "flex",
               alignItems: "center",
-              gap: 6,
+              gap: 5,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
             }}
           >
             <div
               style={{
-                width: 6,
-                height: 6,
+                width: 5,
+                height: 5,
                 borderRadius: "50%",
                 background: isScheduled ? css.arc : "#22c55e",
               }}
             />
-            {platforms.length} Platform{platforms.length > 1 ? "s" : ""}
+            {platforms.length} {platforms.length > 1 ? "Platforms" : "Platform"}
           </div>
         )}
       </div>
 
       <div
         style={{
-          padding: "20px 24px 24px",
+          padding: "18px 20px 20px",
           flex: 1,
           display: "flex",
           flexDirection: "column",
         }}
       >
-        <div className="eyebrow" style={{ fontSize: 10, marginBottom: 12 }}>
+        <div className="eyebrow" style={{ fontSize: 9, marginBottom: 10, color: css.slate, opacity: 0.7 }}>
           {formatDate(isScheduled ? post.scheduled_for : post.posted_at)}
         </div>
 
         <p
           style={{
-            fontSize: 15,
-            fontWeight: 500,
+            fontSize: 14,
+            fontWeight: 550,
             color: css.ink,
             margin: "0 0 16px",
-            lineHeight: 1.5,
-            flex: 1,
+            lineHeight: 1.45,
             display: "-webkit-box",
-            WebkitLineClamp: 2,
+            WebkitLineClamp: 3,
             WebkitBoxOrient: "vertical",
             overflow: "hidden",
             letterSpacing: "-0.01em",
+            height: "4.35em", // Strictly 3 lines
+            marginBottom: 16,
           }}
         >
           {post.caption || (
-            <span
-              style={{ color: css.dust, fontStyle: "italic", fontWeight: 400 }}
-            >
-              No caption provided
+            <span style={{ color: css.dust, fontStyle: "italic", fontWeight: 400 }}>
+              Untitled post
             </span>
           )}
         </p>
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
           {platforms.slice(0, 3).map((p) => (
             <PlatformBadge key={p.id} platform={p} />
           ))}
@@ -509,11 +518,11 @@ function GridCard({ post, onOpen, formatDate }) {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                padding: "4px 10px",
-                borderRadius: css.r_pill,
+                padding: "3px 8px",
+                borderRadius: "var(--r-chip)",
                 background: "rgba(20,20,19,0.04)",
                 color: css.slate,
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: 700,
               }}
             >
@@ -832,7 +841,7 @@ function Dashboard() {
       Math.floor((availableWidth + gridGap) / (minCardWidth + gridGap)),
     );
 
-    const rows = columns === 1 ? 3 : 2;
+    const rows = columns === 1 ? 5 : 3;
     return columns * rows;
   };
 
@@ -969,8 +978,8 @@ function Dashboard() {
           alignItems: "center",
           justifyContent: "center",
           gap: 8,
-          marginTop: 20,
-          marginBottom: 0,
+          marginTop: 24,
+          marginBottom: 40,
         }}
       >
         <button

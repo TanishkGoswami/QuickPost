@@ -595,7 +595,7 @@ export default function PostPreviewModal({ post, onClose }) {
                 <Play className="w-5 h-5 text-blue-600 fill-blue-600" />
              </div>
              <div>
-              <h2 className="text-lg font-bold text-gray-900 leading-tight">{post.caption?.split('\n')[0] || 'Post Preview'}</h2>
+              <h2 className="text-lg font-bold text-gray-900 leading-tight line-clamp-1">{post.caption?.split('\n')[0] || 'Post Preview'}</h2>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-xs text-gray-400 font-medium">{formatDate(post.posted_at)}</span>
                 <span className="w-1 h-1 rounded-full bg-gray-300" />
