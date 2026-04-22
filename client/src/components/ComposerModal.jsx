@@ -16,6 +16,8 @@ import {
   AtSign,
   ChevronLeft,
   ChevronRight,
+  Calendar,
+  Clock,
 } from "lucide-react";
 import { Reorder, AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
@@ -299,7 +301,7 @@ const PLATFORM_POST_TYPES = {
   pinterest: ["post"],
   bluesky: ["post"],
   mastodon: ["post"],
-  reddit: ["post"]
+  reddit: ["post"],
 };
 
 function getPresetsForPlatform(platformId) {
@@ -360,7 +362,7 @@ function PlatformPreviewPanel({
 
   const resolvedCaption = useMemo(
     () => resolveMentions(caption, activeId),
-    [caption, activeId, connectedAccounts]
+    [caption, activeId, connectedAccounts],
   );
 
   /* ── Stable Blob URL management ── */
@@ -445,7 +447,7 @@ function PlatformPreviewPanel({
               onClick={(e) => {
                 e.stopPropagation();
                 setActiveMediaIndex((prev) =>
-                  prev > 0 ? prev - 1 : mediaFiles.length - 1
+                  prev > 0 ? prev - 1 : mediaFiles.length - 1,
                 );
               }}
               className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100 z-10"
@@ -456,7 +458,7 @@ function PlatformPreviewPanel({
               onClick={(e) => {
                 e.stopPropagation();
                 setActiveMediaIndex((prev) =>
-                  prev < mediaFiles.length - 1 ? prev + 1 : 0
+                  prev < mediaFiles.length - 1 ? prev + 1 : 0,
                 );
               }}
               className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100 z-10"
@@ -478,7 +480,9 @@ function PlatformPreviewPanel({
                 <div
                   key={i}
                   className={`w-1 h-1 rounded-full transition-all ${
-                    i === activeMediaIndex ? "bg-white scale-125" : "bg-white/40"
+                    i === activeMediaIndex
+                      ? "bg-white scale-125"
+                      : "bg-white/40"
                   }`}
                 />
               ))}
@@ -497,7 +501,8 @@ function PlatformPreviewPanel({
     resolvedCaption?.length > 60
       ? resolvedCaption.slice(0, 60) + "…"
       : resolvedCaption || "Your Video Title";
-  const platformUsername = connectedAccounts[activeId]?.username || "your_account";
+  const platformUsername =
+    connectedAccounts[activeId]?.username || "your_account";
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
@@ -705,7 +710,9 @@ function PlatformPreviewPanel({
                 </p>
                 {caption && (
                   <p className="text-[11px] text-gray-900 mt-1 leading-relaxed">
-                    <span className="font-semibold mr-1">{platformUsername}</span>
+                    <span className="font-semibold mr-1">
+                      {platformUsername}
+                    </span>
                     {truncatedCaption}
                   </p>
                 )}
@@ -1075,6 +1082,475 @@ function PlatformPreviewPanel({
   );
 }
 
+const CalendarView = ({ value, onChange }) => {
+  const [viewDate, setViewDate] = useState(new Date(value || Date.now()));
+  const daysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
+  const firstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
+
+  const month = viewDate.getMonth();
+  const year = viewDate.getFullYear();
+
+  const handlePrevMonth = () => setViewDate(new Date(year, month - 1, 1));
+  const handleNextMonth = () => setViewDate(new Date(year, month + 1, 1));
+
+  const days = [];
+  const startDay = firstDayOfMonth(year, month);
+  const totalDays = daysInMonth(year, month);
+
+  // Padding for start of month
+  for (let i = 0; i < startDay; i++) days.push(null);
+  for (let i = 1; i <= totalDays; i++) days.push(i);
+
+  const isSelected = (day) => {
+    if (!day) return false;
+    const d = new Date(year, month, day);
+    const selected = new Date(value);
+    return (
+      d.getDate() === selected.getDate() &&
+      d.getMonth() === selected.getMonth() &&
+      d.getFullYear() === selected.getFullYear()
+    );
+  };
+
+  const isToday = (day) => {
+    if (!day) return false;
+    const d = new Date(year, month, day);
+    const today = new Date();
+    return (
+      d.getDate() === today.getDate() &&
+      d.getMonth() === today.getMonth() &&
+      d.getFullYear() === today.getFullYear()
+    );
+  };
+
+  const isPast = (day) => {
+    if (!day) return true;
+    const d = new Date(year, month, day);
+    d.setHours(23, 59, 59, 999);
+    return d < new Date();
+  };
+
+  return (
+    <div className="p-4 w-[280px]">
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="text-[13px] font-bold text-gray-900">
+          {viewDate.toLocaleString("default", { month: "long", year: "numeric" })}
+        </h4>
+        <div className="flex gap-1">
+          <button
+            onClick={handlePrevMonth}
+            className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900 transition-colors"
+          >
+            <ChevronLeft size={16} />
+          </button>
+          <button
+            onClick={handleNextMonth}
+            className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900 transition-colors"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
+          <div
+            key={d}
+            className="text-[10px] font-bold text-gray-400 text-center uppercase py-1"
+          >
+            {d}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {days.map((day, i) => (
+          <button
+            key={i}
+            disabled={!day || isPast(day)}
+            onClick={() => {
+              const selected = new Date(year, month, day);
+              const local = new Date(
+                selected.getTime() - selected.getTimezoneOffset() * 60000,
+              );
+              onChange(local.toISOString().slice(0, 10));
+            }}
+            className={`
+              aspect-square rounded-lg text-[11px] font-semibold transition-all flex items-center justify-center
+              ${!day ? "invisible" : ""}
+              ${isPast(day) ? "text-gray-300 cursor-not-allowed" : "hover:bg-[#f37338]/10 hover:text-[#f37338]"}
+              ${isSelected(day) ? "bg-[#f37338] text-white shadow-lg shadow-[#f37338]/30 scale-110" : ""}
+              ${isToday(day) && !isSelected(day) ? "text-[#f37338] border border-[#f37338]/20 bg-[#f37338]/5" : ""}
+            `}
+          >
+            {day}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const ClockPickerView = ({ value, onChange, onClose }) => {
+  const [h24, minute] = (value || "00:00").split(":");
+  const h24Int = parseInt(h24);
+  const period = h24Int >= 12 ? "PM" : "AM";
+  const hour12 = h24Int % 12 || 12;
+  const [view, setView] = useState("hours"); // "hours" | "minutes"
+  const clockRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const periods = ["AM", "PM"];
+  const hours = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+  const minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+
+  const handleUpdate = (h12, min, p) => {
+    let h24Val = parseInt(h12);
+    if (p === "PM" && h24Val < 12) h24Val += 12;
+    if (p === "AM" && h24Val === 12) h24Val = 0;
+    onChange(`${h24Val.toString().padStart(2, "0")}:${min.padStart(2, "0")}`);
+  };
+
+  const calculateFromPoint = (e) => {
+    if (!clockRef.current) return;
+    const rect = clockRef.current.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const px = e.clientX || (e.touches && e.touches[0].clientX);
+    const py = e.clientY || (e.touches && e.touches[0].clientY);
+
+    const dx = px - cx;
+    const dy = py - cy;
+    let angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+    if (angle < 0) angle += 360;
+
+    if (view === "hours") {
+      let h = Math.round(angle / 30);
+      if (h === 0) h = 12;
+      if (h > 12) h = 1;
+      handleUpdate(h, minute, period);
+    } else {
+      let m = Math.round(angle / 6);
+      if (m >= 60) m = 0;
+      handleUpdate(hour12, m.toString(), period);
+    }
+  };
+
+  const handleMouseDown = (e) => {
+    setIsDragging(true);
+    calculateFromPoint(e);
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (isDragging) {
+        calculateFromPoint(e);
+      }
+    };
+    const handleMouseUp = () => {
+      if (isDragging) {
+        setIsDragging(false);
+        if (view === "hours") setView("minutes");
+      }
+    };
+
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleMouseUp);
+      window.addEventListener("touchmove", handleMouseMove);
+      window.addEventListener("touchend", handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      window.removeEventListener("touchmove", handleMouseMove);
+      window.removeEventListener("touchend", handleMouseUp);
+    };
+  }, [isDragging, view, hour12, minute, period]);
+
+  const getPosition = (index, total, radius) => {
+    const angle = (index / total) * 360 - 90;
+    const x = radius * Math.cos((angle * Math.PI) / 180);
+    const y = radius * Math.sin((angle * Math.PI) / 180);
+    return { x, y };
+  };
+
+  return (
+    <div className="p-5 w-[280px] bg-white select-none">
+      {/* Header with AM/PM and View Toggle */}
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+            {periods.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => handleUpdate(hour12, minute, p)}
+                className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all ${p === period ? "bg-white text-[#f37338] shadow-sm" : "text-gray-400 hover:text-gray-600"}`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 text-[15px] font-black">
+            <button
+              type="button"
+              onClick={() => setView("hours")}
+              className={`${view === "hours" ? "text-[#f37338]" : "text-gray-300"}`}
+            >
+              {hour12.toString().padStart(2, "0")}
+            </button>
+            <span className="text-gray-200">:</span>
+            <button
+              type="button"
+              onClick={() => setView("minutes")}
+              className={`${view === "minutes" ? "text-[#f37338]" : "text-gray-300"}`}
+            >
+              {minute.padStart(2, "0")}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Clock Face */}
+      <div
+        ref={clockRef}
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleMouseDown}
+        className="relative w-52 h-52 mx-auto bg-gray-50 rounded-full border border-gray-100 shadow-inner flex items-center justify-center cursor-crosshair"
+      >
+        {/* Center Point */}
+        <div className="absolute w-2 h-2 bg-[#f37338] rounded-full z-20" />
+
+        {/* Numbers */}
+        {(view === "hours" ? hours : minutes).map((num, i) => {
+          const { x, y } = getPosition(i, 12, 80);
+          const isSelected =
+            view === "hours"
+              ? num === hour12
+              : parseInt(minute) === num;
+
+          return (
+            <div
+              key={num}
+              className={`absolute w-10 h-10 flex items-center justify-center text-[13px] font-bold rounded-full transition-all z-30 pointer-events-none ${isSelected ? "text-white bg-[#f37338] shadow-lg scale-110" : "text-gray-400/60"}`}
+              style={{
+                transform: `translate(${x}px, ${y}px)`,
+              }}
+            >
+              {num === 0 && view === "minutes" ? "00" : num}
+            </div>
+          );
+        })}
+
+        {/* Selection Line */}
+        <div
+          className="absolute w-0.5 bg-[#f37338]/30 origin-bottom z-0 pointer-events-none"
+          style={{
+            height: "80px",
+            bottom: "50%",
+            transform: `rotate(${(view === "hours" ? (hour12 % 12) : parseInt(minute)) * (view === "hours" ? 30 : 6)}deg)`,
+            transition: isDragging ? "none" : "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          }}
+        />
+
+        {/* Selected Handle (Visual only) */}
+        <div
+          className={`absolute w-11 h-11 bg-[#f37338] rounded-full shadow-2xl flex items-center justify-center text-white text-[14px] font-black z-40 pointer-events-none border-2 border-white`}
+          style={{
+            transform: `rotate(${(view === "hours" ? (hour12 % 12) : parseInt(minute)) * (view === "hours" ? 30 : 6)}deg) translateY(-80px) rotate(-${(view === "hours" ? (hour12 % 12) : parseInt(minute)) * (view === "hours" ? 30 : 6)}deg)`,
+            transition: isDragging ? "none" : "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            boxShadow: "0 0 20px rgba(243, 115, 56, 0.4)",
+          }}
+        >
+          {view === "hours" ? hour12 : minute.padStart(2, "0")}
+        </div>
+      </div>
+
+      <div className="mt-8 flex items-center justify-between">
+        <p className="text-[10px] font-medium text-gray-400">
+          Drag to set {view === "hours" ? "hour" : "minutes"}
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-4 py-2 bg-[#f37338] text-white text-[11px] font-bold rounded-lg shadow-md hover:bg-[#e0662d] transition-all"
+        >
+          Done
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const CustomSelect = ({
+  value,
+  options,
+  onChange,
+  icon: Icon,
+  isCalendar,
+  isTime,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+  const [localTime, setLocalTime] = useState(value);
+
+  useEffect(() => {
+    setLocalTime(value);
+  }, [value]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleTimeInput = (e) => {
+    const val = e.target.value.replace(/[^0-9:]/g, "");
+    setLocalTime(val);
+
+    // Validate HH:MM format
+    if (/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(val)) {
+      const formatted = val.includes(":")
+        ? val
+            .split(":")
+            .map((s) => s.padStart(2, "0"))
+            .join(":")
+        : val;
+      onChange(formatted);
+    }
+  };
+
+  const selectedOption = isCalendar
+    ? {
+        label: new Date(value).toLocaleDateString(undefined, {
+          weekday: "short",
+          day: "2-digit",
+          month: "short",
+        }),
+      }
+    : isTime
+      ? {
+          label: (() => {
+            const [h24, min] = (value || "00:00").split(":");
+            const h24Int = parseInt(h24);
+            const period = h24Int >= 12 ? "PM" : "AM";
+            const h12 = h24Int % 12 || 12;
+            return `${h12.toString().padStart(2, "0")}:${min} ${period}`;
+          })(),
+        }
+      : options.find((o) => (o.value || o) === value);
+
+  const displayTime = isTime ? (() => {
+    const [h24, min] = (localTime || "00:00").split(":");
+    if (!h24 || !min) return localTime;
+    const h24Int = parseInt(h24);
+    if (isNaN(h24Int)) return localTime;
+    const period = h24Int >= 12 ? "PM" : "AM";
+    const h12 = h24Int % 12 || 12;
+    return `${h12.toString().padStart(2, "0")}:${min} ${period}`;
+  })() : "";
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <div
+        className={`w-full flex items-center justify-between pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl transition-all ${isOpen ? "ring-2 ring-[#f37338]/10 border-[#f37338] bg-white" : "hover:bg-white"}`}
+      >
+        <Icon
+          className={`absolute left-3 w-4 h-4 transition-colors ${isOpen ? "text-[#f37338]" : "text-gray-400"}`}
+        />
+        {isTime ? (
+          <input
+            type="text"
+            value={displayTime}
+            onChange={handleTimeInput}
+            onFocus={() => setIsOpen(true)}
+            placeholder="00:00 AM"
+            className="w-full bg-transparent border-none outline-none text-[13px] font-semibold text-gray-900 placeholder:text-gray-300"
+            readOnly={!isOpen} // Prevent typing in 12h format directly to avoid parsing complexity for now, or just let them use the picker
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setIsOpen(!isOpen)}
+            className="w-full text-left truncate outline-none text-[13px] font-semibold text-gray-900"
+          >
+            {selectedOption?.label || selectedOption}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex-shrink-0 ml-2"
+        >
+          <ChevronDown
+            className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+          />
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 5, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 5, scale: 0.95 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className={`absolute z-[100] mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl overflow-hidden ${isCalendar || isTime ? "left-0" : "w-full"}`}
+            style={{ top: "100%" }}
+          >
+            {isCalendar ? (
+              <CalendarView
+                value={value}
+                onChange={(val) => {
+                  onChange(val);
+                  setIsOpen(false);
+                }}
+              />
+            ) : isTime ? (
+              <ClockPickerView
+                value={value}
+                onChange={(val) => {
+                  onChange(val);
+                  // Only close if it's a minute selection (which is the last step)
+                  // But wait, the user might want to pick hour again.
+                  // Let's add a "Done" button or just let them click outside.
+                  // For now, let's keep it open to allow tweaks,
+                  // but I'll add a "Done" button inside ClockPickerView.
+                }}
+                onClose={() => setIsOpen(false)}
+              />
+            ) : (
+              <div className="py-1 max-h-60 overflow-y-auto custom-scrollbar">
+                {options.map((opt) => {
+                  const val = opt.value || opt;
+                  const lbl = opt.label || opt;
+                  const isSelected = val === value;
+                  return (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => {
+                        onChange(val);
+                        setIsOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-2.5 text-[13px] font-medium transition-colors hover:bg-[#f37338]/5 ${isSelected ? "text-[#f37338] bg-[#f37338]/5" : "text-gray-700"}`}
+                    >
+                      {lbl}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 function ComposerModal({ isOpen, onClose, onPostCreated }) {
   const { connectedAccounts } = useAuth();
   const { addJob } = useUploadJobs();
@@ -1109,8 +1585,8 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
   React.useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const isMobile = windowWidth < 768;
@@ -1128,13 +1604,13 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
   const availablePostTypes = useMemo(() => {
     if (selectedChannels.length === 0) return ["post", "story", "reel"];
-    
+
     let common = PLATFORM_POST_TYPES[selectedChannels[0]] || ["post"];
     for (let i = 1; i < selectedChannels.length; i++) {
       const types = PLATFORM_POST_TYPES[selectedChannels[i]] || ["post"];
-      common = common.filter(t => types.includes(t));
+      common = common.filter((t) => types.includes(t));
     }
-    
+
     return common.length > 0 ? common : ["post"];
   }, [selectedChannels]);
 
@@ -1144,11 +1620,96 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     }
   }, [availablePostTypes, postType]);
 
+  const toLocalDateTimeValue = (date) => {
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 16);
+  };
+
   // Min datetime for scheduling = now + 2 minutes
   const minScheduleDateTime = React.useMemo(() => {
     const d = new Date(Date.now() + 2 * 60 * 1000);
-    return d.toISOString().slice(0, 16);
+    return toLocalDateTimeValue(d);
   }, []);
+
+  const minScheduleDate = minScheduleDateTime.slice(0, 10);
+  const minScheduleTime = minScheduleDateTime.slice(11, 16);
+  const scheduledDatePart = scheduledAt ? scheduledAt.slice(0, 10) : "";
+  const scheduledTimePart = scheduledAt ? scheduledAt.slice(11, 16) : "";
+
+  const scheduleDateOptions = useMemo(() => {
+    const options = [];
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+
+      const value = toLocalDateTimeValue(d).slice(0, 10);
+      const label = d.toLocaleDateString(undefined, {
+        weekday: "short",
+        day: "2-digit",
+        month: "short",
+      });
+
+      options.push({ value, label });
+    }
+
+    return options;
+  }, []);
+
+  const getMinimumTimeForDate = (datePart) => {
+    if (datePart !== minScheduleDate) return "00:00";
+    return minScheduleTime;
+  };
+
+  const buildTimeOptions = (datePart) => {
+    const options = [];
+    const minTime = getMinimumTimeForDate(datePart || minScheduleDate);
+
+    for (let hour = 0; hour < 24; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        const value = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+        if (value >= minTime) {
+          options.push(value);
+        }
+      }
+    }
+
+    return options;
+  };
+
+  const scheduleTimeOptions = useMemo(
+    () => buildTimeOptions(scheduledDatePart || minScheduleDate),
+    [scheduledDatePart, minScheduleDate, minScheduleTime],
+  );
+
+  const updateScheduledAt = (datePart, timePart) => {
+    if (!datePart || !timePart) {
+      setScheduledAt("");
+      return;
+    }
+
+    setScheduledAt(`${datePart}T${timePart}`);
+  };
+
+  React.useEffect(() => {
+    if (!isScheduled) return;
+
+    const dateValue = scheduledDatePart || minScheduleDate;
+    const options = buildTimeOptions(dateValue);
+    const nextTime =
+      scheduledTimePart && options.includes(scheduledTimePart)
+        ? scheduledTimePart
+        : options[0] || "";
+
+    if (!nextTime) return;
+
+    const nextValue = `${dateValue}T${nextTime}`;
+    if (scheduledAt !== nextValue) {
+      setScheduledAt(nextValue);
+    }
+  }, [isScheduled, scheduledDatePart, minScheduleDate, minScheduleTime]);
 
   const selectedRatio = useMemo(() => {
     return (
@@ -1450,27 +2011,42 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
   return (
     <div className="modal-overlay" onClick={handleClose}>
-      <div
-        style={{
-          background: 'var(--canvas-lifted)',
-          borderRadius: isMobile ? '0' : 'var(--r-hero)',
-          boxShadow: 'var(--shadow-deep)',
-          width: '100%',
-          maxWidth: isMobile ? '100%' : '1100px',
-          height: isMobile ? '100%' : 'auto',
-          maxHeight: isMobile ? '100%' : '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          position: isMobile ? 'fixed' : 'relative',
-          inset: isMobile ? 0 : 'auto',
+      <div style={{
+          background: "var(--canvas-lifted)",
+          borderRadius: isMobile ? "0" : "var(--r-hero)",
+          boxShadow: "var(--shadow-deep)",
+          width: "100%",
+          maxWidth: isMobile ? "100%" : "1100px",
+          height: isMobile ? "100%" : "auto",
+          maxHeight: isMobile ? "100%" : "90vh",
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          position: isMobile ? "fixed" : "relative",
+          inset: isMobile ? 0 : "auto",
         }}
-        onClick={(e) => e.stopPropagation()}
-      >
+        onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div style={{ borderBottom: '1px solid rgba(20,20,19,0.08)', padding: isMobile ? '12px 16px' : '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--canvas-lifted)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <h2 style={{ fontSize: isMobile ? 15 : 16, fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>
+        <div
+          style={{
+            borderBottom: "1px solid rgba(20,20,19,0.08)",
+            padding: isMobile ? "12px 16px" : "14px 24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: "var(--canvas-lifted)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <h2
+              style={{
+                fontSize: isMobile ? 15 : 16,
+                fontWeight: 600,
+                color: "var(--ink)",
+                letterSpacing: "-0.02em",
+                margin: 0,
+              }}
+            >
               {isMobile ? "Composer" : "Create Post"}
             </h2>
           </div>
@@ -1533,16 +2109,46 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
         {/* Mobile Tab Switcher */}
         {isMobile && (
-          <div style={{ display: 'flex', background: 'var(--canvas-lifted)', borderBottom: '1px solid rgba(20,20,19,0.08)' }}>
-            <button 
+          <div
+            style={{
+              display: "flex",
+              background: "var(--canvas-lifted)",
+              borderBottom: "1px solid rgba(20,20,19,0.08)",
+            }}
+          >
+            <button
               onClick={() => setMobileActiveTab("edit")}
-              style={{ flex: 1, padding: '12px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: mobileActiveTab === "edit" ? 'var(--ink)' : 'var(--slate)', border: 'none', background: 'transparent', borderBottom: `2.5px solid ${mobileActiveTab === "edit" ? 'var(--ink)' : 'transparent'}`, transition: 'all 0.2s' }}
+              style={{
+                flex: 1,
+                padding: "12px",
+                fontSize: 12,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                color:
+                  mobileActiveTab === "edit" ? "var(--ink)" : "var(--slate)",
+                border: "none",
+                background: "transparent",
+                borderBottom: `2.5px solid ${mobileActiveTab === "edit" ? "var(--ink)" : "transparent"}`,
+                transition: "all 0.2s",
+              }}
             >
               1. Compose
             </button>
-            <button 
+            <button
               onClick={() => setMobileActiveTab("preview")}
-              style={{ flex: 1, padding: '12px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: mobileActiveTab === "preview" ? 'var(--ink)' : 'var(--slate)', border: 'none', background: 'transparent', borderBottom: `2.5px solid ${mobileActiveTab === "preview" ? 'var(--ink)' : 'transparent'}`, transition: 'all 0.2s' }}
+              style={{
+                flex: 1,
+                padding: "12px",
+                fontSize: 12,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                color:
+                  mobileActiveTab === "preview" ? "var(--ink)" : "var(--slate)",
+                border: "none",
+                background: "transparent",
+                borderBottom: `2.5px solid ${mobileActiveTab === "preview" ? "var(--ink)" : "transparent"}`,
+                transition: "all 0.2s",
+              }}
             >
               2. Preview
             </button>
@@ -1550,15 +2156,22 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
         )}
 
         {/* Body - Split Layout */}
-        <div style={{ display: 'flex', height: isMobile ? 'calc(100vh - 110px)' : 'calc(90vh - 120px)', flex: 1 }}>
+        <div
+          style={{
+            display: "flex",
+            height: isMobile ? "calc(100vh - 110px)" : "calc(90vh - 120px)",
+            flex: 1,
+          }}
+        >
           {/* Left Panel - Composer */}
-          <div 
-            className="flex-1 overflow-y-auto" 
-            style={{ 
-              padding: isMobile ? '20px 16px' : '24px', 
-              borderRight: isMobile ? 'none' : '1px solid rgba(20,20,19,0.08)', 
-              background: 'var(--canvas)',
-              display: isMobile && mobileActiveTab !== "edit" ? 'none' : 'block'
+          <div
+            className="flex-1 overflow-y-auto"
+            style={{
+              padding: isMobile ? "20px 16px" : "24px",
+              borderRight: isMobile ? "none" : "1px solid rgba(20,20,19,0.08)",
+              background: "var(--canvas)",
+              display:
+                isMobile && mobileActiveTab !== "edit" ? "none" : "block",
             }}
           >
             {/* Channel Selection with Remove Badges */}
@@ -1572,24 +2185,56 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
             {/* Post Type Selection */}
             <div className="mb-6">
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">Publish As</label>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">
+                Publish As
+              </label>
               <div className="flex gap-2">
                 {availablePostTypes.includes("post") && (
-                  <label className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "post" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}>
-                    <input type="radio" value="post" checked={postType === "post"} onChange={() => setPostType("post")} className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"/>
-                    <span className="text-[12px] font-semibold text-gray-700">Post</span>
+                  <label
+                    className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "post" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}
+                  >
+                    <input
+                      type="radio"
+                      value="post"
+                      checked={postType === "post"}
+                      onChange={() => setPostType("post")}
+                      className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"
+                    />
+                    <span className="text-[12px] font-semibold text-gray-700">
+                      Post
+                    </span>
                   </label>
                 )}
                 {availablePostTypes.includes("story") && (
-                  <label className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "story" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}>
-                    <input type="radio" value="story" checked={postType === "story"} onChange={() => setPostType("story")} className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"/>
-                    <span className="text-[12px] font-semibold text-gray-700">Story</span>
+                  <label
+                    className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "story" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}
+                  >
+                    <input
+                      type="radio"
+                      value="story"
+                      checked={postType === "story"}
+                      onChange={() => setPostType("story")}
+                      className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"
+                    />
+                    <span className="text-[12px] font-semibold text-gray-700">
+                      Story
+                    </span>
                   </label>
                 )}
                 {availablePostTypes.includes("reel") && (
-                  <label className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "reel" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}>
-                    <input type="radio" value="reel" checked={postType === "reel"} onChange={() => setPostType("reel")} className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"/>
-                    <span className="text-[12px] font-semibold text-gray-700">Reel / Shorts</span>
+                  <label
+                    className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "reel" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}
+                  >
+                    <input
+                      type="radio"
+                      value="reel"
+                      checked={postType === "reel"}
+                      onChange={() => setPostType("reel")}
+                      className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"
+                    />
+                    <span className="text-[12px] font-semibold text-gray-700">
+                      Reel / Shorts
+                    </span>
                   </label>
                 )}
               </div>
@@ -1611,9 +2256,15 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                   </p>
                   {caption && (
                     <div className="flex items-center gap-2">
-                       <button
+                      <button
                         type="button"
-                        onClick={() => setCaption((prev) => prev ? `${prev} {{MENTION_SELF}}` : "{{MENTION_SELF}}")}
+                        onClick={() =>
+                          setCaption((prev) =>
+                            prev
+                              ? `${prev} {{MENTION_SELF}}`
+                              : "{{MENTION_SELF}}",
+                          )
+                        }
                         className="text-[10px] text-indigo-500 hover:text-indigo-600 transition-colors uppercase tracking-wider font-bold flex items-center gap-1"
                         title="Inserts a dynamic handle that resolves to each platform's username"
                       >
@@ -1829,7 +2480,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                   axis="x"
                   values={mediaFiles}
                   onReorder={setMediaFiles}
-                  className={`grid ${isMobile ? 'grid-cols-3' : 'grid-cols-5'} gap-3 mt-4`}
+                  className={`grid ${isMobile ? "grid-cols-3" : "grid-cols-5"} gap-3 mt-4`}
                 >
                   <AnimatePresence>
                     {mediaFiles.map((m, idx) => {
@@ -1920,7 +2571,8 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                     );
                     if (!ratio) return null;
 
-                    const matches = preset.matchedPlatforms || preset.platforms || [];
+                    const matches =
+                      preset.matchedPlatforms || preset.platforms || [];
 
                     return (
                       <button
@@ -1994,20 +2646,20 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
             </div>
 
             {/* Scheduling */}
-            <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
+            <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between gap-3 mb-6">
+                <div className="flex items-center gap-3 min-w-0">
                   <div
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center ${isScheduled ? "bg-indigo-100 text-indigo-600" : "bg-gray-200 text-gray-500"}`}
+                    className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 ${isScheduled ? "bg-black text-white shadow-[0_8px_24px_rgba(0,0,0,0.15)]" : "bg-gray-50 text-gray-400 border border-gray-100"}`}
                   >
-                    <Sparkles className="w-4 h-4" />
+                    <Calendar className="w-5 h-5" />
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-gray-900 uppercase tracking-tight">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-extrabold text-gray-900 uppercase tracking-[0.12em] leading-tight">
                       Schedule Post
                     </p>
-                    <p className="text-[10px] text-gray-500">
-                      Pick a future date and time
+                    <p className="text-[11px] text-gray-500 leading-tight mt-1.5">
+                      Optimize reach by posting at the perfect time
                     </p>
                   </div>
                 </div>
@@ -2015,80 +2667,147 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                   type="button"
                   onClick={() => {
                     setIsScheduled(!isScheduled);
-                    setScheduledAt("");
+                    if (!isScheduled) {
+                      setScheduledAt(minScheduleDateTime);
+                    } else {
+                      setScheduledAt("");
+                    }
                   }}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isScheduled ? "bg-indigo-600" : "bg-gray-300"}`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none ${isScheduled ? "bg-[#f37338]" : "bg-gray-200"}`}
+                  aria-label="Toggle scheduling"
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isScheduled ? "translate-x-6" : "translate-x-1"}`}
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${isScheduled ? "translate-x-6" : "translate-x-1"}`}
                   />
                 </button>
               </div>
 
-              {isScheduled && (
-                <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <input
-                    type="datetime-local"
-                    value={scheduledAt}
-                    onChange={(e) => setScheduledAt(e.target.value)}
-                    min={minScheduleDateTime}
-                    className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                  />
-                  {/* Timezone display */}
-                  <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-lg border border-indigo-100">
-                    <svg
-                      className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">
-                        Timezone:{" "}
-                      </span>
-                      <span className="text-[10px] text-indigo-600 font-medium">
-                        {userTimezone}
-                      </span>
+              <AnimatePresence>
+                {isScheduled && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0, overflow: "hidden" }}
+                    animate={{ height: "auto", opacity: 1, overflow: "visible" }}
+                    exit={{ height: 0, opacity: 0, overflow: "hidden" }}
+                    transition={{
+                      duration: 0.3,
+                      ease: "circOut",
+                      overflow: { delay: 0.3 }
+                    }}
+                    className="relative"
+                  >
+                    <div className="flex flex-col gap-4 pb-44">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="relative">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 block ml-1">
+                            Publish Date
+                          </label>
+                          <CustomSelect
+                            value={scheduledDatePart || minScheduleDate}
+                            options={scheduleDateOptions}
+                            onChange={(val) =>
+                              updateScheduledAt(
+                                val,
+                                scheduledTimePart ||
+                                  getMinimumTimeForDate(val),
+                              )
+                            }
+                            icon={Calendar}
+                            isCalendar={true}
+                          />
+                        </div>
+
+                        <div className="relative">
+                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 block ml-1">
+                            Publish Time
+                          </label>
+                          <CustomSelect
+                            value={
+                              scheduledTimePart ||
+                              scheduleTimeOptions[0] ||
+                              ""
+                            }
+                            options={scheduleTimeOptions}
+                            onChange={(val) =>
+                              updateScheduledAt(
+                                scheduledDatePart || minScheduleDate,
+                                val,
+                              )
+                            }
+                            icon={Clock}
+                            isTime={true}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 py-1">
+                        {[
+                          { label: "+15m", minutes: 15 },
+                          { label: "+1h", minutes: 60 },
+                          { label: "Tomorrow 9AM", minutes: null },
+                        ].map((quick) => (
+                          <button
+                            key={quick.label}
+                            type="button"
+                            onClick={() => {
+                              if (quick.minutes !== null) {
+                                const date = new Date(
+                                  Date.now() + quick.minutes * 60000,
+                                );
+                                setScheduledAt(toLocalDateTimeValue(date));
+                                return;
+                              }
+                              const tomorrow = new Date();
+                              tomorrow.setDate(tomorrow.getDate() + 1);
+                              tomorrow.setHours(9, 0, 0, 0);
+                              setScheduledAt(toLocalDateTimeValue(tomorrow));
+                            }}
+                            className="px-3 py-1.5 rounded-lg border border-gray-100 bg-gray-50 text-[10px] font-bold text-gray-600 hover:bg-black hover:text-white hover:border-black transition-all"
+                          >
+                            {quick.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="flex flex-col gap-2 mt-2">
+                        <div className="flex items-center gap-2.5 px-4 py-3 bg-[#f37338]/5 rounded-xl border border-[#f37338]/10">
+                          <AtSign className="w-4 h-4 text-[#f37338]" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-bold text-[#f37338] uppercase tracking-wider mb-0.5">
+                              Local Timezone
+                            </p>
+                            <p className="text-[11px] text-[#f37338] font-semibold opacity-80">
+                              {userTimezone}
+                            </p>
+                          </div>
+                        </div>
+
+                        {scheduledAt && (
+                          <div className="flex items-center gap-2.5 px-4 py-3 bg-black rounded-xl shadow-lg shadow-black/10">
+                            <Sparkles className="w-4 h-4 text-white" />
+                            <p className="text-[11px] text-white font-semibold">
+                              Scheduled for{" "}
+                              {new Date(scheduledAt).toLocaleString(
+                                undefined,
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                },
+                              )}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <p className="text-[10px] text-gray-400 font-medium italic text-center mt-1">
+                        Changes are saved automatically to the cloud
+                      </p>
                     </div>
-                  </div>
-                  {scheduledAt && (
-                    <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-100">
-                      <svg
-                        className="w-3.5 h-3.5 text-green-500 flex-shrink-0"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <span className="text-[10px] text-green-700 font-medium">
-                        Will publish at{" "}
-                        {new Date(scheduledAt).toLocaleString(undefined, {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}{" "}
-                        ({userTimezone})
-                      </span>
-                    </div>
-                  )}
-                  <p className="text-[10px] text-indigo-500 font-medium ml-1">
-                    ✓ Post is saved server-side and publishes automatically —
-                    even if you close the app.
-                  </p>
-                </div>
-              )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             </div>
 
             {/* Platform Customization */}
@@ -2234,7 +2953,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
           </button>
         </div>
       </div>
-    </div>
+   
   );
 }
 
