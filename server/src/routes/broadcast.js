@@ -210,7 +210,10 @@ async function processBroadcastJob({
       );
 
       const uploadPromises = filePaths.map((p, i) => {
-        return uploadToCloudinary(p, isVideo ? "video" : "image").then((r) => {
+        // ✅ Detect resource type per-file from its actual MIME type
+        const mime = uploadedFiles[i]?.mimetype || '';
+        const fileResourceType = mime.startsWith('video/') ? 'video' : 'image';
+        return uploadToCloudinary(p, fileResourceType).then((r) => {
           // Update progress incrementally as each file uploads
           const perFileProgress = Math.floor(25 / filePaths.length);
           updateJob(jobId, {
@@ -530,13 +533,19 @@ async function processBroadcastJob({
   }
   if (channels.includes("threads") && tokens.threads) {
     const resolvedCaption = resolveMentions(caption, 'threads', tokens.threads);
+    // Build mediaItems with per-file type for carousel support
+    const threadsMediaItems = mediaUrls.map((url, idx) => ({
+      url,
+      type: uploadedFiles[idx]?.mimetype?.startsWith('video/') ? 'video' : 'image',
+    }));
     platformPromises.push(
       postToThreads(
         tokens.threads.accessToken,
         tokens.threads.account_id,
         resolvedCaption,
-        primaryMediaUrl,
+        mediaUrls[0],
         mediaType,
+        threadsMediaItems,
       ).then((r) => onChannelComplete("Threads", r)),
     );
   }

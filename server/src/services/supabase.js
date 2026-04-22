@@ -182,19 +182,35 @@ export async function getUserByEmail(email) {
 
 /**
  * Create or update user
+ * @param {string} email
+ * @param {string} name
+ * @param {string} externalId - Can be Google ID or Supabase UUID
+ * @param {string} profilePicture
  */
-export async function createOrUpdateUser(email, name, googleId = null, profilePicture = null) {
+export async function createOrUpdateUser(email, name, externalId = null, profilePicture = null) {
   try {
-    // Try find by google_id first
     let existingUser = null;
 
-    if (googleId) {
-      const { data } = await supabase
+    // Try find by externalId (which we now store as id or google_id)
+    if (externalId) {
+      // First try to match the ID directly (for Supabase UUIDs)
+      const { data: byId } = await supabase
         .from('users')
         .select('*')
-        .eq('google_id', googleId)
+        .eq('id', externalId)
         .maybeSingle();
-      existingUser = data;
+      
+      if (byId) {
+        existingUser = byId;
+      } else {
+        // Then try by google_id (legacy)
+        const { data: byGoogleId } = await supabase
+          .from('users')
+          .select('*')
+          .eq('google_id', externalId)
+          .maybeSingle();
+        existingUser = byGoogleId;
+      }
     }
 
     // Fallback by email
@@ -213,8 +229,12 @@ export async function createOrUpdateUser(email, name, googleId = null, profilePi
       updated_at: new Date().toISOString()
     };
 
-    if (googleId) updates.google_id = googleId;
     if (profilePicture) updates.profile_picture = profilePicture;
+    
+    // If it looks like a Google ID (numeric string), put it in google_id
+    if (externalId && /^\d+$/.test(externalId)) {
+      updates.google_id = externalId;
+    }
 
     if (existingUser) {
       const { data, error } = await supabase
@@ -228,9 +248,17 @@ export async function createOrUpdateUser(email, name, googleId = null, profilePi
       return data;
     }
 
+    // New user
+    const newUser = { ...updates, created_at: new Date().toISOString() };
+    
+    // If we have a UUID from Supabase, use it as the primary key
+    if (externalId && externalId.length > 20 && externalId.includes('-')) {
+      newUser.id = externalId;
+    }
+
     const { data, error } = await supabase
       .from('users')
-      .insert([{ ...updates, created_at: new Date().toISOString() }])
+      .insert([newUser])
       .select()
       .single();
 

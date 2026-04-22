@@ -1,110 +1,102 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 function AuthCallback() {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { login } = useAuth();
   const [status, setStatus] = useState('processing'); // 'processing', 'success', 'error'
   const [message, setMessage] = useState('Completing authentication...');
 
   useEffect(() => {
-    const processCallback = async () => {
-      const token = searchParams.get('token');
-      const provider = searchParams.get('provider');
-      const error = searchParams.get('error');
-
-      if (error) {
-        setStatus('error');
-        setMessage(getErrorMessage(error));
-        setTimeout(() => navigate('/login'), 3000);
-        return;
-      }
-
-      if (!token) {
-        setStatus('error');
-        setMessage('Authentication failed. No token received.');
-        setTimeout(() => navigate('/login'), 3000);
-        return;
-      }
-
+    const checkSession = async () => {
       try {
-        // Store token and login
-        login(token);
-        setStatus('success');
-        setMessage(`Successfully signed in with ${provider === 'google' ? 'Google' : 'Instagram'}!`);
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        // Redirect to dashboard
-        setTimeout(() => navigate('/dashboard'), 1500);
+        if (error) throw error;
+
+        if (session) {
+          setStatus('success');
+          setMessage('Successfully signed in!');
+          setTimeout(() => navigate('/dashboard'), 1000);
+        } else {
+          // If no session after a few seconds, it might be an error or slow
+          const timeout = setTimeout(() => {
+            setStatus('error');
+            setMessage('Authentication failed or took too long.');
+            setTimeout(() => navigate('/login'), 3000);
+          }, 5000);
+          return () => clearTimeout(timeout);
+        }
       } catch (error) {
         console.error('Auth callback error:', error);
         setStatus('error');
-        setMessage('An error occurred during authentication');
+        setMessage(error.message || 'An error occurred during authentication');
         setTimeout(() => navigate('/login'), 3000);
       }
     };
 
-    processCallback();
-  }, [searchParams, navigate, login]);
-
-  const getErrorMessage = (error) => {
-    const messages = {
-      'access_denied': 'You denied access. Please try again.',
-      'google_oauth_failed': 'Google authentication failed. Please try again.',
-      'authentication_failed': 'Authentication failed. Please try again.',
-      'no_code': 'Invalid authentication code.',
-      'instagram_oauth_failed': 'Instagram connection failed.',
-      'instagram_connection_failed': 'Failed to connect Instagram account.'
-    };
-    return messages[error] || 'An unknown error occurred';
-  };
+    checkSession();
+  }, [navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      {/* Animated background gradient */}
-      <div className="fixed inset-0 bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-purple-900/20 via-transparent to-transparent"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-pink-900/20 via-transparent to-transparent"></div>
-      </div>
-
-      {/* Content */}
-      <div className="glass-card p-12 max-w-md w-full text-center animate-fade-in">
+    <div
+      style={{
+        minHeight: '100vh',
+        background: 'var(--canvas)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+        fontFamily: 'var(--font)',
+      }}
+    >
+      <div
+        style={{
+          background: 'var(--canvas-lifted)',
+          borderRadius: 'var(--r-hero)',
+          padding: '48px',
+          maxWidth: 400,
+          width: '100%',
+          textAlign: 'center',
+          boxShadow: 'var(--shadow-card)',
+          border: '1px solid rgba(20,20,19,0.07)',
+        }}
+      >
         {status === 'processing' && (
-          <div className="space-y-6">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10">
-              <Loader2 className="w-10 h-10 text-primary-light animate-spin" />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(243,115,56,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Loader2 size={32} className="animate-spin" style={{ color: 'var(--arc)' }} />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-white mb-2">Signing you in...</h2>
-              <p className="text-white/60">{message}</p>
+              <h2 style={{ fontSize: 24, fontWeight: 500, color: 'var(--ink)', marginBottom: 8 }}>Signing you in...</h2>
+              <p style={{ color: 'var(--slate)', fontSize: 14 }}>{message}</p>
             </div>
           </div>
         )}
 
         {status === 'success' && (
-          <div className="space-y-6 animate-slide-up">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-500/10">
-              <CheckCircle className="w-10 h-10 text-green-400" />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CheckCircle size={32} style={{ color: '#10b981' }} />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-white mb-2">Success!</h2>
-              <p className="text-white/60">{message}</p>
-              <p className="text-sm text-white/40 mt-4">Redirecting to dashboard...</p>
+              <h2 style={{ fontSize: 24, fontWeight: 500, color: 'var(--ink)', marginBottom: 8 }}>Success!</h2>
+              <p style={{ color: 'var(--slate)', fontSize: 14 }}>{message}</p>
+              <p style={{ color: 'var(--dust)', fontSize: 12, marginTop: 16 }}>Redirecting to dashboard...</p>
             </div>
           </div>
         )}
 
         {status === 'error' && (
-          <div className="space-y-6 animate-slide-up">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-500/10">
-              <AlertCircle className="w-10 h-10 text-red-400" />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AlertCircle size={32} style={{ color: '#ef4444' }} />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-white mb-2">Authentication Failed</h2>
-              <p className="text-white/60">{message}</p>
-              <p className="text-sm text-white/40 mt-4">Redirecting to login...</p>
+              <h2 style={{ fontSize: 24, fontWeight: 500, color: 'var(--ink)', marginBottom: 8 }}>Auth Failed</h2>
+              <p style={{ color: 'var(--slate)', fontSize: 14 }}>{message}</p>
+              <p style={{ color: 'var(--dust)', fontSize: 12, marginTop: 16 }}>Redirecting to login...</p>
             </div>
           </div>
         )}

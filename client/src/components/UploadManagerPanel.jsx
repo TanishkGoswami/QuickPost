@@ -76,6 +76,15 @@ function JobCard({ job, onRetry, onDismiss }) {
   const fileCount = meta?.fileCount || 1;
   const previewUrl = meta?.previewUrl || null;
 
+  React.useEffect(() => {
+    if (status === 'completed') {
+      const timer = setTimeout(() => {
+        onDismiss(job.id);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [status, job.id, onDismiss]);
+
   return (
     <motion.div
       layout
