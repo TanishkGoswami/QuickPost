@@ -643,3 +643,45 @@
     animation-delay: 400ms;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   MASONRY GRID (react-masonry-css)
+═══════════════════════════════════════════════════════ */
+.masonry-grid {
+  display: flex;
+  width: auto;
+  margin-left: -16px;
+}
+.masonry-grid_column {
+  padding-left: 16px;
+  background-clip: padding-box;
+}
+.masonry-grid_column > .masonry-card {
+  margin-bottom: 16px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   SKELETON SHIMMER
+═══════════════════════════════════════════════════════ */
+@keyframes skeleton-shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position: 600px 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #e8e2da 0%,
+    #f3efeb 40%,
+    #ede9e4 60%,
+    #e8e2da 100%
+  );
+  background-size: 600px 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+.skeleton-card {
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(20,20,19,0.06);
+}
+
+

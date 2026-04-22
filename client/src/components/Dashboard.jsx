@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { AnimatePresence } from "framer-motion";
+import Masonry from "react-masonry-css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   Plus,
   Search,
-  Calendar,
-  ChevronDown,
-  ChevronUp,
-  ExternalLink,
   Clock,
   Share2,
   CheckCircle2,
@@ -18,9 +16,11 @@ import {
   List,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
   Play,
   Eye,
-  ThumbsUp,
   X,
 } from "lucide-react";
 import apiClient from "../utils/apiClient";
@@ -379,158 +379,375 @@ function PlatformBadge({ platform }) {
   );
 }
 
-/* ── Grid card ── */
-function GridCard({ post, onOpen, formatDate }) {
+/* ── Pinterest Masonry Card ── */
+function PinterestCard({ post, onOpen, formatDate }) {
+  const [hovered, setHovered] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
   const platforms = buildPlatforms(post);
   const isScheduled = post.status === "scheduled";
+  const isImage =
+    post.media_type === "image" ||
+    /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || "");
+  const displayUrl = post.thumbnail_url || (isImage ? post.media_url : null);
+  const hasMedia = !!displayUrl;
+  const allSuccess =
+    platforms.length > 0 && platforms.every((p) => p.success);
+
+  const ICON_MAP = {
+    instagram: "ig-instagram-icon.svg",
+    x: "x-social-media-round-icon.svg",
+    linkedin: "linkedin-icon.svg",
+    youtube: "youtube-color-icon.svg",
+    facebook: "facebook-round-color-icon.svg",
+    tiktok: "tiktok-circle-icon.svg",
+    pinterest: "pinterest-round-color-icon.svg",
+    threads: "threads-icon.svg",
+    mastodon: "mastodon-round-icon.svg",
+    bluesky: "bluesky-circle-color-icon.svg",
+    reddit: "reddit-icon.svg",
+  };
 
   return (
     <div
+      className="masonry-card"
       onClick={onOpen}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
-        background: css.lifted,
-        borderRadius: "var(--r-hero)",
-        border: "1px solid rgba(20,20,19,0.08)",
+        position: "relative",
+        borderRadius: 20,
         overflow: "hidden",
         cursor: "pointer",
-        display: "flex",
-        flexDirection: "column",
-        transition: "all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.02)",
-        height: "100%",
-        width: "100%",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = "0 20px 40px rgba(0,0,0,0.06)";
-        e.currentTarget.style.transform = "translateY(-4px)";
-        e.currentTarget.style.borderColor = "rgba(20,20,19,0.12)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.02)";
-        e.currentTarget.style.transform = "none";
-        e.currentTarget.style.borderColor = "rgba(20,20,19,0.08)";
+        background: hasMedia ? "transparent" : css.lifted,
+        boxShadow: hovered
+          ? "0 24px 48px rgba(20,20,19,0.15), 0 4px 12px rgba(20,20,19,0.06)"
+          : "0 2px 12px rgba(20,20,19,0.06)",
+        transform: hovered ? "translateY(-5px) scale(1.01)" : "none",
+        transition:
+          "box-shadow 0.35s cubic-bezier(0.2,0.8,0.2,1), transform 0.35s cubic-bezier(0.2,0.8,0.2,1)",
+        border: "1px solid rgba(20,20,19,0.07)",
+        willChange: "transform",
       }}
     >
-      <div style={{ position: "relative" }}>
-        <MediaThumb
-          post={post}
-          style={{ width: "100%", height: 180, borderRadius: 0 }}
-        />
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "1px", background: "rgba(20,20,19,0.03)" }} />
+      {hasMedia ? (
+        /* ─── Image-first: no fixed height, aspect ratio preserved ─── */
+        <div style={{ position: "relative", lineHeight: 0, minHeight: imgLoaded ? 0 : 180 }}>
+          {/* Shimmer shown until image loads */}
+          {!imgLoaded && (
+            <div
+              className="skeleton-shimmer"
+              style={{
+                position: "absolute",
+                inset: 0,
+                minHeight: 180,
+                zIndex: 1,
+              }}
+            />
+          )}
+          <img
+            src={displayUrl}
+            alt={post.caption || "Post"}
+            loading="lazy"
+            style={{
+              width: "100%",
+              height: "auto",
+              display: "block",
+              opacity: imgLoaded ? 1 : 0,
+              transition:
+                "opacity 0.5s ease, transform 0.55s cubic-bezier(0.2,0.8,0.2,1)",
+              transform: hovered ? "scale(1.05)" : "scale(1)",
+            }}
+            onLoad={() => setImgLoaded(true)}
+            onError={(e) => {
+              setImgLoaded(true);
+              e.target.src =
+                "https://placehold.co/400x300/e8e2da/9a9088?text=Preview";
+            }}
+          />
 
-        {/* Media Type Label */}
-        <div
-          style={{
-            position: "absolute",
-            top: 12,
-            right: 12,
-            padding: "4px 10px",
-            borderRadius: "var(--r-chip)",
-            background: "rgba(20,20,19,0.7)",
-            backdropFilter: "blur(8px)",
-            color: "#fff",
-            fontSize: 8,
-            fontWeight: 800,
-            textTransform: "uppercase",
-            letterSpacing: "0.1em",
-            border: "1px solid rgba(255,255,255,0.1)",
-          }}
-        >
-          {post.media_type || "media"}
-        </div>
+          {/* YouTube play badge */}
+          {post.youtube_success && (
+            <div
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%,-50%)",
+                width: 48,
+                height: 48,
+                background: "#FF0000",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 8px 24px rgba(255,0,0,0.4)",
+                pointerEvents: "none",
+              }}
+            >
+              <Play
+                size={20}
+                style={{ color: "#fff", fill: "#fff", marginLeft: 3 }}
+              />
+            </div>
+          )}
 
-        {/* Platform Count pill */}
-        {platforms.length > 0 && (
+          {/* ── Hover overlay ── */}
           <div
             style={{
               position: "absolute",
-              bottom: 12,
-              left: 12,
-              padding: "4px 10px",
-              borderRadius: "var(--r-chip)",
-              background: "rgba(255,255,255,0.92)",
-              backdropFilter: "blur(4px)",
-              color: css.ink,
-              border: "1px solid rgba(0,0,0,0.05)",
-              fontSize: 9,
-              fontWeight: 700,
+              inset: 0,
+              background:
+                "linear-gradient(to top, rgba(10,8,6,0.9) 0%, rgba(10,8,6,0.4) 50%, transparent 100%)",
+              opacity: hovered ? 1 : 0,
+              transition: "opacity 0.3s ease",
               display: "flex",
-              alignItems: "center",
-              gap: 5,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+              flexDirection: "column",
+              justifyContent: "flex-end",
+              padding: 14,
+              gap: 8,
+              pointerEvents: "none",
             }}
           >
-            <div
-              style={{
-                width: 5,
-                height: 5,
-                borderRadius: "50%",
-                background: isScheduled ? css.arc : "#22c55e",
-              }}
-            />
-            {platforms.length} {platforms.length > 1 ? "Platforms" : "Platform"}
-          </div>
-        )}
-      </div>
+            {/* Caption */}
+            {post.caption && (
+              <p
+                style={{
+                  color: "rgba(255,255,255,0.93)",
+                  fontSize: 12,
+                  fontWeight: 500,
+                  lineHeight: 1.5,
+                  margin: 0,
+                  display: "-webkit-box",
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {post.caption}
+              </p>
+            )}
 
-      <div
-        style={{
-          padding: "18px 20px 20px",
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <div className="eyebrow" style={{ fontSize: 9, marginBottom: 10, color: css.slate, opacity: 0.7 }}>
-          {formatDate(isScheduled ? post.scheduled_for : post.posted_at)}
-        </div>
-
-        <p
-          style={{
-            fontSize: 14,
-            fontWeight: 550,
-            color: css.ink,
-            margin: "0 0 16px",
-            lineHeight: 1.45,
-            display: "-webkit-box",
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-            letterSpacing: "-0.01em",
-            height: "4.35em", // Strictly 3 lines
-            marginBottom: 16,
-          }}
-        >
-          {post.caption || (
-            <span style={{ color: css.dust, fontStyle: "italic", fontWeight: 400 }}>
-              Untitled post
-            </span>
-          )}
-        </p>
-
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-          {platforms.slice(0, 3).map((p) => (
-            <PlatformBadge key={p.id} platform={p} />
-          ))}
-          {platforms.length > 3 && (
+            {/* Bottom row */}
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                padding: "3px 8px",
-                borderRadius: "var(--r-chip)",
-                background: "rgba(20,20,19,0.04)",
-                color: css.slate,
-                fontSize: 9,
-                fontWeight: 700,
+                justifyContent: "space-between",
+                gap: 8,
               }}
             >
-              +{platforms.length - 3}
+              {/* Platform icons */}
+              <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                {platforms.slice(0, 5).map((p) => (
+                  <div
+                    key={p.id}
+                    title={`${p.name}: ${p.success ? "Success" : "Failed"}`}
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: "50%",
+                      background: "rgba(255,255,255,0.12)",
+                      backdropFilter: "blur(8px)",
+                      border: `1.5px solid ${p.success ? "rgba(34,197,94,0.7)" : "rgba(239,68,68,0.7)"}`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {ICON_MAP[p.id] ? (
+                      <img
+                        src={`/icons/${ICON_MAP[p.id]}`}
+                        alt={p.name}
+                        style={{ width: 13, height: 13, objectFit: "contain" }}
+                      />
+                    ) : (
+                      <Share2 size={9} style={{ color: "#fff" }} />
+                    )}
+                  </div>
+                ))}
+                {platforms.length > 5 && (
+                  <span
+                    style={{
+                      color: "rgba(255,255,255,0.6)",
+                      fontSize: 9,
+                      fontWeight: 700,
+                    }}
+                  >
+                    +{platforms.length - 5}
+                  </span>
+                )}
+              </div>
+
+              {/* Date + status dot */}
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    flexShrink: 0,
+                    background: isScheduled
+                      ? "#f97316"
+                      : allSuccess
+                        ? "#22c55e"
+                        : "#ef4444",
+                    boxShadow: isScheduled
+                      ? "0 0 6px rgba(249,115,22,0.7)"
+                      : allSuccess
+                        ? "0 0 6px rgba(34,197,94,0.7)"
+                        : "0 0 6px rgba(239,68,68,0.7)",
+                  }}
+                />
+                <span
+                  style={{
+                    color: "rgba(255,255,255,0.6)",
+                    fontSize: 10,
+                    fontWeight: 600,
+                  }}
+                >
+                  {new Date(
+                    isScheduled ? post.scheduled_for : post.posted_at,
+                  ).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </span>
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Media type chip */}
+          <div
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 10,
+              padding: "3px 8px",
+              borderRadius: 6,
+              background: "rgba(10,8,6,0.65)",
+              backdropFilter: "blur(12px)",
+              color: "rgba(255,255,255,0.9)",
+              fontSize: 8,
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              border: "1px solid rgba(255,255,255,0.12)",
+              pointerEvents: "none",
+            }}
+          >
+            {post.media_type || "media"}
+          </div>
         </div>
-      </div>
+      ) : (
+        /* ─── No media fallback: text card ─── */
+        <div style={{ padding: "18px 18px 16px" }}>
+          <div
+            style={{
+              width: "100%",
+              paddingBottom: "45%",
+              position: "relative",
+              borderRadius: 12,
+              background:
+                post.media_type === "video"
+                  ? "linear-gradient(135deg, #1e1c1a 0%, #2a2724 100%)"
+                  : "#ede9e4",
+              marginBottom: 14,
+              overflow: "hidden",
+              transition: "opacity 0.3s",
+              opacity: hovered ? 0.85 : 1,
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+              }}
+            >
+              {post.media_type === "video" ? (
+                <>
+                  <Video
+                    size={26}
+                    style={{ color: "rgba(243,240,238,0.3)" }}
+                  />
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      color: "rgba(243,240,238,0.25)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                    }}
+                  >
+                    Video
+                  </span>
+                </>
+              ) : (
+                <>
+                  <ImageIcon size={26} style={{ color: "#b8b0a6" }} />
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      color: "#b8b0a6",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                    }}
+                  >
+                    No Media
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+
+          <p
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: css.ink,
+              margin: "0 0 12px",
+              lineHeight: 1.5,
+              display: "-webkit-box",
+              WebkitLineClamp: 4,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {post.caption || (
+              <span style={{ color: css.dust, fontStyle: "italic" }}>
+                Untitled post
+              </span>
+            )}
+          </p>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {platforms.slice(0, 3).map((p) => (
+              <PlatformBadge key={p.id} platform={p} />
+            ))}
+            {platforms.length > 3 && (
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: css.slate,
+                  padding: "3px 8px",
+                  background: "rgba(20,20,19,0.04)",
+                  borderRadius: 6,
+                }}
+              >
+                +{platforms.length - 3}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -803,6 +1020,46 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
   );
 }
 
+/* ── Skeleton card for loading state ── */
+const SKELETON_HEIGHTS = [280, 180, 350, 220, 315, 260, 385, 200, 295, 340, 170, 235];
+
+function SkeletonCard({ height }) {
+  return (
+    <div className="masonry-card skeleton-card">
+      <div className="skeleton-shimmer" style={{ height }} />
+      <div
+        style={{
+          padding: "12px 14px 14px",
+          background: "var(--canvas-lifted)",
+        }}
+      >
+        <div
+          className="skeleton-shimmer"
+          style={{
+            height: 11,
+            borderRadius: 6,
+            marginBottom: 8,
+            width: "75%",
+          }}
+        />
+        <div
+          className="skeleton-shimmer"
+          style={{
+            height: 9,
+            borderRadius: 6,
+            marginBottom: 6,
+            width: "55%",
+          }}
+        />
+        <div
+          className="skeleton-shimmer"
+          style={{ height: 9, borderRadius: 6, width: "35%" }}
+        />
+      </div>
+    </div>
+  );
+}
+
 /* ══════════════════════════════════════════════════════
    MAIN DASHBOARD
    ══════════════════════════════════════════════════════ */
@@ -820,36 +1077,10 @@ function Dashboard() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [queueCount, setQueueCount] = useState(0);
 
-  const getResponsiveItemsPerPage = (width, mode) => {
-    if (mode === "list") {
-      if (width < 640) return 4;
-      if (width < 1024) return 6;
-      return 8;
-    }
-
-    const sidebarWidth = width >= 1024 ? 240 : 0;
-    const horizontalPadding = width >= 1024 ? 56 : 32;
-    const availableWidth = Math.max(
-      260,
-      width - sidebarWidth - horizontalPadding,
-    );
-    const minCardWidth = 260;
-    const gridGap = 20;
-
-    const columns = Math.max(
-      1,
-      Math.floor((availableWidth + gridGap) / (minCardWidth + gridGap)),
-    );
-
-    const rows = columns === 1 ? 5 : 3;
-    return columns * rows;
-  };
-
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(() =>
-    getResponsiveItemsPerPage(window.innerWidth, "grid"),
-  );
+  const BATCH_SIZE = 20;
+  const [displayCount, setDisplayCount] = useState(BATCH_SIZE);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadMoreRef = useRef(null);
 
   const tabs = [
     {
@@ -889,25 +1120,12 @@ function Dashboard() {
 
   useEffect(() => {
     fetchBroadcasts();
-    setCurrentPage(1);
+    setDisplayCount(BATCH_SIZE);
   }, [activeTab]);
 
   useEffect(() => {
-    setCurrentPage(1);
+    setDisplayCount(BATCH_SIZE);
   }, [searchTerm]);
-
-  useEffect(() => {
-    const updateItemsPerPage = () => {
-      setItemsPerPage(getResponsiveItemsPerPage(window.innerWidth, viewMode));
-    };
-
-    updateItemsPerPage();
-    window.addEventListener("resize", updateItemsPerPage);
-
-    return () => window.removeEventListener("resize", updateItemsPerPage);
-  }, [viewMode]);
-
-  const resetPagination = () => setCurrentPage(1);
 
   const fetchBroadcasts = async () => {
     try {
@@ -951,96 +1169,59 @@ function Dashboard() {
     return matchesSearch && matchesPlatform;
   });
 
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const paginatedItems = filtered.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage,
-  );
+  const displayedItems = filtered.slice(0, displayCount);
+  const hasMore = displayCount < filtered.length;
 
+  // ── Infinite scroll: scroll-container-aware ──
   useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
+    if (!hasMore || isLoadingMore) return;
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+    const sentinel = loadMoreRef.current;
+    if (!sentinel) return;
 
-  const Pagination = () => {
-    if (totalPages <= 1) return null;
-    const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
-    return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-          marginTop: 24,
-          marginBottom: 40,
-        }}
-      >
-        <button
-          onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-          disabled={currentPage === 1}
-          style={{
-            padding: 8,
-            borderRadius: css.r_btn,
-            border: "1.5px solid rgba(20,20,19,0.15)",
-            background: css.lifted,
-            cursor: "pointer",
-            color: css.slate,
-            opacity: currentPage === 1 ? 0.3 : 1,
-            display: "flex",
-            alignItems: "center",
-          }}
-        >
-          <ChevronLeft size={16} />
-        </button>
-        {pages.map((page) => (
-          <button
-            key={page}
-            onClick={() => handlePageChange(page)}
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: css.r_btn,
-              border: `1.5px solid ${currentPage === page ? css.ink : "rgba(20,20,19,0.15)"}`,
-              background: currentPage === page ? css.ink : css.lifted,
-              color: currentPage === page ? css.canvas : css.slate,
-              fontWeight: 700,
-              fontSize: 13,
-              cursor: "pointer",
-              transition: "all 0.15s",
-            }}
-          >
-            {page}
-          </button>
-        ))}
-        <button
-          onClick={() =>
-            handlePageChange(Math.min(totalPages, currentPage + 1))
-          }
-          disabled={currentPage === totalPages}
-          style={{
-            padding: 8,
-            borderRadius: css.r_btn,
-            border: "1.5px solid rgba(20,20,19,0.15)",
-            background: css.lifted,
-            cursor: "pointer",
-            color: css.slate,
-            opacity: currentPage === totalPages ? 0.3 : 1,
-            display: "flex",
-            alignItems: "center",
-          }}
-        >
-          <ChevronRight size={16} />
-        </button>
-      </div>
-    );
-  };
+    // Walk up the DOM to find the actual scrollable container
+    const getScrollParent = (node) => {
+      if (!node || node === document.body) return window;
+      const { overflowY, overflow } = window.getComputedStyle(node);
+      if (
+        overflowY === "auto" ||
+        overflowY === "scroll" ||
+        overflow === "auto" ||
+        overflow === "scroll"
+      )
+        return node;
+      return getScrollParent(node.parentElement);
+    };
+
+    const scrollParent = getScrollParent(sentinel.parentElement);
+
+    const triggerLoadMore = () => {
+      const sentinelRect = sentinel.getBoundingClientRect();
+      const containerBottom =
+        scrollParent === window
+          ? window.innerHeight
+          : scrollParent.getBoundingClientRect().bottom;
+
+      // Load when sentinel is within 400px of the visible bottom
+      if (sentinelRect.top <= containerBottom + 400) {
+        setIsLoadingMore(true);
+        setTimeout(() => {
+          setDisplayCount((prev) =>
+            Math.min(prev + BATCH_SIZE, filtered.length),
+          );
+          setIsLoadingMore(false);
+        }, 500);
+      }
+    };
+
+    // 1. Immediate check (handles content that fits inside the viewport)
+    triggerLoadMore();
+
+    // 2. Scroll listener on the real scroll container
+    const target = scrollParent === window ? window : scrollParent;
+    target.addEventListener("scroll", triggerLoadMore, { passive: true });
+    return () => target.removeEventListener("scroll", triggerLoadMore);
+  }, [hasMore, isLoadingMore, filtered.length]);
 
   return (
     <div
@@ -1361,60 +1542,50 @@ function Dashboard() {
 
       {/* ── Main content ── */}
       <div
-        style={{ padding: "clamp(16px, 3vw, 28px) clamp(16px, 3vw, 28px) 0" }}
+        style={{ padding: "clamp(16px, 3vw, 28px) clamp(16px, 3vw, 28px) 40px" }}
       >
         {loading ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "80px 0",
-              gap: 16,
+          <Masonry
+            breakpointCols={{
+              default: 4,
+              1400: 3,
+              1100: 3,
+              768: 2,
+              480: 1,
             }}
+            className="masonry-grid"
+            columnClassName="masonry-grid_column"
           >
-            <div style={{ display: "flex", gap: 8 }}>
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  style={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: "50%",
-                    background: css.ink,
-                    animation: "mc-float 1.2s ease-in-out infinite",
-                    animationDelay: `${i * 0.2}s`,
-                  }}
-                />
-              ))}
-            </div>
-            <p style={{ fontSize: 13, color: css.slate, margin: 0 }}>
-              Syncing data…
-            </p>
-          </div>
+            {SKELETON_HEIGHTS.map((h, i) => (
+              <SkeletonCard key={i} height={h} />
+            ))}
+          </Masonry>
         ) : (activeTab === "sent" ||
             activeTab === "queue" ||
             activeTab === "history") &&
           filtered.length > 0 ? (
           <>
             {viewMode === "grid" ? (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-                  gap: 20,
+              <Masonry
+                breakpointCols={{
+                  default: 4,
+                  1400: 3,
+                  1100: 3,
+                  768: 2,
+                  480: 1,
                 }}
+                className="masonry-grid"
+                columnClassName="masonry-grid_column"
               >
-                {paginatedItems.map((post) => (
-                  <GridCard
+                {displayedItems.map((post) => (
+                  <PinterestCard
                     key={post.id}
                     post={post}
                     onOpen={() => setSelectedPost(post)}
                     formatDate={formatDate}
                   />
                 ))}
-              </div>
+              </Masonry>
             ) : (
               <div
                 style={{
@@ -1425,7 +1596,7 @@ function Dashboard() {
                   margin: "0 auto",
                 }}
               >
-                {paginatedItems.map((post) => (
+                {displayedItems.map((post) => (
                   <div
                     key={post.id}
                     onClick={() => setSelectedPost(post)}
@@ -1444,7 +1615,47 @@ function Dashboard() {
                 ))}
               </div>
             )}
-            <Pagination />
+
+            {/* ── Infinite scroll sentinel + skeletons ── */}
+            <div ref={loadMoreRef} style={{ marginTop: 8 }} />
+
+            {isLoadingMore && viewMode === "grid" && (
+              <Masonry
+                breakpointCols={{
+                  default: 4,
+                  1400: 3,
+                  1100: 3,
+                  768: 2,
+                  480: 1,
+                }}
+                className="masonry-grid"
+                columnClassName="masonry-grid_column"
+              >
+                {SKELETON_HEIGHTS.slice(0, 8).map((h, i) => (
+                  <SkeletonCard key={i} height={h} />
+                ))}
+              </Masonry>
+            )}
+            {isLoadingMore && viewMode === "list" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 860, margin: "0 auto" }}>
+                {[1,2,3].map((i) => (
+                  <div key={i} className="skeleton-card" style={{ display: "flex", alignItems: "center", gap: 20, padding: "20px 24px" }}>
+                    <div className="skeleton-shimmer" style={{ width: 84, height: 84, borderRadius: 12, flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div className="skeleton-shimmer" style={{ height: 14, borderRadius: 6, marginBottom: 10, width: "60%" }} />
+                      <div className="skeleton-shimmer" style={{ height: 11, borderRadius: 6, marginBottom: 8, width: "85%" }} />
+                      <div className="skeleton-shimmer" style={{ height: 10, borderRadius: 6, width: "40%" }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!hasMore && displayedItems.length > 0 && (
+              <div style={{ textAlign: "center", padding: "32px 0 48px", color: css.slate, fontSize: 12, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", opacity: 0.5 }}>
+                ✦ All posts loaded
+              </div>
+            )}
           </>
         ) : (
           /* ── Empty state ── */
@@ -1558,10 +1769,14 @@ function Dashboard() {
         onClose={() => setComposerOpen(false)}
         onPostCreated={fetchBroadcasts}
       />
-      <PostPreviewModal
-        post={selectedPost}
-        onClose={() => setSelectedPost(null)}
-      />
+      <AnimatePresence>
+        {selectedPost && (
+          <PostPreviewModal
+            post={selectedPost}
+            onClose={() => setSelectedPost(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
