@@ -1119,7 +1119,17 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     useState("ig-post-square");
   const [activePreviewPlatform, setActivePreviewPlatform] =
     useState("instagram");
+  const [mobileActiveTab, setMobileActiveTab] = useState("edit"); // "edit" | "preview"
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const fileInputRef = useRef(null);
+
+  React.useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 768;
 
   const availableSizePresets = useMemo(() => {
     const targetPlatform =
@@ -1458,38 +1468,26 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     <div className="modal-overlay" onClick={handleClose}>
       <div
         style={{
-          background: "var(--canvas-lifted)",
-          borderRadius: "var(--r-hero)",
-          boxShadow: "var(--shadow-deep)",
-          width: "100%",
-          maxWidth: "1100px",
-          maxHeight: "90vh",
-          overflow: "hidden",
+          background: 'var(--canvas-lifted)',
+          borderRadius: isMobile ? '0' : 'var(--r-hero)',
+          boxShadow: 'var(--shadow-deep)',
+          width: '100%',
+          maxWidth: isMobile ? '100%' : '1100px',
+          height: isMobile ? '100%' : 'auto',
+          maxHeight: isMobile ? '100%' : '90vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          position: isMobile ? 'fixed' : 'relative',
+          inset: isMobile ? 0 : 'auto',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div
-          style={{
-            borderBottom: "1px solid rgba(20,20,19,0.08)",
-            padding: "14px 24px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            background: "var(--canvas-lifted)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <h2
-              style={{
-                fontSize: 16,
-                fontWeight: 600,
-                color: "var(--ink)",
-                letterSpacing: "-0.02em",
-                margin: 0,
-              }}
-            >
-              Create Post
+        <div style={{ borderBottom: '1px solid rgba(20,20,19,0.08)', padding: isMobile ? '12px 16px' : '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--canvas-lifted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <h2 style={{ fontSize: isMobile ? 15 : 16, fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>
+              {isMobile ? "Composer" : "Create Post"}
             </h2>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -1519,35 +1517,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
               title="AI Assistant"
             >
               <Sparkles size={13} />
-              <span>AI Assistant</span>
-            </button>
-            <button
-              type="button"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 12px",
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--slate)",
-                background: "transparent",
-                border: "1px solid rgba(20,20,19,0.10)",
-                borderRadius: "var(--r-btn)",
-                cursor: "pointer",
-                fontFamily: "var(--font)",
-                transition: "background 0.15s",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "rgba(20,20,19,0.05)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "transparent")
-              }
-              title="Preview"
-            >
-              <Eye size={13} />
-              <span>Preview</span>
+              {!isMobile && <span>AI Assistant</span>}
             </button>
             <button
               type="button"
@@ -1577,14 +1547,34 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
           </div>
         </div>
 
+        {/* Mobile Tab Switcher */}
+        {isMobile && (
+          <div style={{ display: 'flex', background: 'var(--canvas-lifted)', borderBottom: '1px solid rgba(20,20,19,0.08)' }}>
+            <button 
+              onClick={() => setMobileActiveTab("edit")}
+              style={{ flex: 1, padding: '12px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: mobileActiveTab === "edit" ? 'var(--ink)' : 'var(--slate)', border: 'none', background: 'transparent', borderBottom: `2.5px solid ${mobileActiveTab === "edit" ? 'var(--ink)' : 'transparent'}`, transition: 'all 0.2s' }}
+            >
+              1. Compose
+            </button>
+            <button 
+              onClick={() => setMobileActiveTab("preview")}
+              style={{ flex: 1, padding: '12px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: mobileActiveTab === "preview" ? 'var(--ink)' : 'var(--slate)', border: 'none', background: 'transparent', borderBottom: `2.5px solid ${mobileActiveTab === "preview" ? 'var(--ink)' : 'transparent'}`, transition: 'all 0.2s' }}
+            >
+              2. Preview
+            </button>
+          </div>
+        )}
+
         {/* Body - Split Layout */}
-        <div className="flex h-[calc(90vh-120px)]">
+        <div style={{ display: 'flex', height: isMobile ? 'calc(100vh - 110px)' : 'calc(90vh - 120px)', flex: 1 }}>
           {/* Left Panel - Composer */}
-          <div
-            className="flex-1 overflow-y-auto p-6 border-r"
-            style={{
-              borderColor: "rgba(20,20,19,0.08)",
-              background: "var(--canvas)",
+          <div 
+            className="flex-1 overflow-y-auto" 
+            style={{ 
+              padding: isMobile ? '20px 16px' : '24px', 
+              borderRight: isMobile ? 'none' : '1px solid rgba(20,20,19,0.08)', 
+              background: 'var(--canvas)',
+              display: isMobile && mobileActiveTab !== "edit" ? 'none' : 'block'
             }}
           >
             {/* Channel Selection with Remove Badges */}
@@ -1855,7 +1845,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                   axis="x"
                   values={mediaFiles}
                   onReorder={setMediaFiles}
-                  className="grid grid-cols-5 gap-3 mt-4"
+                  className={`grid ${isMobile ? 'grid-cols-3' : 'grid-cols-5'} gap-3 mt-4`}
                 >
                   <AnimatePresence>
                     {mediaFiles.map((m, idx) => {

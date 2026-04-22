@@ -1,7 +1,7 @@
 import { Menu } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-function Header({ onMenuClick }) {
+function Header({ onMenuClick, sidebarOpen, isDesktop }) {
   const { user } = useAuth();
 
   if (!user) return null;
@@ -15,65 +15,69 @@ function Header({ onMenuClick }) {
       position: 'fixed',
       top: 0,
       right: 0,
-      left: 240,
+      left: isDesktop ? 240 : 0,
       zIndex: 39,
       height: 56,
-      background: 'var(--canvas-lifted)',
-      borderBottom: '1px solid rgba(20,20,19,0.08)',
+      background: 'rgba(255, 255, 255, 0.8)',
+      backdropFilter: 'blur(12px)',
+      WebkitBackdropFilter: 'blur(12px)',
+      borderBottom: '1px solid rgba(20,20,19,0.06)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: '0 24px',
+      padding: isDesktop ? '0 24px' : '0 16px',
       fontFamily: 'var(--font)',
-      backdropFilter: 'blur(8px)',
+      transition: 'left 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
     }}>
       {/* Mobile menu toggle */}
-      <button
-        onClick={onMenuClick}
-        aria-label="Toggle Menu"
-        className="lg:hidden"
-        style={{
-          width: 36, height: 36, borderRadius: 'var(--r-btn)',
-          border: '1px solid rgba(20,20,19,0.10)',
-          background: 'transparent', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: 'var(--slate)', transition: 'background 0.15s',
-        }}
-        onMouseEnter={e => e.currentTarget.style.background = 'rgba(20,20,19,0.05)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-      >
-        <Menu size={16} />
-      </button>
+      {!isDesktop && (
+        <button
+          onClick={onMenuClick}
+          aria-label="Toggle Menu"
+          style={{
+            width: 36, height: 36, borderRadius: 'var(--r-btn)',
+            border: '1px solid rgba(20,20,19,0.08)',
+            background: 'var(--white)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--ink)', transition: 'all 0.2s',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+          }}
+          onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+        >
+          <Menu size={18} />
+        </button>
+      )}
 
       {/* Right: user pill */}
       <div style={{ marginLeft: 'auto' }}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 8,
-          padding: '5px 12px 5px 5px',
+          padding: '4px 10px 4px 4px',
           borderRadius: 'var(--r-pill)',
           background: 'var(--canvas)',
-          border: '1px solid rgba(20,20,19,0.10)',
-          boxShadow: 'var(--shadow-nav)',
+          border: '1px solid rgba(20,20,19,0.08)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
         }}>
           {user.picture ? (
             <img
               src={user.picture}
               alt={user.name}
-              style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--canvas-lifted)' }}
+              style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--white)' }}
             />
           ) : (
             <div style={{
-              width: 28, height: 28, borderRadius: '50%',
+              width: 26, height: 26, borderRadius: '50%',
               background: 'var(--ink)', color: 'var(--canvas)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11, fontWeight: 700, flexShrink: 0,
+              fontSize: 10, fontWeight: 700, flexShrink: 0,
             }}>
               {initials}
             </div>
           )}
           <span style={{
-            fontSize: 12, fontWeight: 600, color: 'var(--ink)',
-            maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis',
+            fontSize: 11, fontWeight: 600, color: 'var(--ink)',
+            maxWidth: isDesktop ? 120 : 80, overflow: 'hidden', textOverflow: 'ellipsis',
             whiteSpace: 'nowrap', letterSpacing: '-0.01em',
           }}>
             {user.name || 'Account'}

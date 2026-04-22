@@ -211,9 +211,45 @@ export default function Onboarding() {
       </div>
 
       <div style={{ position: 'relative', zIndex: 2, textAlign: 'center', padding: '40px 24px', maxWidth: 460 }}>
-        {/* Logo circle */}
-        <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'var(--ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px', boxShadow: '0 12px 40px rgba(20,20,19,0.2)' }}>
-          <img src={logo} alt="GAP Social-pilot" style={{ width: 48, height: 48, objectFit: 'contain' }} />
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: '50%',
+              background: 'var(--ink)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px',
+              boxShadow: '0 12px 40px rgba(20,20,19,0.18)',
+            }}
+          >
+            <img src={logo} alt="GAP Social-pilot" style={{ width: 44, height: 44, objectFit: 'contain' }} />
+          </div>
+          <h1
+            style={{
+              fontSize: 'clamp(32px, 8vw, 40px)',
+              fontWeight: 500,
+              letterSpacing: '-0.02em',
+              color: 'var(--ink)',
+              lineHeight: 1.05,
+              margin: '0 0 12px',
+            }}
+          >
+            Broadcast<br />everywhere.
+          </h1>
+          <p
+            style={{
+              fontSize: 'clamp(14px, 4vw, 16px)',
+              fontWeight: 450,
+              color: 'var(--slate)',
+              margin: 0,
+              lineHeight: 1.5,
+            }}
+          >
+            One post. Every platform. Instant.
+          </p>
         </div>
         <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: 16 }}>Setup</div>
         <h1 style={{ fontSize: 44, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', lineHeight: 1.05, margin: '0 0 14px' }}>
@@ -240,7 +276,12 @@ export default function Onboarding() {
       <div style={{ flex: 1, padding: '48px 40px', maxWidth: 640, margin: '0 auto', width: '100%' }}>
         <h1 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: '0 0 6px' }}>Which channels are you active on?</h1>
         <p style={{ fontSize: 14, color: 'var(--slate)', margin: '0 0 32px' }}>Select all that apply. You can connect accounts after setup.</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 36 }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', 
+          gap: 12, 
+          marginBottom: 36 
+        }}>
           {PLATFORMS.map(p => {
             const sel = selectedChannels.includes(p.id);
             return (
@@ -327,7 +368,12 @@ export default function Onboarding() {
       <div style={{ flex: 1, padding: '48px 40px', maxWidth: 640, margin: '0 auto', width: '100%' }}>
         <h1 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: '0 0 6px' }}>How would you describe yourself?</h1>
         <p style={{ fontSize: 14, color: 'var(--slate)', margin: '0 0 32px' }}>Choose the option that best fits your role.</p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 36 }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', 
+          gap: 10, 
+          marginBottom: 36 
+        }}>
           {USER_TYPES.map(u => {
             const sel = selectedType === u.id;
             return (

@@ -25,14 +25,14 @@ const DashboardLayout = () => {
   }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--canvas)' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--canvas)', overflow: 'hidden' }}>
       {/* Mobile overlay */}
       {!isDesktop && sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
           style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-            zIndex: 40, backdropFilter: 'blur(2px)',
+            position: 'fixed', inset: 0, background: 'rgba(20,20,19,0.4)',
+            zIndex: 49, backdropFilter: 'blur(4px)',
           }}
         />
       )}
@@ -42,8 +42,9 @@ const DashboardLayout = () => {
         position: 'fixed', top: 0, left: 0, bottom: 0,
         zIndex: 50,
         transform: isDesktop || sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
-        transition: 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
+        transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         width: 240,
+        boxShadow: !isDesktop && sidebarOpen ? '20px 0 60px rgba(0,0,0,0.1)' : 'none',
       }}>
         <Sidebar onClose={() => setSidebarOpen(false)} />
       </div>
@@ -55,13 +56,21 @@ const DashboardLayout = () => {
         display: 'flex',
         flexDirection: 'column',
         minWidth: 0,
-        transition: 'margin-left 0.25s cubic-bezier(0.4,0,0.2,1)',
+        transition: 'margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        height: '100vh',
       }}>
         {/* Header — passes mobile toggle */}
-        <Header onMenuClick={() => setSidebarOpen(o => !o)} />
+        <Header onMenuClick={() => setSidebarOpen(o => !o)} sidebarOpen={sidebarOpen} isDesktop={isDesktop} />
 
         {/* Page content below header */}
-        <main style={{ flex: 1, marginTop: 64, overflowY: 'auto' }}>
+        <main style={{ 
+          flex: 1, 
+          marginTop: 56, 
+          overflowY: 'auto', 
+          overflowX: 'hidden',
+          padding: isDesktop ? '24px' : '16px',
+          WebkitOverflowScrolling: 'touch'
+        }}>
           <ProtectedRoute>
             <Outlet />
           </ProtectedRoute>
