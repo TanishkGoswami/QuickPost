@@ -68,7 +68,7 @@ const DashboardLayout = () => {
           marginTop: 56, 
           overflowY: 'auto', 
           overflowX: 'hidden',
-          padding: isDesktop ? '24px' : '16px',
+          padding: 0,
           WebkitOverflowScrolling: 'touch'
         }}>
           <ProtectedRoute>
