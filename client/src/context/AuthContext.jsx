@@ -1,13 +1,12 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import apiClient from '../utils/apiClient';
-import { jwtDecode } from 'jwt-decode';
+import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext(null);
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [session, setSession] = useState(null);
   const [connectedAccounts, setConnectedAccounts] = useState({
     instagram: false,
     youtube: false,
@@ -22,52 +21,51 @@ export function AuthProvider({ children }) {
     reddit: false
   });
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem('quickpost_token'));
 
-  // Load user data from token
   useEffect(() => {
-    const loadUser = async () => {
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        // Decode token to get user info
-        const decoded = jwtDecode(token);
-        
-        // Check if token is expired
-        const currentTime = Date.now() / 1000;
-        if (decoded.exp < currentTime) {
-          // Token expired, logout
-          logout();
-          return;
-        }
-
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) {
         setUser({
-          userId: decoded.userId,
-          email: decoded.email,
-          name: decoded.name
+          userId: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0]
         });
-
-        // Fetch connected accounts
-        await fetchConnectedAccounts();
-      } catch (error) {
-        console.error('Error loading user:', error);
-        logout();
-      } finally {
-        setLoading(false);
+        localStorage.setItem('quickpost_token', session.access_token);
       }
-    };
+      setLoading(false);
+    });
 
-    loadUser();
-  }, [token]);
+    // Listen for changes on auth state (logged in, signed out, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) {
+        setUser({
+          userId: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0]
+        });
+        localStorage.setItem('quickpost_token', session.access_token);
+        fetchConnectedAccounts();
+      } else {
+        setUser(null);
+        localStorage.removeItem('quickpost_token');
+        setConnectedAccounts({ 
+          instagram: false, youtube: false, pinterest: false, facebook: false, 
+          bluesky: false, linkedin: false, mastodon: false, tiktok: false, threads: false, x: false, reddit: false
+        });
+      }
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const fetchConnectedAccounts = async () => {
     try {
       const response = await apiClient.get('/api/auth/accounts');
       if (response.data.success) {
-        // Transform the accounts object to extract just the connected boolean
         const accounts = response.data.accounts;
         const transformedAccounts = {
           instagram: accounts.instagram?.connected || false,
@@ -89,19 +87,42 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const login = (jwtToken) => {
-    localStorage.setItem('quickpost_token', jwtToken);
-    setToken(jwtToken);
+  const login = async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) throw error;
+    return data;
   };
 
-  const logout = () => {
-    localStorage.removeItem('quickpost_token');
-    setToken(null);
-    setUser(null);
-    setConnectedAccounts({ 
-      instagram: false, youtube: false, pinterest: false, facebook: false, 
-      bluesky: false, linkedin: false, mastodon: false, tiktok: false, threads: false, x: false, reddit: false
+  const signUp = async (email, password, name) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name,
+        },
+      },
     });
+    if (error) throw error;
+    return data;
+  };
+
+  const googleSignIn = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+    if (error) throw error;
+    return data;
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
   };
 
   const refreshAccounts = async () => {
@@ -110,9 +131,12 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
+    session,
     connectedAccounts,
     loading,
     login,
+    signUp,
+    googleSignIn,
     logout,
     refreshAccounts,
     isAuthenticated: !!user
