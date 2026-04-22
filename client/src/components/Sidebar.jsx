@@ -115,12 +115,12 @@ function Sidebar() {
 
   return (
     <aside
-      className="fixed left-0 top-0 h-screen flex flex-col custom-scrollbar"
+      className="flex flex-col custom-scrollbar"
       style={{
         width: 240,
+        height: '100%',
         background: 'var(--canvas)',
-        borderRight: '1px solid rgba(20,20,19,0.08)',
-        zIndex: 50,
+        borderRight: '1px solid rgba(20,20,19,0.06)',
       }}
     >
       {/* ── Brand ── */}

@@ -20,21 +20,21 @@ const STEPS = [
 
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="landing-section" style={{ padding: '80px 32px', background: 'var(--canvas-lifted)' }}>
+    <section id="how-it-works" className="landing-section" style={{ padding: 'clamp(60px, 10vh, 100px) 24px', background: 'var(--canvas-lifted)' }}>
       <div className="landing-container" style={{ maxWidth: 1280, margin: '0 auto' }}>
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 60 }}>
+        <div style={{ textAlign: 'center', marginBottom: 'clamp(40px, 6vw, 60px)' }}>
           <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: 16 }}>Process</div>
-          <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: '0 0 14px' }}>
+          <h2 style={{ fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.02em', margin: '0 0 14px', lineHeight: 1.1 }}>
             Three steps to everywhere
           </h2>
-          <p style={{ fontSize: 17, fontWeight: 450, color: 'var(--slate)', maxWidth: 440, margin: '0 auto', lineHeight: 1.5 }}>
+          <p style={{ fontSize: 'clamp(15px, 2vw, 17px)', fontWeight: 450, color: 'var(--slate)', maxWidth: 440, margin: '0 auto', lineHeight: 1.5 }}>
             From account setup to live post across all channels in minutes.
           </p>
         </div>
 
         {/* Steps */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'clamp(16px, 3vw, 24px)' }}>
           {STEPS.map((step, i) => (
             <motion.div
               key={step.num}
