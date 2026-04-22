@@ -32,7 +32,12 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       // Token expired or invalid
       localStorage.removeItem('quickpost_token');
-      window.location.href = '/';
+      
+      // Only redirect if not already on the login or landing page
+      const isPublicPage = window.location.pathname === '/' || window.location.pathname === '/login';
+      if (!isPublicPage) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
