@@ -544,12 +544,12 @@ function PinterestCard({ post, onOpen, formatDate }) {
                     key={p.id}
                     title={`${p.name}: ${p.success ? "Success" : "Failed"}`}
                     style={{
-                      width: 22,
-                      height: 22,
+                      width: 24,
+                      height: 24,
                       borderRadius: "50%",
-                      background: "rgba(255,255,255,0.12)",
-                      backdropFilter: "blur(8px)",
-                      border: `1.5px solid ${p.success ? "rgba(34,197,94,0.7)" : "rgba(239,68,68,0.7)"}`,
+                      background: "#ffffff",
+                      boxShadow: "0 1px 6px rgba(0,0,0,0.18)",
+                      border: `2px solid ${p.success ? "rgba(34,197,94,0.85)" : "rgba(239,68,68,0.85)"}`,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
