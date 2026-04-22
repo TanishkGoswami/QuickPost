@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
-import Masonry from "react-masonry-css";
+import Masonry from "react-masonry-css"; 
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
