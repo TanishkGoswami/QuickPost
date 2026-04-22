@@ -811,9 +811,36 @@ function Dashboard() {
   const [selectedPost, setSelectedPost] = useState(null);
   const [queueCount, setQueueCount] = useState(0);
 
+  const getResponsiveItemsPerPage = (width, mode) => {
+    if (mode === "list") {
+      if (width < 640) return 4;
+      if (width < 1024) return 6;
+      return 8;
+    }
+
+    const sidebarWidth = width >= 1024 ? 240 : 0;
+    const horizontalPadding = width >= 1024 ? 56 : 32;
+    const availableWidth = Math.max(
+      260,
+      width - sidebarWidth - horizontalPadding,
+    );
+    const minCardWidth = 260;
+    const gridGap = 20;
+
+    const columns = Math.max(
+      1,
+      Math.floor((availableWidth + gridGap) / (minCardWidth + gridGap)),
+    );
+
+    const rows = columns === 1 ? 3 : 2;
+    return columns * rows;
+  };
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(() =>
+    getResponsiveItemsPerPage(window.innerWidth, "grid"),
+  );
 
   const tabs = [
     {
@@ -859,6 +886,17 @@ function Dashboard() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
+
+  useEffect(() => {
+    const updateItemsPerPage = () => {
+      setItemsPerPage(getResponsiveItemsPerPage(window.innerWidth, viewMode));
+    };
+
+    updateItemsPerPage();
+    window.addEventListener("resize", updateItemsPerPage);
+
+    return () => window.removeEventListener("resize", updateItemsPerPage);
+  }, [viewMode]);
 
   const resetPagination = () => setCurrentPage(1);
 
@@ -909,6 +947,13 @@ function Dashboard() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
   const handlePageChange = (page) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -924,8 +969,8 @@ function Dashboard() {
           alignItems: "center",
           justifyContent: "center",
           gap: 8,
-          marginTop: 40,
-          marginBottom: 24,
+          marginTop: 20,
+          marginBottom: 0,
         }}
       >
         <button
@@ -989,22 +1034,6 @@ function Dashboard() {
   };
 
   return (
-<<<<<<< Updated upstream
-    <div style={{ background: css.canvas, fontFamily: 'var(--font)' }}>
-
-      {/* ── Top header ── */}
-      <div style={{
-        background: css.lifted,
-        borderBottom: '1px solid rgba(20,20,19,0.08)',
-        padding: '16px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: 16,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, minWidth: 200 }}>
-=======
     <div
       style={{
         minHeight: "100vh",
@@ -1034,7 +1063,6 @@ function Dashboard() {
             minWidth: 200,
           }}
         >
->>>>>>> Stashed changes
           <div>
             <div className="eyebrow" style={{ marginBottom: 2 }}>
               Overview
@@ -1323,11 +1351,9 @@ function Dashboard() {
         )}
 
       {/* ── Main content ── */}
-<<<<<<< Updated upstream
-      <div style={{ padding: 0 }}>
-=======
-      <div style={{ padding: "clamp(16px, 3vw, 28px)" }}>
->>>>>>> Stashed changes
+      <div
+        style={{ padding: "clamp(16px, 3vw, 28px) clamp(16px, 3vw, 28px) 0" }}
+      >
         {loading ? (
           <div
             style={{
