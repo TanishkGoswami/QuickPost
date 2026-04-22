@@ -338,6 +338,7 @@ function PlatformPreviewPanel({
 }) {
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const activeId = activePlatform || selectedChannels[0] || null;
+  const scrollRef = useRef(null);
 
   const meta = PLATFORM_META[activeId] || PLATFORM_META.instagram;
 
@@ -394,10 +395,8 @@ function PlatformPreviewPanel({
   }, [mediaFiles]);
 
   /* ── INTERNAL COMPONENT: PreviewMedia ── */
-  const PreviewMediaContent = ({ forceRatio }) => {
-    const currentMedia = mediaUrls[activeMediaIndex];
-
-    if (!currentMedia) {
+  const renderPreviewMediaContent = (forceRatio) => {
+    if (!mediaUrls || mediaUrls.length === 0) {
       return (
         <div
           className={`w-full ${forceRatio || currentAspect} flex flex-col items-center justify-center bg-gray-100`}
@@ -412,71 +411,64 @@ function PlatformPreviewPanel({
       <div
         className={`relative w-full ${forceRatio || currentAspect} bg-gray-900 group overflow-hidden`}
       >
-        <AnimatePresence>
-          <motion.div
-            key={activeMediaIndex}
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="w-full h-full"
-          >
-            {currentMedia.type === "image" ? (
-              <img
-                src={currentMedia.url}
-                alt="Post"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <video
-                src={currentMedia.url}
-                className="w-full h-full object-cover"
-                muted
-                playsInline
-                autoPlay
-                loop
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
+        <div
+          className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          onScroll={(e) => {
+            const index = Math.round(e.target.scrollLeft / e.target.clientWidth);
+            if (index !== activeMediaIndex) setActiveMediaIndex(index);
+          }}
+          ref={scrollRef}
+        >
+          {mediaUrls.map((media) => (
+            <div key={media.id} className="w-full h-full flex-shrink-0 snap-center relative bg-black/10">
+              {media.type === "image" ? (
+                <img src={media.url} alt="Post" className="w-full h-full object-cover pointer-events-none" />
+              ) : (
+                <video src={media.url} className="w-full h-full object-cover pointer-events-none" muted playsInline autoPlay loop />
+              )}
+            </div>
+          ))}
+        </div>
 
-        {mediaFiles.length > 1 && (
+        {mediaUrls.length > 1 && (
           <>
-            {/* Arrows */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setActiveMediaIndex((prev) =>
-                  prev > 0 ? prev - 1 : mediaFiles.length - 1
-                );
-              }}
-              className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100 z-10"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setActiveMediaIndex((prev) =>
-                  prev < mediaFiles.length - 1 ? prev + 1 : 0
-                );
-              }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100 z-10"
-            >
-              <ChevronRight size={16} />
-            </button>
-
-            {/* Indicator Badge */}
+            {activeMediaIndex > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (scrollRef.current) {
+                    const newIndex = activeMediaIndex - 1;
+                    scrollRef.current.scrollTo({ left: newIndex * scrollRef.current.clientWidth, behavior: 'smooth' });
+                  }
+                }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100 z-10"
+              >
+                <ChevronLeft size={16} />
+              </button>
+            )}
+            {activeMediaIndex < mediaUrls.length - 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (scrollRef.current) {
+                    const newIndex = activeMediaIndex + 1;
+                    scrollRef.current.scrollTo({ left: newIndex * scrollRef.current.clientWidth, behavior: 'smooth' });
+                  }
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100 z-10"
+              >
+                <ChevronRight size={16} />
+              </button>
+            )}
             <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md rounded-full px-2 py-0.5 flex items-center gap-1 border border-white/10 shadow-lg z-10">
               <ImageIcon className="w-2.5 h-2.5 text-white" />
               <span className="text-[10px] font-bold text-white leading-none">
-                {activeMediaIndex + 1}/{mediaFiles.length}
+                {activeMediaIndex + 1}/{mediaUrls.length}
               </span>
             </div>
-
-            {/* Dots */}
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1 z-10">
-              {mediaFiles.map((_, i) => (
+              {mediaUrls.map((_, i) => (
                 <div
                   key={i}
                   className={`w-1 h-1 rounded-full transition-all ${
@@ -547,7 +539,7 @@ function PlatformPreviewPanel({
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <PreviewMediaContent />
+                  renderPreviewMediaContent()
                 )}
                 {/* Duration badge */}
                 <span className="absolute bottom-1.5 right-1.5 bg-black/80 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded shadow-sm">
@@ -644,7 +636,7 @@ function PlatformPreviewPanel({
                   ))}
                 </div>
               </div>
-              <PreviewMediaContent />
+              {renderPreviewMediaContent()}
               <div className="px-3 pt-2.5 pb-1">
                 <div className="flex items-center">
                   <div className="flex items-center gap-3 flex-1">
@@ -755,7 +747,7 @@ function PlatformPreviewPanel({
                 </p>
               )}
               {/* Media */}
-              <PreviewMediaContent />
+              {renderPreviewMediaContent()}
               {/* Reaction counts */}
               <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-100">
                 <div className="flex items-center gap-1">
@@ -824,7 +816,7 @@ function PlatformPreviewPanel({
                 </p>
               )}
               {/* Media */}
-              <PreviewMediaContent />
+              {renderPreviewMediaContent()}
               {/* Reactions */}
               <div className="flex items-center justify-between px-3 py-1.5">
                 <div className="flex items-center gap-1">
@@ -887,7 +879,7 @@ function PlatformPreviewPanel({
                     </p>
                   )}
                   <div className="mb-2">
-                    <PreviewMediaContent forceRatio="aspect-auto rounded-xl overflow-hidden shadow-sm border border-gray-100" />
+                    {renderPreviewMediaContent("aspect-auto rounded-xl overflow-hidden shadow-sm border border-gray-100")}
                   </div>
                   {/* Action icons */}
                   <div className="flex items-center gap-4">
@@ -1027,7 +1019,7 @@ function PlatformPreviewPanel({
                   </p>
                 )}
                 <div className="relative">
-                  <PreviewMediaContent />
+                  {renderPreviewMediaContent()}
                   {activeId === "tiktok" && caption && (
                     <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
                       <p className="text-white text-[10px] leading-tight">
@@ -2369,9 +2361,26 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
                   {/* Other Hashtags Row */}
                   <div
-                    className="flex gap-2 overflow-x-auto pb-2 no-scrollbar"
+                    className="flex gap-2 overflow-x-auto pb-2 no-scrollbar items-center"
                     style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                   >
+                    <input 
+                      type="text" 
+                      placeholder="+ Add custom tag (Enter)..."
+                      className="flex-shrink-0 px-3 py-1 bg-white border border-gray-200 rounded-md text-[11px] font-medium text-gray-700 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 w-36 transition-all"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const val = e.target.value.trim();
+                          if (val) {
+                            const newTag = val.startsWith('#') ? val : `#${val}`;
+                            setCaption(prev => prev ? `${prev} ${newTag}` : newTag);
+                            e.target.value = '';
+                          }
+                        }
+                      }}
+                    />
+                    <div className="w-px h-4 bg-gray-200 flex-shrink-0"></div>
                     {SUGGESTED_HASHTAGS.map((tag, i) => (
                       <button
                         key={i}
@@ -2656,7 +2665,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                     }}
                     className="relative"
                   >
-                    <div className="flex flex-col gap-4 pb-44">
+                    <div className="flex flex-col gap-4 pb-4">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="relative">
                           <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 block ml-1">
