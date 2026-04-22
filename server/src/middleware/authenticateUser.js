@@ -7,7 +7,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-producti
  * Authentication middleware
  * Verifies JWT token from Authorization header (Supabase JWT)
  */
-export function authenticateUser(req, res, next) {
+export async function authenticateUser(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
 
