@@ -1075,7 +1075,9 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
   const [youtubeThumbnail, setYoutubeThumbnail] = useState(null);
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
-  const [userTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+  const [userTimezone] = useState(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [dragActive, setDragActive] = useState(false);
@@ -1101,10 +1103,6 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     const d = new Date(Date.now() + 2 * 60 * 1000);
     return d.toISOString().slice(0, 16);
   }, []);
-
-  const availableSizePresets = useMemo(() => {
-    return PLATFORM_LAYOUT_PRESETS[activePreviewPlatform] || [];
-  }, [activePreviewPlatform]);
 
   const selectedRatio = useMemo(() => {
     return (
@@ -1406,27 +1404,64 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     <div className="modal-overlay" onClick={handleClose}>
       <div
         style={{
-          background: 'var(--canvas-lifted)',
-          borderRadius: 'var(--r-hero)',
-          boxShadow: 'var(--shadow-deep)',
-          width: '100%',
-          maxWidth: '1100px',
-          maxHeight: '90vh',
-          overflow: 'hidden',
+          background: "var(--canvas-lifted)",
+          borderRadius: "var(--r-hero)",
+          boxShadow: "var(--shadow-deep)",
+          width: "100%",
+          maxWidth: "1100px",
+          maxHeight: "90vh",
+          overflow: "hidden",
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{ borderBottom: '1px solid rgba(20,20,19,0.08)', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--canvas-lifted)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>Create Post</h2>
+        <div
+          style={{
+            borderBottom: "1px solid rgba(20,20,19,0.08)",
+            padding: "14px 24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            background: "var(--canvas-lifted)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <h2
+              style={{
+                fontSize: 16,
+                fontWeight: 600,
+                color: "var(--ink)",
+                letterSpacing: "-0.02em",
+                margin: 0,
+              }}
+            >
+              Create Post
+            </h2>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <button
               type="button"
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: 'var(--slate)', background: 'transparent', border: '1px solid rgba(20,20,19,0.10)', borderRadius: 'var(--r-btn)', cursor: 'pointer', fontFamily: 'var(--font)', transition: 'background 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(20,20,19,0.05)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 12px",
+                fontSize: 12,
+                fontWeight: 600,
+                color: "var(--slate)",
+                background: "transparent",
+                border: "1px solid rgba(20,20,19,0.10)",
+                borderRadius: "var(--r-btn)",
+                cursor: "pointer",
+                fontFamily: "var(--font)",
+                transition: "background 0.15s",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background = "rgba(20,20,19,0.05)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.background = "transparent")
+              }
               title="AI Assistant"
             >
               <Sparkles size={13} />
@@ -1434,9 +1469,27 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
             </button>
             <button
               type="button"
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: 'var(--slate)', background: 'transparent', border: '1px solid rgba(20,20,19,0.10)', borderRadius: 'var(--r-btn)', cursor: 'pointer', fontFamily: 'var(--font)', transition: 'background 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(20,20,19,0.05)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "6px 12px",
+                fontSize: 12,
+                fontWeight: 600,
+                color: "var(--slate)",
+                background: "transparent",
+                border: "1px solid rgba(20,20,19,0.10)",
+                borderRadius: "var(--r-btn)",
+                cursor: "pointer",
+                fontFamily: "var(--font)",
+                transition: "background 0.15s",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background = "rgba(20,20,19,0.05)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.background = "transparent")
+              }
               title="Preview"
             >
               <Eye size={13} />
@@ -1445,9 +1498,25 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
             <button
               type="button"
               onClick={handleClose}
-              style={{ width: 32, height: 32, borderRadius: '50%', border: '1px solid rgba(20,20,19,0.10)', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--slate)', transition: 'background 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(20,20,19,0.05)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                border: "1px solid rgba(20,20,19,0.10)",
+                background: "transparent",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--slate)",
+                transition: "background 0.15s",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background = "rgba(20,20,19,0.05)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.background = "transparent")
+              }
             >
               <X size={14} />
             </button>
@@ -1457,7 +1526,13 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
         {/* Body - Split Layout */}
         <div className="flex h-[calc(90vh-120px)]">
           {/* Left Panel - Composer */}
-          <div className="flex-1 overflow-y-auto p-6 border-r" style={{ borderColor: 'rgba(20,20,19,0.08)', background: 'var(--canvas)' }}>
+          <div
+            className="flex-1 overflow-y-auto p-6 border-r"
+            style={{
+              borderColor: "rgba(20,20,19,0.08)",
+              background: "var(--canvas)",
+            }}
+          >
             {/* Channel Selection with Remove Badges */}
             <div className="mb-6">
               <ChannelSelector
@@ -1503,9 +1578,32 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                           prev ? `${prev} ${suggestion}` : suggestion,
                         )
                       }
-                      style={{ flexShrink: 0, padding: '5px 12px', background: 'var(--canvas-lifted)', border: '1px solid rgba(20,20,19,0.12)', borderRadius: 'var(--r-pill)', fontSize: 11, color: 'var(--slate)', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'var(--font)', fontWeight: 500, transition: 'all 0.15s' }}
-                      onMouseEnter={e => { e.currentTarget.style.background = 'var(--ink)'; e.currentTarget.style.color = 'var(--canvas)'; e.currentTarget.style.borderColor = 'var(--ink)'; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = 'var(--canvas-lifted)'; e.currentTarget.style.color = 'var(--slate)'; e.currentTarget.style.borderColor = 'rgba(20,20,19,0.12)'; }}
+                      style={{
+                        flexShrink: 0,
+                        padding: "5px 12px",
+                        background: "var(--canvas-lifted)",
+                        border: "1px solid rgba(20,20,19,0.12)",
+                        borderRadius: "var(--r-pill)",
+                        fontSize: 11,
+                        color: "var(--slate)",
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        fontFamily: "var(--font)",
+                        fontWeight: 500,
+                        transition: "all 0.15s",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "var(--ink)";
+                        e.currentTarget.style.color = "var(--canvas)";
+                        e.currentTarget.style.borderColor = "var(--ink)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background =
+                          "var(--canvas-lifted)";
+                        e.currentTarget.style.color = "var(--slate)";
+                        e.currentTarget.style.borderColor =
+                          "rgba(20,20,19,0.12)";
+                      }}
                       className=""
                     >
                       {suggestion}
@@ -1523,21 +1621,74 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                 </div>
                 <div className="flex flex-col gap-3">
                   {/* Brand Promotion Card */}
-                  <div style={{ background: 'var(--canvas-lifted)', border: '1px solid rgba(20,20,19,0.08)', borderLeft: '3px solid var(--arc)', borderRadius: 'var(--r-btn)', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--canvas)', boxShadow: 'var(--shadow-nav)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--arc)' }}>
+                  <div
+                    style={{
+                      background: "var(--canvas-lifted)",
+                      border: "1px solid rgba(20,20,19,0.08)",
+                      borderLeft: "3px solid var(--arc)",
+                      borderRadius: "var(--r-btn)",
+                      padding: "10px 14px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 10 }}
+                    >
+                      <div
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: "50%",
+                          background: "var(--canvas)",
+                          boxShadow: "var(--shadow-nav)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "var(--arc)",
+                        }}
+                      >
                         <Sparkles size={14} />
                       </div>
                       <div>
-                        <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink)', margin: 0, lineHeight: 1.3 }}>Get Featured!</p>
-                        <p style={{ fontSize: 10, color: 'var(--slate)', margin: 0 }}>Use #getaipilot to boost your reach</p>
+                        <p
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: "var(--ink)",
+                            margin: 0,
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          Get Featured!
+                        </p>
+                        <p
+                          style={{
+                            fontSize: 10,
+                            color: "var(--slate)",
+                            margin: 0,
+                          }}
+                        >
+                          Use #getaipilot to boost your reach
+                        </p>
                       </div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => setCaption((prev) => prev ? `${prev} #getaipilot` : "#getaipilot")}
+                      onClick={() =>
+                        setCaption((prev) =>
+                          prev ? `${prev} #getaipilot` : "#getaipilot",
+                        )
+                      }
                       className="btn-signal"
-                      style={{ fontSize: 10, padding: '4px 12px', display: 'flex', alignItems: 'center', gap: 4 }}
+                      style={{
+                        fontSize: 10,
+                        padding: "4px 12px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                      }}
                     >
                       <span>#getaipilot</span>
                       <Sparkles size={10} />
@@ -1798,7 +1949,10 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                 </div>
                 <button
                   type="button"
-                  onClick={() => { setIsScheduled(!isScheduled); setScheduledAt(""); }}
+                  onClick={() => {
+                    setIsScheduled(!isScheduled);
+                    setScheduledAt("");
+                  }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${isScheduled ? "bg-indigo-600" : "bg-gray-300"}`}
                 >
                   <span
@@ -1818,26 +1972,56 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                   />
                   {/* Timezone display */}
                   <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-lg border border-indigo-100">
-                    <svg className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                     <div className="flex-1 min-w-0">
-                      <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Timezone: </span>
-                      <span className="text-[10px] text-indigo-600 font-medium">{userTimezone}</span>
+                      <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">
+                        Timezone:{" "}
+                      </span>
+                      <span className="text-[10px] text-indigo-600 font-medium">
+                        {userTimezone}
+                      </span>
                     </div>
                   </div>
                   {scheduledAt && (
                     <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg border border-green-100">
-                      <svg className="w-3.5 h-3.5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <svg
+                        className="w-3.5 h-3.5 text-green-500 flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
                       </svg>
                       <span className="text-[10px] text-green-700 font-medium">
-                        Will publish at {new Date(scheduledAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })} ({userTimezone})
+                        Will publish at{" "}
+                        {new Date(scheduledAt).toLocaleString(undefined, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}{" "}
+                        ({userTimezone})
                       </span>
                     </div>
                   )}
                   <p className="text-[10px] text-indigo-500 font-medium ml-1">
-                    ✓ Post is saved server-side and publishes automatically — even if you close the app.
+                    ✓ Post is saved server-side and publishes automatically —
+                    even if you close the app.
                   </p>
                 </div>
               )}
@@ -1865,9 +2049,36 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
           </div>
 
           {/* Right Panel - Live Platform Previews */}
-          <div style={{ width: 320, flexShrink: 0, borderLeft: '1px solid rgba(20,20,19,0.08)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: 'var(--canvas-lifted)' }}>
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(20,20,19,0.08)', background: 'var(--canvas-lifted)' }}>
-              <h3 style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em', margin: 0, textTransform: 'uppercase' }}>Post Preview</h3>
+          <div
+            style={{
+              width: 320,
+              flexShrink: 0,
+              borderLeft: "1px solid rgba(20,20,19,0.08)",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              background: "var(--canvas-lifted)",
+            }}
+          >
+            <div
+              style={{
+                padding: "12px 16px",
+                borderBottom: "1px solid rgba(20,20,19,0.08)",
+                background: "var(--canvas-lifted)",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "var(--ink)",
+                  letterSpacing: "-0.01em",
+                  margin: 0,
+                  textTransform: "uppercase",
+                }}
+              >
+                Post Preview
+              </h3>
             </div>
 
             {selectedChannels.length === 0 ? (
@@ -1895,13 +2106,31 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
         </div>
 
         {/* Footer */}
-        <div style={{ borderTop: '1px solid rgba(20,20,19,0.08)', padding: '12px 24px', background: 'var(--canvas-lifted)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div
+          style={{
+            borderTop: "1px solid rgba(20,20,19,0.08)",
+            padding: "12px 24px",
+            background: "var(--canvas-lifted)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           <button
             type="button"
             onClick={handleClose}
-            style={{ fontSize: 13, fontWeight: 500, color: 'var(--slate)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', letterSpacing: '-0.01em' }}
-            onMouseEnter={e => e.currentTarget.style.color = 'var(--ink)'}
-            onMouseLeave={e => e.currentTarget.style.color = 'var(--slate)'}
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: "var(--slate)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontFamily: "var(--font)",
+              letterSpacing: "-0.01em",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--ink)")}
+            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--slate)")}
           >
             Cancel
           </button>
