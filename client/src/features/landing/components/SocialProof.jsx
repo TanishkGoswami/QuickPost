@@ -33,18 +33,18 @@ const PLATFORMS = [
 
 export default function SocialProof() {
   return (
-    <section className="landing-section" style={{ padding: '80px 32px', background: 'var(--canvas)' }}>
+    <section className="landing-section" style={{ padding: 'clamp(60px, 10vh, 100px) 24px', background: 'var(--canvas)' }}>
       <div className="landing-container" style={{ maxWidth: 1280, margin: '0 auto' }}>
 
         {/* ── Testimonials ── */}
-        <div style={{ textAlign: 'center', marginBottom: 56 }}>
+        <div style={{ textAlign: 'center', marginBottom: 'clamp(40px, 6vw, 56px)' }}>
           <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: 16 }}>From creators</div>
-          <h2 style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>
+          <h2 style={{ fontSize: 'clamp(28px, 4vw, 48px)', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0, lineHeight: 1.1 }}>
             Real results, real people
           </h2>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20, marginBottom: 72 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'clamp(16px, 3vw, 20px)', marginBottom: 'clamp(40px, 8vw, 72px)' }}>
           {TESTIMONIALS.map((t, i) => (
             <motion.div
               key={t.name}

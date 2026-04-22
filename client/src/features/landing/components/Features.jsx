@@ -26,21 +26,21 @@ const FEATURES = [
 
 export default function Features() {
   return (
-    <section id="features" className="landing-section" style={{ padding: '80px 32px', background: 'var(--canvas)' }}>
-      <div className="landing-container" style={{ maxWidth: 1280, margin: '0 auto' }}>
+    <section id="features" className="landing-section" style={{ padding: 'clamp(60px, 10vh, 100px) 24px', background: 'var(--canvas)' }}>
+      <div className="landing-container" style={{ maxWidth: '1280px', margin: '0 auto' }}>
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 56 }}>
-          <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: 16 }}>Features</div>
-          <h2 style={{ fontSize: 'clamp(32px, 4vw, 52px)', fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: '0 0 14px' }}>
+        <div style={{ textAlign: 'center', marginBottom: 'clamp(40px, 6vw, 56px)' }}>
+          <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: '16px' }}>Features</div>
+          <h2 style={{ fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.02em', margin: '0 0 14px', lineHeight: 1.1 }}>
             Built for serious creators
           </h2>
-          <p style={{ fontSize: 17, fontWeight: 450, color: 'var(--slate)', maxWidth: 480, margin: '0 auto', lineHeight: 1.5 }}>
+          <p style={{ fontSize: 'clamp(15px, 2vw, 17px)', fontWeight: 450, color: 'var(--slate)', maxWidth: '480px', margin: '0 auto', lineHeight: 1.5 }}>
             Every feature is designed around one principle — your time is your most valuable asset.
           </p>
         </div>
 
         {/* Feature grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'clamp(16px, 3vw, 20px)', marginBottom: 'clamp(40px, 8vw, 72px)' }}>
           {FEATURES.map((f, i) => (
             <motion.div
               key={f.title}
