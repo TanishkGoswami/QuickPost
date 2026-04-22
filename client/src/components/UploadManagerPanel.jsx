@@ -8,9 +8,8 @@ import {
 import { useUploadJobs } from '../context/UploadJobContext';
 
 /* ─────────────────────────────────────────────────────────────────────────── */
-/* DESIGN DIRECTION: "Mission Control"                                         */
-/* Dark obsidian panels • electric cyan/emerald progress • Geist Mono font    */
-/* Each job card feels like a live telemetry readout from a launch dashboard  */
+/* DESIGN DIRECTION: "Mastercard Premium"                                      */
+/* Clean putty/white surfaces • bright orange arc accents • Sofia Sans         */
 /* ─────────────────────────────────────────────────────────────────────────── */
 
 const PLATFORM_ICONS = {
@@ -27,12 +26,24 @@ const PLATFORM_ICONS = {
   reddit: '/icons/reddit-icon.svg',
 };
 
+// tokens
+const css = {
+  ink: '#141413',
+  slate: '#696969',
+  arc: '#F37338',
+  canvas: '#F3F0EE',
+  lifted: '#FCFBFA',
+  white: '#FFFFFF',
+  success: '#10b981',
+  error: '#ef4444'
+};
+
 function phase(progress, status) {
-  if (status === 'failed') return { label: 'FAILED', bar: '#f43f5e', glow: 'rgba(244,63,94,0.4)', text: '#f43f5e' };
-  if (status === 'completed' || progress >= 100) return { label: 'DONE', bar: '#10b981', glow: 'rgba(16,185,129,0.35)', text: '#10b981' };
-  if (progress < 30) return { label: 'UPLOADING', bar: '#6366f1', glow: 'rgba(99,102,241,0.3)', text: '#6366f1' };
-  if (progress < 70) return { label: 'PUBLISHING', bar: '#8e4cfb', glow: 'rgba(142,76,251,0.35)', text: '#8e4cfb' };
-  return { label: 'FINALIZING', bar: '#94a3b8', glow: 'rgba(148,163,184,0.35)', text: '#94a3b8' };
+  if (status === 'failed') return { label: 'FAILED', bar: css.error, glow: 'rgba(239,68,68,0.15)', text: css.error };
+  if (status === 'completed' || progress >= 100) return { label: 'DONE', bar: css.success, glow: 'rgba(16,185,129,0.15)', text: css.success };
+  if (progress < 30) return { label: 'UPLOADING', bar: css.arc, glow: 'rgba(243,115,56,0.15)', text: css.arc };
+  if (progress < 70) return { label: 'PUBLISHING', bar: css.arc, glow: 'rgba(243,115,56,0.15)', text: css.arc };
+  return { label: 'FINALIZING', bar: css.slate, glow: 'rgba(105,105,105,0.15)', text: css.slate };
 }
 
 /* Pulsing dot indicator */
@@ -77,13 +88,13 @@ function JobCard({ job, onRetry, onDismiss }) {
         borderRadius: 12,
         padding: '12px 13px',
         background: isFailed
-          ? 'linear-gradient(135deg, rgba(255,59,92,0.07), rgba(10,10,16,0.95))'
+          ? 'linear-gradient(135deg, rgba(239,68,68,0.03), #FFFFFF)'
           : isDone
-          ? 'linear-gradient(135deg, rgba(0,229,160,0.07), rgba(10,10,16,0.95))'
-          : 'rgba(255,255,255,0.03)',
-        border: `1px solid ${isFailed ? 'rgba(255,59,92,0.18)' : isDone ? 'rgba(0,229,160,0.18)' : 'rgba(255,255,255,0.06)'}`,
+          ? 'linear-gradient(135deg, rgba(16,185,129,0.03), #FFFFFF)'
+          : '#FFFFFF',
+        border: `1.5px solid ${isFailed ? 'rgba(239,68,68,0.15)' : isDone ? 'rgba(16,185,129,0.15)' : 'rgba(20,20,19,0.05)'}`,
         overflow: 'hidden',
-        fontFamily: "'Geist Mono', 'JetBrains Mono', 'Fira Code', monospace",
+        boxShadow: '0 4px 12px rgba(0,0,0,0.02)',
       }}
     >
       {/* Active scan-line shimmer */}
@@ -91,7 +102,7 @@ function JobCard({ job, onRetry, onDismiss }) {
         <motion.div
           style={{
             position: 'absolute', top: 0, left: 0, right: 0, height: '100%',
-            background: 'linear-gradient(90deg, transparent 0%, rgba(0,180,255,0.03) 50%, transparent 100%)',
+            background: 'linear-gradient(90deg, transparent 0%, rgba(243,115,56,0.03) 50%, transparent 100%)',
             pointerEvents: 'none',
           }}
           animate={{ x: ['-100%', '200%'] }}
@@ -103,8 +114,8 @@ function JobCard({ job, onRetry, onDismiss }) {
         {/* Thumbnail */}
         <div style={{
           width: 42, height: 42, borderRadius: 8, overflow: 'hidden', flexShrink: 0,
-          background: 'rgba(255,255,255,0.04)',
-          border: `1px solid ${p.bar}22`,
+          background: 'rgba(20,20,19,0.02)',
+          border: `1px solid ${p.bar}33`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: `0 0 12px ${p.glow}`,
         }}>
@@ -123,8 +134,8 @@ function JobCard({ job, onRetry, onDismiss }) {
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 6 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{
-                fontSize: 11.5, fontWeight: 700, color: 'rgba(255,255,255,0.88)',
-                letterSpacing: '0.01em', lineHeight: 1.3,
+                fontSize: 12, fontWeight: 600, color: css.ink,
+                letterSpacing: '-0.01em', lineHeight: 1.3,
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
               }}>
                 {caption || `${fileCount} file${fileCount !== 1 ? 's' : ''}`}
@@ -132,15 +143,14 @@ function JobCard({ job, onRetry, onDismiss }) {
               {/* Status label + dot */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
                 {isActive && <StatusDot color={p.bar} />}
-                {isDone && <CheckCircle2 size={10} color="#10b981" />}
-                {isFailed && <AlertCircle size={10} color="#f43f5e" />}
+                {isDone && <CheckCircle2 size={10} color={css.success} />}
+                {isFailed && <AlertCircle size={10} color={css.error} />}
                 <span style={{ 
                   fontSize: 9.5, 
                   fontWeight: 700, 
                   color: p.text, 
                   letterSpacing: '0.06em', 
                   textTransform: 'uppercase',
-                  fontFamily: 'var(--font-mono)'
                 }}>
                   {p.label}
                 </span>
@@ -154,15 +164,15 @@ function JobCard({ job, onRetry, onDismiss }) {
                 flexShrink: 0, width: 22, height: 22, borderRadius: 6,
                 background: 'none', border: 'none', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'rgba(255,255,255,0.2)', transition: 'all 0.15s',
+                color: css.slate, transition: 'all 0.15s',
                 padding: 0,
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.color = 'rgba(244,63,94,0.8)';
-                e.currentTarget.style.background = 'rgba(244,63,94,0.1)';
+                e.currentTarget.style.color = css.error;
+                e.currentTarget.style.background = 'rgba(239,68,68,0.05)';
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.color = 'rgba(255,255,255,0.2)';
+                e.currentTarget.style.color = css.slate;
                 e.currentTarget.style.background = 'none';
               }}
             >
@@ -172,7 +182,7 @@ function JobCard({ job, onRetry, onDismiss }) {
 
           {/* Step message or error */}
           <p style={{
-            fontSize: 10, color: isFailed ? '#ff3b5c' : 'rgba(255,255,255,0.3)',
+            fontSize: 10, color: isFailed ? css.error : css.slate,
             marginTop: 4, letterSpacing: '0.01em', lineHeight: 1.4,
             overflow: 'hidden', textOverflow: 'ellipsis',
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
@@ -182,17 +192,17 @@ function JobCard({ job, onRetry, onDismiss }) {
 
           {/* Progress bar */}
           <div style={{
-            height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.06)',
+            height: 4, borderRadius: 99, background: 'rgba(20,20,19,0.06)',
             marginTop: 8, overflow: 'hidden', position: 'relative',
           }}>
             <motion.div
               style={{
                 height: '100%', borderRadius: 99,
                 background: isFailed
-                  ? '#ff3b5c'
+                  ? css.error
                   : isDone
-                  ? '#00e5a0'
-                  : `linear-gradient(90deg, ${p.bar}, ${p.bar}cc)`,
+                  ? css.success
+                  : `linear-gradient(90deg, ${p.bar}, #FF8C5A)`,
                 boxShadow: `0 0 8px ${p.glow}`,
               }}
               animate={{ width: `${isFailed ? 100 : Math.max(progress, 0)}%` }}
@@ -203,7 +213,7 @@ function JobCard({ job, onRetry, onDismiss }) {
               <motion.div
                 style={{
                   position: 'absolute', top: 0, height: '100%', width: 30,
-                  background: `linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)`,
+                  background: `linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent)`,
                   left: `${progress}%`,
                 }}
                 animate={{ opacity: [0.6, 0, 0.6] }}
@@ -215,9 +225,9 @@ function JobCard({ job, onRetry, onDismiss }) {
           {/* Bottom row: % + platforms */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
             <span style={{
-              fontSize: 9.5, fontWeight: 700,
-              color: isDone ? '#00e5a0' : isFailed ? '#ff3b5c' : 'rgba(255,255,255,0.25)',
-              fontVariantNumeric: 'tabular-nums', letterSpacing: '0.05em',
+              fontSize: 10, fontWeight: 700,
+              color: isDone ? css.success : isFailed ? css.error : css.slate,
+              fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em',
             }}>
               {isDone ? '100%' : isFailed ? 'ERR' : `${progress}%`}
             </span>
@@ -227,19 +237,21 @@ function JobCard({ job, onRetry, onDismiss }) {
                 const src = PLATFORM_ICONS[ch];
                 return src ? (
                   <img key={ch} src={src} alt={ch} style={{
-                    width: 15, height: 15, borderRadius: '50%', objectFit: 'cover',
-                    border: '1.5px solid rgba(10,10,16,0.9)',
-                    marginLeft: i > 0 ? -5 : 0, position: 'relative', zIndex: 6 - i,
+                    width: 16, height: 16, borderRadius: '50%', objectFit: 'cover',
+                    border: '1.5px solid #FFFFFF',
+                    marginLeft: i > 0 ? -6 : 0, position: 'relative', zIndex: 6 - i,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
                   }} />
                 ) : null;
               })}
               {channels.length > 6 && (
                 <div style={{
-                  width: 15, height: 15, borderRadius: '50%', marginLeft: -5,
-                  background: 'rgba(255,255,255,0.1)', border: '1.5px solid rgba(10,10,16,0.9)',
+                  width: 16, height: 16, borderRadius: '50%', marginLeft: -6,
+                  background: css.canvas, border: '1.5px solid #FFFFFF',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
                 }}>
-                  <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.5)', fontWeight: 700 }}>
+                  <span style={{ fontSize: 7, color: css.slate, fontWeight: 700 }}>
                     +{channels.length - 6}
                   </span>
                 </div>
@@ -253,13 +265,13 @@ function JobCard({ job, onRetry, onDismiss }) {
               onClick={() => onRetry(job.id)}
               style={{
                 marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6,
-                background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)',
-                borderRadius: 8, padding: '5px 12px', cursor: 'pointer', color: '#818cf8',
+                background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)',
+                borderRadius: 8, padding: '5px 12px', cursor: 'pointer', color: css.error,
                 fontSize: 10, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
                 transition: 'all 0.15s',
               }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.2)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'rgba(99,102,241,0.1)'}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.05)'}
             >
               <RefreshCw size={10} className={isActive ? 'animate-spin' : ''} />
               Retry
@@ -290,9 +302,6 @@ export default function UploadManagerPanel() {
 
   return (
     <>
-      {/* Google Fonts for Geist Mono equivalent */}
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');`}</style>
-
       <motion.div
         initial={{ opacity: 0, y: 32, scale: 0.94 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -305,16 +314,15 @@ export default function UploadManagerPanel() {
           zIndex: 99999,
           width: 'clamp(300px, 90vw, 360px)',
           borderRadius: 20,
-          background: 'rgba(10, 10, 18, 0.98)',
+          background: 'rgba(252, 251, 250, 0.95)',
           backdropFilter: 'blur(32px) saturate(1.8)',
           WebkitBackdropFilter: 'blur(32px) saturate(1.8)',
-          border: '1px solid rgba(255,255,255,0.08)',
+          border: '1.5px solid rgba(20,20,19,0.08)',
           boxShadow: [
-            '0 40px 100px rgba(0,0,0,0.8)',
-            '0 0 0 1px rgba(255,255,255,0.03) inset',
-            activeCount > 0 ? '0 0 60px rgba(99,102,241,0.08)' : '',
+            '0 24px 48px rgba(0,0,0,0.08)',
+            '0 0 0 1px rgba(255,255,255,0.4) inset',
+            activeCount > 0 ? '0 0 60px rgba(243,115,56,0.08)' : '',
           ].filter(Boolean).join(', '),
-          fontFamily: 'var(--font-ui)',
           overflow: 'hidden',
         }}
       >
@@ -323,20 +331,20 @@ export default function UploadManagerPanel() {
           onClick={() => setCollapsed(c => !c)}
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '11px 13px 11px 12px', cursor: 'pointer',
-            borderBottom: collapsed ? 'none' : '1px solid rgba(255,255,255,0.05)',
+            padding: '12px 14px', cursor: 'pointer',
+            borderBottom: collapsed ? 'none' : '1px solid rgba(20,20,19,0.05)',
             userSelect: 'none',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
             {/* Icon */}
             <div style={{
               width: 32, height: 32, borderRadius: 10, flexShrink: 0,
               background: activeCount > 0
-                ? 'linear-gradient(135deg, #6366f1, #8e4cfb)'
-                : 'linear-gradient(135deg, #10b981, #059669)',
+                ? css.arc
+                : css.success,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: activeCount > 0 ? '0 4px 20px rgba(99,102,241,0.4)' : '0 4px 20px rgba(16,185,129,0.3)',
+              boxShadow: activeCount > 0 ? '0 4px 20px rgba(243,115,56,0.3)' : '0 4px 20px rgba(16,185,129,0.2)',
             }}>
               {activeCount > 0 ? (
                 <motion.div
@@ -352,13 +360,13 @@ export default function UploadManagerPanel() {
 
             {/* Title block */}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: 'rgba(255,255,255,0.9)', letterSpacing: '0.02em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: css.ink, letterSpacing: '-0.01em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {activeCount > 0 ? `Broadcasting ${activeCount}…` : 'Broadcast Manager'}
               </div>
-              <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.35)', marginTop: 2, letterSpacing: '0.04em', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
+              <div style={{ fontSize: 10, color: css.slate, marginTop: 1, fontWeight: 600 }}>
                 {jobs.length} JOB{jobs.length !== 1 ? 'S' : ''}
-                {completedCount > 0 && <span style={{ color: '#10b981' }}> · {completedCount} DONE</span>}
-                {failedCount > 0 && <span style={{ color: '#f43f5e' }}> · {failedCount} FAILED</span>}
+                {completedCount > 0 && <span style={{ color: css.success }}> · {completedCount} DONE</span>}
+                {failedCount > 0 && <span style={{ color: css.error }}> · {failedCount} FAILED</span>}
               </div>
             </div>
           </div>
@@ -368,13 +376,13 @@ export default function UploadManagerPanel() {
               <button
                 onClick={e => { e.stopPropagation(); clearCompleted(); }}
                 style={{
-                  fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.28)',
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)',
-                  borderRadius: 5, padding: '3px 8px', cursor: 'pointer',
-                  letterSpacing: '0.05em', textTransform: 'uppercase', transition: 'all 0.12s',
+                  fontSize: 10, fontWeight: 700, color: css.slate,
+                  background: 'rgba(20,20,19,0.03)', border: '1px solid rgba(20,20,19,0.05)',
+                  borderRadius: 6, padding: '4px 10px', cursor: 'pointer',
+                  letterSpacing: '0.02em', textTransform: 'uppercase', transition: 'all 0.12s',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; }}
-                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.28)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                onMouseEnter={e => { e.currentTarget.style.color = css.ink; e.currentTarget.style.background = 'rgba(20,20,19,0.06)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = css.slate; e.currentTarget.style.background = 'rgba(20,20,19,0.03)'; }}
               >
                 Clear
               </button>
@@ -383,16 +391,16 @@ export default function UploadManagerPanel() {
               animate={{ rotate: collapsed ? 180 : 0 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
             >
-              <ChevronDown size={16} color="rgba(255,255,255,0.35)" />
+              <ChevronDown size={16} color={css.slate} />
             </motion.div>
           </div>
         </div>
 
         {/* Summary progress strip (always visible, only when active) */}
         {activeCount > 0 && (
-          <div style={{ height: 2, background: 'rgba(255,255,255,0.04)' }}>
+          <div style={{ height: 2, background: 'rgba(20,20,19,0.04)' }}>
             <motion.div
-              style={{ height: '100%', background: 'linear-gradient(90deg, #6366f1, #8e4cfb, #10b981)', backgroundSize: '200% 100%' }}
+              style={{ height: '100%', background: `linear-gradient(90deg, ${css.arc}, #FF8C5A, ${css.arc})`, backgroundSize: '200% 100%' }}
               animate={{ width: `${avgProgress}%`, backgroundPosition: ['0% 0%', '100% 0%'] }}
               transition={{ width: { duration: 0.6, ease: [0.16,1,0.3,1] }, backgroundPosition: { repeat: Infinity, duration: 3, ease: 'linear' } }}
             />

@@ -46,7 +46,7 @@ const css = {
 
 /* ── Platform helpers ── */
 function getPlatformIcon(id) {
-  const s = { width: 16, height: 16, objectFit: 'contain' };
+  const s = { width: 14, height: 14, objectFit: 'contain' };
   switch (id) {
     case 'facebook':  return <img src="/icons/facebook-round-color-icon.svg" style={s} alt="Facebook" />;
     case 'instagram': return <img src="/icons/ig-instagram-icon.svg" style={s} alt="Instagram" />;
@@ -60,7 +60,7 @@ function getPlatformIcon(id) {
     case 'bluesky':   return <img src="/icons/bluesky-circle-color-icon.svg" style={s} alt="Bluesky" />;
     case 'reddit':    return <img src="/icons/reddit-icon.svg" style={s} alt="Reddit" />;
     case 'google-business': return <img src="/icons/google-icon.svg" style={s} alt="Google" />;
-    default:          return <Share2 size={16} />;
+    default:          return <Share2 size={14} />;
   }
 }
 
@@ -151,7 +151,7 @@ function MediaThumb({ post, className = '', style = {} }) {
   const isImage = post.media_type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || '');
   const displayUrl = post.thumbnail_url || (isImage ? post.media_url : null);
   return (
-    <div className={className} style={{ background: '#e8e2da', overflow: 'hidden', position: 'relative', ...style }}>
+    <div className={className} style={{ background: '#e8e2da', overflow: 'hidden', position: 'relative', borderBottom: '1px solid rgba(20,20,19,0.05)', ...style }}>
       {displayUrl ? (
         <div style={{ width: '100%', height: '100%', position: 'relative' }}>
           <img src={displayUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s', display: 'block' }}
@@ -160,22 +160,28 @@ function MediaThumb({ post, className = '', style = {} }) {
             onError={e => { e.target.src = 'https://placehold.co/300x300?text=Preview'; }}
           />
           {post.youtube_success && (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.08)' }}>
-              <div style={{ width: 42, height: 42, background: '#dc2626', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}>
-                <Play size={18} style={{ color: '#fff', fill: '#fff', marginLeft: 3 }} />
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.12)', backdropFilter: 'blur(1px)' }}>
+              <div style={{ width: 44, height: 44, background: '#FF0000', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(255,0,0,0.3)', border: '2px solid rgba(255,255,255,0.2)' }}>
+                <Play size={20} style={{ color: '#fff', fill: '#fff', marginLeft: 3 }} />
               </div>
             </div>
           )}
+          {/* Subtle bottom gradient for card transition */}
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 40, background: 'linear-gradient(to top, rgba(20,20,19,0.04), transparent)' }} />
         </div>
       ) : post.media_type === 'image' ? (
-        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, background: '#e8e2da' }}>
-          <ImageIcon size={28} style={{ color: '#9a9088' }} />
-          <span style={{ fontSize: 9, fontWeight: 700, color: '#9a9088', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Image</span>
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#e8e2da' }}>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(20,20,19,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ImageIcon size={22} style={{ color: '#9a9088' }} />
+          </div>
+          <span style={{ fontSize: 9, fontWeight: 700, color: '#9a9088', textTransform: 'uppercase', letterSpacing: '0.12em' }}>No Media</span>
         </div>
       ) : (
-        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, background: css.ink }}>
-          <Video size={28} style={{ color: 'rgba(243,240,238,0.5)' }} />
-          <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(243,240,238,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Video</span>
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, background: css.ink }}>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Video size={22} style={{ color: 'rgba(243,240,238,0.5)' }} />
+          </div>
+          <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(243,240,238,0.4)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>No Video</span>
         </div>
       )}
     </div>
@@ -185,14 +191,14 @@ function MediaThumb({ post, className = '', style = {} }) {
 /* ── Platform badge ── */
 function PlatformBadge({ platform }) {
   return (
-    <div style={{
+      <div style={{ 
       display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px',
       borderRadius: css.r_pill, fontSize: 10, fontWeight: 700,
       background: platform.success ? '#e6f4ea' : '#fde8e8',
       color: platform.success ? '#1a6b34' : '#9b1c1c',
       border: `1px solid ${platform.success ? '#b7dfc3' : '#f5b8b8'}`,
-    }}>
-      {getPlatformIcon(platform.id)}
+      }}>
+        {getPlatformIcon(platform.id)}
       <span>{platform.name}</span>
       {platform.success
         ? <CheckCircle2 size={10} />
@@ -206,55 +212,94 @@ function PlatformBadge({ platform }) {
 function GridCard({ post, onOpen, formatDate }) {
   const platforms = buildPlatforms(post);
   const successCount = platforms.filter((p) => p.success).length;
+  const isScheduled = post.status === 'scheduled';
+  
   return (
     <div
       onClick={onOpen}
       style={{
         background: css.lifted,
         borderRadius: css.r_hero,
-        border: '1px solid rgba(20,20,19,0.07)',
+        border: '1.5px solid rgba(20,20,19,0.06)',
         overflow: 'hidden',
         cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
-        transition: 'box-shadow 0.25s, transform 0.2s',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: '0 8px 30px rgba(0,0,0,0.02)',
       }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = css.shadow; e.currentTarget.style.transform = 'translateY(-4px)'; }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
+      onMouseEnter={e => { 
+        e.currentTarget.style.boxShadow = css.shadow; 
+        e.currentTarget.style.transform = 'translateY(-6px)';
+        e.currentTarget.style.borderColor = 'rgba(243, 115, 56, 0.2)'; // mc arc subtle highlight
+      }}
+      onMouseLeave={e => { 
+        e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.02)'; 
+        e.currentTarget.style.transform = 'none';
+        e.currentTarget.style.borderColor = 'rgba(20,20,19,0.06)';
+      }}
     >
       <div style={{ position: 'relative' }}>
-        <MediaThumb post={post} style={{ width: '100%', height: 176, borderRadius: 0 }} />
+        <MediaThumb post={post} style={{ width: '100%', height: 184, borderRadius: 0 }} />
+        
+        {/* Modern Label-style Badge (Frosted Glass) */}
         <div style={{
-          position: 'absolute', top: 12, right: 12,
-          padding: '3px 10px', borderRadius: css.r_pill,
-          background: 'rgba(20,20,19,0.7)', color: css.canvas,
-          fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
+          position: 'absolute', top: 14, right: 14,
+          padding: '4px 12px', borderRadius: css.r_pill,
+          background: 'rgba(20,20,19,0.65)', 
+          backdropFilter: 'blur(10px)',
+          color: css.canvas,
+          border: '1px solid rgba(255,255,255,0.15)',
+          fontSize: 8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
         }}>
           {post.media_type || 'media'}
         </div>
-        {successCount > 0 && (
+        
+        {/* Count Badge */}
+        {platforms.length > 0 && (
           <div style={{
-            position: 'absolute', bottom: 12, left: 12,
-            padding: '3px 10px', borderRadius: css.r_pill,
-            background: 'rgba(20,20,19,0.82)', color: css.canvas,
+            position: 'absolute', bottom: 14, left: 14,
+            padding: '4px 12px', borderRadius: css.r_pill,
+            background: 'rgba(255,255,255,0.85)', 
+            backdropFilter: 'blur(8px)',
+            color: css.ink,
+            border: '1px solid rgba(255,255,255,0.5)',
             fontSize: 9, fontWeight: 700,
+            boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
+            display: 'flex', alignItems: 'center', gap: 6
           }}>
-            {successCount} platform{successCount > 1 ? 's' : ''}
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: isScheduled ? css.arc : '#22c55e' }} />
+            {platforms.length} Platform{platforms.length > 1 ? 's' : ''}
           </div>
         )}
       </div>
 
-      <div style={{ padding: '16px 20px 20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: css.slate, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            <Calendar size={10} />{formatDate(post.status === 'scheduled' ? post.scheduled_for : post.posted_at)}
-          </div>
+      <div style={{ padding: '20px 24px 24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div className="eyebrow" style={{ fontSize: 10, marginBottom: 12 }}>
+          {formatDate(isScheduled ? post.scheduled_for : post.posted_at)}
         </div>
-        <p style={{ fontSize: 14, fontWeight: 600, color: css.ink, margin: '0 0 12px', lineHeight: 1.4, flex: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-          {post.caption || <span style={{ color: css.dust, fontStyle: 'italic' }}>No caption</span>}
+        
+        <p style={{ 
+          fontSize: 15, fontWeight: 500, color: css.ink, margin: '0 0 16px', lineHeight: 1.5, 
+          flex: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', 
+          overflow: 'hidden', letterSpacing: '-0.01em' 
+        }}>
+          {post.caption || <span style={{ color: css.dust, fontStyle: 'italic', fontWeight: 400 }}>No caption provided</span>}
         </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-          {platforms.map(p => <PlatformBadge key={p.id} platform={p} />)}
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {platforms.slice(0, 3).map(p => <PlatformBadge key={p.id} platform={p} />)}
+          {platforms.length > 3 && (
+            <div style={{ 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', 
+              padding: '4px 10px', borderRadius: css.r_pill, 
+              background: 'rgba(20,20,19,0.04)', color: css.slate,
+              fontSize: 10, fontWeight: 700
+            }}>
+              +{platforms.length - 3}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -264,57 +309,87 @@ function GridCard({ post, onOpen, formatDate }) {
 /* ── List row ── */
 function ListRow({ post, expanded, onToggle, formatDate }) {
   const platforms = buildPlatforms(post);
+  const isScheduled = post.status === 'scheduled';
+  
   return (
     <div style={{
       background: css.lifted,
       borderRadius: css.r_hero,
-      border: `1px solid ${expanded ? 'rgba(20,20,19,0.20)' : 'rgba(20,20,19,0.07)'}`,
+      border: `1.5px solid ${expanded ? 'rgba(243, 115, 56, 0.25)' : 'rgba(20,20,19,0.06)'}`,
       overflow: 'hidden',
-      transition: 'box-shadow 0.2s',
-      boxShadow: expanded ? css.shadow : 'none',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      boxShadow: expanded ? css.shadow : '0 4px 15px rgba(0,0,0,0.01)',
     }}>
-      <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'flex-start', gap: 16, cursor: 'pointer' }} onClick={onToggle}>
-        <MediaThumb post={post} style={{ width: 72, height: 72, borderRadius: 'var(--r-btn)', flexShrink: 0 }} />
+      <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 20, cursor: 'pointer' }} onClick={onToggle}>
+        <MediaThumb post={post} style={{ width: 84, height: 84, borderRadius: 'var(--r-btn)', flexShrink: 0, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: css.slate, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              <Calendar size={10} />{formatDate(post.status === 'scheduled' ? post.scheduled_for : post.posted_at)}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div className="eyebrow" style={{ fontSize: 9 }}>
+              {formatDate(isScheduled ? post.scheduled_for : post.posted_at)}
             </div>
-            {expanded ? <ChevronUp size={14} style={{ color: css.slate }} /> : <ChevronDown size={14} style={{ color: css.slate }} />}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {isScheduled && (
+                <div style={{ fontSize: 9, fontWeight: 800, color: css.arc, background: 'rgba(243, 115, 56, 0.08)', padding: '2px 8px', borderRadius: css.r_pill, textTransform: 'uppercase' }}>
+                  Scheduled
+                </div>
+              )}
+              {expanded ? <ChevronUp size={16} style={{ color: css.arc }} /> : <ChevronDown size={16} style={{ color: css.slate }} />}
+            </div>
           </div>
-          <h3 style={{ fontSize: 14, fontWeight: 600, color: css.ink, margin: '0 0 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {post.caption || 'Untitled Broadcast'}
+          <h3 style={{ fontSize: 16, fontWeight: 500, color: css.ink, margin: '0 0 10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>
+            {post.caption || <span style={{ fontStyle: 'italic', color: css.dust }}>No caption</span>}
           </h3>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-            {platforms.map(p => <PlatformBadge key={p.id} platform={p} />)}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {platforms.slice(0, 5).map(p => <PlatformBadge key={p.id} platform={p} />)}
+            {platforms.length > 5 && (
+              <div style={{ padding: '4px 10px', borderRadius: css.r_pill, background: 'rgba(20,20,19,0.04)', color: css.slate, fontSize: 10, fontWeight: 700 }}>
+                +{platforms.length - 5}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {expanded && (
-        <div style={{ borderTop: '1px solid rgba(20,20,19,0.07)', background: css.canvas, padding: '16px 20px 20px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10, marginBottom: 12 }}>
+        <div style={{ borderTop: '1.5px solid rgba(243, 115, 56, 0.1)', background: 'linear-gradient(to bottom, rgba(243, 115, 56, 0.02), transparent)', padding: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 20 }}>
             {platforms.map(p => (
-              <div key={p.id} style={{ background: css.lifted, padding: '12px 14px', borderRadius: css.r_btn, border: '1px solid rgba(20,20,19,0.07)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>{getPlatformIcon(p.id)}<span style={{ fontSize: 12, fontWeight: 700, color: css.ink }}>{p.name}</span></div>
-                  <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: css.r_pill, background: p.success ? '#e6f4ea' : '#fde8e8', color: p.success ? '#1a6b34' : '#9b1c1c', border: `1px solid ${p.success ? '#b7dfc3' : '#f5b8b8'}` }}>
+              <div key={p.id} style={{ 
+                background: css.white, 
+                padding: '16px', 
+                borderRadius: css.r_btn, 
+                border: '1.2px solid rgba(20,20,19,0.06)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: PLATFORM_COLORS[p.id] || css.slate, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {getPlatformIcon(p.id)}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: css.ink }}>{p.name}</span>
+                  </div>
+                  <span style={{ 
+                    fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: css.r_pill, 
+                    background: p.success ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', 
+                    color: p.success ? '#15803d' : '#b91c1c',
+                    border: `1px solid ${p.success ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`
+                  }}>
                     {p.success ? 'Success' : 'Failed'}
                   </span>
                 </div>
                 {p.success
                   ? p.url
-                    ? <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--link)', fontWeight: 700 }}>View Live Post <ExternalLink size={10} /></a>
-                    : <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: css.slate, fontWeight: 600 }}><Clock size={10} /> Pending Sync</div>
-                  : <p style={{ fontSize: 10, color: '#dc2626', fontStyle: 'italic', margin: 0 }}>{p.error || 'API error'}</p>
+                    ? <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: css.arc, fontWeight: 700, textDecoration: 'none' }}>View Live Post <ExternalLink size={12} /></a>
+                    : <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: css.slate, fontWeight: 600 }}><Clock size={12} /> Pending Sync</div>
+                  : <p style={{ fontSize: 11, color: '#ef4444', fontStyle: 'italic', margin: 0, lineHeight: 1.4 }}>{p.error || 'Connection error'}</p>
                 }
               </div>
             ))}
           </div>
           {post.caption && (
-            <div style={{ background: css.lifted, padding: '12px 14px', borderRadius: css.r_btn, border: '1px solid rgba(20,20,19,0.07)' }}>
-              <div className="eyebrow" style={{ marginBottom: 6, fontSize: 10 }}>Full Caption</div>
-              <p style={{ fontSize: 13, color: css.ink, whiteSpace: 'pre-wrap', lineHeight: 1.5, margin: 0 }}>{post.caption}</p>
+            <div style={{ background: css.white, padding: '20px', borderRadius: css.r_btn, border: '1.2px solid rgba(243, 115, 56, 0.1)', boxShadow: '0 8px 24px rgba(243, 115, 56, 0.05)' }}>
+              <div className="eyebrow" style={{ marginBottom: 10, fontSize: 10 }}>Full Caption</div>
+              <p style={{ fontSize: 14, color: css.ink, whiteSpace: 'pre-wrap', lineHeight: 1.6, margin: 0 }}>{post.caption}</p>
             </div>
           )}
         </div>

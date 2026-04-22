@@ -306,6 +306,7 @@ class InstagramOAuthService {
         instagram_business_id: tokenData.instagramBusinessId,
         page_id: tokenData.pageId,
         account_id: tokenData.instagramBusinessId,
+        username: tokenData.userInfo?.username,
         updated_at: new Date().toISOString()
       };
 

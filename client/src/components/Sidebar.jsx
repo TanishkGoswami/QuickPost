@@ -167,7 +167,19 @@ function Sidebar() {
                   fontWeight: 600,
                   fontSize: 14,
                   textDecoration: 'none',
-                  transition: 'background 0.2s, color 0.2s',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+                onMouseEnter={e => {
+                  if (!active) {
+                    e.currentTarget.style.background = 'rgba(20,20,19,0.05)';
+                    e.currentTarget.style.color = 'var(--ink)';
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!active) {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = 'var(--slate)';
+                  }
                 }}
               >
                 <span style={{ width: 28, height: 28, borderRadius: 'var(--r-sm)', background: active ? 'rgba(255,255,255,0.15)' : 'rgba(20,20,19,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

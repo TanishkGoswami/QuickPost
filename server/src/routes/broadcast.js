@@ -25,6 +25,7 @@ import {
 import googleOAuth from "../services/googleOAuth.js";
 import { createJob, updateJob, failJob, getJob } from "../services/jobQueue.js";
 import fs from "fs";
+import { resolveMentions } from "../services/mentions.js";
 
 const router = express.Router();
 
@@ -69,6 +70,7 @@ router.post(
       userTimezone,
       selectedAspectRatio = '1:1',
       selectedPostSizePreset,
+      postType = 'post',
     } = req.body;
     
     const userId = req.user.userId;
@@ -115,6 +117,7 @@ router.post(
       caption,
       channels,
       mediaType,
+      postType,
       filenames,
       fileCount: uploadedFiles.length,
       hasThumbnail: !!thumbnailFile,
@@ -126,23 +129,6 @@ router.post(
 
     let platformVariants = {};
     let generatedVariantPaths = [];
-
-    if (primaryInputPath) {
-      try {
-        const variantResult = await generatePlatformMediaVariants({
-          inputFilePath: primaryInputPath,
-          mediaType,
-          selectedChannels: channels,
-          selectedAspectRatio,
-          jobId,
-        });
-
-        platformVariants = variantResult.variants || {};
-        generatedVariantPaths = variantResult.generatedFiles || [];
-      } catch (variantErr) {
-        console.warn(`⚠️ [BROADCAST] Variant generation failed for job ${jobId}:`, variantErr.message);
-      }
-    }
 
     console.log(`🚀 Broadcast job queued. Type: ${mediaType}, User: ${userId}, Scheduled: ${isScheduled ? scheduledAt : 'Immediate'}`);
 
@@ -162,6 +148,7 @@ router.post(
       thumbnailFile,
       isVideo,
       mediaType,
+      postType,
       primaryVideoPath,
       platformVariants,
       generatedVariantPaths,
@@ -196,7 +183,7 @@ router.post(
 async function processBroadcastJob({
   jobId, userId, caption, channels, platData,
   uploadedFiles, filePaths, filenames,
-  thumbnailFile, isVideo, mediaType, primaryVideoPath,
+  thumbnailFile, isVideo, mediaType, postType, primaryVideoPath,
   platformVariants, generatedVariantPaths,
   selectedAspectRatio, selectedPostSizePreset,
   isScheduled, scheduledAt, userTimezone
@@ -305,6 +292,7 @@ async function processBroadcastJob({
         mediaType, 
         { 
           ...platData, 
+          postType,
           selectedChannels: channels, 
           filePaths, 
           userTimezone: userTimezone || 'UTC',
@@ -372,10 +360,11 @@ async function processBroadcastJob({
 
   // Pinterest
   if (channels.includes("pinterest") && tokens.pinterest) {
+    const resolvedCaption = resolveMentions(platData?.pinterest?.title || caption, 'pinterest', tokens.pinterest);
     platformPromises.push(
       postToPinterest(
         primaryMediaUrl,
-        platData?.pinterest?.title || caption,
+        resolvedCaption,
         tokens.pinterest,
         platData?.pinterest?.link,
         platData?.pinterest?.boardId,
@@ -385,14 +374,15 @@ async function processBroadcastJob({
 
   // Instagram
   if (channels.includes("instagram") && tokens.instagram) {
+    const resolvedCaption = resolveMentions(caption, 'instagram', tokens.instagram);
     let action;
     if (mediaUrls.length > 1 && !isVideo) {
-      action = postCarouselToInstagram(mediaUrls, caption, tokens.instagram);
+      action = postCarouselToInstagram(mediaUrls, resolvedCaption, tokens.instagram);
     } else if (isVideo) {
       const igTokens = { ...tokens.instagram, coverUrl: autoCoverImageUrl };
-      action = postToInstagram(primaryMediaUrl, caption, igTokens);
+      action = postToInstagram(primaryMediaUrl, resolvedCaption, igTokens);
     } else {
-      action = postImageToInstagram(primaryMediaUrl, caption, tokens.instagram);
+      action = postImageToInstagram(primaryMediaUrl, resolvedCaption, tokens.instagram);
     }
     platformPromises.push(
       action.then((r) => onChannelComplete("Instagram", r)),
@@ -401,18 +391,19 @@ async function processBroadcastJob({
 
   // Facebook
   if (channels.includes("facebook") && tokens.facebook?.pageId) {
+    const resolvedCaption = resolveMentions(caption, 'facebook', tokens.facebook);
     const fbAction = isVideo
       ? postVideoToFacebook(
           tokens.facebook.accessToken,
           tokens.facebook.pageId,
-          caption,
+          resolvedCaption,
           primaryMediaUrl,
           autoCoverImageUrl,
         )
       : postToFacebook(
           tokens.facebook.accessToken,
           tokens.facebook.pageId,
-          caption,
+          resolvedCaption,
           mediaUrls,
         );
     platformPromises.push(
@@ -422,8 +413,9 @@ async function processBroadcastJob({
 
   // LinkedIn
   if (channels.includes("linkedin") && tokens.linkedin) {
+    const resolvedCaption = resolveMentions(caption, 'linkedin', tokens.linkedin);
     platformPromises.push(
-      postToLinkedIn(mediaUrls, caption, tokens.linkedin).then((r) =>
+      postToLinkedIn(mediaUrls, resolvedCaption, tokens.linkedin).then((r) =>
         onChannelComplete("LinkedIn", r),
       ),
     );
@@ -431,6 +423,7 @@ async function processBroadcastJob({
 
   // Bluesky
   if (channels.includes("bluesky") && tokens.bluesky?.did) {
+    const resolvedCaption = resolveMentions(caption, 'bluesky', tokens.bluesky);
     const stats = filePaths.map((p) => {
       try {
         return fs.statSync(p).size;
@@ -466,8 +459,9 @@ async function processBroadcastJob({
 
   // X (Twitter)
   if (channels.includes("x") && tokens.x) {
+    const resolvedCaption = resolveMentions(caption, 'x', tokens.x);
     platformPromises.push(
-      broadcastToX(caption, mediaUrls, tokens.x, userId)
+      broadcastToX(resolvedCaption, mediaUrls, tokens.x, userId)
         .then((r) => (typeof r === "object" ? r : { success: true, result: r })) // ensure object response
         .then((r) => onChannelComplete("X", r)),
     );
@@ -484,8 +478,9 @@ async function processBroadcastJob({
       (async () => {
         const validAccessToken = await googleOAuth.getValidAccessToken(userId);
         const ytTokens = { ...tokens.youtube, accessToken: validAccessToken };
+        const resolvedCaption = resolveMentions(caption, 'youtube', ytTokens);
         updateJob(jobId, { step: "Uploading video to YouTube…" });
-        const result = await postToYouTube(primaryVideoPath, caption, ytTokens);
+        const result = await postToYouTube(primaryVideoPath, resolvedCaption, ytTokens);
         if (result.success && result.videoId && youtubeThumbnailPath) {
           const thumbResult = await setVideoThumbnail(
             result.videoId,
@@ -501,29 +496,32 @@ async function processBroadcastJob({
 
   // TikTok, Mastodon, Reddit, Threads...
   if (channels.includes("tiktok") && tokens.tiktok && primaryVideoPath) {
+    const resolvedCaption = resolveMentions(caption, 'tiktok', tokens.tiktok);
     platformPromises.push(
       tiktok
-        .publishVideo(tokens.tiktok.accessToken, primaryVideoPath, caption)
+        .publishVideo(tokens.tiktok.accessToken, primaryVideoPath, resolvedCaption)
         .then((r) => onChannelComplete("TikTok", r)),
     );
   }
   if (channels.includes("mastodon") && tokens.mastodon) {
+    const resolvedCaption = resolveMentions(caption, 'mastodon', tokens.mastodon);
     platformPromises.push(
       mastodon
         .postStatus(
           tokens.mastodon.accessToken,
           tokens.mastodon.instanceUrl,
-          caption,
+          resolvedCaption,
           filePaths,
         )
         .then((r) => onChannelComplete("Mastodon", r)),
     );
   }
   if (channels.includes("reddit") && tokens.reddit) {
+    const resolvedCaption = resolveMentions(caption, 'reddit', tokens.reddit);
     platformPromises.push(
       postToReddit(
         userId,
-        caption,
+        resolvedCaption,
         primaryMediaUrl,
         tokens.reddit,
         platData?.reddit,
@@ -531,11 +529,12 @@ async function processBroadcastJob({
     );
   }
   if (channels.includes("threads") && tokens.threads) {
+    const resolvedCaption = resolveMentions(caption, 'threads', tokens.threads);
     platformPromises.push(
       postToThreads(
         tokens.threads.accessToken,
         tokens.threads.account_id,
-        caption,
+        resolvedCaption,
         primaryMediaUrl,
         mediaType,
       ).then((r) => onChannelComplete("Threads", r)),
@@ -560,6 +559,7 @@ async function processBroadcastJob({
   try {
     await saveBroadcast(userId, caption, filenames, results, mediaType, { 
       ...platData, 
+      postType,
       selected_aspect_ratio: selectedAspectRatio,
       selected_post_size_preset: selectedPostSizePreset
     }, 'sent');

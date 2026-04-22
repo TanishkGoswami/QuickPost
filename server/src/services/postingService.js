@@ -13,6 +13,7 @@ import { broadcastToX } from './x.js';
 import { postToReddit } from './reddit.js';
 import googleOAuth from './googleOAuth.js';
 import { updateBroadcastResults } from './broadcasts.js';
+import { resolveMentions } from './mentions.js';
 
 /**
  * Core function to broadcast to platforms
@@ -44,56 +45,62 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
 
     // Pinterest
     if (channels.includes('pinterest') && tokens.pinterest) {
+      const resolvedCaption = resolveMentions(platData?.pinterest?.title || caption, 'pinterest', tokens.pinterest);
       platformPromises.push(
-        postToPinterest(primaryMediaUrl, platData?.pinterest?.title || caption, tokens.pinterest, platData?.pinterest?.link, platData?.pinterest?.boardId)
+        postToPinterest(primaryMediaUrl, resolvedCaption, tokens.pinterest, platData?.pinterest?.link, platData?.pinterest?.boardId)
           .then(result => ({ platform: 'pinterest', result }))
       );
     }
     
     // Instagram
     if (channels.includes('instagram') && tokens.instagram) {
+      const resolvedCaption = resolveMentions(caption, 'instagram', tokens.instagram);
       let instagramAction;
       if (mediaUrls.length > 1 && !isVideo) {
-        instagramAction = postCarouselToInstagram(mediaUrls, caption, tokens.instagram);
+        instagramAction = postCarouselToInstagram(mediaUrls, resolvedCaption, tokens.instagram);
       } else if (isVideo) {
         const igTokens = { ...tokens.instagram, coverUrl: coverImageUrl };
         const videoUrl = mediaUrls[filePaths.findIndex(p => p.includes('video-'))] || primaryMediaUrl;
-        instagramAction = postToInstagram(videoUrl, caption, igTokens);
+        instagramAction = postToInstagram(videoUrl, resolvedCaption, igTokens);
       } else {
-        instagramAction = postImageToInstagram(primaryMediaUrl, caption, tokens.instagram);
+        instagramAction = postImageToInstagram(primaryMediaUrl, resolvedCaption, tokens.instagram);
       }
       platformPromises.push(instagramAction.then(result => ({ platform: 'instagram', result })));
     }
 
     // Facebook
     if (channels.includes('facebook') && tokens.facebook?.pageId) {
+      const resolvedCaption = resolveMentions(caption, 'facebook', tokens.facebook);
       const fbAction = isVideo
-        ? postVideoToFacebook(tokens.facebook.accessToken, tokens.facebook.pageId, caption, mediaUrls[filePaths.findIndex(p => p.includes('video-'))] || primaryMediaUrl, coverImageUrl)
-        : postToFacebook(tokens.facebook.accessToken, tokens.facebook.pageId, caption, mediaUrls);
+        ? postVideoToFacebook(tokens.facebook.accessToken, tokens.facebook.pageId, resolvedCaption, mediaUrls[filePaths.findIndex(p => p.includes('video-'))] || primaryMediaUrl, coverImageUrl)
+        : postToFacebook(tokens.facebook.accessToken, tokens.facebook.pageId, resolvedCaption, mediaUrls);
       platformPromises.push(fbAction.then(result => ({ platform: 'facebook', result })));
     }
 
     // LinkedIn
     if (channels.includes('linkedin') && tokens.linkedin) {
+      const resolvedCaption = resolveMentions(caption, 'linkedin', tokens.linkedin);
       platformPromises.push(
-        postToLinkedIn(mediaUrls, caption, tokens.linkedin)
+        postToLinkedIn(mediaUrls, resolvedCaption, tokens.linkedin)
           .then(result => ({ platform: 'linkedin', result }))
       );
     }
 
     // Bluesky
     if (channels.includes('bluesky') && tokens.bluesky?.did) {
+      const resolvedCaption = resolveMentions(caption, 'bluesky', tokens.bluesky);
       const blobs = filePaths.map(p => fs.existsSync(p) ? fs.readFileSync(p) : null).filter(Boolean);
       platformPromises.push(
-        postToBluesky(tokens.bluesky.accessToken, tokens.bluesky.did, caption, mediaUrls, blobs, isVideo)
+        postToBluesky(tokens.bluesky.accessToken, tokens.bluesky.did, resolvedCaption, mediaUrls, blobs, isVideo)
           .then(result => ({ platform: 'bluesky', result }))
       );
     }
 
     // X
     if (channels.includes('x') && tokens.x) {
+      const resolvedCaption = resolveMentions(caption, 'x', tokens.x);
       platformPromises.push(
-        broadcastToX(caption, mediaUrls, tokens.x, userId)
+        broadcastToX(resolvedCaption, mediaUrls, tokens.x, userId)
           .then(result => ({ platform: 'x', result }))
       );
     }
@@ -113,7 +120,7 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
             } catch (tokenErr) {
               console.warn(`⚠️ [postingService] Could not refresh YouTube token: ${tokenErr.message}. Using stored token.`);
             }
-            return postToYouTube(primaryVideoPath, caption, ytTokens)
+            return postToYouTube(primaryVideoPath, resolveMentions(caption, 'youtube', ytTokens), ytTokens)
               .then(async result => {
                 if (result.success && result.mediaId && coverImagePath && fs.existsSync(coverImagePath)) {
                   await setVideoThumbnail(result.mediaId, coverImagePath, ytTokens);
@@ -129,10 +136,11 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
     
     // TikTok
     if (channels.includes('tiktok') && tokens.tiktok) {
+      const resolvedCaption = resolveMentions(caption, 'tiktok', tokens.tiktok);
       const primaryVideoPath = filePaths.find(p => p.includes('video-'));
       if (primaryVideoPath && fs.existsSync(primaryVideoPath)) {
         platformPromises.push(
-          tiktok.publishVideo(tokens.tiktok.accessToken, primaryVideoPath, caption)
+          tiktok.publishVideo(tokens.tiktok.accessToken, primaryVideoPath, resolvedCaption)
             .then(result => ({ platform: 'tiktok', result }))
         );
       }
@@ -140,24 +148,27 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
 
     // Mastodon
     if (channels.includes('mastodon') && tokens.mastodon) {
+      const resolvedCaption = resolveMentions(caption, 'mastodon', tokens.mastodon);
       platformPromises.push(
-        mastodon.postStatus(tokens.mastodon.accessToken, tokens.mastodon.instanceUrl, caption, filePaths.filter(p => fs.existsSync(p)))
+        mastodon.postStatus(tokens.mastodon.accessToken, tokens.mastodon.instanceUrl, resolvedCaption, filePaths.filter(p => fs.existsSync(p)))
           .then(result => ({ platform: 'mastodon', result }))
       );
     }
 
     // Reddit
     if (channels.includes('reddit') && tokens.reddit) {
+      const resolvedCaption = resolveMentions(caption, 'reddit', tokens.reddit);
       platformPromises.push(
-        postToReddit(userId, caption, primaryMediaUrl, tokens.reddit, platData?.reddit)
+        postToReddit(userId, resolvedCaption, primaryMediaUrl, tokens.reddit, platData?.reddit)
           .then(result => ({ platform: 'reddit', result }))
       );
     }
     
     // Threads
     if (channels.includes('threads') && tokens.threads) {
+      const resolvedCaption = resolveMentions(caption, 'threads', tokens.threads);
       platformPromises.push(
-        postToThreads(tokens.threads.accessToken, tokens.threads.account_id, caption, primaryMediaUrl, mediaType)
+        postToThreads(tokens.threads.accessToken, tokens.threads.account_id, resolvedCaption, primaryMediaUrl, mediaType)
           .then(result => ({ platform: 'threads', result }))
       );
     }

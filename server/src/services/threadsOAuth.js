@@ -120,6 +120,7 @@ class ThreadsOAuth {
         access_token: tokenData.accessToken,
         token_expiry: expiryDate.toISOString(),
         account_id: tokenData.threadsUserId,
+        username: tokenData.userInfo?.username,
         updated_at: new Date().toISOString()
       };
 
