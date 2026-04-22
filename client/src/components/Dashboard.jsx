@@ -417,7 +417,7 @@ function Dashboard() {
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = 10;
 
   const tabs = [
     { id: 'sent',    label: 'Sent',    count: activeTab === 'sent'    ? broadcasts.length : 0 },
@@ -498,26 +498,27 @@ function Dashboard() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: css.canvas, fontFamily: 'var(--font)' }}>
+    <div style={{ background: css.canvas, fontFamily: 'var(--font)' }}>
 
       {/* ── Top header ── */}
       <div style={{
         background: css.lifted,
         borderBottom: '1px solid rgba(20,20,19,0.08)',
-        padding: '18px 28px',
+        padding: '16px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 16,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flex: 1, minWidth: 200 }}>
           <div>
-            <div className="eyebrow" style={{ marginBottom: 4 }}>Overview</div>
-            <h1 style={{ fontSize: 28, fontWeight: 500, color: css.ink, margin: 0, letterSpacing: '-0.02em', lineHeight: 1 }}>Post Analytics</h1>
+            <div className="eyebrow" style={{ marginBottom: 2 }}>Overview</div>
+            <h1 style={{ fontSize: 'clamp(20px, 4vw, 26px)', fontWeight: 600, color: css.ink, margin: 0, letterSpacing: '-0.02em', lineHeight: 1 }}>Analytics</h1>
           </div>
           {selectedPlatform !== 'all' && (
-             <div style={{ padding: '4px 12px', background: 'rgba(20,20,19,0.05)', borderRadius: css.r_btn, border: '1px solid rgba(20,20,19,0.1)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: css.slate, textTransform: 'uppercase' }}>Filtering:</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: css.ink }}>{selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)}</span>
+             <div style={{ padding: '4px 10px', background: 'rgba(20,20,19,0.05)', borderRadius: css.r_btn, border: '1px solid rgba(20,20,19,0.1)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: css.ink }}>{selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)}</span>
                 <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}><X size={12} /></button>
              </div>
           )}
@@ -526,16 +527,28 @@ function Dashboard() {
           <button
             onClick={() => setComposerOpen(true)}
             className="btn-ink"
-            style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '10px 22px' }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '10px 20px', borderRadius: css.r_pill }}
           >
             <Plus size={16} />
-            New Post
+            <span className="hidden sm:inline">New Post</span>
+            <span className="sm:hidden">New</span>
           </button>
         </div>
       </div>
 
       {/* ── Tabs ── */}
-      <div style={{ background: css.lifted, borderBottom: '1px solid rgba(20,20,19,0.08)', padding: '0 28px', display: 'flex', alignItems: 'center', gap: 32 }}>
+      <div style={{ 
+        background: css.lifted, 
+        borderBottom: '1px solid rgba(20,20,19,0.08)', 
+        padding: '0 16px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 'clamp(16px, 4vw, 32px)',
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        msOverflowStyle: 'none',
+        scrollbarWidth: 'none',
+      }}>
         {tabs.map(tab => {
           const active = activeTab === tab.id;
           return (
@@ -544,7 +557,7 @@ function Dashboard() {
               onClick={() => { if (tab.id === 'queue' && activeTab !== 'queue') { navigate('/dashboard/queue'); return; } setActiveTab(tab.id); }}
               style={{
                 padding: '14px 0',
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 letterSpacing: '0.06em',
@@ -552,22 +565,24 @@ function Dashboard() {
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
-                borderBottom: `2px solid ${active ? css.ink : 'transparent'}`,
+                borderBottom: `2.5px solid ${active ? css.ink : 'transparent'}`,
                 marginBottom: -1,
-                transition: 'color 0.15s',
+                transition: 'all 0.2s',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
             >
               {tab.label}
               {tab.count > 0 && (
                 <span style={{
-                  padding: '1px 8px',
+                  padding: '1px 6px',
                   borderRadius: css.r_pill,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  background: active ? css.ink : 'rgba(20,20,19,0.07)',
+                  fontSize: 9,
+                  fontWeight: 800,
+                  background: active ? css.ink : 'rgba(20,20,19,0.06)',
                   color: active ? css.canvas : css.slate,
                 }}>
                   {tab.count}
@@ -580,55 +595,59 @@ function Dashboard() {
 
       {/* ── Toolbar ── */}
       {(activeTab === 'sent' || activeTab === 'queue' || activeTab === 'history') && !loading && broadcasts.length > 0 && (
-        <div style={{ background: css.canvas, borderBottom: '1px solid rgba(20,20,19,0.06)', padding: '12px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ 
+          background: css.canvas, 
+          borderBottom: '1px solid rgba(20,20,19,0.06)', 
+          padding: '12px 16px', 
+          display: 'flex', 
+          flexDirection: window.innerWidth < 768 ? 'column' : 'row',
+          alignItems: window.innerWidth < 768 ? 'stretch' : 'center', 
+          justifyContent: 'space-between', 
+          gap: 16 
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, overflowX: 'auto', paddingBottom: window.innerWidth < 768 ? 4 : 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
               <Clock size={14} style={{ color: css.arc }} />
               <span style={{ fontSize: 13, fontWeight: 700, color: css.ink }}>{filtered.length}</span>
-              <span style={{ fontSize: 12, color: css.slate }}>{activeTab === 'queue' ? 'scheduled' : 'total'} posts</span>
+              <span style={{ fontSize: 12, color: css.slate }}>{activeTab === 'queue' ? 'scheduled' : 'total'}</span>
             </div>
-            <div style={{ width: 1, height: 16, background: 'rgba(20,20,19,0.12)' }} />
+            <div style={{ width: 1, height: 16, background: 'rgba(20,20,19,0.1)', flexShrink: 0 }} />
             {activeTab !== 'queue' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                 <CheckCircle2 size={14} style={{ color: '#22c55e' }} />
                 <span style={{ fontSize: 13, fontWeight: 700, color: css.ink }}>
                   {filtered.filter(b => buildPlatforms(b).some(p => p.success)).length}
                 </span>
-                <span style={{ fontSize: 12, color: css.slate }}>successful</span>
-              </div>
-            )}
-            {activeTab === 'queue' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Calendar size={14} style={{ color: css.arc }} />
-                <span style={{ fontSize: 10, color: css.arc, fontWeight: 700, textTransform: 'uppercase' }}>Pending Broadcasts</span>
+                <span style={{ fontSize: 12, color: css.slate }}>success</span>
               </div>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ position: 'relative' }}>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, alignSelf: window.innerWidth < 768 ? 'stretch' : 'auto' }}>
+            <div style={{ position: 'relative', flex: 1 }}>
               <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: css.slate }} />
               <input
                 type="text"
-                placeholder="Search posts…"
+                placeholder="Search…"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 style={{
-                  paddingLeft: 32, paddingRight: 16, paddingTop: 8, paddingBottom: 8,
+                  padding: '8px 16px 8px 32px',
                   background: css.lifted,
-                  border: '1px solid rgba(20,20,19,0.12)',
+                  border: '1px solid rgba(20,20,19,0.1)',
                   borderRadius: css.r_pill,
                   fontSize: 13, color: css.ink, fontFamily: 'var(--font)',
-                  outline: 'none', width: 200,
+                  outline: 'none', width: '100%',
                 }}
               />
             </div>
-            <div style={{ display: 'flex', background: css.lifted, border: '1px solid rgba(20,20,19,0.10)', borderRadius: css.r_pill, padding: 3, gap: 2 }}>
+            <div style={{ display: 'flex', background: css.lifted, border: '1px solid rgba(20,20,19,0.08)', borderRadius: css.r_pill, padding: 3, gap: 2 }}>
               {[
-                { mode: 'grid', icon: <LayoutGrid size={14} /> },
-                { mode: 'list', icon: <List size={14} /> },
+                { mode: 'grid', icon: <LayoutGrid size={13} /> },
+                { mode: 'list', icon: <List size={13} /> },
               ].map(({ mode, icon }) => (
                 <button key={mode} onClick={() => setViewMode(mode)} title={`${mode} view`}
-                  style={{ padding: '5px 10px', borderRadius: css.r_pill, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', background: viewMode === mode ? css.ink : 'transparent', color: viewMode === mode ? css.canvas : css.slate, transition: 'all 0.2s' }}>
+                   style={{ padding: '6px 10px', borderRadius: css.r_pill, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', background: viewMode === mode ? css.ink : 'transparent', color: viewMode === mode ? css.canvas : css.slate, transition: 'all 0.2s' }}>
                   {icon}
                 </button>
               ))}
@@ -638,7 +657,7 @@ function Dashboard() {
       )}
 
       {/* ── Main content ── */}
-      <div style={{ padding: '28px' }}>
+      <div style={{ padding: 0 }}>
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: 16 }}>
             <div style={{ display: 'flex', gap: 8 }}>
