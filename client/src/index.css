@@ -31,10 +31,10 @@
     --link: #3860be;
 
     /* ── Radius scale ── */
-    --r-sm: 6px;
-    --r-btn: 20px; /* primary / secondary CTAs */
-    --r-chip: 24px; /* consent pills */
-    --r-hero: 40px; /* hero frames, large containers */
+    --r-sm: 4px;
+    --r-btn: 12px; /* primary / secondary CTAs */
+    --r-chip: 8px; /* informational pills */
+    --r-hero: 18px; /* hero frames, large containers */
     --r-pill: 999px; /* nav, full pills */
     --r-circle: 50%; /* portrait circles */
 

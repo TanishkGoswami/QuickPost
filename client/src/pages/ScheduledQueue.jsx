@@ -518,7 +518,7 @@ export default function ScheduledQueue() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ── Header ── */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="bg-white border-b border-gray-200 px-8 md:px-16 py-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Scheduled Queue</h1>
@@ -549,7 +549,7 @@ export default function ScheduledQueue() {
       </div>
 
       {/* ── Stats strip ── */}
-      <div className="bg-white border-b border-gray-100 px-6 py-3">
+      <div className="bg-white border-b border-gray-100 px-8 md:px-16 py-4">
         <div className="flex items-center gap-6">
           {[
             {
@@ -582,7 +582,7 @@ export default function ScheduledQueue() {
       </div>
 
       {/* ── Filter tabs ── */}
-      <div className="bg-white border-b border-gray-100 px-6">
+      <div className="bg-white border-b border-gray-100 px-8 md:px-16">
         <div className="flex items-center gap-6">
           {FILTERS.map((f) => (
             <button
@@ -601,7 +601,7 @@ export default function ScheduledQueue() {
       </div>
 
       {/* ── Content ── */}
-      <div className="p-0 mx-auto">
+      <div className="px-8 md:px-16 py-8 mx-auto max-w-[1600px]">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-4" />
