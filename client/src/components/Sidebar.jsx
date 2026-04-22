@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Settings, LogOut, CalendarClock, Plus, Share2, X } from 'lucide-react';
+import { Settings, LogOut, CalendarClock, Plus, Share2, ChevronDown, X } from 'lucide-react';
 import { useDialog } from '../context/DialogContext';
 import logo from '/logo.png';
 import InstagramBusinessSetupModal from './InstagramBusinessSetupModal';
@@ -167,7 +167,19 @@ function Sidebar() {
                   fontWeight: 600,
                   fontSize: 14,
                   textDecoration: 'none',
-                  transition: 'background 0.2s, color 0.2s',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+                onMouseEnter={e => {
+                  if (!active) {
+                    e.currentTarget.style.background = 'rgba(20,20,19,0.05)';
+                    e.currentTarget.style.color = 'var(--ink)';
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!active) {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = 'var(--slate)';
+                  }
                 }}
               >
                 <span style={{ width: 28, height: 28, borderRadius: 'var(--r-sm)', background: active ? 'rgba(255,255,255,0.15)' : 'rgba(20,20,19,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -181,13 +193,85 @@ function Sidebar() {
 
         {/* ── Connected platforms ── */}
         <div style={{ marginTop: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px', marginBottom: 8 }}>
-             <span className="eyebrow">Connected</span>
-             <button onClick={() => setConnectedOpen(!connectedOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', color: 'var(--slate)' }}>
-                {connectedOpen ? <Settings size={12} /> : <Plus size={12} />}
-             </button>
-          </div>
-          
+          {(() => {
+            const connectedPlatforms = platforms.filter(p => p.connected);
+            const visibleIcons = connectedPlatforms.slice(0, 3);
+            const extraCount = Math.max(0, connectedPlatforms.length - 3);
+
+            return (
+              <button
+                onClick={() => setConnectedOpen(!connectedOpen)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '8px 12px',
+                  borderRadius: '100px',
+                  background: 'var(--canvas-lifted)',
+                  border: '1px solid rgba(20,20,19,0.08)',
+                  cursor: 'pointer',
+                  marginBottom: 8,
+                  transition: 'all 0.2s',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  {visibleIcons.map((p, i) => (
+                    <div
+                      key={p.id}
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: '50%',
+                        background: 'var(--white)',
+                        border: '1.5px solid var(--canvas-lifted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginLeft: i === 0 ? 0 : -8,
+                        zIndex: 3 - i,
+                        overflow: 'hidden',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                      }}
+                    >
+                      {React.cloneElement(p.icon, { style: { width: 14, height: 14 } })}
+                    </div>
+                  ))}
+                  {extraCount > 0 && (
+                    <div
+                      style={{
+                        width: 22,
+                        height: 22,
+                        borderRadius: '50%',
+                        background: 'var(--canvas)',
+                        border: '1.5px solid var(--canvas-lifted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginLeft: -8,
+                        zIndex: 0,
+                        fontSize: 9,
+                        fontWeight: 700,
+                        color: 'var(--slate)',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                      }}
+                    >
+                      +{extraCount}
+                    </div>
+                  )}
+                </div>
+                <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>Connected</span>
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {connectedPlatforms.length > 0 && (
+                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#6366f1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>
+                      {connectedPlatforms.length}
+                    </div>
+                  )}
+                  <ChevronDown size={14} style={{ color: 'var(--slate)', transform: connectedOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                </div>
+              </button>
+            );
+          })()}
+
           <AnimatePresence>
             {connectedOpen && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -198,13 +282,13 @@ function Sidebar() {
                       key={platform.id}
                       onClick={() => navigate(`/dashboard?platform=${platform.id}`)}
                       className="group"
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: 10, 
-                        padding: '8px 10px', 
-                        borderRadius: 'var(--r-btn)', 
-                        cursor: 'pointer', 
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '8px 10px',
+                        borderRadius: 'var(--r-btn)',
+                        cursor: 'pointer',
                         transition: 'background 0.15s',
                         background: isSelected ? 'rgba(20,20,19,0.07)' : 'transparent',
                       }}
@@ -245,7 +329,7 @@ function Sidebar() {
                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--ink)'; e.currentTarget.style.background = 'var(--white)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(20,20,19,0.2)'; e.currentTarget.style.background = 'var(--canvas-lifted)'; }}
               >
-                <div style={{ filter: 'grayscale(1)', opacity: 0.7, transition: 'all 0.2s' }} onMouseEnter={e => { e.target.style.filter = 'none'; e.target.style.opacity = 1; }}>
+                <div style={{ transition: 'all 0.2s', transform: 'scale(1)', filter: 'none', opacity: 1 }} onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.1)'; }} onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}>
                   {platform.icon}
                 </div>
               </button>

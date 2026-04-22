@@ -34,9 +34,18 @@ export async function uploadToCloudinary(filePath, resourceType = 'auto') {
     };
 
     // Use upload_large for videos (handles chunking transparently)
-    const result = resourceType === 'video'
-      ? await cloudinary.uploader.upload_large(filePath, uploadOptions)
-      : await cloudinary.uploader.upload(filePath, uploadOptions);
+    const result = await new Promise((resolve, reject) => {
+      if (resourceType === 'video') {
+         cloudinary.uploader.upload_large(filePath, uploadOptions, (error, res) => {
+            if (error) reject(error);
+            else resolve(res);
+         });
+      } else {
+         cloudinary.uploader.upload(filePath, uploadOptions)
+           .then(resolve)
+           .catch(reject);
+      }
+    });
 
     console.log(`✓ Upload successful: ${result.secure_url}`);
 

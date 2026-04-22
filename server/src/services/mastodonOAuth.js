@@ -133,6 +133,7 @@ class MastodonOAuth {
           refresh_token: null,
           mastodon_instance: instanceUrl,
           profile_data: tokenData.userInfo,
+          username: tokenData.userInfo?.username,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id,provider'
