@@ -601,7 +601,7 @@ export default function ScheduledQueue() {
       </div>
 
       {/* ── Content ── */}
-      <div className="p-0 mx-auto">
+      <div className="px-4 py-6 md:px-6 mx-auto">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-24">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-4" />
