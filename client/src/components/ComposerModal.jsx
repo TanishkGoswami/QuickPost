@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 import apiClient from "../utils/apiClient";
 import {
   X,
@@ -14,8 +14,10 @@ import {
   Square,
   RectangleVertical,
   AtSign,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import { Reorder, AnimatePresence } from "framer-motion";
+import { Reorder, AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import { useUploadJobs } from "../context/UploadJobContext";
 import { useDialog } from "../context/DialogContext";
@@ -332,6 +334,7 @@ function PlatformPreviewPanel({
   onActivePlatformChange,
   connectedAccounts,
 }) {
+  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
   const activeId = activePlatform || selectedChannels[0] || null;
 
   const meta = PLATFORM_META[activeId] || PLATFORM_META.instagram;
@@ -341,11 +344,10 @@ function PlatformPreviewPanel({
     ? ASPECT_RATIOS.find((r) => r.id === selectedRatio)?.aspect
     : meta.imgAspect;
 
-  // Memoize URL creation to prevent leaks and flicker
-  const mediaUrl = useMemo(() => {
-    if (!mediaFiles || mediaFiles.length === 0) return null;
-    return URL.createObjectURL(mediaFiles[0].file);
-  }, [mediaFiles]);
+  // Reset index when files change or platform changes
+  useEffect(() => {
+    setActiveMediaIndex(0);
+  }, [mediaFiles.length, activeId]);
 
   const resolveMentions = (text, platform) => {
     if (!text) return text;
@@ -360,6 +362,132 @@ function PlatformPreviewPanel({
     () => resolveMentions(caption, activeId),
     [caption, activeId, connectedAccounts]
   );
+
+  /* ── Stable Blob URL management ── */
+  const [ytThumbUrl, setYtThumbUrl] = useState(null);
+  const [mediaUrls, setMediaUrls] = useState([]);
+
+  useEffect(() => {
+    if (!youtubeThumbnail) {
+      setYtThumbUrl(null);
+    } else {
+      const url = URL.createObjectURL(youtubeThumbnail);
+      setYtThumbUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [youtubeThumbnail]);
+
+  useEffect(() => {
+    if (!mediaFiles || mediaFiles.length === 0) {
+      setMediaUrls([]);
+      return;
+    }
+    const urls = mediaFiles.map((m) => ({
+      id: m.id,
+      url: URL.createObjectURL(m.file),
+      type: m.file.type.startsWith("video/") ? "video" : "image",
+    }));
+    setMediaUrls(urls);
+    return () => urls.forEach((u) => URL.revokeObjectURL(u.url));
+  }, [mediaFiles]);
+
+  /* ── INTERNAL COMPONENT: PreviewMedia ── */
+  const PreviewMediaContent = ({ forceRatio }) => {
+    const currentMedia = mediaUrls[activeMediaIndex];
+
+    if (!currentMedia) {
+      return (
+        <div
+          className={`w-full ${forceRatio || currentAspect} flex flex-col items-center justify-center bg-gray-100`}
+        >
+          <ImageIcon className="w-8 h-8 text-gray-300 mb-1" />
+          <span className="text-[10px] text-gray-400">No media yet</span>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className={`relative w-full ${forceRatio || currentAspect} bg-gray-900 group overflow-hidden`}
+      >
+        <AnimatePresence>
+          <motion.div
+            key={activeMediaIndex}
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+            className="w-full h-full"
+          >
+            {currentMedia.type === "image" ? (
+              <img
+                src={currentMedia.url}
+                alt="Post"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <video
+                src={currentMedia.url}
+                className="w-full h-full object-cover"
+                muted
+                playsInline
+                autoPlay
+                loop
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        {mediaFiles.length > 1 && (
+          <>
+            {/* Arrows */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveMediaIndex((prev) =>
+                  prev > 0 ? prev - 1 : mediaFiles.length - 1
+                );
+              }}
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100 z-10"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveMediaIndex((prev) =>
+                  prev < mediaFiles.length - 1 ? prev + 1 : 0
+                );
+              }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100 z-10"
+            >
+              <ChevronRight size={16} />
+            </button>
+
+            {/* Indicator Badge */}
+            <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md rounded-full px-2 py-0.5 flex items-center gap-1 border border-white/10 shadow-lg z-10">
+              <ImageIcon className="w-2.5 h-2.5 text-white" />
+              <span className="text-[10px] font-bold text-white leading-none">
+                {activeMediaIndex + 1}/{mediaFiles.length}
+              </span>
+            </div>
+
+            {/* Dots */}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+              {mediaFiles.map((_, i) => (
+                <div
+                  key={i}
+                  className={`w-1 h-1 rounded-full transition-all ${
+                    i === activeMediaIndex ? "bg-white scale-125" : "bg-white/40"
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
 
   const truncatedCaption =
     resolvedCaption?.length > 120
@@ -410,23 +538,14 @@ function PlatformPreviewPanel({
               <div
                 className={`relative w-full ${currentAspect} bg-gray-900 group`}
               >
-                {youtubeThumbnail || mediaUrl ? (
+                {ytThumbUrl ? (
                   <img
-                    src={
-                      youtubeThumbnail
-                        ? URL.createObjectURL(youtubeThumbnail)
-                        : mediaUrl
-                    }
+                    src={ytThumbUrl}
                     alt="Thumbnail"
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100">
-                    <ImageIcon className="w-8 h-8 text-gray-300 mb-1" />
-                    <span className="text-[10px] text-gray-400">
-                      No media yet
-                    </span>
-                  </div>
+                  <PreviewMediaContent />
                 )}
                 {/* Duration badge */}
                 <span className="absolute bottom-1.5 right-1.5 bg-black/80 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded shadow-sm">
@@ -523,43 +642,7 @@ function PlatformPreviewPanel({
                   ))}
                 </div>
               </div>
-              <div
-                className={`relative w-full ${currentAspect} bg-gray-900 overflow-hidden`}
-              >
-                {mediaUrl ? (
-                  <>
-                    {mediaType === "image" ? (
-                      <img
-                        src={mediaUrl}
-                        alt="Post"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <video
-                        src={mediaUrl}
-                        className="w-full h-full object-cover"
-                        muted
-                        playsInline
-                      />
-                    )}
-                    {mediaFiles.length > 1 && (
-                      <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md rounded-full px-2 py-0.5 flex items-center gap-1 border border-white/10 shadow-lg">
-                        <ImageIcon className="w-2.5 h-2.5 text-white" />
-                        <span className="text-[10px] font-bold text-white leading-none">
-                          1/{mediaFiles.length}
-                        </span>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100">
-                    <ImageIcon className="w-8 h-8 text-gray-400 mb-1" />
-                    <span className="text-[10px] text-gray-400">
-                      No media yet
-                    </span>
-                  </div>
-                )}
-              </div>
+              <PreviewMediaContent />
               <div className="px-3 pt-2.5 pb-1">
                 <div className="flex items-center">
                   <div className="flex items-center gap-3 flex-1">
@@ -670,31 +753,7 @@ function PlatformPreviewPanel({
                 </p>
               )}
               {/* Media */}
-              <div className={`relative w-full ${currentAspect} bg-gray-100`}>
-                {mediaUrl ? (
-                  mediaType === "image" ? (
-                    <img
-                      src={mediaUrl}
-                      alt="Post"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <video
-                      src={mediaUrl}
-                      className="w-full h-full object-cover"
-                      muted
-                      playsInline
-                    />
-                  )
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100">
-                    <ImageIcon className="w-8 h-8 text-gray-300 mb-1" />
-                    <span className="text-[10px] text-gray-400">
-                      No media yet
-                    </span>
-                  </div>
-                )}
-              </div>
+              <PreviewMediaContent />
               {/* Reaction counts */}
               <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-100">
                 <div className="flex items-center gap-1">
@@ -763,31 +822,7 @@ function PlatformPreviewPanel({
                 </p>
               )}
               {/* Media */}
-              <div className={`relative w-full ${currentAspect} bg-gray-100`}>
-                {mediaUrl ? (
-                  mediaType === "image" ? (
-                    <img
-                      src={mediaUrl}
-                      alt="Post"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <video
-                      src={mediaUrl}
-                      className="w-full h-full object-cover"
-                      muted
-                      playsInline
-                    />
-                  )
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100">
-                    <ImageIcon className="w-8 h-8 text-gray-300 mb-1" />
-                    <span className="text-[10px] text-gray-400">
-                      No media yet
-                    </span>
-                  </div>
-                )}
-              </div>
+              <PreviewMediaContent />
               {/* Reactions */}
               <div className="flex items-center justify-between px-3 py-1.5">
                 <div className="flex items-center gap-1">
@@ -849,36 +884,9 @@ function PlatformPreviewPanel({
                       {truncatedCaption}
                     </p>
                   )}
-                  {mediaUrl && (
-                    <div
-                      className={`relative w-full ${currentAspect} rounded-xl overflow-hidden bg-gray-100 mb-2`}
-                    >
-                      {mediaType === "image" ? (
-                        <img
-                          src={mediaUrl}
-                          alt="Post"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <video
-                          src={mediaUrl}
-                          className="w-full h-full object-cover"
-                          muted
-                          playsInline
-                        />
-                      )}
-                    </div>
-                  )}
-                  {!mediaUrl && (
-                    <div
-                      className={`relative w-full ${currentAspect} rounded-xl overflow-hidden bg-gray-100 mb-2 flex flex-col items-center justify-center`}
-                    >
-                      <ImageIcon className="w-8 h-8 text-gray-300 mb-1" />
-                      <span className="text-[10px] text-gray-400">
-                        No media yet
-                      </span>
-                    </div>
-                  )}
+                  <div className="mb-2">
+                    <PreviewMediaContent forceRatio="aspect-auto rounded-xl overflow-hidden shadow-sm border border-gray-100" />
+                  </div>
                   {/* Action icons */}
                   <div className="flex items-center gap-4">
                     <svg
@@ -1016,32 +1024,8 @@ function PlatformPreviewPanel({
                     {truncatedCaption}
                   </p>
                 )}
-                <div
-                  className={`w-full ${currentAspect} overflow-hidden relative bg-gray-900`}
-                >
-                  {mediaUrl ? (
-                    mediaType === "image" ? (
-                      <img
-                        src={mediaUrl}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <video
-                        src={mediaUrl}
-                        className="w-full h-full object-cover"
-                        muted
-                        playsInline
-                      />
-                    )
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center bg-gray-100">
-                      <ImageIcon className="w-8 h-8 text-gray-300 mb-1" />
-                      <span className="text-[10px] text-gray-400">
-                        No media yet
-                      </span>
-                    </div>
-                  )}
+                <div className="relative">
+                  <PreviewMediaContent />
                   {activeId === "tiktok" && caption && (
                     <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
                       <p className="text-white text-[10px] leading-tight">

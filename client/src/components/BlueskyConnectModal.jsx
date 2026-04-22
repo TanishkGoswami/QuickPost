@@ -69,7 +69,7 @@ function BlueskyConnectModal({ isOpen, onClose, onSuccess }) {
         {/* Content */}
         <div className="p-6 space-y-6">
           {/* Info Alert */}
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex gap-3">
+          {/* <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex gap-3">
             <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-blue-900">App Password Required</p>
@@ -77,7 +77,7 @@ function BlueskyConnectModal({ isOpen, onClose, onSuccess }) {
                 For security, Bluesky requires an App Password for third-party applications. Your main account password won't work here.
               </p>
             </div>
-          </div>
+          </div> */}
 
           {/* What is Bluesky */}
           <div>
@@ -88,68 +88,6 @@ function BlueskyConnectModal({ isOpen, onClose, onSuccess }) {
             </p>
           </div>
 
-          {/* How to Get App Password */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">How to Create an App Password</h3>
-            
-            <div className="space-y-4">
-              {/* Step 1 */}
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">
-                  1
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 mb-1">Log into Bluesky</h4>
-                  <p className="text-sm text-gray-600">
-                    Visit{' '}
-                    <a 
-                      href="https://bsky.app" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-700 inline-flex items-center gap-1"
-                    >
-                      bsky.app
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                    {' '}and log into your account.
-                  </p>
-                </div>
-              </div>
-
-              {/* Step 2 */}
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">
-                  2
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 mb-1">Go to Settings</h4>
-                  <p className="text-sm text-gray-600">Click your profile → Settings → App Passwords</p>
-                </div>
-              </div>
-
-              {/* Step 3 */}
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">
-                  3
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 mb-1">Create App Password</h4>
-                  <p className="text-sm text-gray-600">Click "Add App Password" and give it a name like "QuickPost"</p>
-                </div>
-              </div>
-
-              {/* Step 4 */}
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">
-                  4
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 mb-1">Copy Password</h4>
-                  <p className="text-sm text-gray-600">Copy the generated app password and paste it below</p>
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* Form */}
           <form onSubmit={handleConnect} className="space-y-4">
