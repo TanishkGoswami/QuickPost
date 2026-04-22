@@ -1,10 +1,11 @@
 import jwt from 'jsonwebtoken';
+import { createOrUpdateUser } from '../services/supabase.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 /**
  * Authentication middleware
- * Verifies JWT token from Authorization header
+ * Verifies JWT token from Authorization header (Supabase JWT)
  */
 export function authenticateUser(req, res, next) {
   try {
@@ -22,7 +23,33 @@ export function authenticateUser(req, res, next) {
 
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
-      req.user = decoded; // Attach user info to request
+      
+      // Map Supabase fields
+      const userInfo = {
+        userId: decoded.sub,
+        email: decoded.email,
+        name: decoded.user_metadata?.full_name || decoded.email?.split('@')[0],
+        profilePicture: decoded.user_metadata?.avatar_url || null
+      };
+
+      // Sync with public.users table to ensure social tokens can be linked
+      try {
+        await createOrUpdateUser(
+          userInfo.email,
+          userInfo.name,
+          userInfo.userId, // We pass the sub as the primary key/link
+          userInfo.profilePicture
+        );
+      } catch (syncError) {
+        console.warn('⚠️ [AUTH] Failed to sync user to public.users:', syncError.message);
+        // We continue anyway, as the JWT is valid
+      }
+
+      req.user = {
+        ...userInfo,
+        ...decoded
+      };
+      
       next();
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
@@ -50,10 +77,7 @@ export function authenticateUser(req, res, next) {
 }
 
 /**
- * Generate JWT token
- * @param {Object} payload - Data to encode in token
- * @param {string} expiresIn - Token expiration (default: '7d')
- * @returns {string} JWT token
+ * Generate JWT token (Legacy support, may not be needed with Supabase)
  */
 export function generateToken(payload, expiresIn = '7d') {
   return jwt.sign(payload, JWT_SECRET, { expiresIn });
