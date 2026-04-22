@@ -301,7 +301,7 @@ const PLATFORM_POST_TYPES = {
   pinterest: ["post"],
   bluesky: ["post"],
   mastodon: ["post"],
-  reddit: ["post"],
+  reddit: ["post"]
 };
 
 function getPresetsForPlatform(platformId) {
@@ -362,7 +362,7 @@ function PlatformPreviewPanel({
 
   const resolvedCaption = useMemo(
     () => resolveMentions(caption, activeId),
-    [caption, activeId, connectedAccounts],
+    [caption, activeId, connectedAccounts]
   );
 
   /* ── Stable Blob URL management ── */
@@ -447,7 +447,7 @@ function PlatformPreviewPanel({
               onClick={(e) => {
                 e.stopPropagation();
                 setActiveMediaIndex((prev) =>
-                  prev > 0 ? prev - 1 : mediaFiles.length - 1,
+                  prev > 0 ? prev - 1 : mediaFiles.length - 1
                 );
               }}
               className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100 z-10"
@@ -458,7 +458,7 @@ function PlatformPreviewPanel({
               onClick={(e) => {
                 e.stopPropagation();
                 setActiveMediaIndex((prev) =>
-                  prev < mediaFiles.length - 1 ? prev + 1 : 0,
+                  prev < mediaFiles.length - 1 ? prev + 1 : 0
                 );
               }}
               className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100 z-10"
@@ -480,9 +480,7 @@ function PlatformPreviewPanel({
                 <div
                   key={i}
                   className={`w-1 h-1 rounded-full transition-all ${
-                    i === activeMediaIndex
-                      ? "bg-white scale-125"
-                      : "bg-white/40"
+                    i === activeMediaIndex ? "bg-white scale-125" : "bg-white/40"
                   }`}
                 />
               ))}
@@ -501,8 +499,7 @@ function PlatformPreviewPanel({
     resolvedCaption?.length > 60
       ? resolvedCaption.slice(0, 60) + "…"
       : resolvedCaption || "Your Video Title";
-  const platformUsername =
-    connectedAccounts[activeId]?.username || "your_account";
+  const platformUsername = connectedAccounts[activeId]?.username || "your_account";
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
@@ -710,9 +707,7 @@ function PlatformPreviewPanel({
                 </p>
                 {caption && (
                   <p className="text-[11px] text-gray-900 mt-1 leading-relaxed">
-                    <span className="font-semibold mr-1">
-                      {platformUsername}
-                    </span>
+                    <span className="font-semibold mr-1">{platformUsername}</span>
                     {truncatedCaption}
                   </p>
                 )}
@@ -1134,7 +1129,10 @@ const CalendarView = ({ value, onChange }) => {
     <div className="p-4 w-[280px]">
       <div className="flex items-center justify-between mb-4">
         <h4 className="text-[13px] font-bold text-gray-900">
-          {viewDate.toLocaleString("default", { month: "long", year: "numeric" })}
+          {viewDate.toLocaleString("default", {
+            month: "long",
+            year: "numeric",
+          })}
         </h4>
         <div className="flex gap-1">
           <button
@@ -1189,7 +1187,7 @@ const CalendarView = ({ value, onChange }) => {
   );
 };
 
-const ClockPickerView = ({ value, onChange, onClose }) => {
+const ClockPickerView = ({ value, onChange, onClose, minTime }) => {
   const [h24, minute] = (value || "00:00").split(":");
   const h24Int = parseInt(h24);
   const period = h24Int >= 12 ? "PM" : "AM";
@@ -1202,11 +1200,42 @@ const ClockPickerView = ({ value, onChange, onClose }) => {
   const hours = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
   const minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
 
-  const handleUpdate = (h12, min, p) => {
+  const minH24 = minTime ? parseInt(minTime.split(":")[0]) : -1;
+  const minMin = minTime ? parseInt(minTime.split(":")[1]) : -1;
+
+  const isHourDisabled = (h12, p) => {
+    if (!minTime) return false;
     let h24Val = parseInt(h12);
     if (p === "PM" && h24Val < 12) h24Val += 12;
     if (p === "AM" && h24Val === 12) h24Val = 0;
-    onChange(`${h24Val.toString().padStart(2, "0")}:${min.padStart(2, "0")}`);
+    return h24Val < minH24;
+  };
+
+  const isMinuteDisabled = (m) => {
+    if (!minTime) return false;
+    return h24Int === minH24 && parseInt(m) < minMin;
+  };
+
+  const isPeriodDisabled = (p) => {
+    if (!minTime) return false;
+    if (p === "AM") return minH24 >= 12;
+    return false; // PM is only fully disabled if minTime is in the next day, which shouldn't happen here
+  };
+
+  const handleUpdate = (h12, min, p) => {
+    if (isHourDisabled(h12, p)) return;
+    
+    let h24Val = parseInt(h12);
+    if (p === "PM" && h24Val < 12) h24Val += 12;
+    if (p === "AM" && h24Val === 12) h24Val = 0;
+    
+    // If hour is at min, ensure minutes aren't past
+    let finalMin = min;
+    if (h24Val === minH24 && parseInt(min) < minMin) {
+      finalMin = minMin.toString().padStart(2, "0");
+    }
+    
+    onChange(`${h24Val.toString().padStart(2, "0")}:${finalMin.padStart(2, "0")}`);
   };
 
   const calculateFromPoint = (e) => {
@@ -1226,11 +1255,16 @@ const ClockPickerView = ({ value, onChange, onClose }) => {
       let h = Math.round(angle / 30);
       if (h === 0) h = 12;
       if (h > 12) h = 1;
-      handleUpdate(h, minute, period);
+      
+      if (!isHourDisabled(h, period)) {
+        handleUpdate(h, minute, period);
+      }
     } else {
       let m = Math.round(angle / 6);
       if (m >= 60) m = 0;
-      handleUpdate(hour12, m.toString(), period);
+      if (!isMinuteDisabled(m)) {
+        handleUpdate(hour12, m.toString(), period);
+      }
     }
   };
 
@@ -1275,20 +1309,25 @@ const ClockPickerView = ({ value, onChange, onClose }) => {
 
   return (
     <div className="p-5 w-[280px] bg-white select-none">
-      {/* Header with AM/PM and View Toggle */}
       <div className="flex flex-col gap-4 mb-6">
         <div className="flex items-center justify-between">
           <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
-            {periods.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => handleUpdate(hour12, minute, p)}
-                className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all ${p === period ? "bg-white text-[#f37338] shadow-sm" : "text-gray-400 hover:text-gray-600"}`}
-              >
-                {p}
-              </button>
-            ))}
+            {periods.map((p) => {
+              const disabled = isPeriodDisabled(p);
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => handleUpdate(hour12, minute, p)}
+                  className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all 
+                    ${disabled ? "opacity-30 cursor-not-allowed" : ""}
+                    ${p === period && !disabled ? "bg-white text-[#f37338] shadow-sm" : "text-gray-400 hover:text-gray-600"}`}
+                >
+                  {p}
+                </button>
+              );
+            })}
           </div>
           <div className="flex items-center gap-2 text-[15px] font-black">
             <button
@@ -1310,28 +1349,25 @@ const ClockPickerView = ({ value, onChange, onClose }) => {
         </div>
       </div>
 
-      {/* Clock Face */}
       <div
         ref={clockRef}
         onMouseDown={handleMouseDown}
         onTouchStart={handleMouseDown}
         className="relative w-52 h-52 mx-auto bg-gray-50 rounded-full border border-gray-100 shadow-inner flex items-center justify-center cursor-crosshair"
       >
-        {/* Center Point */}
         <div className="absolute w-2 h-2 bg-[#f37338] rounded-full z-20" />
 
-        {/* Numbers */}
         {(view === "hours" ? hours : minutes).map((num, i) => {
           const { x, y } = getPosition(i, 12, 80);
           const isSelected =
-            view === "hours"
-              ? num === hour12
-              : parseInt(minute) === num;
+            view === "hours" ? num === hour12 : parseInt(minute) === num;
+          const disabled = view === "hours" ? isHourDisabled(num, period) : isMinuteDisabled(num);
 
           return (
             <div
               key={num}
-              className={`absolute w-10 h-10 flex items-center justify-center text-[13px] font-bold rounded-full transition-all z-30 pointer-events-none ${isSelected ? "text-white bg-[#f37338] shadow-lg scale-110" : "text-gray-400/60"}`}
+              className={`absolute w-10 h-10 flex items-center justify-center text-[13px] font-bold rounded-full transition-all z-30 pointer-events-none 
+                ${disabled ? "text-gray-200" : isSelected ? "text-white bg-[#f37338] shadow-lg scale-110" : "text-gray-400/60"}`}
               style={{
                 transform: `translate(${x}px, ${y}px)`,
               }}
@@ -1341,23 +1377,25 @@ const ClockPickerView = ({ value, onChange, onClose }) => {
           );
         })}
 
-        {/* Selection Line */}
         <div
           className="absolute w-0.5 bg-[#f37338]/30 origin-bottom z-0 pointer-events-none"
           style={{
             height: "80px",
             bottom: "50%",
-            transform: `rotate(${(view === "hours" ? (hour12 % 12) : parseInt(minute)) * (view === "hours" ? 30 : 6)}deg)`,
-            transition: isDragging ? "none" : "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            transform: `rotate(${(view === "hours" ? hour12 % 12 : parseInt(minute)) * (view === "hours" ? 30 : 6)}deg)`,
+            transition: isDragging
+              ? "none"
+              : "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
           }}
         />
 
-        {/* Selected Handle (Visual only) */}
         <div
           className={`absolute w-11 h-11 bg-[#f37338] rounded-full shadow-2xl flex items-center justify-center text-white text-[14px] font-black z-40 pointer-events-none border-2 border-white`}
           style={{
-            transform: `rotate(${(view === "hours" ? (hour12 % 12) : parseInt(minute)) * (view === "hours" ? 30 : 6)}deg) translateY(-80px) rotate(-${(view === "hours" ? (hour12 % 12) : parseInt(minute)) * (view === "hours" ? 30 : 6)}deg)`,
-            transition: isDragging ? "none" : "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            transform: `rotate(${(view === "hours" ? hour12 % 12 : parseInt(minute)) * (view === "hours" ? 30 : 6)}deg) translateY(-80px) rotate(-${(view === "hours" ? hour12 % 12 : parseInt(minute)) * (view === "hours" ? 30 : 6)}deg)`,
+            transition: isDragging
+              ? "none"
+              : "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
             boxShadow: "0 0 20px rgba(243, 115, 56, 0.4)",
           }}
         >
@@ -1367,7 +1405,7 @@ const ClockPickerView = ({ value, onChange, onClose }) => {
 
       <div className="mt-8 flex items-center justify-between">
         <p className="text-[10px] font-medium text-gray-400">
-          Drag to set {view === "hours" ? "hour" : "minutes"}
+          {view === "hours" ? "Select hour" : "Select minutes"}
         </p>
         <button
           type="button"
@@ -1388,6 +1426,7 @@ const CustomSelect = ({
   icon: Icon,
   isCalendar,
   isTime,
+  minTime,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
@@ -1399,7 +1438,10 @@ const CustomSelect = ({
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target)
+      ) {
         setIsOpen(false);
       }
     };
@@ -1419,7 +1461,14 @@ const CustomSelect = ({
             .map((s) => s.padStart(2, "0"))
             .join(":")
         : val;
-      onChange(formatted);
+      
+      // Check against minTime
+      if (minTime && formatted < minTime) {
+        onChange(minTime);
+        setLocalTime(minTime);
+      } else {
+        onChange(formatted);
+      }
     }
   };
 
@@ -1443,15 +1492,17 @@ const CustomSelect = ({
         }
       : options.find((o) => (o.value || o) === value);
 
-  const displayTime = isTime ? (() => {
-    const [h24, min] = (localTime || "00:00").split(":");
-    if (!h24 || !min) return localTime;
-    const h24Int = parseInt(h24);
-    if (isNaN(h24Int)) return localTime;
-    const period = h24Int >= 12 ? "PM" : "AM";
-    const h12 = h24Int % 12 || 12;
-    return `${h12.toString().padStart(2, "0")}:${min} ${period}`;
-  })() : "";
+  const displayTime = isTime
+    ? (() => {
+        const [h24, min] = (localTime || "00:00").split(":");
+        if (!h24 || !min) return localTime;
+        const h24Int = parseInt(h24);
+        if (isNaN(h24Int)) return localTime;
+        const period = h24Int >= 12 ? "PM" : "AM";
+        const h12 = h24Int % 12 || 12;
+        return `${h12.toString().padStart(2, "0")}:${min} ${period}`;
+      })()
+    : "";
 
   return (
     <div className="relative" ref={containerRef}>
@@ -1469,7 +1520,7 @@ const CustomSelect = ({
             onFocus={() => setIsOpen(true)}
             placeholder="00:00 AM"
             className="w-full bg-transparent border-none outline-none text-[13px] font-semibold text-gray-900 placeholder:text-gray-300"
-            readOnly={!isOpen} // Prevent typing in 12h format directly to avoid parsing complexity for now, or just let them use the picker
+            readOnly={!isOpen}
           />
         ) : (
           <button
@@ -1512,13 +1563,9 @@ const CustomSelect = ({
             ) : isTime ? (
               <ClockPickerView
                 value={value}
+                minTime={minTime}
                 onChange={(val) => {
                   onChange(val);
-                  // Only close if it's a minute selection (which is the last step)
-                  // But wait, the user might want to pick hour again.
-                  // Let's add a "Done" button or just let them click outside.
-                  // For now, let's keep it open to allow tweaks,
-                  // but I'll add a "Done" button inside ClockPickerView.
                 }}
                 onClose={() => setIsOpen(false)}
               />
@@ -1585,8 +1632,8 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
   React.useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const isMobile = windowWidth < 768;
@@ -1608,7 +1655,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     let common = PLATFORM_POST_TYPES[selectedChannels[0]] || ["post"];
     for (let i = 1; i < selectedChannels.length; i++) {
       const types = PLATFORM_POST_TYPES[selectedChannels[i]] || ["post"];
-      common = common.filter((t) => types.includes(t));
+      common = common.filter(t => types.includes(t));
     }
 
     return common.length > 0 ? common : ["post"];
@@ -2011,42 +2058,27 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
   return (
     <div className="modal-overlay" onClick={handleClose}>
-      <div style={{
-          background: "var(--canvas-lifted)",
-          borderRadius: isMobile ? "0" : "var(--r-hero)",
-          boxShadow: "var(--shadow-deep)",
-          width: "100%",
-          maxWidth: isMobile ? "100%" : "1100px",
-          height: isMobile ? "100%" : "auto",
-          maxHeight: isMobile ? "100%" : "90vh",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          position: isMobile ? "fixed" : "relative",
-          inset: isMobile ? 0 : "auto",
+      <div
+        style={{
+          background: 'var(--canvas-lifted)',
+          borderRadius: isMobile ? '0' : 'var(--r-hero)',
+          boxShadow: 'var(--shadow-deep)',
+          width: '100%',
+          maxWidth: isMobile ? '100%' : '1100px',
+          height: isMobile ? '100%' : 'auto',
+          maxHeight: isMobile ? '100%' : '90vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          position: isMobile ? 'fixed' : 'relative',
+          inset: isMobile ? 0 : 'auto',
         }}
-        onClick={(e) => e.stopPropagation()}>
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div
-          style={{
-            borderBottom: "1px solid rgba(20,20,19,0.08)",
-            padding: isMobile ? "12px 16px" : "14px 24px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            background: "var(--canvas-lifted)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <h2
-              style={{
-                fontSize: isMobile ? 15 : 16,
-                fontWeight: 600,
-                color: "var(--ink)",
-                letterSpacing: "-0.02em",
-                margin: 0,
-              }}
-            >
+        <div style={{ borderBottom: '1px solid rgba(20,20,19,0.08)', padding: isMobile ? '12px 16px' : '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--canvas-lifted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <h2 style={{ fontSize: isMobile ? 15 : 16, fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>
               {isMobile ? "Composer" : "Create Post"}
             </h2>
           </div>
@@ -2109,46 +2141,16 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
         {/* Mobile Tab Switcher */}
         {isMobile && (
-          <div
-            style={{
-              display: "flex",
-              background: "var(--canvas-lifted)",
-              borderBottom: "1px solid rgba(20,20,19,0.08)",
-            }}
-          >
+          <div style={{ display: 'flex', background: 'var(--canvas-lifted)', borderBottom: '1px solid rgba(20,20,19,0.08)' }}>
             <button
               onClick={() => setMobileActiveTab("edit")}
-              style={{
-                flex: 1,
-                padding: "12px",
-                fontSize: 12,
-                fontWeight: 700,
-                textTransform: "uppercase",
-                color:
-                  mobileActiveTab === "edit" ? "var(--ink)" : "var(--slate)",
-                border: "none",
-                background: "transparent",
-                borderBottom: `2.5px solid ${mobileActiveTab === "edit" ? "var(--ink)" : "transparent"}`,
-                transition: "all 0.2s",
-              }}
+              style={{ flex: 1, padding: '12px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: mobileActiveTab === "edit" ? 'var(--ink)' : 'var(--slate)', border: 'none', background: 'transparent', borderBottom: `2.5px solid ${mobileActiveTab === "edit" ? 'var(--ink)' : 'transparent'}`, transition: 'all 0.2s' }}
             >
               1. Compose
             </button>
             <button
               onClick={() => setMobileActiveTab("preview")}
-              style={{
-                flex: 1,
-                padding: "12px",
-                fontSize: 12,
-                fontWeight: 700,
-                textTransform: "uppercase",
-                color:
-                  mobileActiveTab === "preview" ? "var(--ink)" : "var(--slate)",
-                border: "none",
-                background: "transparent",
-                borderBottom: `2.5px solid ${mobileActiveTab === "preview" ? "var(--ink)" : "transparent"}`,
-                transition: "all 0.2s",
-              }}
+              style={{ flex: 1, padding: '12px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: mobileActiveTab === "preview" ? 'var(--ink)' : 'var(--slate)', border: 'none', background: 'transparent', borderBottom: `2.5px solid ${mobileActiveTab === "preview" ? 'var(--ink)' : 'transparent'}`, transition: 'all 0.2s' }}
             >
               2. Preview
             </button>
@@ -2156,22 +2158,15 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
         )}
 
         {/* Body - Split Layout */}
-        <div
-          style={{
-            display: "flex",
-            height: isMobile ? "calc(100vh - 110px)" : "calc(90vh - 120px)",
-            flex: 1,
-          }}
-        >
+        <div style={{ display: 'flex', height: isMobile ? 'calc(100vh - 110px)' : 'calc(90vh - 120px)', flex: 1 }}>
           {/* Left Panel - Composer */}
           <div
             className="flex-1 overflow-y-auto"
             style={{
-              padding: isMobile ? "20px 16px" : "24px",
-              borderRight: isMobile ? "none" : "1px solid rgba(20,20,19,0.08)",
-              background: "var(--canvas)",
-              display:
-                isMobile && mobileActiveTab !== "edit" ? "none" : "block",
+              padding: isMobile ? '20px 16px' : '24px',
+              borderRight: isMobile ? 'none' : '1px solid rgba(20,20,19,0.08)',
+              background: 'var(--canvas)',
+              display: isMobile && mobileActiveTab !== "edit" ? 'none' : 'block'
             }}
           >
             {/* Channel Selection with Remove Badges */}
@@ -2185,56 +2180,24 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
             {/* Post Type Selection */}
             <div className="mb-6">
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">
-                Publish As
-              </label>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">Publish As</label>
               <div className="flex gap-2">
                 {availablePostTypes.includes("post") && (
-                  <label
-                    className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "post" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}
-                  >
-                    <input
-                      type="radio"
-                      value="post"
-                      checked={postType === "post"}
-                      onChange={() => setPostType("post")}
-                      className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"
-                    />
-                    <span className="text-[12px] font-semibold text-gray-700">
-                      Post
-                    </span>
+                  <label className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "post" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}>
+                    <input type="radio" value="post" checked={postType === "post"} onChange={() => setPostType("post")} className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"/>
+                    <span className="text-[12px] font-semibold text-gray-700">Post</span>
                   </label>
                 )}
                 {availablePostTypes.includes("story") && (
-                  <label
-                    className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "story" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}
-                  >
-                    <input
-                      type="radio"
-                      value="story"
-                      checked={postType === "story"}
-                      onChange={() => setPostType("story")}
-                      className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"
-                    />
-                    <span className="text-[12px] font-semibold text-gray-700">
-                      Story
-                    </span>
+                  <label className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "story" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}>
+                    <input type="radio" value="story" checked={postType === "story"} onChange={() => setPostType("story")} className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"/>
+                    <span className="text-[12px] font-semibold text-gray-700">Story</span>
                   </label>
                 )}
                 {availablePostTypes.includes("reel") && (
-                  <label
-                    className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "reel" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}
-                  >
-                    <input
-                      type="radio"
-                      value="reel"
-                      checked={postType === "reel"}
-                      onChange={() => setPostType("reel")}
-                      className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"
-                    />
-                    <span className="text-[12px] font-semibold text-gray-700">
-                      Reel / Shorts
-                    </span>
+                  <label className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "reel" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}>
+                    <input type="radio" value="reel" checked={postType === "reel"} onChange={() => setPostType("reel")} className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"/>
+                    <span className="text-[12px] font-semibold text-gray-700">Reel / Shorts</span>
                   </label>
                 )}
               </div>
@@ -2256,15 +2219,9 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                   </p>
                   {caption && (
                     <div className="flex items-center gap-2">
-                      <button
+                       <button
                         type="button"
-                        onClick={() =>
-                          setCaption((prev) =>
-                            prev
-                              ? `${prev} {{MENTION_SELF}}`
-                              : "{{MENTION_SELF}}",
-                          )
-                        }
+                        onClick={() => setCaption((prev) => prev ? `${prev} {{MENTION_SELF}}` : "{{MENTION_SELF}}")}
                         className="text-[10px] text-indigo-500 hover:text-indigo-600 transition-colors uppercase tracking-wider font-bold flex items-center gap-1"
                         title="Inserts a dynamic handle that resolves to each platform's username"
                       >
@@ -2480,7 +2437,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                   axis="x"
                   values={mediaFiles}
                   onReorder={setMediaFiles}
-                  className={`grid ${isMobile ? "grid-cols-3" : "grid-cols-5"} gap-3 mt-4`}
+                  className={`grid ${isMobile ? 'grid-cols-3' : 'grid-cols-5'} gap-3 mt-4`}
                 >
                   <AnimatePresence>
                     {mediaFiles.map((m, idx) => {
@@ -2571,8 +2528,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                     );
                     if (!ratio) return null;
 
-                    const matches =
-                      preset.matchedPlatforms || preset.platforms || [];
+                    const matches = preset.matchedPlatforms || preset.platforms || [];
 
                     return (
                       <button
@@ -2645,6 +2601,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
               </div>
             </div>
 
+
             {/* Scheduling */}
             <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-3 mb-6">
@@ -2686,12 +2643,16 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                 {isScheduled && (
                   <motion.div
                     initial={{ height: 0, opacity: 0, overflow: "hidden" }}
-                    animate={{ height: "auto", opacity: 1, overflow: "visible" }}
+                    animate={{
+                      height: "auto",
+                      opacity: 1,
+                      overflow: "visible",
+                    }}
                     exit={{ height: 0, opacity: 0, overflow: "hidden" }}
                     transition={{
                       duration: 0.3,
                       ease: "circOut",
-                      overflow: { delay: 0.3 }
+                      overflow: { delay: 0.3 },
                     }}
                     className="relative"
                   >
@@ -2707,8 +2668,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                             onChange={(val) =>
                               updateScheduledAt(
                                 val,
-                                scheduledTimePart ||
-                                  getMinimumTimeForDate(val),
+                                scheduledTimePart || getMinimumTimeForDate(val),
                               )
                             }
                             icon={Calendar}
@@ -2722,9 +2682,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                           </label>
                           <CustomSelect
                             value={
-                              scheduledTimePart ||
-                              scheduleTimeOptions[0] ||
-                              ""
+                              scheduledTimePart || scheduleTimeOptions[0] || ""
                             }
                             options={scheduleTimeOptions}
                             onChange={(val) =>
@@ -2735,6 +2693,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                             }
                             icon={Clock}
                             isTime={true}
+                            minTime={getMinimumTimeForDate(scheduledDatePart || minScheduleDate)}
                           />
                         </div>
                       </div>
@@ -2786,15 +2745,12 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                             <Sparkles className="w-4 h-4 text-white" />
                             <p className="text-[11px] text-white font-semibold">
                               Scheduled for{" "}
-                              {new Date(scheduledAt).toLocaleString(
-                                undefined,
-                                {
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                },
-                              )}
+                              {new Date(scheduledAt).toLocaleString(undefined, {
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
                             </p>
                           </div>
                         )}
@@ -2807,7 +2763,6 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
             </div>
 
             {/* Platform Customization */}
@@ -2953,7 +2908,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
           </button>
         </div>
       </div>
-   
+    </div>
   );
 }
 
