@@ -1,14 +1,17 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import 'dotenv/config'; // Load variables before other imports
+
 import broadcastRouter from './routes/broadcast.js';
 import authRouter from './routes/auth.js';
 import broadcastsRouter from './routes/broadcasts.js';
+import onboardingRouter from './routes/onboarding.js';
+import jobsRouter from './routes/jobs.js';
+import { initScheduler } from './services/scheduler.js';
 
-// Load environment variables
-dotenv.config();
+// dotenv.config(); // Removed duplicate call below
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,12 +21,35 @@ const PORT = process.env.PORT || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
 // Middleware
+const allowedOrigins = [CLIENT_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'];
+
 app.use(cors({
-  origin: CLIENT_URL,
-  credentials: true
+  origin: function(origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        return callback(null, true);
+      }
+      return callback(new Error('CORS Not allowed'), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning', 'X-Requested-With']
 }));
 
+// Explicitly handle preflight requests
+app.options('*', cors());
+
+// Add ngrok skip header to all responses
+app.use((req, res, next) => {
+  res.header('ngrok-skip-browser-warning', 'true');
+  next();
+});
+
 app.use(express.json());
+
 app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded files statically (for Instagram public URL requirement)
@@ -33,6 +59,8 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/auth', authRouter);
 app.use('/api', broadcastRouter);
 app.use('/api', broadcastsRouter);
+app.use('/api', onboardingRouter);
+app.use('/api', jobsRouter);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -74,14 +102,22 @@ app.use((req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log('╔══════════════════════════════════════╗');
   console.log('║     QuickPost API Server             ║');
   console.log('╚══════════════════════════════════════╝');
   console.log(`\n🚀 Server running on http://localhost:${PORT}`);
   console.log(`🌐 Client URL: ${CLIENT_URL}`);
   console.log(`📁 Uploads directory: ${path.join(__dirname, '../uploads')}`);
+  
+  // Initialize Post Scheduler
+  initScheduler();
+
   console.log(`\n✨ Ready to broadcast!\n`);
 });
+
+// Set server timeout to 5 minutes for large uploads
+server.timeout = 300000;
+server.keepAliveTimeout = 300000;
 
 export default app;

@@ -8,6 +8,11 @@ import pinterestOAuth from '../services/pinterestOAuth.js';
 import facebookOAuth from '../services/facebookOAuth.js';
 import blueskyAuth from '../services/blueskyAuth.js';
 import linkedinOAuth from '../services/linkedinOAuth.js';
+import mastodonOAuth from '../services/mastodonOAuth.js';
+import tiktokOAuth from '../services/tiktokOAuth.js';
+import threadsOAuth from '../services/threadsOAuth.js';
+import xOAuth from '../services/xOAuth.js';
+import redditOAuth from '../services/redditOAuth.js';
 
 import supabase, { createOrUpdateUser, getConnectedAccounts } from '../services/supabase.js';
 import { authenticateUser, generateToken } from '../middleware/authenticateUser.js';
@@ -58,12 +63,7 @@ router.get('/google/callback', async (req, res) => {
       tokenData.userInfo.picture
     );
 
-    console.log('--- LOGIN DEBUG ---');
-    console.log('User created/found:', { id: user.id, email: user.email });
-
-    console.log('Storing YouTube tokens for user:', user.id);
     await googleOAuth.storeTokens(user.id, tokenData);
-    console.log('YouTube tokens stored successfully.');
 
     const jwtToken = generateToken({
       userId: user.id,
@@ -302,6 +302,274 @@ router.get('/linkedin/callback', async (req, res) => {
   }
 });
 
+/* ---------------- MASTODON ---------------- */
+
+router.post('/mastodon/init', authenticateUser, async (req, res) => {
+  try {
+    const { instanceUrl } = req.body;
+    const userId = req.user.userId;
+
+    if (!instanceUrl) {
+      return res.status(400).json({ success: false, error: 'Instance URL is required' });
+    }
+
+    // 1. Register app on the instance
+    const registration = await mastodonOAuth.registerApp(instanceUrl);
+    
+    // 2. Create state with all needed info
+    const state = mastodonOAuth.makeState(
+      userId, 
+      instanceUrl, 
+      registration.clientId, 
+      registration.clientSecret
+    );
+
+    // 3. Return the auth URL
+    const authUrl = mastodonOAuth.getAuthorizationUrl(instanceUrl, registration.clientId, state);
+    
+    res.json({ success: true, authUrl });
+  } catch (error) {
+    console.error('Mastodon init error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/mastodon/callback', async (req, res) => {
+  const { code, error, state } = req.query;
+
+  if (error) return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied`);
+  if (!code || !state) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
+
+  const parsed = decodeState(state);
+  if (!parsed?.userId || !parsed?.instanceUrl || !parsed?.clientId || !parsed?.clientSecret) {
+    return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
+  }
+
+  try {
+    const tokenData = await mastodonOAuth.exchangeCodeForToken(
+      parsed.instanceUrl,
+      parsed.clientId,
+      parsed.clientSecret,
+      code
+    );
+
+    await mastodonOAuth.storeTokens(parsed.userId, parsed.instanceUrl, tokenData);
+
+    res.redirect(`${CLIENT_URL}/dashboard?success=mastodon_connected`);
+  } catch (err) {
+    console.error('❌ Mastodon callback error:', err.message);
+    res.redirect(`${CLIENT_URL}/dashboard?error=mastodon_connection_failed`);
+  }
+});
+
+/* ---------------- TIKTOK ---------------- */
+
+router.get('/tiktok', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.redirect(`${CLIENT_URL}/dashboard?error=missing_token`);
+
+    let userId;
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      userId = decoded.userId;
+    } catch (e) {
+      return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token`);
+    }
+
+    const state = tiktokOAuth.makeState(userId);
+    const authUrl = tiktokOAuth.getAuthorizationUrl(state);
+    return res.redirect(authUrl);
+  } catch (error) {
+    console.error('TikTok init error:', error);
+    res.redirect(`${CLIENT_URL}/dashboard?error=tiktok_oauth_failed`);
+  }
+});
+
+router.get('/tiktok/callback', async (req, res) => {
+  const { code, error, state } = req.query;
+
+  if (error) return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied`);
+  if (!code || !state) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
+
+  const parsed = decodeState(state);
+  if (!parsed?.userId) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
+
+  try {
+    const tokenData = await tiktokOAuth.exchangeCodeForToken(code);
+    await tiktokOAuth.storeTokens(parsed.userId, tokenData);
+
+    res.redirect(`${CLIENT_URL}/dashboard?success=tiktok_connected`);
+  } catch (err) {
+    console.error('❌ TikTok callback error:', err.message);
+    res.redirect(`${CLIENT_URL}/dashboard?error=tiktok_connection_failed`);
+  }
+});
+
+/* ---------------- THREADS ---------------- */
+
+router.get('/threads', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.redirect(`${CLIENT_URL}/dashboard?error=missing_token`);
+
+    let userId;
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      userId = decoded.userId;
+    } catch (e) {
+      return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token`);
+    }
+
+    const state = threadsOAuth.makeState(userId);
+    const authUrl = threadsOAuth.getAuthorizationUrl(state);
+    return res.redirect(authUrl);
+  } catch (error) {
+    console.error('Threads init error:', error);
+    res.redirect(`${CLIENT_URL}/dashboard?error=threads_oauth_failed`);
+  }
+});
+
+router.get('/threads/callback', async (req, res) => {
+  const { code, error, state } = req.query;
+
+  if (error) return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied`);
+  if (!code || !state) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
+
+  const parsed = decodeState(state);
+  if (!parsed?.userId) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
+
+  try {
+    const tokenData = await threadsOAuth.exchangeCodeForToken(code);
+    await threadsOAuth.storeTokens(parsed.userId, tokenData);
+
+    console.log(`✅ [AUTH] Threads connected successfully for user ${parsed.userId}`);
+    res.redirect(`${CLIENT_URL}/dashboard?success=threads_connected`);
+  } catch (err) {
+    console.error('❌ Threads callback error:', err.message);
+    res.redirect(`${CLIENT_URL}/dashboard?error=threads_connection_failed&message=${encodeURIComponent(err.message)}`);
+  }
+});
+
+/* ---------------- 𝕏 (TWITTER) ---------------- */
+
+router.get('/x', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.redirect(`${CLIENT_URL}/dashboard?error=missing_token`);
+
+    let userId;
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      userId = decoded.userId;
+    } catch (e) {
+      return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token`);
+    }
+
+    // X requires PKCE. We'll generate a verifier and challenge.
+    // Since we don't have sessions, we'll encode the verifier into the state.
+    const { verifier, challenge } = xOAuth.generatePKCE();
+    
+    // Create state object with verifier
+    const stateObj = {
+      userId,
+      provider: 'x',
+      codeVerifier: verifier, // Store verifier here to use in callback
+      nonce: crypto.randomUUID(),
+      ts: Date.now()
+    };
+    
+    const state = Buffer.from(JSON.stringify(stateObj)).toString('base64url');
+    const authUrl = xOAuth.getAuthorizationUrl(state, challenge);
+    
+    return res.redirect(authUrl);
+  } catch (error) {
+    console.error('X init error:', error);
+    res.redirect(`${CLIENT_URL}/dashboard?error=x_oauth_failed`);
+  }
+});
+
+router.get('/x/callback', async (req, res) => {
+  const { code, error, state } = req.query;
+
+  console.log('\n🔵 X OAuth Callback Received');
+  console.log(' - Code:', code ? '***' + code.substring(code.length - 5) : 'MISSING');
+  console.log(' - State:', state ? 'PRESENT' : 'MISSING');
+  console.log(' - Error:', error || 'NONE');
+
+  if (error) {
+    console.error('❌ X OAuth Error from provider:', error);
+    return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied&details=${error}`);
+  }
+  if (!code || !state) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
+
+  const parsed = decodeState(state);
+  if (!parsed?.userId || !parsed?.codeVerifier) {
+    console.error('❌ X callback error: invalid state or missing verifier');
+    console.log(' - Parsed State:', parsed);
+    return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
+  }
+
+  console.log(' - Verifier retrieved:', parsed.codeVerifier ? 'YES' : 'NO');
+
+  try {
+    const tokenData = await xOAuth.exchangeCodeForTokens(code, parsed.codeVerifier);
+    console.log(' - Token exchange success!');
+    await xOAuth.storeTokens(parsed.userId, tokenData);
+
+    console.log(`✅ [AUTH] X connected successfully for user ${parsed.userId}`);
+    res.redirect(`${CLIENT_URL}/dashboard?success=x_connected`);
+  } catch (err) {
+    console.error('❌ X callback error:', err.message);
+    res.redirect(`${CLIENT_URL}/dashboard?error=x_connection_failed&message=${encodeURIComponent(err.message)}`);
+  }
+});
+
+/* ---------------- REDDIT ---------------- */
+
+router.get('/reddit', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.redirect(`${CLIENT_URL}/dashboard?error=missing_token`);
+
+    let userId;
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      userId = decoded.userId;
+    } catch (e) {
+      return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token`);
+    }
+
+    const state = redditOAuth.makeState(userId);
+    const authUrl = redditOAuth.getAuthorizationUrl(state);
+    return res.redirect(authUrl);
+  } catch (error) {
+    console.error('Reddit init error:', error);
+    res.redirect(`${CLIENT_URL}/dashboard?error=reddit_oauth_failed`);
+  }
+});
+
+router.get('/reddit/callback', async (req, res) => {
+  const { code, error, state } = req.query;
+
+  if (error) return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied`);
+  if (!code || !state) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
+
+  const parsed = decodeState(state);
+  if (!parsed?.userId) return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
+
+  try {
+    const tokenData = await redditOAuth.exchangeCodeForToken(code);
+    await redditOAuth.storeTokens(parsed.userId, tokenData);
+
+    console.log(`✅ [AUTH] Reddit connected successfully for user ${parsed.userId}`);
+    res.redirect(`${CLIENT_URL}/dashboard?success=reddit_connected`);
+  } catch (err) {
+    console.error('❌ Reddit callback error:', err.message);
+    res.redirect(`${CLIENT_URL}/dashboard?error=reddit_connection_failed&message=${encodeURIComponent(err.message)}`);
+  }
+});
+
 // LinkedIn manual connection with access token
 router.post('/linkedin/connect', authenticateUser, async (req, res) => {
   try {
@@ -365,16 +633,21 @@ router.post('/pinterest/connect', authenticateUser, async (req, res) => {
     const userInfo = await pinterestOAuth.getUserInfo(accessToken);
     
     // Get boards
-    const boards = await pinterestOAuth.getBoards(accessToken);
+    let boards = [];
+    try {
+      boards = await pinterestOAuth.getBoards(accessToken);
+    } catch (boardError) {
+      console.warn('⚠️ Could not fetch Pinterest boards during connect:', boardError.message);
+    }
     
     // Use provided boardId or first board
     let targetBoardId = boardId;
     let targetBoardName = null;
     
-    if (!targetBoardId && boards.length > 0) {
+    if (!targetBoardId && boards && boards.length > 0) {
       targetBoardId = boards[0].id;
       targetBoardName = boards[0].name;
-    } else if (targetBoardId && boards.length > 0) {
+    } else if (targetBoardId && boards && boards.length > 0) {
       const foundBoard = boards.find(b => b.id === targetBoardId);
       targetBoardName = foundBoard?.name || null;
     }
@@ -386,8 +659,8 @@ router.post('/pinterest/connect', authenticateUser, async (req, res) => {
       boardId: targetBoardId,
       boardName: targetBoardName,
       userInfo: {
-        username: userInfo.username,
-        profileImage: userInfo.profile_image
+        username: userInfo.username || userInfo.account_type || 'User',
+        profileImage: userInfo.profile_image || userInfo.profile_image_url || null
       }
     });
 
@@ -448,7 +721,7 @@ router.get('/accounts', authenticateUser, async (req, res) => {
 router.delete('/disconnect/:provider', authenticateUser, async (req, res) => {
   try {
     const { provider } = req.params;
-    const validProviders = ['youtube', 'instagram', 'pinterest', 'facebook', 'bluesky'];
+    const validProviders = ['youtube', 'instagram', 'pinterest', 'facebook', 'bluesky', 'linkedin', 'mastodon', 'tiktok', 'threads', 'x', 'reddit'];
     if (!validProviders.includes(provider)) {
       return res.status(400).json({ success: false, error: 'Invalid provider' });
     }

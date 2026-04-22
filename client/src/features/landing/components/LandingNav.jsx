@@ -1,131 +1,72 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Menu, X, Zap } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import logo from '/logo.png';
 
 export default function LandingNav() {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
-
-  const scrollToSection = (id) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-      setIsMobileMenuOpen(false);
-    }
-  };
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? 'bg-white shadow-lg border-b border-gray-200' : 'bg-white/80 backdrop-blur-md'
-      }`}
+      className="landing-nav"
+      style={{
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        transition: 'box-shadow 0.25s',
+        boxShadow: scrolled ? 'var(--shadow-nav)' : 'none',
+      }}
     >
-      <div className="landing-container">
-        <div className="flex items-center justify-between h-16 md:h-20">
-          {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 group">
-            <div className="p-2 rounded-lg group-hover:scale-110 transition-transform" style={{ background: '#8E4CFB' }}>
-              <Zap className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xl md:text-2xl font-bold text-gray-900">
-              Quick<span className="gradient-text">Post</span>
-            </span>
-          </Link>
+      <div className="landing-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 32px', maxWidth: 1280, margin: '0 auto' }}>
+        {/* Brand */}
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+          <img src={logo} alt="GAP Social-pilot" style={{ height: 32, width: 32, objectFit: 'contain' }} />
+          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em' }}>
+            GAP Social‑pilot
+          </span>
+        </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <button
-              onClick={() => scrollToSection('features')}
-              className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+        {/* Links */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 28 }} className="hidden md:flex">
+          {['Features', 'How It Works', 'Pricing'].map(label => (
+            <a
+              key={label}
+              href={`#${label.toLowerCase().replace(/\s+/g, '-')}`}
+              style={{ fontSize: 14, fontWeight: 500, color: 'var(--slate)', textDecoration: 'none', transition: 'color 0.15s', letterSpacing: '-0.01em' }}
+              onMouseEnter={e => e.currentTarget.style.color = 'var(--ink)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--slate)'}
             >
-              Features
-            </button>
-            <button
-              onClick={() => scrollToSection('how-it-works')}
-              className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
-            >
-              How It Works
-            </button>
-            <button
-              onClick={() => scrollToSection('platforms')}
-              className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
-            >
-              Platforms
-            </button>
-          </div>
-
-          {/* CTA Buttons */}
-          <div className="hidden md:flex items-center space-x-4">
-            <Link
-              to="/login"
-              className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
-            >
-              Login
-            </Link>
-            <Link
-              to="/login"
-              className="btn-glow text-white font-semibold px-6 py-2.5 rounded-lg"
-            >
-              Get Started
-            </Link>
-          </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden text-gray-900 p-2"
-          >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+              {label}
+            </a>
+          ))}
         </div>
 
-        {/* Mobile Menu */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden bg-white rounded-lg mt-2 p-4 shadow-xl border border-gray-200 animate-fade-in-up">
-            <div className="flex flex-col space-y-4">
-              <button
-                onClick={() => scrollToSection('features')}
-                className="text-gray-600 hover:text-gray-900 transition-colors text-left font-medium"
-              >
-                Features
-              </button>
-              <button
-                onClick={() => scrollToSection('how-it-works')}
-                className="text-gray-600 hover:text-gray-900 transition-colors text-left font-medium"
-              >
-                How It Works
-              </button>
-              <button
-                onClick={() => scrollToSection('platforms')}
-                className="text-gray-600 hover:text-gray-900 transition-colors text-left font-medium"
-              >
-                Platforms
-              </button>
-              <hr className="border-gray-200" />
-              <Link
-                to="/login"
-                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
-              >
-                Login
-              </Link>
-              <Link
-                to="/login"
-                className="btn-glow text-white font-semibold px-6 py-3 rounded-lg text-center"
-              >
-                Get Started
-              </Link>
-            </div>
-          </div>
-        )}
+        {/* CTA */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Link
+            to="/login"
+            style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink)', textDecoration: 'none', padding: '7px 16px', borderRadius: 'var(--r-btn)', transition: 'background 0.15s' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(20,20,19,0.05)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          >
+            Sign in
+          </Link>
+          <button
+            onClick={() => navigate('/login')}
+            className="btn-ink"
+            style={{ fontSize: 14, padding: '8px 20px' }}
+          >
+            Get started
+          </button>
+        </div>
       </div>
     </nav>
   );

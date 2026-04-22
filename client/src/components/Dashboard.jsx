@@ -1,294 +1,713 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Plus, List, Calendar, ChevronDown, ExternalLink, Instagram, Youtube, Clock } from 'lucide-react';
-import apiClient from '../utils/apiClient';
-import ComposerModal from './ComposerModal';
+import {
+  Plus,
+  Search,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Clock,
+  Share2,
+  CheckCircle2,
+  XCircle,
+  Video,
+  Image as ImageIcon,
+  LayoutGrid,
+  List,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Eye,
+  ThumbsUp,
+  X
+} from "lucide-react";
+import apiClient from "../utils/apiClient";
+import ComposerModal from "./ComposerModal";
+import PostPreviewModal from "./PostPreviewModal";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-function Dashboard() {
-  const { user, connectedAccounts, refreshAccounts } = useAuth();
-  const [activeTab, setActiveTab] = useState('sent');
-  const [broadcasts, setBroadcasts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [composerOpen, setComposerOpen] = useState(false);
+/* ── token shortcuts ── */
+const css = {
+  canvas:  'var(--canvas)',
+  lifted:  'var(--canvas-lifted)',
+  ink:     'var(--ink)',
+  white:   'var(--white)',
+  slate:   'var(--slate)',
+  dust:    'var(--dust)',
+  arc:     'var(--arc)',
+  shadow:  'var(--shadow-card)',
+  r_btn:   'var(--r-btn)',
+  r_hero:  'var(--r-hero)',
+  r_pill:  'var(--r-pill)',
+};
 
-  const tabs = [
-    { id: 'queue', label: 'Queue', count: 0 },
-    { id: 'drafts', label: 'Drafts', count: 0 },
-    { id: 'sent', label: 'Sent', count: broadcasts.length },
-  ];
+/* ── Platform helpers ── */
+function getPlatformIcon(id) {
+  const s = { width: 14, height: 14, objectFit: 'contain' };
+  switch (id) {
+    case 'facebook':  return <img src="/icons/facebook-round-color-icon.svg" style={s} alt="Facebook" />;
+    case 'instagram': return <img src="/icons/ig-instagram-icon.svg" style={s} alt="Instagram" />;
+    case 'x':         return <img src="/icons/x-social-media-round-icon.svg" style={s} alt="X" />;
+    case 'linkedin':  return <img src="/icons/linkedin-icon.svg" style={s} alt="LinkedIn" />;
+    case 'tiktok':    return <img src="/icons/tiktok-circle-icon.svg" style={s} alt="TikTok" />;
+    case 'youtube':   return <img src="/icons/youtube-color-icon.svg" style={s} alt="YouTube" />;
+    case 'pinterest': return <img src="/icons/pinterest-round-color-icon.svg" style={s} alt="Pinterest" />;
+    case 'threads':   return <img src="/icons/threads-icon.svg" style={s} alt="Threads" />;
+    case 'mastodon':  return <img src="/icons/mastodon-round-icon.svg" style={s} alt="Mastodon" />;
+    case 'bluesky':   return <img src="/icons/bluesky-circle-color-icon.svg" style={s} alt="Bluesky" />;
+    case 'reddit':    return <img src="/icons/reddit-icon.svg" style={s} alt="Reddit" />;
+    case 'google-business': return <img src="/icons/google-icon.svg" style={s} alt="Google" />;
+    default:          return <Share2 size={14} />;
+  }
+}
 
-  // Handle OAuth callback (Instagram/Pinterest connection success)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const success = params.get('success');
-    const error = params.get('error');
-    
-    if (success === 'instagram_connected' || success === 'pinterest_connected') {
-      console.log(`✅ ${success.replace('_', ' ')}`);
-      // Refresh connected accounts to update UI
-      refreshAccounts();
-      // Clean URL
-      window.history.replaceState({}, '', '/dashboard');
-    } else if (error) {
-      console.error('❌ OAuth error:', error);
-      // Clean URL
-      window.history.replaceState({}, '', '/dashboard');
-    }
-  }, [refreshAccounts]);
+function buildPlatforms(post) {
+  return [
+    {
+      id: "linkedin",
+      name: "LinkedIn",
+      success: post.linkedin_success,
+      error: post.linkedin_error,
+      url: post.linkedin_url,
+    },
+    {
+      id: "youtube",
+      name: "YouTube",
+      success: post.youtube_success,
+      error: post.youtube_error,
+      url: post.youtube_shorts_url || post.youtube_url,
+    },
+    {
+      id: "instagram",
+      name: "Instagram",
+      success: post.instagram_success,
+      error: post.instagram_error,
+      url: post.instagram_url,
+    },
+    {
+      id: "facebook",
+      name: "Facebook",
+      success: post.facebook_success,
+      error: post.facebook_error,
+      url: post.facebook_url,
+    },
+    {
+      id: "tiktok",
+      name: "TikTok",
+      success: post.tiktok_success,
+      error: post.tiktok_error,
+      url: null,
+    },
+    {
+      id: "mastodon",
+      name: "Mastodon",
+      success: post.mastodon_success,
+      error: post.mastodon_error,
+      url: post.mastodon_url,
+    },
+    {
+      id: "bluesky",
+      name: "Bluesky",
+      success: post.bluesky_success,
+      error: post.bluesky_error,
+      url: post.bluesky_url,
+    },
+    {
+      id: "pinterest",
+      name: "Pinterest",
+      success: post.pinterest_success,
+      error: post.pinterest_error,
+      url: post.pinterest_url,
+    },
+    {
+      id: "threads",
+      name: "Threads",
+      success: post.threads_success,
+      error: post.threads_error,
+      url: post.threads_url,
+    },
+    {
+      id: "x",
+      name: "X",
+      success: post.x_success,
+      error: post.x_error,
+      url: post.x_url,
+    },
+    {
+      id: "reddit",
+      name: "Reddit",
+      success: post.reddit_success,
+      error: post.reddit_error,
+      url: post.reddit_url,
+    },
+  ].filter((p) => p.success || (p.error && p.error !== "Not selected"));
+}
 
-  // Fetch broadcasts
-  useEffect(() => {
-    fetchBroadcasts();
-  }, [activeTab]);
-
-  const fetchBroadcasts = async () => {
-    try {
-      setLoading(true);
-      const params = activeTab === 'sent' ? { status: 'sent' } : {};
-      const response = await apiClient.get('/api/broadcasts', { params });
-      setBroadcasts(response.data.broadcasts || []);
-    } catch (error) {
-      console.error('Failed to fetch broadcasts:', error);
-      setBroadcasts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    
-    if (diffMins < 60) {
-      return `${diffMins} minutes ago`;
-    } else if (diffMins < 1440) {
-      const hours = Math.floor(diffMins / 60);
-      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
-    } else {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    }
-  };
-
-  const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString('en-US', { 
-      hour: 'numeric', 
-      minute: '2-digit',
-      hour12: true 
-    });
-  };
-
+/* ── Media thumbnail ── */
+function MediaThumb({ post, className = '', style = {} }) {
+  const isImage = post.media_type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || '');
+  const displayUrl = post.thumbnail_url || (isImage ? post.media_url : null);
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top Header Bar */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                </svg>
+    <div className={className} style={{ background: '#e8e2da', overflow: 'hidden', position: 'relative', borderBottom: '1px solid rgba(20,20,19,0.05)', ...style }}>
+      {displayUrl ? (
+        <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+          <img src={displayUrl} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s', display: 'block' }}
+            onMouseEnter={e => e.target.style.transform = 'scale(1.06)'}
+            onMouseLeave={e => e.target.style.transform = 'scale(1)'}
+            onError={e => { e.target.src = 'https://placehold.co/300x300?text=Preview'; }}
+          />
+          {post.youtube_success && (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.12)', backdropFilter: 'blur(1px)' }}>
+              <div style={{ width: 44, height: 44, background: '#FF0000', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(255,0,0,0.3)', border: '2px solid rgba(255,255,255,0.2)' }}>
+                <Play size={20} style={{ color: '#fff', fill: '#fff', marginLeft: 3 }} />
               </div>
-              <h1 className="text-xl font-semibold text-gray-900">All Channels</h1>
             </div>
+          )}
+          {/* Subtle bottom gradient for card transition */}
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 40, background: 'linear-gradient(to top, rgba(20,20,19,0.04), transparent)' }} />
+        </div>
+      ) : post.media_type === 'image' ? (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, background: '#e8e2da' }}>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(20,20,19,0.03)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ImageIcon size={22} style={{ color: '#9a9088' }} />
           </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex items-center border border-gray-200 rounded-lg">
-              <button className="px-3 py-1.5 text-sm bg-white border-r border-gray-200 rounded-l-lg hover:bg-gray-50 flex items-center gap-2">
-                <List className="w-4 h-4" />
-                List
-              </button>
-              <button className="px-3 py-1.5 text-sm bg-white rounded-r-lg hover:bg-gray-50 flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                Calendar
-              </button>
-            </div>
-
-            <button
-              onClick={() => setComposerOpen(true)}
-              className="px-4 py-2 bg-buffer-blue hover:bg-buffer-blueDark text-white font-medium rounded-lg transition-colors flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              New Post
-            </button>
+          <span style={{ fontSize: 9, fontWeight: 700, color: '#9a9088', textTransform: 'uppercase', letterSpacing: '0.12em' }}>No Media</span>
+        </div>
+      ) : (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, background: css.ink }}>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Video size={22} style={{ color: 'rgba(243,240,238,0.5)' }} />
           </div>
+          <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(243,240,238,0.4)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>No Video</span>
         </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Platform badge ── */
+function PlatformBadge({ platform }) {
+  return (
+      <div style={{ 
+      display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px',
+      borderRadius: css.r_pill, fontSize: 10, fontWeight: 700,
+      background: platform.success ? '#e6f4ea' : '#fde8e8',
+      color: platform.success ? '#1a6b34' : '#9b1c1c',
+      border: `1px solid ${platform.success ? '#b7dfc3' : '#f5b8b8'}`,
+      }}>
+        {getPlatformIcon(platform.id)}
+      <span>{platform.name}</span>
+      {platform.success
+        ? <CheckCircle2 size={10} />
+        : <XCircle size={10} />
+      }
+    </div>
+  );
+}
+
+/* ── Grid card ── */
+function GridCard({ post, onOpen, formatDate }) {
+  const platforms = buildPlatforms(post);
+  const successCount = platforms.filter((p) => p.success).length;
+  const isScheduled = post.status === 'scheduled';
+  
+  return (
+    <div
+      onClick={onOpen}
+      style={{
+        background: css.lifted,
+        borderRadius: css.r_hero,
+        border: '1.5px solid rgba(20,20,19,0.06)',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: '0 8px 30px rgba(0,0,0,0.02)',
+      }}
+      onMouseEnter={e => { 
+        e.currentTarget.style.boxShadow = css.shadow; 
+        e.currentTarget.style.transform = 'translateY(-6px)';
+        e.currentTarget.style.borderColor = 'rgba(243, 115, 56, 0.2)'; // mc arc subtle highlight
+      }}
+      onMouseLeave={e => { 
+        e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.02)'; 
+        e.currentTarget.style.transform = 'none';
+        e.currentTarget.style.borderColor = 'rgba(20,20,19,0.06)';
+      }}
+    >
+      <div style={{ position: 'relative' }}>
+        <MediaThumb post={post} style={{ width: '100%', height: 184, borderRadius: 0 }} />
+        
+        {/* Modern Label-style Badge (Frosted Glass) */}
+        <div style={{
+          position: 'absolute', top: 14, right: 14,
+          padding: '4px 12px', borderRadius: css.r_pill,
+          background: 'rgba(20,20,19,0.65)', 
+          backdropFilter: 'blur(10px)',
+          color: css.canvas,
+          border: '1px solid rgba(255,255,255,0.15)',
+          fontSize: 8, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+        }}>
+          {post.media_type || 'media'}
+        </div>
+        
+        {/* Count Badge */}
+        {platforms.length > 0 && (
+          <div style={{
+            position: 'absolute', bottom: 14, left: 14,
+            padding: '4px 12px', borderRadius: css.r_pill,
+            background: 'rgba(255,255,255,0.85)', 
+            backdropFilter: 'blur(8px)',
+            color: css.ink,
+            border: '1px solid rgba(255,255,255,0.5)',
+            fontSize: 9, fontWeight: 700,
+            boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
+            display: 'flex', alignItems: 'center', gap: 6
+          }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: isScheduled ? css.arc : '#22c55e' }} />
+            {platforms.length} Platform{platforms.length > 1 ? 's' : ''}
+          </div>
+        )}
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white border-b border-gray-200 px-6">
-        <div className="flex items-center gap-6">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-2 py-4 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab.id
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              {tab.label}
-              {tab.count > 0 && (
-                <span className="ml-2 px-2 py-0.5 rounded-full bg-gray-100 text-xs">
-                  {tab.count}
-                </span>
-              )}
-            </button>
-          ))}
+      <div style={{ padding: '20px 24px 24px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div className="eyebrow" style={{ fontSize: 10, marginBottom: 12 }}>
+          {formatDate(isScheduled ? post.scheduled_for : post.posted_at)}
         </div>
-      </div>
+        
+        <p style={{ 
+          fontSize: 15, fontWeight: 500, color: css.ink, margin: '0 0 16px', lineHeight: 1.5, 
+          flex: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', 
+          overflow: 'hidden', letterSpacing: '-0.01em' 
+        }}>
+          {post.caption || <span style={{ color: css.dust, fontStyle: 'italic', fontWeight: 400 }}>No caption provided</span>}
+        </p>
 
-      {/* Filters */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3">
-        <div className="flex items-center gap-3">
-          <button className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-2">
-            <span>Channels</span>
-            <ChevronDown className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="p-6">
-        <div className="max-w-4xl mx-auto">
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600 mx-auto"></div>
-              <p className="text-gray-600 mt-4">Loading broadcasts...</p>
-            </div>
-          ) : activeTab === 'sent' && broadcasts.length > 0 ? (
-            <div className="space-y-6">
-              {/* Group by date */}
-              {broadcasts.map((broadcast) => (
-                <div key={broadcast.id}>
-                  {/* Date Header */}
-                  <div className="mb-4">
-                    <h3 className="text-sm font-semibold text-gray-700">
-                      Today, {new Date(broadcast.posted_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
-                    </h3>
-                  </div>
-
-                  {/* Broadcast Card */}
-                  <div className="bg-white rounded-lg border border-gray-200 p-6">
-                    {/* Time */}
-                    <div className="text-sm text-gray-600 mb-4">{formatTime(broadcast.posted_at)}</div>
-
-                    {/* User Info */}
-                    <div className="flex items-start gap-4 mb-4">
-                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                        <span className="text-blue-700 font-semibold text-sm">
-                          {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
-                        </span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <p className="font-semibold text-gray-900">{user?.name || user?.email}</p>
-                          <div className="flex items-center gap-1">
-                            {broadcast.youtube_success && (
-                              <span className="text-red-600" title="YouTube">
-                                <Youtube className="w-4 h-4" />
-                              </span>
-                            )}
-                            {broadcast.instagram_success && (
-                              <span className="text-pink-600" title="Instagram">
-                                <Instagram className="w-4 h-4" />
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-gray-700 whitespace-pre-wrap">{broadcast.caption}</p>
-                      </div>
-                    </div>
-
-                    {/* Platform Results */}
-                    <div className="flex items-center gap-4 mb-4 text-sm text-gray-600">
-                      {broadcast.youtube_success && broadcast.youtube_shorts_url && (
-                        <a
-                          href={broadcast.youtube_shorts_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          View on YouTube
-                        </a>
-                      )}
-                      {broadcast.instagram_success && broadcast.instagram_url && (
-                        <a
-                          href={broadcast.instagram_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-blue-600 hover:text-blue-700"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          View on Instagram
-                        </a>
-                      )}
-                    </div>
-
-                    {/* Stats Placeholder */}
-                    <div className="flex items-center gap-6 py-3 border-t border-gray-100 text-sm text-gray-500">
-                      <span>— Saves</span>
-                      <span>— Comments</span>
-                      <span>— Impressions</span>
-                      <span>— Reactions</span>
-                    </div>
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Clock className="w-4 h-4" />
-                        <span>You created this {formatDate(broadcast.posted_at)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            /* Empty State */
-            <div className="bg-white rounded-lg border-2 border-dashed border-gray-200 p-16 text-center">
-              <div className="mb-6">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {activeTab === 'queue' ? 'No posts scheduled' : activeTab === 'drafts' ? 'No drafts' : 'No posts sent yet'}
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  {activeTab === 'sent' ? 'Create and send your first post to see it here' : 'Schedule some posts and they will appear here'}
-                </p>
-              </div>
-
-              <button
-                onClick={() => setComposerOpen(true)}
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-buffer-blue hover:bg-buffer-blueDark text-white font-medium rounded-lg transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Create your next post
-              </button>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {platforms.slice(0, 3).map(p => <PlatformBadge key={p.id} platform={p} />)}
+          {platforms.length > 3 && (
+            <div style={{ 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', 
+              padding: '4px 10px', borderRadius: css.r_pill, 
+              background: 'rgba(20,20,19,0.04)', color: css.slate,
+              fontSize: 10, fontWeight: 700
+            }}>
+              +{platforms.length - 3}
             </div>
           )}
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Composer Modal */}
-      <ComposerModal
-        isOpen={composerOpen}
-        onClose={() => setComposerOpen(false)}
-        onPostCreated={(result) => {
-          // Refresh broadcasts after successful post
-          fetchBroadcasts();
-        }}
-      />
+/* ── List row ── */
+function ListRow({ post, expanded, onToggle, formatDate }) {
+  const platforms = buildPlatforms(post);
+  const isScheduled = post.status === 'scheduled';
+  
+  return (
+    <div style={{
+      background: css.lifted,
+      borderRadius: css.r_hero,
+      border: `1.5px solid ${expanded ? 'rgba(243, 115, 56, 0.25)' : 'rgba(20,20,19,0.06)'}`,
+      overflow: 'hidden',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      boxShadow: expanded ? css.shadow : '0 4px 15px rgba(0,0,0,0.01)',
+    }}>
+      <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 20, cursor: 'pointer' }} onClick={onToggle}>
+        <MediaThumb post={post} style={{ width: 84, height: 84, borderRadius: 'var(--r-btn)', flexShrink: 0, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div className="eyebrow" style={{ fontSize: 9 }}>
+              {formatDate(isScheduled ? post.scheduled_for : post.posted_at)}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {isScheduled && (
+                <div style={{ fontSize: 9, fontWeight: 800, color: css.arc, background: 'rgba(243, 115, 56, 0.08)', padding: '2px 8px', borderRadius: css.r_pill, textTransform: 'uppercase' }}>
+                  Scheduled
+                </div>
+              )}
+              {expanded ? <ChevronUp size={16} style={{ color: css.arc }} /> : <ChevronDown size={16} style={{ color: css.slate }} />}
+            </div>
+          </div>
+          <h3 style={{ fontSize: 16, fontWeight: 500, color: css.ink, margin: '0 0 10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>
+            {post.caption || <span style={{ fontStyle: 'italic', color: css.dust }}>No caption</span>}
+          </h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {platforms.slice(0, 5).map(p => <PlatformBadge key={p.id} platform={p} />)}
+            {platforms.length > 5 && (
+              <div style={{ padding: '4px 10px', borderRadius: css.r_pill, background: 'rgba(20,20,19,0.04)', color: css.slate, fontSize: 10, fontWeight: 700 }}>
+                +{platforms.length - 5}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {expanded && (
+        <div style={{ borderTop: '1.5px solid rgba(243, 115, 56, 0.1)', background: 'linear-gradient(to bottom, rgba(243, 115, 56, 0.02), transparent)', padding: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 20 }}>
+            {platforms.map(p => (
+              <div key={p.id} style={{ 
+                background: css.white, 
+                padding: '16px', 
+                borderRadius: css.r_btn, 
+                border: '1.2px solid rgba(20,20,19,0.06)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.02)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: PLATFORM_COLORS[p.id] || css.slate, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {getPlatformIcon(p.id)}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: css.ink }}>{p.name}</span>
+                  </div>
+                  <span style={{ 
+                    fontSize: 10, fontWeight: 700, padding: '3px 10px', borderRadius: css.r_pill, 
+                    background: p.success ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', 
+                    color: p.success ? '#15803d' : '#b91c1c',
+                    border: `1px solid ${p.success ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}`
+                  }}>
+                    {p.success ? 'Success' : 'Failed'}
+                  </span>
+                </div>
+                {p.success
+                  ? p.url
+                    ? <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, color: css.arc, fontWeight: 700, textDecoration: 'none' }}>View Live Post <ExternalLink size={12} /></a>
+                    : <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: css.slate, fontWeight: 600 }}><Clock size={12} /> Pending Sync</div>
+                  : <p style={{ fontSize: 11, color: '#ef4444', fontStyle: 'italic', margin: 0, lineHeight: 1.4 }}>{p.error || 'Connection error'}</p>
+                }
+              </div>
+            ))}
+          </div>
+          {post.caption && (
+            <div style={{ background: css.white, padding: '20px', borderRadius: css.r_btn, border: '1.2px solid rgba(243, 115, 56, 0.1)', boxShadow: '0 8px 24px rgba(243, 115, 56, 0.05)' }}>
+              <div className="eyebrow" style={{ marginBottom: 10, fontSize: 10 }}>Full Caption</div>
+              <p style={{ fontSize: 14, color: css.ink, whiteSpace: 'pre-wrap', lineHeight: 1.6, margin: 0 }}>{post.caption}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   MAIN DASHBOARD
+   ══════════════════════════════════════════════════════ */
+function Dashboard() {
+  const { user, refreshAccounts } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState('sent');
+  const [broadcasts, setBroadcasts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState("grid");
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [queueCount, setQueueCount] = useState(0);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
+  const tabs = [
+    { id: 'sent',    label: 'Sent',    count: activeTab === 'sent'    ? broadcasts.length : 0 },
+    { id: 'queue',   label: 'Queue',   count: activeTab === 'queue'   ? broadcasts.length : (activeTab === 'sent' ? queueCount : 0) },
+    { id: 'drafts',  label: 'Drafts',  count: 0 },
+    { id: 'history', label: 'History', count: activeTab === 'history' ? broadcasts.length : 0 },
+  ];
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('success')) { refreshAccounts(); window.history.replaceState({}, '', '/dashboard'); }
+    apiClient.get('/api/broadcasts/stats').then(r => setQueueCount(r.data.pending || 0)).catch(() => {});
+  }, [refreshAccounts]);
+
+  useEffect(() => { 
+    fetchBroadcasts(); 
+    setCurrentPage(1); 
+  }, [activeTab]);
+  
+  useEffect(() => { 
+    setCurrentPage(1); 
+  }, [searchTerm]);
+
+  const resetPagination = () => setCurrentPage(1);
+
+  const fetchBroadcasts = async () => {
+    try {
+      setLoading(true);
+      let params = {};
+      if (activeTab === 'sent') params.status = 'sent';
+      else if (activeTab === 'queue') params.status = 'scheduled';
+
+      const response = await apiClient.get('/api/broadcasts', { params });
+      setBroadcasts(response.data.broadcasts || []);
+    } catch (err) { setBroadcasts([]); }
+    finally { setLoading(false); }
+  };
+
+  const formatDate = (dateString) =>
+    new Date(dateString).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  const toggleExpand = (id) => setExpandedId(prev => prev === id ? null : id);
+  
+  const selectedPlatform = searchParams.get('platform') || 'all';
+
+  const filtered = broadcasts.filter(b => {
+    const matchesSearch = (b.caption || '').toLowerCase().includes(searchTerm.toLowerCase());
+    if (selectedPlatform === 'all') return matchesSearch;
+    const matchesPlatform = buildPlatforms(b).some(p => p.id === selectedPlatform);
+    return matchesSearch && matchesPlatform;
+  });
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const handlePageChange = (page) => { setCurrentPage(page); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+
+  const Pagination = () => {
+    if (totalPages <= 1) return null;
+    const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 40, marginBottom: 24 }}>
+        <button onClick={() => handlePageChange(Math.max(1, currentPage - 1))} disabled={currentPage === 1}
+          style={{ padding: 8, borderRadius: css.r_btn, border: '1.5px solid rgba(20,20,19,0.15)', background: css.lifted, cursor: 'pointer', color: css.slate, opacity: currentPage === 1 ? 0.3 : 1, display: 'flex', alignItems: 'center' }}>
+          <ChevronLeft size={16} />
+        </button>
+        {pages.map(page => (
+          <button key={page} onClick={() => handlePageChange(page)}
+            style={{ width: 36, height: 36, borderRadius: css.r_btn, border: `1.5px solid ${currentPage === page ? css.ink : 'rgba(20,20,19,0.15)'}`, background: currentPage === page ? css.ink : css.lifted, color: currentPage === page ? css.canvas : css.slate, fontWeight: 700, fontSize: 13, cursor: 'pointer', transition: 'all 0.15s' }}>
+            {page}
+          </button>
+        ))}
+        <button onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}
+          style={{ padding: 8, borderRadius: css.r_btn, border: '1.5px solid rgba(20,20,19,0.15)', background: css.lifted, cursor: 'pointer', color: css.slate, opacity: currentPage === totalPages ? 0.3 : 1, display: 'flex', alignItems: 'center' }}>
+          <ChevronRight size={16} />
+        </button>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ minHeight: '100vh', background: css.canvas, fontFamily: 'var(--font)' }}>
+
+      {/* ── Top header ── */}
+      <div style={{
+        background: css.lifted,
+        borderBottom: '1px solid rgba(20,20,19,0.08)',
+        padding: '18px 28px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          <div>
+            <div className="eyebrow" style={{ marginBottom: 4 }}>Overview</div>
+            <h1 style={{ fontSize: 28, fontWeight: 500, color: css.ink, margin: 0, letterSpacing: '-0.02em', lineHeight: 1 }}>Post Analytics</h1>
+          </div>
+          {selectedPlatform !== 'all' && (
+             <div style={{ padding: '4px 12px', background: 'rgba(20,20,19,0.05)', borderRadius: css.r_btn, border: '1px solid rgba(20,20,19,0.1)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: css.slate, textTransform: 'uppercase' }}>Filtering:</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: css.ink }}>{selectedPlatform.charAt(0).toUpperCase() + selectedPlatform.slice(1)}</span>
+                <button onClick={() => navigate('/dashboard')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}><X size={12} /></button>
+             </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            onClick={() => setComposerOpen(true)}
+            className="btn-ink"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '10px 22px' }}
+          >
+            <Plus size={16} />
+            New Post
+          </button>
+        </div>
+      </div>
+
+      {/* ── Tabs ── */}
+      <div style={{ background: css.lifted, borderBottom: '1px solid rgba(20,20,19,0.08)', padding: '0 28px', display: 'flex', alignItems: 'center', gap: 32 }}>
+        {tabs.map(tab => {
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => { if (tab.id === 'queue' && activeTab !== 'queue') { navigate('/dashboard/queue'); return; } setActiveTab(tab.id); }}
+              style={{
+                padding: '14px 0',
+                fontSize: 12,
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: active ? css.ink : css.slate,
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                borderBottom: `2px solid ${active ? css.ink : 'transparent'}`,
+                marginBottom: -1,
+                transition: 'color 0.15s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+              }}
+            >
+              {tab.label}
+              {tab.count > 0 && (
+                <span style={{
+                  padding: '1px 8px',
+                  borderRadius: css.r_pill,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  background: active ? css.ink : 'rgba(20,20,19,0.07)',
+                  color: active ? css.canvas : css.slate,
+                }}>
+                  {tab.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Toolbar ── */}
+      {(activeTab === 'sent' || activeTab === 'queue' || activeTab === 'history') && !loading && broadcasts.length > 0 && (
+        <div style={{ background: css.canvas, borderBottom: '1px solid rgba(20,20,19,0.06)', padding: '12px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Clock size={14} style={{ color: css.arc }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: css.ink }}>{filtered.length}</span>
+              <span style={{ fontSize: 12, color: css.slate }}>{activeTab === 'queue' ? 'scheduled' : 'total'} posts</span>
+            </div>
+            <div style={{ width: 1, height: 16, background: 'rgba(20,20,19,0.12)' }} />
+            {activeTab !== 'queue' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <CheckCircle2 size={14} style={{ color: '#22c55e' }} />
+                <span style={{ fontSize: 13, fontWeight: 700, color: css.ink }}>
+                  {filtered.filter(b => buildPlatforms(b).some(p => p.success)).length}
+                </span>
+                <span style={{ fontSize: 12, color: css.slate }}>successful</span>
+              </div>
+            )}
+            {activeTab === 'queue' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Calendar size={14} style={{ color: css.arc }} />
+                <span style={{ fontSize: 10, color: css.arc, fontWeight: 700, textTransform: 'uppercase' }}>Pending Broadcasts</span>
+              </div>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ position: 'relative' }}>
+              <Search size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: css.slate }} />
+              <input
+                type="text"
+                placeholder="Search posts…"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                style={{
+                  paddingLeft: 32, paddingRight: 16, paddingTop: 8, paddingBottom: 8,
+                  background: css.lifted,
+                  border: '1px solid rgba(20,20,19,0.12)',
+                  borderRadius: css.r_pill,
+                  fontSize: 13, color: css.ink, fontFamily: 'var(--font)',
+                  outline: 'none', width: 200,
+                }}
+              />
+            </div>
+            <div style={{ display: 'flex', background: css.lifted, border: '1px solid rgba(20,20,19,0.10)', borderRadius: css.r_pill, padding: 3, gap: 2 }}>
+              {[
+                { mode: 'grid', icon: <LayoutGrid size={14} /> },
+                { mode: 'list', icon: <List size={14} /> },
+              ].map(({ mode, icon }) => (
+                <button key={mode} onClick={() => setViewMode(mode)} title={`${mode} view`}
+                  style={{ padding: '5px 10px', borderRadius: css.r_pill, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', background: viewMode === mode ? css.ink : 'transparent', color: viewMode === mode ? css.canvas : css.slate, transition: 'all 0.2s' }}>
+                  {icon}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Main content ── */}
+      <div style={{ padding: '28px' }}>
+        {loading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: 16 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: css.ink, animation: 'mc-float 1.2s ease-in-out infinite', animationDelay: `${i * 0.2}s` }} />
+              ))}
+            </div>
+            <p style={{ fontSize: 13, color: css.slate, margin: 0 }}>Syncing data…</p>
+          </div>
+        ) : (activeTab === "sent" || activeTab === "queue" || activeTab === "history") && filtered.length > 0 ? (
+          <>
+            {viewMode === 'grid' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 20 }}>
+                {paginatedItems.map(post => (
+                  <GridCard key={post.id} post={post} onOpen={() => setSelectedPost(post)} formatDate={formatDate} />
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 860, margin: '0 auto' }}>
+                {paginatedItems.map(post => (
+                  <div key={post.id} onClick={() => setSelectedPost(post)} style={{ cursor: 'pointer' }}>
+                    <ListRow post={post} expanded={expandedId === post.id}
+                      onToggle={e => { e?.stopPropagation(); toggleExpand(post.id); }}
+                      formatDate={formatDate}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+            <Pagination />
+          </>
+        ) : (
+          /* ── Empty state ── */
+          <div style={{
+            background: css.lifted,
+            borderRadius: css.r_hero,
+            border: '1px dashed rgba(20,20,19,0.15)',
+            padding: '80px 40px',
+            textAlign: 'center',
+          }}>
+            <div style={{ position: 'relative', display: 'inline-block', marginBottom: 24 }}>
+              <div className="watermark" style={{ fontSize: 80, position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', whiteSpace: 'nowrap' }}>✦</div>
+              <div style={{ position: 'relative', width: 64, height: 64, borderRadius: '50%', background: css.ink, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+                <Share2 size={26} style={{ color: css.canvas }} />
+              </div>
+            </div>
+            <h3 style={{ fontSize: 22, fontWeight: 500, color: css.ink, margin: '0 0 10px', letterSpacing: '-0.02em' }}>
+              {activeTab === 'queue' ? 'Your queue is empty'
+                : activeTab === 'drafts' ? 'No drafts yet'
+                : activeTab === 'history' ? 'No broadcast history yet'
+                : 'Ready for your first boost?'}
+            </h3>
+            <p style={{ fontSize: 14, color: css.slate, margin: '0 0 28px', maxWidth: 300, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.5 }}>
+              {activeTab === 'sent' || activeTab === 'history'
+                ? 'Create a post and broadcast it across your social channels to see analytics here.'
+                : 'Schedule posts to see them appear here.'}
+            </p>
+            {(activeTab === 'sent' || activeTab === 'history') && (
+              <button className="btn-ink" onClick={() => setComposerOpen(true)} style={{ fontSize: 15, padding: '12px 32px' }}>
+                Launch your first post
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} style={{ marginLeft: 6 }}><path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" /></svg>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <ComposerModal isOpen={composerOpen} onClose={() => setComposerOpen(false)} onPostCreated={fetchBroadcasts} />
+      <PostPreviewModal post={selectedPost} onClose={() => setSelectedPost(null)} />
     </div>
   );
 }
