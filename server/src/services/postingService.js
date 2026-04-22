@@ -164,12 +164,25 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
       );
     }
     
-    // Threads
+    // Threads — supports single image, single video, and carousel (mixed images+videos)
     if (channels.includes('threads') && tokens.threads) {
       const resolvedCaption = resolveMentions(caption, 'threads', tokens.threads);
+
+      // Build mediaItems array: [{url, type}] — one entry per uploaded file
+      const threadsMediaItems = mediaUrls.map((url, idx) => ({
+        url,
+        type: filePaths[idx]?.includes('video-') ? 'video' : 'image',
+      }));
+
       platformPromises.push(
-        postToThreads(tokens.threads.accessToken, tokens.threads.account_id, resolvedCaption, primaryMediaUrl, mediaType)
-          .then(result => ({ platform: 'threads', result }))
+        postToThreads(
+          tokens.threads.accessToken,
+          tokens.threads.account_id,
+          resolvedCaption,
+          mediaUrls[0],   // fallback single url
+          mediaType,
+          threadsMediaItems // full list for carousel detection
+        ).then(result => ({ platform: 'threads', result }))
       );
     }
 
