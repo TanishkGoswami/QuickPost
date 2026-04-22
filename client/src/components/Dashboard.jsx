@@ -498,13 +498,13 @@ function Dashboard() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: css.canvas, fontFamily: 'var(--font)' }}>
+    <div style={{ background: css.canvas, fontFamily: 'var(--font)' }}>
 
       {/* ── Top header ── */}
       <div style={{
         background: css.lifted,
         borderBottom: '1px solid rgba(20,20,19,0.08)',
-        padding: 'clamp(14px, 3vw, 20px) 16px',
+        padding: '16px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -657,7 +657,7 @@ function Dashboard() {
       )}
 
       {/* ── Main content ── */}
-      <div style={{ padding: 'clamp(16px, 3vw, 28px)' }}>
+      <div style={{ padding: 0 }}>
         {loading ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', gap: 16 }}>
             <div style={{ display: 'flex', gap: 8 }}>
