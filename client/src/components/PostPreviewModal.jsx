@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, ExternalLink, CheckCircle2, XCircle,
   Clock, Heart, MessageCircle, Share2, Bookmark,
@@ -184,7 +185,7 @@ const InstagramOverlay = ({ format, caption, children, isFull }) => {
           <Bookmark className="w-5 h-5 text-black" />
         </div>
         <div className="text-[11px] font-bold text-black mb-1">1,234 likes</div>
-        <p className="text-[11px] text-black line-clamp-2"><span className="font-bold mr-1">username</span>{caption}</p>
+        <p className="text-[11px] text-black"><span className="font-bold mr-1">username</span>{caption}</p>
       </div>
     </div>
   );
@@ -202,7 +203,7 @@ const YouTubeOverlay = ({ format, caption, children, isFull }) => {
               <span className="text-[10px] font-bold">@channelname</span>
               <button className="bg-white text-black px-2.5 py-1 rounded-full text-[9px] font-bold">Subscribe</button>
             </div>
-            <p className="text-[11px] font-medium line-clamp-2 mb-2">{caption}</p>
+            <p className="text-[11px] font-medium mb-2">{caption}</p>
           </div>
           <div className="flex flex-col gap-4 items-center mb-1">
             <div className="flex flex-col items-center gap-0.5">
@@ -245,7 +246,7 @@ const YouTubeOverlay = ({ format, caption, children, isFull }) => {
           <div className="flex gap-3">
             <div className="w-10 h-10 rounded-full bg-gray-600 flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-[13px] font-bold leading-tight line-clamp-2 mb-1">{caption || 'Video Title'}</p>
+              <p className="text-[13px] font-bold leading-tight mb-1">{caption || 'Video Title'}</p>
               <p className="text-[11px] text-gray-400">Channel Name • 12K views • 2 hours ago</p>
             </div>
             <MoreVertical className="w-4 h-4 text-gray-400" />
@@ -268,7 +269,7 @@ const LinkedInOverlay = ({ format, caption, children, isFull }) => {
         <MoreHorizontal className="w-4 h-4 text-gray-400" />
       </div>
       <div className="p-3">
-        <p className="text-[11px] text-black line-clamp-3 leading-relaxed mb-2">{caption}</p>
+        <p className="text-[11px] text-black leading-relaxed mb-2">{caption}</p>
       </div>
       <div className={`relative overflow-hidden bg-gray-50 ${format.css} w-full`}>
         {children}
@@ -331,7 +332,7 @@ const TikTokOverlay = ({ format, caption, children, isFull }) => {
       <div className="flex justify-between items-end gap-2">
         <div className="flex-1 pr-2">
           <p className="text-[11px] font-bold mb-1">@username</p>
-          <p className="text-[10px] line-clamp-2 mb-3">{caption}</p>
+          <p className="text-[10px] mb-3">{caption}</p>
           <div className="flex items-center gap-2">
             <Music2 className="w-3 h-3" />
             <span className="text-[9px]">Original sound - username</span>
@@ -409,7 +410,7 @@ const FacebookOverlay = ({ format, caption, children, isFull }) => {
         <MoreHorizontal className="w-4 h-4 text-gray-500" />
       </div>
       <div className="px-3 pb-3">
-        <p className="text-[12px] text-gray-900 line-clamp-3 leading-relaxed">{caption}</p>
+        <p className="text-[12px] text-gray-900 leading-relaxed">{caption}</p>
       </div>
       <div className={`relative overflow-hidden bg-gray-100 ${format.css} w-full`}>
         {children}
@@ -480,7 +481,7 @@ const PinterestOverlay = ({ format, caption, children, isFull }) => {
          {children}
        </div>
        <div className="p-4 bg-white rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-          <h3 className="text-sm font-bold text-gray-900 mb-2 line-clamp-1">{caption || 'Pin Title'}</h3>
+          <h3 className="text-sm font-bold text-gray-900 mb-2">{caption || 'Pin Title'}</h3>
           <div className="flex items-center justify-between">
              <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-gray-200" />
@@ -581,12 +582,21 @@ export default function PostPreviewModal({ post, onClose }) {
   });
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
       style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(12px)' }}
       onClick={handleBackdrop}
     >
-      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ type: 'spring', duration: 0.5, bounce: 0.3 }}
+        className="bg-white rounded-[2rem] shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col"
+      >
 
         {/* ── Modal Header ── */}
         <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-10">
@@ -595,7 +605,7 @@ export default function PostPreviewModal({ post, onClose }) {
                 <Play className="w-5 h-5 text-blue-600 fill-blue-600" />
              </div>
              <div>
-              <h2 className="text-lg font-bold text-gray-900 leading-tight line-clamp-1">{post.caption?.split('\n')[0] || 'Post Preview'}</h2>
+              <h2 className="text-lg font-bold text-gray-900 leading-tight">{post.caption?.split('\n')[0] || 'Post Preview'}</h2>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-xs text-gray-400 font-medium">{formatDate(post.posted_at)}</span>
                 <span className="w-1 h-1 rounded-full bg-gray-300" />
@@ -732,27 +742,27 @@ export default function PostPreviewModal({ post, onClose }) {
 
                   {/* Status and Actions Card */}
                   <div className="flex-1 w-full max-w-md space-y-6">
-                    <div className={`p-6 rounded-[1.5rem] border-2 transition-all ${
+                    <div className={`p-8 rounded-[2rem] border-2 transition-all shadow-sm ${
                       activePlatform.success
-                      ? 'bg-green-50/30 border-green-100'
-                      : 'bg-red-50/30 border-red-100'
+                      ? 'bg-green-50/20 border-green-100/50 shadow-green-900/5'
+                      : 'bg-red-50/20 border-red-100/50 shadow-red-900/5'
                     }`}>
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner ${
                             activePlatform.success ? 'bg-green-100' : 'bg-red-100'
                           }`}>
                             {activePlatform.success ? (
-                              <CheckCircle2 className="w-5 h-5 text-green-600" />
+                              <CheckCircle2 className="w-6 h-6 text-green-600" />
                             ) : (
-                              <XCircle className="w-5 h-5 text-red-600" />
+                              <XCircle className="w-6 h-6 text-red-600" />
                             )}
                           </div>
                           <div>
-                            <h3 className={`text-sm font-bold ${activePlatform.success ? 'text-green-900' : 'text-red-900'}`}>
-                              {activePlatform.success ? 'Post Published' : 'Publication Failed'}
+                            <h3 className={`text-base font-bold tracking-tight ${activePlatform.success ? 'text-green-900' : 'text-red-900'}`}>
+                              {activePlatform.success ? 'Successfully Published' : 'Publication Failed'}
                             </h3>
-                            <p className={`text-[11px] font-medium ${activePlatform.success ? 'text-green-600' : 'text-red-600'}`}>
+                            <p className={`text-[12px] font-bold uppercase tracking-wider ${activePlatform.success ? 'text-green-600' : 'text-red-600'}`}>
                               {activePlatform.name}
                             </p>
                           </div>
@@ -762,25 +772,25 @@ export default function PostPreviewModal({ post, onClose }) {
                             href={activePlatform.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="bg-white border border-gray-200 px-4 py-2 rounded-xl text-xs font-bold text-gray-700 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
+                            className="bg-white border border-gray-100 px-5 py-2.5 rounded-xl text-xs font-black text-gray-800 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm uppercase tracking-tighter"
                           >
-                            Live Post <ExternalLink className="w-3 h-3" />
+                            View Live <ExternalLink className="w-3.5 h-3.5" />
                           </a>
                         )}
                       </div>
 
                       {!activePlatform.success && activePlatform.error && (
-                        <div className="mt-4 p-4 rounded-xl bg-white/80 border border-red-100">
-                          <p className="text-[11px] font-black text-red-400 uppercase tracking-widest mb-1">Error Detail</p>
-                          <p className="text-xs text-red-600 font-medium">{activePlatform.error}</p>
+                        <div className="mt-4 p-5 rounded-2xl bg-white border border-red-100/50 shadow-sm">
+                          <p className="text-[10px] font-black text-red-400 uppercase tracking-[0.2em] mb-2">Error Log</p>
+                          <p className="text-sm text-red-600 font-medium leading-relaxed">{activePlatform.error}</p>
                         </div>
                       )}
                     </div>
 
                     {post.caption && (
-                      <div className="bg-gray-50 rounded-[1.5rem] p-6 border border-gray-100">
+                      <div className="bg-gray-50 rounded-[1.5rem] p-6 border border-gray-100 shadow-sm">
                         <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.1em] mb-3">Post Content</p>
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed max-h-[200px] overflow-y-auto">
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                           {post.caption}
                         </p>
                       </div>
@@ -803,7 +813,7 @@ export default function PostPreviewModal({ post, onClose }) {
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
