@@ -214,52 +214,54 @@ function Sidebar() {
                   transition: 'all 0.2s',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                  {visibleIcons.map((p, i) => (
-                    <div
-                      key={p.id}
-                      style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: '50%',
-                        background: 'var(--white)',
-                        border: '1.5px solid var(--canvas-lifted)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginLeft: i === 0 ? 0 : -8,
-                        zIndex: 3 - i,
-                        overflow: 'hidden',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                      }}
-                    >
-                      {React.cloneElement(p.icon, { style: { width: 14, height: 14 } })}
-                    </div>
-                  ))}
-                  {extraCount > 0 && (
-                    <div
-                      style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: '50%',
-                        background: 'var(--canvas)',
-                        border: '1.5px solid var(--canvas-lifted)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginLeft: -8,
-                        zIndex: 0,
-                        fontSize: 9,
-                        fontWeight: 700,
-                        color: 'var(--slate)',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                      }}
-                    >
-                      +{extraCount}
-                    </div>
-                  )}
-                </div>
-                <span style={{ marginLeft: 8, fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>Connected</span>
+                {!connectedOpen && (
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    {visibleIcons.map((p, i) => (
+                      <div
+                        key={p.id}
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: '50%',
+                          background: 'var(--white)',
+                          border: '1.5px solid var(--canvas-lifted)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginLeft: i === 0 ? 0 : -8,
+                          zIndex: 3 - i,
+                          overflow: 'hidden',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                        }}
+                      >
+                        {React.cloneElement(p.icon, { style: { width: 14, height: 14 } })}
+                      </div>
+                    ))}
+                    {extraCount > 0 && (
+                      <div
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: '50%',
+                          background: 'var(--canvas)',
+                          border: '1.5px solid var(--canvas-lifted)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginLeft: -8,
+                          zIndex: 0,
+                          fontSize: 9,
+                          fontWeight: 700,
+                          color: 'var(--slate)',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                        }}
+                      >
+                        +{extraCount}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <span style={{ marginLeft: connectedOpen ? 0 : 8, fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>Connected</span>
                 <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
                   {connectedPlatforms.length > 0 && (
                     <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#6366f1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>
