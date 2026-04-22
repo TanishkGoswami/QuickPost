@@ -125,7 +125,7 @@ function Login() {
           style={{
             background: 'var(--canvas-lifted)',
             borderRadius: 'var(--r-hero)',
-            padding: '36px 40px 32px',
+            padding: 'clamp(24px, 8vw, 40px) clamp(20px, 8vw, 40px) clamp(24px, 8vw, 32px)',
             boxShadow: 'var(--shadow-card)',
             border: '1px solid rgba(20,20,19,0.07)',
           }}
@@ -134,7 +134,7 @@ function Login() {
           <div className="eyebrow" style={{ marginBottom: 12 }}>Sign in</div>
           <h2
             style={{
-              fontSize: 22,
+              fontSize: 'clamp(20px, 5vw, 24px)',
               fontWeight: 500,
               letterSpacing: '-0.02em',
               color: 'var(--ink)',
@@ -143,7 +143,7 @@ function Login() {
           >
             Continue with Google
           </h2>
-          <p style={{ fontSize: 14, fontWeight: 450, color: 'var(--slate)', margin: '0 0 28px' }}>
+          <p style={{ fontSize: 'clamp(13px, 4vw, 14px)', fontWeight: 450, color: 'var(--slate)', margin: '0 0 28px' }}>
             Connect your Google account to get started
           </p>
 

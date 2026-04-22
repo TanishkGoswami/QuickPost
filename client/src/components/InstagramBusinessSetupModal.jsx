@@ -64,7 +64,7 @@ function InstagramBusinessSetupModal({ isOpen, onClose, onProceed }) {
             <div className="space-y-4">
               {/* Step 1 */}
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-buffer-blue text-white rounded-full flex items-center justify-center font-semibold text-sm">
+                <div className="flex-shrink-0 w-8 h-8 bg-link text-white rounded-full flex items-center justify-center font-semibold text-sm">
                   1
                 </div>
                 <div className="flex-1">
@@ -75,7 +75,7 @@ function InstagramBusinessSetupModal({ isOpen, onClose, onProceed }) {
 
               {/* Step 2 */}
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-buffer-blue text-white rounded-full flex items-center justify-center font-semibold text-sm">
+                <div className="flex-shrink-0 w-8 h-8 bg-link text-white rounded-full flex items-center justify-center font-semibold text-sm">
                   2
                 </div>
                 <div className="flex-1">
@@ -86,7 +86,7 @@ function InstagramBusinessSetupModal({ isOpen, onClose, onProceed }) {
 
               {/* Step 3 */}
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-buffer-blue text-white rounded-full flex items-center justify-center font-semibold text-sm">
+                <div className="flex-shrink-0 w-8 h-8 bg-link text-white rounded-full flex items-center justify-center font-semibold text-sm">
                   3
                 </div>
                 <div className="flex-1">
@@ -97,7 +97,7 @@ function InstagramBusinessSetupModal({ isOpen, onClose, onProceed }) {
 
               {/* Step 4 */}
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-buffer-blue text-white rounded-full flex items-center justify-center font-semibold text-sm">
+                <div className="flex-shrink-0 w-8 h-8 bg-link text-white rounded-full flex items-center justify-center font-semibold text-sm">
                   4
                 </div>
                 <div className="flex-1">
@@ -108,7 +108,7 @@ function InstagramBusinessSetupModal({ isOpen, onClose, onProceed }) {
 
               {/* Step 5 */}
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-buffer-blue text-white rounded-full flex items-center justify-center font-semibold text-sm">
+                <div className="flex-shrink-0 w-8 h-8 bg-link text-white rounded-full flex items-center justify-center font-semibold text-sm">
                   5
                 </div>
                 <div className="flex-1">
@@ -120,7 +120,7 @@ function InstagramBusinessSetupModal({ isOpen, onClose, onProceed }) {
                     href="https://www.facebook.com/pages/creation"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-sm text-buffer-blue hover:text-buffer-blueDark"
+                    className="inline-flex items-center gap-1 text-sm text-link hover:underline"
                   >
                     Create Facebook Page
                     <ExternalLink className="w-3 h-3" />
@@ -130,7 +130,7 @@ function InstagramBusinessSetupModal({ isOpen, onClose, onProceed }) {
 
               {/* Step 6 */}
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-buffer-blue text-white rounded-full flex items-center justify-center font-semibold text-sm">
+                <div className="flex-shrink-0 w-8 h-8 bg-link text-white rounded-full flex items-center justify-center font-semibold text-sm">
                   6
                 </div>
                 <div className="flex-1">
@@ -149,7 +149,7 @@ function InstagramBusinessSetupModal({ isOpen, onClose, onProceed }) {
                 href="https://help.instagram.com/502981923235522"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-buffer-blue hover:text-buffer-blueDark"
+                className="flex items-center gap-2 text-sm text-link hover:underline"
               >
                 <ExternalLink className="w-4 h-4" />
                 Instagram Official Guide: Switch to Business Account
@@ -158,7 +158,7 @@ function InstagramBusinessSetupModal({ isOpen, onClose, onProceed }) {
                 href="https://www.facebook.com/business/help/898752960195806"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-buffer-blue hover:text-buffer-blueDark"
+                className="flex items-center gap-2 text-sm text-link hover:underline"
               >
                 <ExternalLink className="w-4 h-4" />
                 Connect Instagram Business Account to Facebook Page
@@ -188,7 +188,7 @@ function InstagramBusinessSetupModal({ isOpen, onClose, onProceed }) {
                   onClose();
                 }
               }}
-              className="px-4 py-2 bg-buffer-blue hover:bg-buffer-blueDark text-white font-medium rounded-lg transition-colors"
+              className="px-4 py-2 bg-link hover:opacity-90 text-white font-medium rounded-lg transition-colors shadow-sm"
             >
               Continue to Connect
             </button>

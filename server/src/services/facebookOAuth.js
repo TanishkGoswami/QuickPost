@@ -159,6 +159,7 @@ class FacebookOAuth {
         token_expiry: expiryDate.toISOString(),
         page_id: tokenData.pageId,
         account_id: tokenData.pageId,
+        username: tokenData.userInfo?.pageName,
         updated_at: new Date().toISOString()
       };
 

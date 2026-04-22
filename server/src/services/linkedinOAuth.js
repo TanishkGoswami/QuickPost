@@ -134,6 +134,7 @@ class LinkedInOAuth {
           refresh_token: null, // LinkedIn tokens don't have refresh tokens in v2
           expires_at: expiresAt.toISOString(),
           profile_data: tokenData.userInfo,
+          username: tokenData.userInfo?.name,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id,provider'

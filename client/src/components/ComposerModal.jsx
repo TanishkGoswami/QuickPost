@@ -13,6 +13,7 @@ import {
   Smartphone,
   Square,
   RectangleVertical,
+  AtSign,
 } from "lucide-react";
 import { Reorder, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
@@ -285,6 +286,20 @@ const PLATFORM_SHORT_LABELS = {
   mastodon: "Mastodon",
 };
 
+const PLATFORM_POST_TYPES = {
+  instagram: ["post", "story", "reel"],
+  facebook: ["post", "story", "reel"],
+  youtube: ["post", "reel"],
+  tiktok: ["post", "reel"],
+  x: ["post"],
+  linkedin: ["post"],
+  threads: ["post"],
+  pinterest: ["post"],
+  bluesky: ["post"],
+  mastodon: ["post"],
+  reddit: ["post"]
+};
+
 function getPresetsForPlatform(platformId) {
   return PLATFORM_LAYOUT_PRESETS[platformId] || [];
 }
@@ -315,6 +330,7 @@ function PlatformPreviewPanel({
   youtubeThumbnail,
   activePlatform,
   onActivePlatformChange,
+  connectedAccounts,
 }) {
   const activeId = activePlatform || selectedChannels[0] || null;
 
@@ -331,12 +347,29 @@ function PlatformPreviewPanel({
     return URL.createObjectURL(mediaFiles[0].file);
   }, [mediaFiles]);
 
+  const resolveMentions = (text, platform) => {
+    if (!text) return text;
+    const username = connectedAccounts[platform]?.username || "your_account";
+    const prefix = ["facebook", "linkedin", "youtube"].includes(platform)
+      ? ""
+      : "@";
+    return text.replaceAll("{{MENTION_SELF}}", `${prefix}${username}`);
+  };
+
+  const resolvedCaption = useMemo(
+    () => resolveMentions(caption, activeId),
+    [caption, activeId, connectedAccounts]
+  );
+
   const truncatedCaption =
-    caption?.length > 120 ? caption.slice(0, 120) + "…" : caption;
+    resolvedCaption?.length > 120
+      ? resolvedCaption.slice(0, 120) + "…"
+      : resolvedCaption;
   const videoTitle =
-    caption?.length > 60
-      ? caption.slice(0, 60) + "…"
-      : caption || "Your Video Title";
+    resolvedCaption?.length > 60
+      ? resolvedCaption.slice(0, 60) + "…"
+      : resolvedCaption || "Your Video Title";
+  const platformUsername = connectedAccounts[activeId]?.username || "your_account";
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
@@ -419,7 +452,7 @@ function PlatformPreviewPanel({
                       {videoTitle || "Your Video Title"}
                     </h3>
                     <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-medium">
-                      <span>Your Channel</span>
+                      <span>{platformUsername}</span>
                       <span className="w-0.5 h-0.5 rounded-full bg-gray-400" />
                       <span>1.2K views</span>
                       <span className="w-0.5 h-0.5 rounded-full bg-gray-400" />
@@ -467,7 +500,7 @@ function PlatformPreviewPanel({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1">
                     <span className="text-[12px] font-semibold text-gray-900 leading-tight">
-                      your_account
+                      {platformUsername}
                     </span>
                     <svg
                       className="w-3 h-3 flex-shrink-0"
@@ -589,7 +622,7 @@ function PlatformPreviewPanel({
                 </p>
                 {caption && (
                   <p className="text-[11px] text-gray-900 mt-1 leading-relaxed">
-                    <span className="font-semibold mr-1">your_account</span>
+                    <span className="font-semibold mr-1">{platformUsername}</span>
                     {truncatedCaption}
                   </p>
                 )}
@@ -607,7 +640,7 @@ function PlatformPreviewPanel({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[12px] font-semibold text-gray-900 leading-tight">
-                    Your Account
+                    {platformUsername}
                   </p>
                   <div className="flex items-center gap-1">
                     <span className="text-[10px] text-gray-500">Just now</span>
@@ -700,7 +733,7 @@ function PlatformPreviewPanel({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[12px] font-semibold text-gray-900 leading-tight">
-                    Your Account
+                    {platformUsername}
                   </p>
                   <p className="text-[10px] text-gray-500">Your Title · 1st</p>
                   <div className="flex items-center gap-1">
@@ -797,7 +830,7 @@ function PlatformPreviewPanel({
                 <div className="flex-1 min-w-0 pb-2">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[12px] font-semibold text-gray-900">
-                      your_account
+                      {platformUsername}
                     </span>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-gray-400">1m</span>
@@ -955,7 +988,7 @@ function PlatformPreviewPanel({
                             : "#111",
                       }}
                     >
-                      Your Account
+                      {platformUsername}
                     </p>
                     <p
                       className="text-[9px]"
@@ -1065,6 +1098,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
   const [caption, setCaption] = useState("");
   const [mediaFiles, setMediaFiles] = useState([]);
   const [selectedChannels, setSelectedChannels] = useState([]);
+  const [postType, setPostType] = useState("post");
   const [platformData, setPlatformData] = useState({
     pinterest: { title: "", link: "", boardId: "" },
     instagram: { firstComment: "" },
@@ -1085,7 +1119,17 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     useState("ig-post-square");
   const [activePreviewPlatform, setActivePreviewPlatform] =
     useState("instagram");
+  const [mobileActiveTab, setMobileActiveTab] = useState("edit"); // "edit" | "preview"
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const fileInputRef = useRef(null);
+
+  React.useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 768;
 
   const availableSizePresets = useMemo(() => {
     const targetPlatform =
@@ -1097,6 +1141,24 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
       matchCount: 1,
     }));
   }, [selectedChannels, activePreviewPlatform]);
+
+  const availablePostTypes = useMemo(() => {
+    if (selectedChannels.length === 0) return ["post", "story", "reel"];
+    
+    let common = PLATFORM_POST_TYPES[selectedChannels[0]] || ["post"];
+    for (let i = 1; i < selectedChannels.length; i++) {
+      const types = PLATFORM_POST_TYPES[selectedChannels[i]] || ["post"];
+      common = common.filter(t => types.includes(t));
+    }
+    
+    return common.length > 0 ? common : ["post"];
+  }, [selectedChannels]);
+
+  React.useEffect(() => {
+    if (!availablePostTypes.includes(postType)) {
+      setPostType(availablePostTypes[0] || "post");
+    }
+  }, [availablePostTypes, postType]);
 
   // Min datetime for scheduling = now + 2 minutes
   const minScheduleDateTime = React.useMemo(() => {
@@ -1352,6 +1414,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
             caption,
             channels: selectedChannels,
             mediaType: isVideo ? "video" : "image",
+            postType,
             fileCount: mediaFiles.length,
             previewUrl: localPreviewUrl,
           },
@@ -1378,6 +1441,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     setCaption("");
     setMediaFiles([]);
     setSelectedChannels([]);
+    setPostType("post");
     setPlatformData({
       pinterest: { title: "", link: "", boardId: "" },
       instagram: { firstComment: "" },
@@ -1404,38 +1468,26 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
     <div className="modal-overlay" onClick={handleClose}>
       <div
         style={{
-          background: "var(--canvas-lifted)",
-          borderRadius: "var(--r-hero)",
-          boxShadow: "var(--shadow-deep)",
-          width: "100%",
-          maxWidth: "1100px",
-          maxHeight: "90vh",
-          overflow: "hidden",
+          background: 'var(--canvas-lifted)',
+          borderRadius: isMobile ? '0' : 'var(--r-hero)',
+          boxShadow: 'var(--shadow-deep)',
+          width: '100%',
+          maxWidth: isMobile ? '100%' : '1100px',
+          height: isMobile ? '100%' : 'auto',
+          maxHeight: isMobile ? '100%' : '90vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          position: isMobile ? 'fixed' : 'relative',
+          inset: isMobile ? 0 : 'auto',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div
-          style={{
-            borderBottom: "1px solid rgba(20,20,19,0.08)",
-            padding: "14px 24px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            background: "var(--canvas-lifted)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <h2
-              style={{
-                fontSize: 16,
-                fontWeight: 600,
-                color: "var(--ink)",
-                letterSpacing: "-0.02em",
-                margin: 0,
-              }}
-            >
-              Create Post
+        <div style={{ borderBottom: '1px solid rgba(20,20,19,0.08)', padding: isMobile ? '12px 16px' : '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--canvas-lifted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <h2 style={{ fontSize: isMobile ? 15 : 16, fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>
+              {isMobile ? "Composer" : "Create Post"}
             </h2>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -1465,35 +1517,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
               title="AI Assistant"
             >
               <Sparkles size={13} />
-              <span>AI Assistant</span>
-            </button>
-            <button
-              type="button"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 12px",
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--slate)",
-                background: "transparent",
-                border: "1px solid rgba(20,20,19,0.10)",
-                borderRadius: "var(--r-btn)",
-                cursor: "pointer",
-                fontFamily: "var(--font)",
-                transition: "background 0.15s",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "rgba(20,20,19,0.05)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "transparent")
-              }
-              title="Preview"
-            >
-              <Eye size={13} />
-              <span>Preview</span>
+              {!isMobile && <span>AI Assistant</span>}
             </button>
             <button
               type="button"
@@ -1523,14 +1547,34 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
           </div>
         </div>
 
+        {/* Mobile Tab Switcher */}
+        {isMobile && (
+          <div style={{ display: 'flex', background: 'var(--canvas-lifted)', borderBottom: '1px solid rgba(20,20,19,0.08)' }}>
+            <button 
+              onClick={() => setMobileActiveTab("edit")}
+              style={{ flex: 1, padding: '12px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: mobileActiveTab === "edit" ? 'var(--ink)' : 'var(--slate)', border: 'none', background: 'transparent', borderBottom: `2.5px solid ${mobileActiveTab === "edit" ? 'var(--ink)' : 'transparent'}`, transition: 'all 0.2s' }}
+            >
+              1. Compose
+            </button>
+            <button 
+              onClick={() => setMobileActiveTab("preview")}
+              style={{ flex: 1, padding: '12px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: mobileActiveTab === "preview" ? 'var(--ink)' : 'var(--slate)', border: 'none', background: 'transparent', borderBottom: `2.5px solid ${mobileActiveTab === "preview" ? 'var(--ink)' : 'transparent'}`, transition: 'all 0.2s' }}
+            >
+              2. Preview
+            </button>
+          </div>
+        )}
+
         {/* Body - Split Layout */}
-        <div className="flex h-[calc(90vh-120px)]">
+        <div style={{ display: 'flex', height: isMobile ? 'calc(100vh - 110px)' : 'calc(90vh - 120px)', flex: 1 }}>
           {/* Left Panel - Composer */}
-          <div
-            className="flex-1 overflow-y-auto p-6 border-r"
-            style={{
-              borderColor: "rgba(20,20,19,0.08)",
-              background: "var(--canvas)",
+          <div 
+            className="flex-1 overflow-y-auto" 
+            style={{ 
+              padding: isMobile ? '20px 16px' : '24px', 
+              borderRight: isMobile ? 'none' : '1px solid rgba(20,20,19,0.08)', 
+              background: 'var(--canvas)',
+              display: isMobile && mobileActiveTab !== "edit" ? 'none' : 'block'
             }}
           >
             {/* Channel Selection with Remove Badges */}
@@ -1540,6 +1584,31 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                 onChannelToggle={handleChannelToggle}
                 onBulkSelect={setSelectedChannels}
               />
+            </div>
+
+            {/* Post Type Selection */}
+            <div className="mb-6">
+              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">Publish As</label>
+              <div className="flex gap-2">
+                {availablePostTypes.includes("post") && (
+                  <label className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "post" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}>
+                    <input type="radio" value="post" checked={postType === "post"} onChange={() => setPostType("post")} className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"/>
+                    <span className="text-[12px] font-semibold text-gray-700">Post</span>
+                  </label>
+                )}
+                {availablePostTypes.includes("story") && (
+                  <label className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "story" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}>
+                    <input type="radio" value="story" checked={postType === "story"} onChange={() => setPostType("story")} className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"/>
+                    <span className="text-[12px] font-semibold text-gray-700">Story</span>
+                  </label>
+                )}
+                {availablePostTypes.includes("reel") && (
+                  <label className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "reel" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}>
+                    <input type="radio" value="reel" checked={postType === "reel"} onChange={() => setPostType("reel")} className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"/>
+                    <span className="text-[12px] font-semibold text-gray-700">Reel / Shorts</span>
+                  </label>
+                )}
+              </div>
             </div>
 
             {/* Main Caption */}
@@ -1557,12 +1626,23 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                     Quick Ideas
                   </p>
                   {caption && (
-                    <button
-                      onClick={() => setCaption("")}
-                      className="text-[10px] text-gray-400 hover:text-red-500 transition-colors uppercase tracking-wider font-bold"
-                    >
-                      Clear all
-                    </button>
+                    <div className="flex items-center gap-2">
+                       <button
+                        type="button"
+                        onClick={() => setCaption((prev) => prev ? `${prev} {{MENTION_SELF}}` : "{{MENTION_SELF}}")}
+                        className="text-[10px] text-indigo-500 hover:text-indigo-600 transition-colors uppercase tracking-wider font-bold flex items-center gap-1"
+                        title="Inserts a dynamic handle that resolves to each platform's username"
+                      >
+                        <AtSign size={10} />
+                        Mention Me
+                      </button>
+                      <button
+                        onClick={() => setCaption("")}
+                        className="text-[10px] text-gray-400 hover:text-red-500 transition-colors uppercase tracking-wider font-bold"
+                      >
+                        Clear all
+                      </button>
+                    </div>
                   )}
                 </div>
                 <div
@@ -1742,7 +1822,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                 />
                 <p className="text-gray-600 text-sm mb-1">
                   Drag & drop or{" "}
-                  <label className="text-buffer-blue hover:text-buffer-blueDark cursor-pointer font-medium">
+                  <label className="text-link hover:underline cursor-pointer font-medium">
                     select multiple files
                     <input
                       ref={fileInputRef}
@@ -1765,7 +1845,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                   axis="x"
                   values={mediaFiles}
                   onReorder={setMediaFiles}
-                  className="grid grid-cols-5 gap-3 mt-4"
+                  className={`grid ${isMobile ? 'grid-cols-3' : 'grid-cols-5'} gap-3 mt-4`}
                 >
                   <AnimatePresence>
                     {mediaFiles.map((m, idx) => {
@@ -1856,7 +1936,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                     );
                     if (!ratio) return null;
 
-                    const matches = preset.matchedPlatforms || preset.platforms;
+                    const matches = preset.matchedPlatforms || preset.platforms || [];
 
                     return (
                       <button
@@ -2100,6 +2180,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                 youtubeThumbnail={youtubeThumbnail}
                 activePlatform={activePreviewPlatform}
                 onActivePlatformChange={setActivePreviewPlatform}
+                connectedAccounts={connectedAccounts}
               />
             )}
           </div>
