@@ -12,6 +12,7 @@ import {
   XCircle,
   Video,
   Image as ImageIcon,
+  Layers,
   LayoutGrid,
   List,
   ChevronLeft,
@@ -407,6 +408,13 @@ function PinterestCard({ post, onOpen, formatDate }) {
     reddit: "reddit-icon.svg",
   };
 
+  // Multi-media / carousel detection
+  const mediaUrls = Array.isArray(post.media_urls) && post.media_urls.length > 1
+    ? post.media_urls
+    : null;
+  const isCarousel = !!mediaUrls;
+  const carouselCount = mediaUrls?.length || 1;
+
   return (
     <div
       className="masonry-card"
@@ -464,6 +472,121 @@ function PinterestCard({ post, onOpen, formatDate }) {
                 "https://placehold.co/400x300/e8e2da/9a9088?text=Preview";
             }}
           />
+
+          {/* ── Carousel: 2-up split preview ── */}
+          {isCarousel && mediaUrls[1] && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                pointerEvents: "none",
+              }}
+            >
+              {/* Divider line */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: "66.6%",
+                  top: 0,
+                  bottom: 0,
+                  width: 2,
+                  background: "rgba(255,255,255,0.6)",
+                  zIndex: 2,
+                }}
+              />
+              {/* Second image peek (right 33%) */}
+              <div
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: "33.3%",
+                  overflow: "hidden",
+                  zIndex: 1,
+                }}
+              >
+                <img
+                  src={mediaUrls[1]}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    opacity: 0.85,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* ── Multi-media count badge (top-left) ── */}
+          {isCarousel && (
+            <div
+              style={{
+                position: "absolute",
+                top: 10,
+                left: 10,
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                background: "rgba(10,8,6,0.72)",
+                backdropFilter: "blur(8px)",
+                borderRadius: 20,
+                padding: "3px 8px 3px 6px",
+                zIndex: 4,
+                pointerEvents: "none",
+              }}
+            >
+              <Layers size={11} style={{ color: "#fff" }} />
+              <span
+                style={{
+                  color: "#fff",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.04em",
+                }}
+              >
+                {carouselCount}
+              </span>
+            </div>
+          )}
+
+          {/* ── Carousel dot strip (bottom) ── */}
+          {isCarousel && (
+            <div
+              style={{
+                position: "absolute",
+                bottom: 8,
+                left: 0,
+                right: 0,
+                display: "flex",
+                justifyContent: "center",
+                gap: 4,
+                zIndex: 4,
+                pointerEvents: "none",
+              }}
+            >
+              {Array.from({ length: Math.min(carouselCount, 5) }).map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: i === 0 ? 14 : 5,
+                    height: 5,
+                    borderRadius: 3,
+                    background: i === 0 ? "#fff" : "rgba(255,255,255,0.45)",
+                    transition: "width 0.2s",
+                  }}
+                />
+              ))}
+              {carouselCount > 5 && (
+                <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 8, fontWeight: 700 }}>
+                  +{carouselCount - 5}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* YouTube play badge */}
           {post.youtube_success && (
