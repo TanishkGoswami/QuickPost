@@ -30,14 +30,11 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('quickpost_token');
-      
-      // Only redirect if not already on the login or landing page
-      const isPublicPage = window.location.pathname === '/' || window.location.pathname === '/login';
-      if (!isPublicPage) {
-        window.location.href = '/login';
-      }
+      // Token expired or invalid — just log it.
+      // Do NOT force window.location redirect here: that wipes React state
+      // and causes an infinite login/dashboard redirect loop.
+      // Components that need to handle 401 (e.g. logout) should do so explicitly.
+      console.warn('[apiClient] 401 Unauthorized:', error.config?.url);
     }
     return Promise.reject(error);
   }
