@@ -13,6 +13,10 @@ const YOUTUBE_SCOPES = [
  * Google OAuth Service
  * Handles YouTube authentication via Google OAuth 2.0
  */
+function base64urlEncode(obj) {
+  return Buffer.from(JSON.stringify(obj)).toString('base64url');
+}
+
 class GoogleOAuthService {
   constructor() {
     this.oauth2Client = new google.auth.OAuth2(
@@ -22,14 +26,25 @@ class GoogleOAuthService {
     );
   }
 
+  makeState(userId) {
+    return base64urlEncode({
+      userId,
+      provider: 'youtube',
+      nonce: Math.random().toString(36).substring(7),
+      ts: Date.now()
+    });
+  }
+
   /**
    * Generate Google OAuth authorization URL
+   * @param {string} state - Base64 encoded state object
    */
-  getAuthorizationUrl() {
+  getAuthorizationUrl(state) {
     const authUrl = this.oauth2Client.generateAuthUrl({
       access_type: 'offline', // Request refresh token
       scope: YOUTUBE_SCOPES,
-      prompt: 'consent' // Force consent screen to get refresh token
+      prompt: 'consent', // Force consent screen to get refresh token
+      state
     });
     return authUrl;
   }
