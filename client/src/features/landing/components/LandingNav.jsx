@@ -1,26 +1,46 @@
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { gsap, ScrollTrigger } from '../../../lib/gsap';
 import logo from '/logo.png';
 
 export default function LandingNav() {
   const navigate = useNavigate();
-  const [scrolled, setScrolled] = useState(false);
+  const navRef = useRef(null);
+  const innerRef = useRef(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
     const onResize = () => setIsMobile(window.innerWidth < 768);
-    
-    window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onResize);
-    
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onResize);
-    };
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // GSAP scroll-driven nav elevation — zero React re-renders on scroll
+  useLayoutEffect(() => {
+    ScrollTrigger.create({
+      start: 'top -20px',
+      onEnter: () => {
+        gsap.to(navRef.current, {
+          backgroundColor: 'rgba(255,255,255,0.88)',
+          boxShadow: '0 10px 30px -10px rgba(0,0,0,0.08)',
+          duration: 0.35,
+          ease: 'power2.out',
+        });
+        gsap.to(innerRef.current, { paddingTop: 10, paddingBottom: 10, duration: 0.35, ease: 'power2.out' });
+      },
+      onLeaveBack: () => {
+        gsap.to(navRef.current, {
+          backgroundColor: 'transparent',
+          boxShadow: 'none',
+          duration: 0.25,
+        });
+        gsap.to(innerRef.current, { paddingTop: 20, paddingBottom: 20, duration: 0.25 });
+      },
+    });
+    return () => ScrollTrigger.getAll().forEach(t => t.kill());
   }, []);
 
   const navLinks = [
@@ -32,6 +52,7 @@ export default function LandingNav() {
   return (
     <>
       <nav
+        ref={navRef}
         className="landing-nav"
         style={{
           position: 'sticky',
@@ -39,13 +60,18 @@ export default function LandingNav() {
           zIndex: 100,
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
-          transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-          boxShadow: scrolled ? '0 10px 30px -10px rgba(0,0,0,0.05)' : 'none',
-          background: scrolled ? 'rgba(255, 255, 255, 0.7)' : 'transparent',
-          borderBottom: scrolled ? '1px solid rgba(20,20,19,0.06)' : '1px solid transparent',
+          background: 'transparent',
+          borderBottom: '1px solid rgba(20,20,19,0.07)',
         }}
       >
-        <div className="landing-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: scrolled ? '10px 24px' : '20px 24px', maxWidth: 1280, margin: '0 auto', transition: 'padding 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
+        <div
+          ref={innerRef}
+          className="landing-container"
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '20px 24px', maxWidth: 1280, margin: '0 auto',
+          }}
+        >
           {/* Brand */}
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
             <img src={logo} alt="GAP Social-pilot" style={{ height: 32, width: 32, objectFit: 'contain' }} />
@@ -93,16 +119,15 @@ export default function LandingNav() {
               </div>
             )}
 
-            {/* Hamburger */}
             {isMobile && (
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 style={{
                   width: 40, height: 40, borderRadius: 'var(--r-btn)',
                   border: '1px solid rgba(20,20,19,0.08)',
-                  background: scrolled ? 'var(--white)' : 'transparent',
+                  background: 'transparent',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'var(--ink)', cursor: 'pointer'
+                  color: 'var(--ink)', cursor: 'pointer',
                 }}
               >
                 {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -119,11 +144,11 @@ export default function LandingNav() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
+            transition={{ type: 'spring', stiffness: 400, damping: 40 }}
             style={{
               position: 'fixed', top: 64, left: 0, right: 0, bottom: 0,
               background: 'var(--canvas)', zIndex: 99,
-              padding: '24px', display: 'flex', flexDirection: 'column', gap: 32
+              padding: '24px', display: 'flex', flexDirection: 'column', gap: 32,
             }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -138,7 +163,6 @@ export default function LandingNav() {
                 </a>
               ))}
             </div>
-            
             <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
               <button
                 onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}

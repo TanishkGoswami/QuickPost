@@ -1,5 +1,6 @@
-import { motion } from 'framer-motion';
+import React, { useLayoutEffect, useRef } from 'react';
 import { Share2, Clock, BarChart2, Zap } from 'lucide-react';
+import { gsap } from '../../../lib/gsap';
 
 const FEATURES = [
   {
@@ -25,11 +26,51 @@ const FEATURES = [
 ];
 
 export default function Features() {
+  const sectionRef = useRef(null);
+  const headerRef = useRef(null);
+  const cardsRef = useRef([]);
+
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from(headerRef.current, {
+        opacity: 0,
+        y: 24,
+        duration: 0.6,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 80%',
+          toggleActions: 'play none none none',
+        },
+      });
+
+      gsap.from(cardsRef.current.filter(Boolean), {
+        opacity: 0,
+        y: 40,
+        stagger: { amount: 0.45 },
+        duration: 0.65,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 72%',
+          toggleActions: 'play none none none',
+        },
+      });
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <section id="features" className="landing-section" style={{ padding: 'clamp(60px, 10vh, 100px) 24px', background: 'var(--canvas)' }}>
+    <section
+      ref={sectionRef}
+      id="features"
+      className="landing-section"
+      style={{ padding: 'clamp(60px, 10vh, 100px) 24px', background: 'var(--canvas)' }}
+    >
       <div className="landing-container" style={{ maxWidth: '1280px', margin: '0 auto' }}>
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 'clamp(40px, 6vw, 56px)' }}>
+        <div ref={headerRef} style={{ textAlign: 'center', marginBottom: 'clamp(40px, 6vw, 56px)' }}>
           <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: '16px' }}>Features</div>
           <h2 style={{ fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.02em', margin: '0 0 14px', lineHeight: 1.1 }}>
             Built for serious creators
@@ -42,15 +83,11 @@ export default function Features() {
         {/* Feature grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'clamp(16px, 3vw, 20px)', marginBottom: 'clamp(40px, 8vw, 72px)' }}>
           {FEATURES.map((f, i) => (
-            <motion.div
+            <div
               key={f.title}
+              ref={el => { cardsRef.current[i] = el; }}
               className="feature-item"
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-60px' }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
             >
-              {/* Icon circle */}
               <div style={{
                 width: 52, height: 52, borderRadius: '50%',
                 background: 'var(--ink)', color: 'var(--canvas)',
@@ -65,7 +102,7 @@ export default function Features() {
               <p style={{ fontSize: 14, fontWeight: 450, color: 'var(--slate)', lineHeight: 1.6, margin: 0 }}>
                 {f.desc}
               </p>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>

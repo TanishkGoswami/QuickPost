@@ -58,6 +58,10 @@
     box-sizing: border-box;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   html,
   body {
     background-color: var(--canvas);
@@ -69,6 +73,13 @@
     letter-spacing: normal;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Offset scroll targets so sticky nav doesn't cover them */
+  #features,
+  #how-it-works,
+  #social-proof {
+    scroll-margin-top: 80px;
   }
 
   h1 {
@@ -307,13 +318,12 @@
     position: fixed;
     inset: 0;
     background: rgba(20, 20, 19, 0.55);
-    backdrop-filter: blur(4px);
     z-index: 50;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 16px;
-    animation: mc-fade-in 0.2s ease-out;
+    /* backdrop-filter and entrance handled by Framer Motion */
   }
   .modal-content {
     background: var(--canvas-lifted);
@@ -323,7 +333,7 @@
     width: 100%;
     max-height: 90vh;
     overflow-y: auto;
-    animation: mc-slide-up 0.3s ease-out;
+    /* animation: none — Framer Motion handles entrance/exit */
   }
 
   /* ── Platform badge ── */
@@ -471,6 +481,7 @@
     stroke-width: 1.2;
     fill: none;
     opacity: 0.7;
+    will-change: stroke-dashoffset;
   }
 
   /* ── Fly-send button (composer) ── */
@@ -662,6 +673,12 @@
 }
 .masonry-grid_column > .masonry-card {
   margin-bottom: 16px;
+  /* CSS-level virtualization: browser skips paint/layout for off-screen cards */
+  content-visibility: auto;
+  contain-intrinsic-size: 0 280px;
+}
+.masonry-grid_column > .masonry-card:hover {
+  will-change: transform;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -673,19 +690,20 @@
 }
 .skeleton-shimmer {
   background: linear-gradient(
-    90deg,
-    #e8e2da 0%,
-    #f3efeb 40%,
-    #ede9e4 60%,
-    #e8e2da 100%
+    110deg,
+    var(--canvas) 0%,
+    var(--canvas-lifted) 38%,
+    #ede9e4 52%,
+    var(--canvas) 100%
   );
   background-size: 600px 100%;
-  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  animation: skeleton-shimmer 2.0s ease-in-out infinite;
 }
 .skeleton-card {
   border-radius: 20px;
   overflow: hidden;
   border: 1px solid rgba(20,20,19,0.06);
+  animation: mc-fade-in 0.3s ease-out both;
 }
 
 
