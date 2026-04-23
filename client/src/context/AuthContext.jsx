@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import apiClient from '../utils/apiClient';
 import { supabase } from '../lib/supabase';
 
@@ -22,6 +22,31 @@ export function AuthProvider({ children }) {
   });
   const [loading, setLoading] = useState(true);
 
+  const fetchConnectedAccounts = useCallback(async () => {
+    try {
+      const response = await apiClient.get('/api/auth/accounts');
+      if (response.data.success) {
+        const accounts = response.data.accounts;
+        const transformedAccounts = {
+          instagram: accounts.instagram?.connected || false,
+          youtube: accounts.youtube?.connected || false,
+          pinterest: accounts.pinterest?.connected || false,
+          facebook: accounts.facebook?.connected || false,
+          bluesky: accounts.bluesky?.connected || false,
+          linkedin: accounts.linkedin?.connected || false,
+          mastodon: accounts.mastodon?.connected || false,
+          tiktok: accounts.tiktok?.connected || false,
+          threads: accounts.threads?.connected || false,
+          x: accounts.x?.connected || false,
+          reddit: accounts.reddit?.connected || false,
+        };
+        setConnectedAccounts(transformedAccounts);
+      }
+    } catch (error) {
+      console.error('Error fetching connected accounts:', error);
+    }
+  }, []);
+
   useEffect(() => {
     // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -33,6 +58,7 @@ export function AuthProvider({ children }) {
           name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0]
         });
         localStorage.setItem('quickpost_token', session.access_token);
+        fetchConnectedAccounts();
       }
       setLoading(false);
     });
@@ -60,32 +86,7 @@ export function AuthProvider({ children }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
-
-  const fetchConnectedAccounts = async () => {
-    try {
-      const response = await apiClient.get('/api/auth/accounts');
-      if (response.data.success) {
-        const accounts = response.data.accounts;
-        const transformedAccounts = {
-          instagram: accounts.instagram?.connected || false,
-          youtube: accounts.youtube?.connected || false,
-          pinterest: accounts.pinterest?.connected || false,
-          facebook: accounts.facebook?.connected || false,
-          bluesky: accounts.bluesky?.connected || false,
-          linkedin: accounts.linkedin?.connected || false,
-          mastodon: accounts.mastodon?.connected || false,
-          tiktok: accounts.tiktok?.connected || false,
-          threads: accounts.threads?.connected || false,
-          x: accounts.x?.connected || false,
-          reddit: accounts.reddit?.connected || false,
-        };
-        setConnectedAccounts(transformedAccounts);
-      }
-    } catch (error) {
-      console.error('Error fetching connected accounts:', error);
-    }
-  };
+  }, [fetchConnectedAccounts]);
 
   const login = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -125,11 +126,11 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut();
   };
 
-  const refreshAccounts = async () => {
+  const refreshAccounts = useCallback(async () => {
     await fetchConnectedAccounts();
-  };
+  }, [fetchConnectedAccounts]);
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     session,
     connectedAccounts,
@@ -140,7 +141,7 @@ export function AuthProvider({ children }) {
     logout,
     refreshAccounts,
     isAuthenticated: !!user
-  };
+  }), [user, session, connectedAccounts, loading, refreshAccounts]);
 
   return (
     <AuthContext.Provider value={value}>
