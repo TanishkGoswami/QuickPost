@@ -57,8 +57,17 @@ router.get('/youtube', async (req, res) => {
       console.log(`\n🔵 [AUTH] YouTube init for token: ${token?.substring(0, 20)}...`);
       const { data: { user }, error } = await supabase.auth.getUser(token);
       if (error || !user) throw error || new Error('User not found');
-      userId = user.id;
-      console.log(`✅ [AUTH] Token verified for user: ${userId}`);
+      
+      // Sync user and get consistent ID
+      const dbUser = await createOrUpdateUser(
+        user.email,
+        user.user_metadata?.full_name || user.email?.split('@')[0],
+        user.id,
+        user.user_metadata?.avatar_url
+      );
+      userId = dbUser.id;
+      
+      console.log(`✅ [AUTH] Token verified and synced for user: ${userId}`);
     } catch (e) {
       console.error('❌ [AUTH] Token verification failed:', e.message);
       return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token&details=${encodeURIComponent(e.message)}`);
@@ -125,8 +134,15 @@ router.get('/instagram', async (req, res) => {
       console.log(`\n🔵 [AUTH] Instagram init for token: ${token?.substring(0, 20)}...`);
       const { data: { user }, error } = await supabase.auth.getUser(token);
       if (error || !user) throw error || new Error('User not found');
-      userId = user.id;
-      console.log(`✅ [AUTH] Token verified for user: ${userId}`);
+      
+      const dbUser = await createOrUpdateUser(
+        user.email,
+        user.user_metadata?.full_name || user.email?.split('@')[0],
+        user.id,
+        user.user_metadata?.avatar_url
+      );
+      userId = dbUser.id;
+      console.log(`✅ [AUTH] Token verified and synced for user: ${userId}`);
     } catch (e) {
       console.error('❌ [AUTH] Token verification failed:', e.message);
       return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token&details=${encodeURIComponent(e.message)}`);
@@ -176,8 +192,15 @@ router.get('/facebook', async (req, res) => {
       console.log(`\n🔵 [AUTH] Facebook init for token: ${token?.substring(0, 20)}...`);
       const { data: { user }, error } = await supabase.auth.getUser(token);
       if (error || !user) throw error || new Error('User not found');
-      userId = user.id;
-      console.log(`✅ [AUTH] Token verified for user: ${userId}`);
+      
+      const dbUser = await createOrUpdateUser(
+        user.email,
+        user.user_metadata?.full_name || user.email?.split('@')[0],
+        user.id,
+        user.user_metadata?.avatar_url
+      );
+      userId = dbUser.id;
+      console.log(`✅ [AUTH] Token verified and synced for user: ${userId}`);
     } catch (e) {
       console.error('❌ [AUTH] Token verification failed:', e.message);
       return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token&details=${encodeURIComponent(e.message)}`);
@@ -227,8 +250,15 @@ router.get('/pinterest', async (req, res) => {
       console.log(`\n🔵 [AUTH] Pinterest init for token: ${token?.substring(0, 20)}...`);
       const { data: { user }, error } = await supabase.auth.getUser(token);
       if (error || !user) throw error || new Error('User not found');
-      userId = user.id;
-      console.log(`✅ [AUTH] Token verified for user: ${userId}`);
+      
+      const dbUser = await createOrUpdateUser(
+        user.email,
+        user.user_metadata?.full_name || user.email?.split('@')[0],
+        user.id,
+        user.user_metadata?.avatar_url
+      );
+      userId = dbUser.id;
+      console.log(`✅ [AUTH] Token verified and synced for user: ${userId}`);
     } catch (e) {
       console.error('❌ [AUTH] Token verification failed:', e.message);
       return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token&details=${encodeURIComponent(e.message)}`);
@@ -314,8 +344,15 @@ router.get('/linkedin', async (req, res) => {
       console.log(`\n🔵 [AUTH] LinkedIn init for token: ${token?.substring(0, 20)}...`);
       const { data: { user }, error } = await supabase.auth.getUser(token);
       if (error || !user) throw error || new Error('User not found');
-      userId = user.id;
-      console.log(`✅ [AUTH] Token verified for user: ${userId}`);
+      
+      const dbUser = await createOrUpdateUser(
+        user.email,
+        user.user_metadata?.full_name || user.email?.split('@')[0],
+        user.id,
+        user.user_metadata?.avatar_url
+      );
+      userId = dbUser.id;
+      console.log(`✅ [AUTH] Token verified and synced for user: ${userId}`);
     } catch (e) {
       console.error('❌ [AUTH] Token verification failed:', e.message);
       return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token&details=${encodeURIComponent(e.message)}`);
@@ -425,8 +462,15 @@ router.get('/tiktok', async (req, res) => {
       console.log(`\n🔵 [AUTH] TikTok init for token: ${token?.substring(0, 20)}...`);
       const { data: { user }, error } = await supabase.auth.getUser(token);
       if (error || !user) throw error || new Error('User not found');
-      userId = user.id;
-      console.log(`✅ [AUTH] Token verified for user: ${userId}`);
+      
+      const dbUser = await createOrUpdateUser(
+        user.email,
+        user.user_metadata?.full_name || user.email?.split('@')[0],
+        user.id,
+        user.user_metadata?.avatar_url
+      );
+      userId = dbUser.id;
+      console.log(`✅ [AUTH] Token verified and synced for user: ${userId}`);
     } catch (e) {
       console.error('❌ [AUTH] Token verification failed:', e.message);
       return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token&details=${encodeURIComponent(e.message)}`);
@@ -473,8 +517,15 @@ router.get('/threads', async (req, res) => {
       console.log(`\n🔵 [AUTH] Threads init for token: ${token?.substring(0, 20)}...`);
       const { data: { user }, error } = await supabase.auth.getUser(token);
       if (error || !user) throw error || new Error('User not found');
-      userId = user.id;
-      console.log(`✅ [AUTH] Token verified for user: ${userId}`);
+      
+      const dbUser = await createOrUpdateUser(
+        user.email,
+        user.user_metadata?.full_name || user.email?.split('@')[0],
+        user.id,
+        user.user_metadata?.avatar_url
+      );
+      userId = dbUser.id;
+      console.log(`✅ [AUTH] Token verified and synced for user: ${userId}`);
     } catch (e) {
       console.error('❌ [AUTH] Token verification failed:', e.message);
       return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token&details=${encodeURIComponent(e.message)}`);
@@ -522,8 +573,15 @@ router.get('/x', async (req, res) => {
       console.log(`\n🔵 [AUTH] X init for token: ${token?.substring(0, 20)}...`);
       const { data: { user }, error } = await supabase.auth.getUser(token);
       if (error || !user) throw error || new Error('User not found');
-      userId = user.id;
-      console.log(`✅ [AUTH] Token verified for user: ${userId}`);
+      
+      const dbUser = await createOrUpdateUser(
+        user.email,
+        user.user_metadata?.full_name || user.email?.split('@')[0],
+        user.id,
+        user.user_metadata?.avatar_url
+      );
+      userId = dbUser.id;
+      console.log(`✅ [AUTH] Token verified and synced for user: ${userId}`);
     } catch (e) {
       console.error('❌ [AUTH] Token verification failed:', e.message);
       return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token&details=${encodeURIComponent(e.message)}`);
@@ -600,8 +658,15 @@ router.get('/reddit', async (req, res) => {
       console.log(`\n🔵 [AUTH] Reddit init for token: ${token?.substring(0, 20)}...`);
       const { data: { user }, error } = await supabase.auth.getUser(token);
       if (error || !user) throw error || new Error('User not found');
-      userId = user.id;
-      console.log(`✅ [AUTH] Token verified for user: ${userId}`);
+      
+      const dbUser = await createOrUpdateUser(
+        user.email,
+        user.user_metadata?.full_name || user.email?.split('@')[0],
+        user.id,
+        user.user_metadata?.avatar_url
+      );
+      userId = dbUser.id;
+      console.log(`✅ [AUTH] Token verified and synced for user: ${userId}`);
     } catch (e) {
       console.error('❌ [AUTH] Token verification failed:', e.message);
       return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_token&details=${encodeURIComponent(e.message)}`);
