@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 import { createOrUpdateUser } from '../services/supabase.js';
-import 'dotenv/config'; 
 
 // Use Supabase admin client to verify tokens correctly.
 // Supabase JWTs are signed with Supabase's own JWT secret, NOT process.env.JWT_SECRET.
@@ -36,15 +35,12 @@ export async function authenticateUser(req, res, next) {
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !user) {
-      console.error('❌ [AUTH] Supabase token verification failed:', error?.message || 'No user returned');
       return res.status(401).json({
         success: false,
         error: 'Invalid token',
         message: error?.message || 'Authentication token is invalid or expired'
       });
     }
-
-    console.log('✅ [AUTH] Verified user:', user.email);
 
     // Build user info from Supabase user object
     const userInfo = {
