@@ -1,4 +1,6 @@
+import React from 'react';
 import { Menu } from 'lucide-react';
+
 import { useAuth } from '../context/AuthContext';
 
 function Header({ onMenuClick, sidebarOpen, isDesktop }) {
