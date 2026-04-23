@@ -1,0 +1,45 @@
+server {
+    server_name api.getaipilot.in;
+
+    # Increase upload limit to 100MB
+    client_max_body_size 100M;
+
+    location / {
+        # Proxy settings
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Standard CORS headers for successful requests
+        # (Usually handled by Express, but good to have as backup)
+        add_header 'Access-Control-Allow-Origin' 'http://localhost:5173' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE' always;
+        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+        add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range' always;
+
+        # Handle Preflight (OPTIONS)
+        if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' 'http://localhost:5173' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS, PUT, DELETE' always;
+            add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain; charset=utf-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+    }
+
+    # Custom error page for 413 to ensure CORS headers are present
+    error_page 413 /error413;
+    location = /error413 {
+        add_header 'Access-Control-Allow-Origin' '*' always;
+        return 413 '{"success": false, "error": "Payload Too Large", "message": "The file you are trying to upload is too large for the server. Please limit files to 100MB."}';
+        default_type application/json;
+    }
+}

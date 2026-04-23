@@ -21,8 +21,9 @@ function BlueskyConnectModal({ isOpen, onClose, onSuccess }) {
       // Remove @ symbol if user included it
       const cleanHandle = handle.trim().replace(/^@/, '');
       
+      const apiUrl = import.meta.env.VITE_API_URL || '';
       const response = await axios.post(
-        'http://localhost:5000/api/auth/bluesky/connect',
+        `${apiUrl}/api/auth/bluesky/connect`,
         { handle: cleanHandle, appPassword },
         { headers: { Authorization: `Bearer ${token}` } }
       );
