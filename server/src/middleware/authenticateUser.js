@@ -50,14 +50,22 @@ export async function authenticateUser(req, res, next) {
       profilePicture: user.user_metadata?.avatar_url || null
     };
 
-    // Sync with public.users table (non-blocking — don't let this fail the request)
+    // Sync with public.users table (important for identity consistency)
     try {
-      await createOrUpdateUser(
+      const dbUser = await createOrUpdateUser(
         userInfo.email,
         userInfo.name,
         userInfo.userId,
         userInfo.profilePicture
       );
+      
+      // ✅ IMPORTANT: Use the ID from our database record.
+      // If a user has multiple identity providers (Google, Email) for the same email,
+      // Supabase gives them different internal IDs, but we want to map them to the same
+      // record in our public.users table.
+      if (dbUser && dbUser.id) {
+        userInfo.userId = dbUser.id;
+      }
     } catch (syncError) {
       console.warn('⚠️ [AUTH] Failed to sync user to public.users:', syncError.message);
     }

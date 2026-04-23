@@ -123,6 +123,14 @@ function Sidebar() {
     setConnectingPlatform("reddit");
     window.location.href = `/api/auth/reddit?token=${token}`;
   };
+  const handleConnectYouTube = () => {
+    const token = localStorage.getItem("quickpost_token");
+    if (!token) {
+      alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
+      return;
+    }
+    window.location.href = `/api/auth/youtube?token=${token}`;
+  };
   const handleDisconnect = async (platform) => {
     const confirmed = await confirm(
       "Disconnect Account",
@@ -244,7 +252,7 @@ function Sidebar() {
           alt=""
         />
       ),
-      onConnect: () => alert("YouTube is connected via Google sign-in"),
+      onConnect: handleConnectYouTube,
     },
     {
       id: "pinterest",
