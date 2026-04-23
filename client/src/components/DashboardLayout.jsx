@@ -4,6 +4,7 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { useAuth } from "../context/AuthContext";
 import ProtectedRoute from "./ProtectedRoute";
+import ConnectChannelsModal from "./ConnectChannelsModal";
 
 const DashboardLayout = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -122,6 +123,7 @@ const DashboardLayout = () => {
           <ProtectedRoute>
             <Outlet />
           </ProtectedRoute>
+          <ConnectChannelsModal />
         </main>
       </div>
     </div>
