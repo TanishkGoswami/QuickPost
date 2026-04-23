@@ -133,6 +133,7 @@ class XOAuth {
         refresh_token: tokenData.refreshToken || tokenData.refresh_token,
         token_expiry: expiryDate.toISOString(),
         account_id: tokenData.xUserId || tokenData.account_id,
+        username: tokenData.userInfo?.username,
         updated_at: new Date().toISOString()
       };
 

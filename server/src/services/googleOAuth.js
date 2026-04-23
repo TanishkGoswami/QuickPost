@@ -13,6 +13,10 @@ const YOUTUBE_SCOPES = [
  * Google OAuth Service
  * Handles YouTube authentication via Google OAuth 2.0
  */
+function base64urlEncode(obj) {
+  return Buffer.from(JSON.stringify(obj)).toString('base64url');
+}
+
 class GoogleOAuthService {
   constructor() {
     this.oauth2Client = new google.auth.OAuth2(
@@ -22,14 +26,25 @@ class GoogleOAuthService {
     );
   }
 
+  makeState(userId) {
+    return base64urlEncode({
+      userId,
+      provider: 'youtube',
+      nonce: Math.random().toString(36).substring(7),
+      ts: Date.now()
+    });
+  }
+
   /**
    * Generate Google OAuth authorization URL
+   * @param {string} state - Base64 encoded state object
    */
-  getAuthorizationUrl() {
+  getAuthorizationUrl(state) {
     const authUrl = this.oauth2Client.generateAuthUrl({
       access_type: 'offline', // Request refresh token
       scope: YOUTUBE_SCOPES,
-      prompt: 'consent' // Force consent screen to get refresh token
+      prompt: 'consent', // Force consent screen to get refresh token
+      state
     });
     return authUrl;
   }
@@ -49,6 +64,21 @@ class GoogleOAuthService {
       const oauth2 = google.oauth2({ version: 'v2', auth: this.oauth2Client });
       const { data: userInfo } = await oauth2.userinfo.get();
 
+      // Get YouTube Channel info (to get the channel name/handle)
+      const youtube = google.youtube({ version: 'v3', auth: this.oauth2Client });
+      let channelTitle = userInfo.name; // Fallback to Google name
+      try {
+        const channelRes = await youtube.channels.list({
+          part: 'snippet',
+          mine: true
+        });
+        if (channelRes.data.items && channelRes.data.items.length > 0) {
+          channelTitle = channelRes.data.items[0].snippet.title;
+        }
+      } catch (err) {
+        console.warn('⚠️ [GOOGLE_OAUTH] Failed to fetch YT channel info:', err.message);
+      }
+
       return {
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token,
@@ -57,7 +87,8 @@ class GoogleOAuthService {
           email: userInfo.email,
           name: userInfo.name,
           picture: userInfo.picture,
-          googleId: userInfo.id
+          googleId: userInfo.id,
+          username: channelTitle
         }
       };
     } catch (error) {
@@ -83,6 +114,7 @@ class GoogleOAuthService {
           access_token: tokenData.accessToken,
           refresh_token: tokenData.refreshToken,
           token_expiry: expiryDate.toISOString(),
+          username: tokenData.userInfo?.username,
           updated_at: new Date().toISOString()
         }, {
           onConflict: 'user_id,provider'
@@ -108,8 +140,10 @@ class GoogleOAuthService {
    */
   async refreshAccessToken(refreshToken) {
     try {
+      console.log('🔄 [GOOGLE_OAUTH] Refreshing access token...');
       this.oauth2Client.setCredentials({ refresh_token: refreshToken });
       const { credentials } = await this.oauth2Client.refreshAccessToken();
+      console.log('✅ [GOOGLE_OAUTH] Access token refreshed');
 
       return {
         accessToken: credentials.access_token,
@@ -128,12 +162,14 @@ class GoogleOAuthService {
    */
   async getValidAccessToken(userId) {
     try {
+      console.log(`🔍 [GOOGLE_OAUTH] Fetching tokens for user ${userId} from DB...`);
       const { data, error } = await supabase
         .from('social_tokens')
         .select('*')
         .eq('user_id', userId)
         .eq('provider', 'youtube')
         .single();
+      console.log('✅ [GOOGLE_OAUTH] DB fetch complete. Token found:', !!data);
 
       if (error || !data) {
         throw new Error('YouTube account not connected');

@@ -99,7 +99,7 @@ class RedditOAuth {
         access_token: tokenData.accessToken,
         refresh_token: tokenData.refreshToken,
         token_expiry: expiryDate.toISOString(),
-        account_id: tokenData.username,
+        username: tokenData.username,
         profile_data: tokenData.userInfo,
         updated_at: new Date().toISOString()
       };

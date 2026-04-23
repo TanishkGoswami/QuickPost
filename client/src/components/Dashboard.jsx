@@ -1,178 +1,1140 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import React, { useState, useEffect, useRef } from "react";
+import { AnimatePresence } from "framer-motion";
+import Masonry from "react-masonry-css"; 
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import {
-  Plus, Search, Calendar, ChevronDown, ChevronUp, ExternalLink,
-  Instagram, Youtube, Clock, Linkedin, Facebook, Share2, CheckCircle2,
-  XCircle, Video, Image as ImageIcon, Hash as HashIcon, LayoutGrid, List
-} from 'lucide-react';
-import apiClient from '../utils/apiClient';
-import ComposerModal from './ComposerModal';
-import PostPreviewModal from './PostPreviewModal';
+  Plus,
+  Search,
+  Clock,
+  Share2,
+  CheckCircle2,
+  XCircle,
+  Video,
+  Image as ImageIcon,
+  Layers,
+  LayoutGrid,
+  List,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink,
+  Play,
+  Eye,
+  X,
+} from "lucide-react";
+import apiClient from "../utils/apiClient";
+import ComposerModal from "./ComposerModal";
+import PostPreviewModal from "./PostPreviewModal";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-/* ── Platform helpers ──────────────────────────────────────────────────── */
+/* ── token shortcuts ── */
+const css = {
+  canvas: "var(--canvas)",
+  lifted: "var(--canvas-lifted)",
+  ink: "var(--ink)",
+  white: "var(--white)",
+  slate: "var(--slate)",
+  dust: "var(--dust)",
+  arc: "var(--arc)",
+  shadow: "var(--shadow-card)",
+  r_btn: "var(--r-btn)",
+  r_hero: "var(--r-hero)",
+  r_pill: "var(--r-pill)",
+};
+
+/* ── Platform helpers ── */
 function getPlatformIcon(id) {
+  const s = { width: 14, height: 14, objectFit: "contain" };
   switch (id) {
-    case 'linkedin':  return <Linkedin  className="w-4 h-4 text-[#0A66C2]" />;
-    case 'youtube':   return <Youtube   className="w-4 h-4 text-[#FF0000]" />;
-    case 'instagram': return <Instagram className="w-4 h-4 text-[#E4405F]" />;
-    case 'facebook':  return <Facebook  className="w-4 h-4 text-[#1877F2]" />;
-    case 'tiktok':    return <Share2    className="w-4 h-4 text-black"      />;
-    case 'mastodon':  return <HashIcon  className="w-4 h-4 text-[#6364FF]" />;
-    case 'bluesky':   return <Share2    className="w-4 h-4 text-[#0085FF]" />;
-    case 'pinterest': return <Share2    className="w-4 h-4 text-[#BD081C]" />;
-    case 'threads':   return <ThreadsIcon className="w-4 h-4" />;
-    case 'x': return (
-      <svg className="w-4 h-4 text-black" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.294 19.497h2.039L6.482 3.239H4.293L17.607 20.65z"/>
-      </svg>
-    );
-    case 'reddit': return (
-      <svg className="w-4 h-4 text-[#FF4500]" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M24 11.5c0-1.65-1.35-3-3-3-.41 0-.8.08-1.15.22C18.21 7.27 15.71 6.5 13 6.5c-.01 0-.02 0-.03.01l1.32-4.19c.01-.03 0-.07-.02-.1-.02-.03-.05-.05-.08-.05l-4.44.93c-.15-.47-.59-.81-1.11-.81-.66 0-1.2.54-1.2 1.2s.54 1.2 1.2 1.2c.5 0 .93-.31 1.1-.74l3.87-.81-1.1 3.5c-2.73.04-5.24.81-6.85 2.23-.35-.14-.74-.22-1.15-.22-1.65 0-3 1.35-3 3 0 1.25.77 2.32 1.86 2.76-.04.24-.06.49-.06.74 0 3.31 4.03 6 9 6s9-2.69 9-6c0-.25-.02-.5-.06-.74 1.09-.44 1.86-1.51 1.86-2.76zM7.5 14c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5-1.5-.67-1.5-1.5zm10.5 4.5c-1.84 0-3.48-.96-4.5-2.5-.1-.14-.07-.34.07-.44.15-.1.35-.07.45.07.9 1.37 2.37 2.22 3.98 2.22s3.08-.85 3.98-2.22c.1-.14.3-.17.44-.07.14.1.17.3.07.44-1.02 1.54-2.66 2.5-4.5 2.5zm1.5-3c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
-      </svg>
-    );
-    default: return <Share2 className="w-4 h-4" />;
+    case "facebook":
+      return (
+        <img
+          src="/icons/facebook-round-color-icon.svg"
+          style={s}
+          alt="Facebook"
+        />
+      );
+    case "instagram":
+      return (
+        <img src="/icons/ig-instagram-icon.svg" style={s} alt="Instagram" />
+      );
+    case "x":
+      return (
+        <img src="/icons/x-social-media-round-icon.svg" style={s} alt="X" />
+      );
+    case "linkedin":
+      return <img src="/icons/linkedin-icon.svg" style={s} alt="LinkedIn" />;
+    case "tiktok":
+      return <img src="/icons/tiktok-circle-icon.svg" style={s} alt="TikTok" />;
+    case "youtube":
+      return (
+        <img src="/icons/youtube-color-icon.svg" style={s} alt="YouTube" />
+      );
+    case "pinterest":
+      return (
+        <img
+          src="/icons/pinterest-round-color-icon.svg"
+          style={s}
+          alt="Pinterest"
+        />
+      );
+    case "threads":
+      return <img src="/icons/threads-icon.svg" style={s} alt="Threads" />;
+    case "mastodon":
+      return (
+        <img src="/icons/mastodon-round-icon.svg" style={s} alt="Mastodon" />
+      );
+    case "bluesky":
+      return (
+        <img
+          src="/icons/bluesky-circle-color-icon.svg"
+          style={s}
+          alt="Bluesky"
+        />
+      );
+    case "reddit":
+      return <img src="/icons/reddit-icon.svg" style={s} alt="Reddit" />;
+    case "google-business":
+      return <img src="/icons/google-icon.svg" style={s} alt="Google" />;
+    default:
+      return <Share2 size={14} />;
   }
 }
 
 function buildPlatforms(post) {
   return [
-    { id: 'linkedin',  name: 'LinkedIn',  success: post.linkedin_success,  error: post.linkedin_error,  url: post.linkedin_url },
-    { id: 'youtube',   name: 'YouTube',   success: post.youtube_success,   error: post.youtube_error,   url: post.youtube_shorts_url || post.youtube_url },
-    { id: 'instagram', name: 'Instagram', success: post.instagram_success, error: post.instagram_error, url: post.instagram_url },
-    { id: 'facebook',  name: 'Facebook',  success: post.facebook_success,  error: post.facebook_error,  url: post.facebook_url },
-    { id: 'tiktok',    name: 'TikTok',    success: post.tiktok_success,    error: post.tiktok_error,    url: null },
-    { id: 'mastodon',  name: 'Mastodon',  success: post.mastodon_success,  error: post.mastodon_error,  url: post.mastodon_url },
-    { id: 'bluesky',   name: 'Bluesky',   success: post.bluesky_success,   error: post.bluesky_error,   url: post.bluesky_url },
-    { id: 'pinterest', name: 'Pinterest', success: post.pinterest_success, error: post.pinterest_error, url: post.pinterest_url },
-    { id: 'threads',   name: 'Threads',   success: post.threads_success,   error: post.threads_error,   url: post.threads_url },
-    { id: 'x',         name: 'X',         success: post.x_success,         error: post.x_error,         url: post.x_url },
-    { id: 'reddit',    name: 'Reddit',    success: post.reddit_success,    error: post.reddit_error,    url: post.reddit_url },
-  ].filter(p => p.success || (p.error && p.error !== 'Not selected'));
+    {
+      id: "linkedin",
+      name: "LinkedIn",
+      success: post.linkedin_success,
+      error: post.linkedin_error,
+      url: post.linkedin_url,
+    },
+    {
+      id: "youtube",
+      name: "YouTube",
+      success: post.youtube_success,
+      error: post.youtube_error,
+      url: post.youtube_shorts_url || post.youtube_url,
+    },
+    {
+      id: "instagram",
+      name: "Instagram",
+      success: post.instagram_success,
+      error: post.instagram_error,
+      url: post.instagram_url,
+    },
+    {
+      id: "facebook",
+      name: "Facebook",
+      success: post.facebook_success,
+      error: post.facebook_error,
+      url: post.facebook_url,
+    },
+    {
+      id: "tiktok",
+      name: "TikTok",
+      success: post.tiktok_success,
+      error: post.tiktok_error,
+      url: null,
+    },
+    {
+      id: "mastodon",
+      name: "Mastodon",
+      success: post.mastodon_success,
+      error: post.mastodon_error,
+      url: post.mastodon_url,
+    },
+    {
+      id: "bluesky",
+      name: "Bluesky",
+      success: post.bluesky_success,
+      error: post.bluesky_error,
+      url: post.bluesky_url,
+    },
+    {
+      id: "pinterest",
+      name: "Pinterest",
+      success: post.pinterest_success,
+      error: post.pinterest_error,
+      url: post.pinterest_url,
+    },
+    {
+      id: "threads",
+      name: "Threads",
+      success: post.threads_success,
+      error: post.threads_error,
+      url: post.threads_url,
+    },
+    {
+      id: "x",
+      name: "X",
+      success: post.x_success,
+      error: post.x_error,
+      url: post.x_url,
+    },
+    {
+      id: "reddit",
+      name: "Reddit",
+      success: post.reddit_success,
+      error: post.reddit_error,
+      url: post.reddit_url,
+    },
+  ].filter((p) => p.success || (p.error && p.error !== "Not selected"));
 }
 
-function MediaThumb({ post, className = '' }) {
-  const isImage = post.media_type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || '');
+/* ── Media thumbnail ── */
+function MediaThumb({ post, className = "", style = {} }) {
+  const isImage =
+    post.media_type === "image" ||
+    /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || "");
+  const displayUrl = post.thumbnail_url || (isImage ? post.media_url : null);
   return (
-    <div className={`bg-gray-100 overflow-hidden ${className}`}>
-      {post.media_url ? (
-        <img src={post.media_url} alt="Preview" className="w-full h-full object-cover"
-          onError={e => { e.target.src = 'https://via.placeholder.com/300?text=Preview'; }} />
-      ) : isImage ? (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-blue-50">
-          <ImageIcon className="w-8 h-8 text-blue-200 mb-1" />
-          <span className="text-[10px] text-blue-300 font-bold uppercase tracking-widest">Image</span>
+    <div
+      className={className}
+      style={{
+        background: "#e8e2da",
+        overflow: "hidden",
+        position: "relative",
+        borderBottom: "1px solid rgba(20,20,19,0.05)",
+        ...style,
+      }}
+    >
+      {displayUrl ? (
+        <div style={{ width: "100%", height: "100%", position: "relative" }}>
+          <img
+            src={displayUrl}
+            alt="Preview"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              transition: "transform 0.5s",
+              display: "block",
+            }}
+            onMouseEnter={(e) => (e.target.style.transform = "scale(1.06)")}
+            onMouseLeave={(e) => (e.target.style.transform = "scale(1)")}
+            onError={(e) => {
+              e.target.src = "https://placehold.co/300x300?text=Preview";
+            }}
+          />
+          {post.youtube_success && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "rgba(0,0,0,0.12)",
+                backdropFilter: "blur(1px)",
+              }}
+            >
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  background: "#FF0000",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 8px 24px rgba(255,0,0,0.3)",
+                  border: "2px solid rgba(255,255,255,0.2)",
+                }}
+              >
+                <Play
+                  size={20}
+                  style={{ color: "#fff", fill: "#fff", marginLeft: 3 }}
+                />
+              </div>
+            </div>
+          )}
+          {/* Subtle bottom gradient for card transition */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: 40,
+              background:
+                "linear-gradient(to top, rgba(20,20,19,0.04), transparent)",
+            }}
+          />
+        </div>
+      ) : post.media_type === "image" ? (
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            background: "#e8e2da",
+          }}
+        >
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: "rgba(20,20,19,0.03)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <ImageIcon size={22} style={{ color: "#9a9088" }} />
+          </div>
+          <span
+            style={{
+              fontSize: 9,
+              fontWeight: 700,
+              color: "#9a9088",
+              textTransform: "uppercase",
+              letterSpacing: "0.12em",
+            }}
+          >
+            No Media
+          </span>
         </div>
       ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900">
-          <Video className="w-8 h-8 text-white/40 mb-1" />
-          <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Video</span>
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            background: css.ink,
+          }}
+        >
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: "rgba(255,255,255,0.05)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Video size={22} style={{ color: "rgba(243,240,238,0.5)" }} />
+          </div>
+          <span
+            style={{
+              fontSize: 9,
+              fontWeight: 700,
+              color: "rgba(243,240,238,0.4)",
+              textTransform: "uppercase",
+              letterSpacing: "0.12em",
+            }}
+          >
+            No Video
+          </span>
         </div>
       )}
     </div>
   );
 }
 
+/* ── Platform badge ── */
 function PlatformBadge({ platform }) {
   return (
-    <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold border ${
-      platform.success ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'
-    }`}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "4px 10px",
+        borderRadius: "var(--r-chip)",
+        fontSize: 10,
+        fontWeight: 600,
+        background: "rgba(20,20,19,0.03)",
+        color: css.ink,
+        border: "1px solid rgba(20,20,19,0.06)",
+        transition: "all 0.2s",
+      }}
+    >
       {getPlatformIcon(platform.id)}
-      <span>{platform.name}</span>
-      {platform.success ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+      <span style={{ opacity: 0.8 }}>{platform.name}</span>
+      <div
+        style={{
+          width: 5,
+          height: 5,
+          borderRadius: "50%",
+          background: platform.success ? "#22c55e" : "#ef4444",
+          marginLeft: 2,
+        }}
+      />
     </div>
   );
 }
 
-/* ── Grid Card (click → modal) ────────────────────────────────────────── */
-function GridCard({ post, onOpen, formatDate }) {
+/* ── Pinterest Masonry Card ── */
+function PinterestCard({ post, onOpen, formatDate }) {
+  const [hovered, setHovered] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
   const platforms = buildPlatforms(post);
-  const successCount = platforms.filter(p => p.success).length;
+  const isScheduled = post.status === "scheduled";
+  const isImage =
+    post.media_type === "image" ||
+    /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || "");
+  const displayUrl = post.thumbnail_url || (isImage ? post.media_url : null);
+  const hasMedia = !!displayUrl;
+  const allSuccess =
+    platforms.length > 0 && platforms.every((p) => p.success);
+
+  const ICON_MAP = {
+    instagram: "ig-instagram-icon.svg",
+    x: "x-social-media-round-icon.svg",
+    linkedin: "linkedin-icon.svg",
+    youtube: "youtube-color-icon.svg",
+    facebook: "facebook-round-color-icon.svg",
+    tiktok: "tiktok-circle-icon.svg",
+    pinterest: "pinterest-round-color-icon.svg",
+    threads: "threads-icon.svg",
+    mastodon: "mastodon-round-icon.svg",
+    bluesky: "bluesky-circle-color-icon.svg",
+    reddit: "reddit-icon.svg",
+  };
+
+  // Multi-media / carousel detection
+  const mediaUrls = Array.isArray(post.media_urls) && post.media_urls.length > 1
+    ? post.media_urls
+    : null;
+  const isCarousel = !!mediaUrls;
+  const carouselCount = mediaUrls?.length || 1;
+
   return (
     <div
+      className="masonry-card"
       onClick={onOpen}
-      className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col cursor-pointer group"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: "relative",
+        borderRadius: 20,
+        overflow: "hidden",
+        cursor: "pointer",
+        background: hasMedia ? "transparent" : css.lifted,
+        boxShadow: hovered
+          ? "0 24px 48px rgba(20,20,19,0.15), 0 4px 12px rgba(20,20,19,0.06)"
+          : "0 2px 12px rgba(20,20,19,0.06)",
+        transform: hovered ? "translateY(-5px) scale(1.01)" : "none",
+        transition:
+          "box-shadow 0.35s cubic-bezier(0.2,0.8,0.2,1), transform 0.35s cubic-bezier(0.2,0.8,0.2,1)",
+        border: "1px solid rgba(20,20,19,0.07)",
+        willChange: "transform",
+      }}
     >
-      <div className="relative">
-        <MediaThumb post={post} className="w-full h-44" />
-        <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-          {post.media_type || 'media'}
-        </div>
-        {successCount > 0 && (
-          <div className="absolute bottom-2 left-2 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-            {successCount} platform{successCount > 1 ? 's' : ''}
+      {hasMedia ? (
+        /* ─── Image-first: no fixed height, aspect ratio preserved ─── */
+        <div style={{ position: "relative", lineHeight: 0, minHeight: imgLoaded ? 0 : 180 }}>
+          {/* Shimmer shown until image loads */}
+          {!imgLoaded && (
+            <div
+              className="skeleton-shimmer"
+              style={{
+                position: "absolute",
+                inset: 0,
+                minHeight: 180,
+                zIndex: 1,
+              }}
+            />
+          )}
+          <img
+            src={displayUrl}
+            alt={post.caption || "Post"}
+            loading="lazy"
+            style={{
+              width: "100%",
+              height: "auto",
+              display: "block",
+              opacity: imgLoaded ? 1 : 0,
+              transition:
+                "opacity 0.5s ease, transform 0.55s cubic-bezier(0.2,0.8,0.2,1)",
+              transform: hovered ? "scale(1.05)" : "scale(1)",
+            }}
+            onLoad={() => setImgLoaded(true)}
+            onError={(e) => {
+              setImgLoaded(true);
+              e.target.src =
+                "https://placehold.co/400x300/e8e2da/9a9088?text=Preview";
+            }}
+          />
+
+          {/* ── Carousel: 2-up split preview ── */}
+          {isCarousel && mediaUrls[1] && (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                pointerEvents: "none",
+              }}
+            >
+              {/* Divider line */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: "66.6%",
+                  top: 0,
+                  bottom: 0,
+                  width: 2,
+                  background: "rgba(255,255,255,0.6)",
+                  zIndex: 2,
+                }}
+              />
+              {/* Second image peek (right 33%) */}
+              <div
+                style={{
+                  position: "absolute",
+                  right: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: "33.3%",
+                  overflow: "hidden",
+                  zIndex: 1,
+                }}
+              >
+                <img
+                  src={mediaUrls[1]}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    opacity: 0.85,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* ── Multi-media count badge (top-left) ── */}
+          {isCarousel && (
+            <div
+              style={{
+                position: "absolute",
+                top: 10,
+                left: 10,
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                background: "rgba(10,8,6,0.72)",
+                backdropFilter: "blur(8px)",
+                borderRadius: 20,
+                padding: "3px 8px 3px 6px",
+                zIndex: 4,
+                pointerEvents: "none",
+              }}
+            >
+              <Layers size={11} style={{ color: "#fff" }} />
+              <span
+                style={{
+                  color: "#fff",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.04em",
+                }}
+              >
+                {carouselCount}
+              </span>
+            </div>
+          )}
+
+          {/* ── Carousel dot strip (bottom) ── */}
+          {isCarousel && (
+            <div
+              style={{
+                position: "absolute",
+                bottom: 8,
+                left: 0,
+                right: 0,
+                display: "flex",
+                justifyContent: "center",
+                gap: 4,
+                zIndex: 4,
+                pointerEvents: "none",
+              }}
+            >
+              {Array.from({ length: Math.min(carouselCount, 5) }).map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: i === 0 ? 14 : 5,
+                    height: 5,
+                    borderRadius: 3,
+                    background: i === 0 ? "#fff" : "rgba(255,255,255,0.45)",
+                    transition: "width 0.2s",
+                  }}
+                />
+              ))}
+              {carouselCount > 5 && (
+                <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 8, fontWeight: 700 }}>
+                  +{carouselCount - 5}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* YouTube play badge */}
+          {post.youtube_success && (
+            <div
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%,-50%)",
+                width: 48,
+                height: 48,
+                background: "#FF0000",
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 8px 24px rgba(255,0,0,0.4)",
+                pointerEvents: "none",
+              }}
+            >
+              <Play
+                size={20}
+                style={{ color: "#fff", fill: "#fff", marginLeft: 3 }}
+              />
+            </div>
+          )}
+
+          {/* ── Hover overlay ── */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(to top, rgba(10,8,6,0.9) 0%, rgba(10,8,6,0.4) 50%, transparent 100%)",
+              opacity: hovered ? 1 : 0,
+              transition: "opacity 0.3s ease",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "flex-end",
+              padding: 14,
+              gap: 8,
+              pointerEvents: "none",
+            }}
+          >
+            {/* Caption */}
+            {post.caption && (
+              <p
+                style={{
+                  color: "rgba(255,255,255,0.93)",
+                  fontSize: 12,
+                  fontWeight: 500,
+                  lineHeight: 1.5,
+                  margin: 0,
+                  display: "-webkit-box",
+                  WebkitLineClamp: 3,
+                  WebkitBoxOrient: "vertical",
+                  overflow: "hidden",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {post.caption}
+              </p>
+            )}
+
+            {/* Bottom row */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 8,
+              }}
+            >
+              {/* Platform icons */}
+              <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                {platforms.slice(0, 5).map((p) => (
+                  <div
+                    key={p.id}
+                    title={`${p.name}: ${p.success ? "Success" : "Failed"}`}
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: "50%",
+                      background: "#ffffff",
+                      boxShadow: "0 1px 6px rgba(0,0,0,0.18)",
+                      border: `2px solid ${p.success ? "rgba(34,197,94,0.85)" : "rgba(239,68,68,0.85)"}`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {ICON_MAP[p.id] ? (
+                      <img
+                        src={`/icons/${ICON_MAP[p.id]}`}
+                        alt={p.name}
+                        style={{ width: 13, height: 13, objectFit: "contain" }}
+                      />
+                    ) : (
+                      <Share2 size={9} style={{ color: "#fff" }} />
+                    )}
+                  </div>
+                ))}
+                {platforms.length > 5 && (
+                  <span
+                    style={{
+                      color: "rgba(255,255,255,0.6)",
+                      fontSize: 9,
+                      fontWeight: 700,
+                    }}
+                  >
+                    +{platforms.length - 5}
+                  </span>
+                )}
+              </div>
+
+              {/* Date + status dot */}
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div
+                  style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    flexShrink: 0,
+                    background: isScheduled
+                      ? "#f97316"
+                      : allSuccess
+                        ? "#22c55e"
+                        : "#ef4444",
+                    boxShadow: isScheduled
+                      ? "0 0 6px rgba(249,115,22,0.7)"
+                      : allSuccess
+                        ? "0 0 6px rgba(34,197,94,0.7)"
+                        : "0 0 6px rgba(239,68,68,0.7)",
+                  }}
+                />
+                <span
+                  style={{
+                    color: "rgba(255,255,255,0.6)",
+                    fontSize: 10,
+                    fontWeight: 600,
+                  }}
+                >
+                  {new Date(
+                    isScheduled ? post.scheduled_for : post.posted_at,
+                  ).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}
+                </span>
+              </div>
+            </div>
           </div>
-        )}
-        {/* Hover overlay hint */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
-          <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 text-gray-800 text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-            View Preview →
-          </span>
+
+          {/* Media type chip */}
+          <div
+            style={{
+              position: "absolute",
+              top: 10,
+              right: 10,
+              padding: "3px 8px",
+              borderRadius: 6,
+              background: "rgba(10,8,6,0.65)",
+              backdropFilter: "blur(12px)",
+              color: "rgba(255,255,255,0.9)",
+              fontSize: 8,
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              border: "1px solid rgba(255,255,255,0.12)",
+              pointerEvents: "none",
+            }}
+          >
+            {post.media_type || "media"}
+          </div>
         </div>
-      </div>
-      <div className="p-4 flex flex-col flex-1">
-        <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">
-          <Calendar className="w-3 h-3" />{formatDate(post.posted_at)}
+      ) : (
+        /* ─── No media fallback: text card ─── */
+        <div style={{ padding: "18px 18px 16px" }}>
+          <div
+            style={{
+              width: "100%",
+              paddingBottom: "45%",
+              position: "relative",
+              borderRadius: 12,
+              background:
+                post.media_type === "video"
+                  ? "linear-gradient(135deg, #1e1c1a 0%, #2a2724 100%)"
+                  : "#ede9e4",
+              marginBottom: 14,
+              overflow: "hidden",
+              transition: "opacity 0.3s",
+              opacity: hovered ? 0.85 : 1,
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+              }}
+            >
+              {post.media_type === "video" ? (
+                <>
+                  <Video
+                    size={26}
+                    style={{ color: "rgba(243,240,238,0.3)" }}
+                  />
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      color: "rgba(243,240,238,0.25)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                    }}
+                  >
+                    Video
+                  </span>
+                </>
+              ) : (
+                <>
+                  <ImageIcon size={26} style={{ color: "#b8b0a6" }} />
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      color: "#b8b0a6",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                    }}
+                  >
+                    No Media
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+
+          <p
+            style={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: css.ink,
+              margin: "0 0 12px",
+              lineHeight: 1.5,
+              display: "-webkit-box",
+              WebkitLineClamp: 4,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {post.caption || (
+              <span style={{ color: css.dust, fontStyle: "italic" }}>
+                Untitled post
+              </span>
+            )}
+          </p>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {platforms.slice(0, 3).map((p) => (
+              <PlatformBadge key={p.id} platform={p} />
+            ))}
+            {platforms.length > 3 && (
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: css.slate,
+                  padding: "3px 8px",
+                  background: "rgba(20,20,19,0.04)",
+                  borderRadius: 6,
+                }}
+              >
+                +{platforms.length - 3}
+              </span>
+            )}
+          </div>
         </div>
-        <p className="text-sm font-bold text-gray-900 line-clamp-2 mb-3 leading-snug flex-1">
-          {post.caption || <span className="text-gray-300 italic">No caption</span>}
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {platforms.map(p => <PlatformBadge key={p.id} platform={p} />)}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
 
-/* ── List Row ──────────────────────────────────────────────────────────── */
+/* ── List row ── */
 function ListRow({ post, expanded, onToggle, formatDate }) {
   const platforms = buildPlatforms(post);
+  const isScheduled = post.status === "scheduled";
+
   return (
-    <div className={`bg-white rounded-2xl border overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 ${
-      expanded ? 'border-blue-200 ring-1 ring-blue-100' : 'border-gray-100'
-    }`}>
-      <div className="p-5 flex items-start gap-5 cursor-pointer" onClick={onToggle}>
-        <MediaThumb post={post} className="w-20 h-20 rounded-xl flex-shrink-0" />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-1.5">
-            <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-              <Calendar className="w-3 h-3" />{formatDate(post.posted_at)}
+    <div
+      style={{
+        background: css.lifted,
+        borderRadius: css.r_hero,
+        border: `1.5px solid ${expanded ? "rgba(243, 115, 56, 0.25)" : "rgba(20,20,19,0.06)"}`,
+        overflow: "hidden",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        boxShadow: expanded ? css.shadow : "0 4px 15px rgba(0,0,0,0.01)",
+      }}
+    >
+      <div
+        style={{
+          padding: "20px 24px",
+          display: "flex",
+          alignItems: "center",
+          gap: 20,
+          cursor: "pointer",
+        }}
+        onClick={onToggle}
+      >
+        <MediaThumb
+          post={post}
+          style={{
+            width: 84,
+            height: 84,
+            borderRadius: "var(--r-btn)",
+            flexShrink: 0,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+          }}
+        />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 8,
+            }}
+          >
+            <div className="eyebrow" style={{ fontSize: 9 }}>
+              {formatDate(isScheduled ? post.scheduled_for : post.posted_at)}
             </div>
-            {expanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {isScheduled && (
+                <div
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 800,
+                    color: css.arc,
+                    background: "rgba(243, 115, 56, 0.08)",
+                    padding: "2px 8px",
+                    borderRadius: css.r_pill,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Scheduled
+                </div>
+              )}
+              {expanded ? (
+                <ChevronUp size={16} style={{ color: css.arc }} />
+              ) : (
+                <ChevronDown size={16} style={{ color: css.slate }} />
+              )}
+            </div>
           </div>
-          <h3 className="text-sm font-bold text-gray-900 line-clamp-1 mb-2">{post.caption || 'Untitled Broadcast'}</h3>
-          <div className="flex flex-wrap gap-1.5">{platforms.map(p => <PlatformBadge key={p.id} platform={p} />)}</div>
+          <h3
+            style={{
+              fontSize: 16,
+              fontWeight: 500,
+              color: css.ink,
+              margin: "0 0 10px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            {post.caption || (
+              <span style={{ fontStyle: "italic", color: css.dust }}>
+                No caption
+              </span>
+            )}
+          </h3>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {platforms.slice(0, 5).map((p) => (
+              <PlatformBadge key={p.id} platform={p} />
+            ))}
+            {platforms.length > 5 && (
+              <div
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: css.r_pill,
+                  background: "rgba(20,20,19,0.04)",
+                  color: css.slate,
+                  fontSize: 10,
+                  fontWeight: 700,
+                }}
+              >
+                +{platforms.length - 5}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
       {expanded && (
-        <div className="border-t border-gray-100 bg-gray-50/30 px-5 pb-5 pt-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
-            {platforms.map(p => (
-              <div key={p.id} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">{getPlatformIcon(p.id)}<span className="text-xs font-bold text-gray-800">{p.name}</span></div>
-                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
-                    p.success ? 'bg-green-100 text-green-700 border-green-200' : 'bg-red-100 text-red-700 border-red-200'
-                  }`}>{p.success ? 'Success' : 'Failed'}</span>
+        <div
+          style={{
+            borderTop: "1.5px solid rgba(243, 115, 56, 0.1)",
+            background:
+              "linear-gradient(to bottom, rgba(243, 115, 56, 0.02), transparent)",
+            padding: "24px",
+          }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+              gap: 12,
+              marginBottom: 20,
+            }}
+          >
+            {platforms.map((p) => (
+              <div
+                key={p.id}
+                style={{
+                  background: css.white,
+                  padding: "16px",
+                  borderRadius: css.r_btn,
+                  border: "1.2px solid rgba(20,20,19,0.06)",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 12,
+                  }}
+                >
+                  <div
+                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                  >
+                    <div
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: "50%",
+                        background: PLATFORM_COLORS[p.id] || css.slate,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {getPlatformIcon(p.id)}
+                    </div>
+                    <span
+                      style={{ fontSize: 13, fontWeight: 600, color: css.ink }}
+                    >
+                      {p.name}
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      padding: "3px 10px",
+                      borderRadius: css.r_pill,
+                      background: p.success
+                        ? "rgba(34,197,94,0.08)"
+                        : "rgba(239,68,68,0.08)",
+                      color: p.success ? "#15803d" : "#b91c1c",
+                      border: `1px solid ${p.success ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`,
+                    }}
+                  >
+                    {p.success ? "Success" : "Failed"}
+                  </span>
                 </div>
-                {p.success && p.url ? (
-                  <a href={p.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[11px] text-blue-600 font-bold hover:text-blue-800">
-                    View Live Post <ExternalLink className="w-3 h-3" />
-                  </a>
-                ) : !p.success ? (
-                  <p className="text-[10px] text-red-500 italic">{p.error || 'API error'}</p>
-                ) : null}
+                {p.success ? (
+                  p.url ? (
+                    <a
+                      href={p.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        fontSize: 11,
+                        color: css.arc,
+                        fontWeight: 700,
+                        textDecoration: "none",
+                      }}
+                    >
+                      View Live Post <ExternalLink size={12} />
+                    </a>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        fontSize: 11,
+                        color: css.slate,
+                        fontWeight: 600,
+                      }}
+                    >
+                      <Clock size={12} /> Pending Sync
+                    </div>
+                  )
+                ) : (
+                  <p
+                    style={{
+                      fontSize: 11,
+                      color: "#ef4444",
+                      fontStyle: "italic",
+                      margin: 0,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {p.error || "Connection error"}
+                  </p>
+                )}
               </div>
             ))}
           </div>
           {post.caption && (
-            <div className="p-3 bg-white rounded-xl border border-gray-100 shadow-sm">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Full Caption</p>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{post.caption}</p>
+            <div
+              style={{
+                background: css.white,
+                padding: "20px",
+                borderRadius: css.r_btn,
+                border: "1.2px solid rgba(243, 115, 56, 0.1)",
+                boxShadow: "0 8px 24px rgba(243, 115, 56, 0.05)",
+              }}
+            >
+              <div
+                className="eyebrow"
+                style={{ marginBottom: 10, fontSize: 10 }}
+              >
+                Full Caption
+              </div>
+              <p
+                style={{
+                  fontSize: 14,
+                  color: css.ink,
+                  whiteSpace: "pre-wrap",
+                  lineHeight: 1.6,
+                  margin: 0,
+                }}
+              >
+                {post.caption}
+              </p>
             </div>
           )}
         </div>
@@ -181,17 +1143,67 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
   );
 }
 
-/* ── Main Dashboard ────────────────────────────────────────────────────── */
+/* ── Skeleton card for loading state ── */
+const SKELETON_HEIGHTS = [280, 180, 350, 220, 315, 260, 385, 200, 295, 340, 170, 235];
+
+function SkeletonCard({ height }) {
+  return (
+    <div className="masonry-card skeleton-card">
+      <div className="skeleton-shimmer" style={{ height }} />
+      <div
+        style={{
+          padding: "12px 14px 14px",
+          background: "var(--canvas-lifted)",
+        }}
+      >
+        <div
+          className="skeleton-shimmer"
+          style={{
+            height: 11,
+            borderRadius: 6,
+            marginBottom: 8,
+            width: "75%",
+          }}
+        />
+        <div
+          className="skeleton-shimmer"
+          style={{
+            height: 9,
+            borderRadius: 6,
+            marginBottom: 6,
+            width: "55%",
+          }}
+        />
+        <div
+          className="skeleton-shimmer"
+          style={{ height: 9, borderRadius: 6, width: "35%" }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   MAIN DASHBOARD
+   ══════════════════════════════════════════════════════ */
 function Dashboard() {
   const { user, refreshAccounts } = useAuth();
-  const [activeTab, setActiveTab] = useState('sent');
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState("sent");
   const [broadcasts, setBroadcasts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [composerOpen, setComposerOpen] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState('grid');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState("grid");
   const [selectedPost, setSelectedPost] = useState(null);
+  const [queueCount, setQueueCount] = useState(0);
+
+  const BATCH_SIZE = 20;
+  const [displayCount, setDisplayCount] = useState(BATCH_SIZE);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadMoreRef = useRef(null);
 
   const tabs = [
     {
@@ -199,8 +1211,16 @@ function Dashboard() {
       label: "Sent",
       count: activeTab === "sent" ? broadcasts.length : 0,
     },
-
-    { id: "queue", label: "Queue", count: 0 },
+    {
+      id: "queue",
+      label: "Queue",
+      count:
+        activeTab === "queue"
+          ? broadcasts.length
+          : activeTab === "sent"
+            ? queueCount
+            : 0,
+    },
     { id: "drafts", label: "Drafts", count: 0 },
     {
       id: "history",
@@ -211,23 +1231,35 @@ function Dashboard() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('success')) {
+    if (params.get("success")) {
       refreshAccounts();
-      window.history.replaceState({}, '', '/dashboard');
+      window.history.replaceState({}, "", "/dashboard");
     }
+    apiClient
+      .get("/api/broadcasts/stats")
+      .then((r) => setQueueCount(r.data.pending || 0))
+      .catch(() => {});
   }, [refreshAccounts]);
 
-  useEffect(() => { fetchBroadcasts(); }, [activeTab]);
+  useEffect(() => {
+    fetchBroadcasts();
+    setDisplayCount(BATCH_SIZE);
+  }, [activeTab]);
+
+  useEffect(() => {
+    setDisplayCount(BATCH_SIZE);
+  }, [searchTerm]);
 
   const fetchBroadcasts = async () => {
     try {
       setLoading(true);
-      // 'history' fetches all broadcasts; 'sent' filters by status
-      const params = activeTab === 'sent' ? { status: 'sent' } : {};
-      const response = await apiClient.get('/api/broadcasts', { params });
+      let params = {};
+      if (activeTab === "sent") params.status = "sent";
+      else if (activeTab === "queue") params.status = "scheduled";
+
+      const response = await apiClient.get("/api/broadcasts", { params });
       setBroadcasts(response.data.broadcasts || []);
     } catch (err) {
-      console.error('Failed to fetch broadcasts:', err);
       setBroadcasts([]);
     } finally {
       setLoading(false);
@@ -235,184 +1267,640 @@ function Dashboard() {
   };
 
   const formatDate = (dateString) =>
-    new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'short', month: 'short', day: 'numeric',
-      year: 'numeric', hour: '2-digit', minute: '2-digit'
+    new Date(dateString).toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
 
-  const toggleExpand = (id) => setExpandedId(prev => prev === id ? null : id);
+  const toggleExpand = (id) =>
+    setExpandedId((prev) => (prev === id ? null : id));
 
-  const filtered = broadcasts.filter(b =>
-    b.caption?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const selectedPlatform = searchParams.get("platform") || "all";
+
+  const filtered = broadcasts.filter((b) => {
+    const matchesSearch = (b.caption || "")
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    if (selectedPlatform === "all") return matchesSearch;
+    const matchesPlatform = buildPlatforms(b).some(
+      (p) => p.id === selectedPlatform,
+    );
+    return matchesSearch && matchesPlatform;
+  });
+
+  const displayedItems = filtered.slice(0, displayCount);
+  const hasMore = displayCount < filtered.length;
+
+  // ── Infinite scroll: scroll-container-aware ──
+  useEffect(() => {
+    if (!hasMore || isLoadingMore) return;
+
+    const sentinel = loadMoreRef.current;
+    if (!sentinel) return;
+
+    // Walk up the DOM to find the actual scrollable container
+    const getScrollParent = (node) => {
+      if (!node || node === document.body) return window;
+      const { overflowY, overflow } = window.getComputedStyle(node);
+      if (
+        overflowY === "auto" ||
+        overflowY === "scroll" ||
+        overflow === "auto" ||
+        overflow === "scroll"
+      )
+        return node;
+      return getScrollParent(node.parentElement);
+    };
+
+    const scrollParent = getScrollParent(sentinel.parentElement);
+
+    const triggerLoadMore = () => {
+      const sentinelRect = sentinel.getBoundingClientRect();
+      const containerBottom =
+        scrollParent === window
+          ? window.innerHeight
+          : scrollParent.getBoundingClientRect().bottom;
+
+      // Load when sentinel is within 400px of the visible bottom
+      if (sentinelRect.top <= containerBottom + 400) {
+        setIsLoadingMore(true);
+        setTimeout(() => {
+          setDisplayCount((prev) =>
+            Math.min(prev + BATCH_SIZE, filtered.length),
+          );
+          setIsLoadingMore(false);
+        }, 500);
+      }
+    };
+
+    // 1. Immediate check (handles content that fits inside the viewport)
+    triggerLoadMore();
+
+    // 2. Scroll listener on the real scroll container
+    const target = scrollParent === window ? window : scrollParent;
+    target.addEventListener("scroll", triggerLoadMore, { passive: true });
+    return () => target.removeEventListener("scroll", triggerLoadMore);
+  }, [hasMore, isLoadingMore, filtered.length]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-
-      {/* ── Top Header ── */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">Post Analytics</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setComposerOpen(true)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-all shadow-sm flex items-center gap-2 text-sm"
+    <div
+      style={{
+        minHeight: "100vh",
+        background: css.canvas,
+        fontFamily: "var(--font)",
+      }}
+    >
+      {/* ── Top header ── */}
+      <div
+        style={{
+          background: css.lifted,
+          borderBottom: "1px solid rgba(20,20,19,0.08)",
+          padding: "clamp(14px, 3vw, 20px) 16px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 16,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            flex: 1,
+            minWidth: 200,
+          }}
+        >
+          <div>
+            <div className="eyebrow" style={{ marginBottom: 2 }}>
+              Overview
+            </div>
+            <h1
+              style={{
+                fontSize: "clamp(20px, 4vw, 26px)",
+                fontWeight: 600,
+                color: css.ink,
+                margin: 0,
+                letterSpacing: "-0.02em",
+                lineHeight: 1,
+              }}
             >
-              <Plus className="w-4 h-4" />
-              New Post
-            </button>
+              Analytics
+            </h1>
           </div>
+          {selectedPlatform !== "all" && (
+            <div
+              style={{
+                padding: "4px 10px",
+                background: "rgba(20,20,19,0.05)",
+                borderRadius: css.r_btn,
+                border: "1px solid rgba(20,20,19,0.1)",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <span style={{ fontSize: 11, fontWeight: 700, color: css.ink }}>
+                {selectedPlatform.charAt(0).toUpperCase() +
+                  selectedPlatform.slice(1)}
+              </span>
+              <button
+                onClick={() => navigate("/dashboard")}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 0,
+                  display: "flex",
+                }}
+              >
+                <X size={12} />
+              </button>
+            </div>
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button
+            onClick={() => setComposerOpen(true)}
+            className="btn-ink"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 14,
+              padding: "10px 20px",
+              borderRadius: css.r_pill,
+            }}
+          >
+            <Plus size={16} />
+            <span className="hidden sm:inline">New Post</span>
+            <span className="sm:hidden">New</span>
+          </button>
         </div>
       </div>
 
       {/* ── Tabs ── */}
-      <div className="bg-white border-b border-gray-200 px-6">
-        <div className="flex items-center gap-8">
-          {tabs.map(tab => (
+      <div
+        style={{
+          background: css.lifted,
+          borderBottom: "1px solid rgba(20,20,19,0.08)",
+          padding: "0 16px",
+          display: "flex",
+          alignItems: "center",
+          gap: "clamp(16px, 4vw, 32px)",
+          overflowX: "auto",
+          WebkitOverflowScrolling: "touch",
+          msOverflowStyle: "none",
+          scrollbarWidth: "none",
+        }}
+      >
+        {tabs.map((tab) => {
+          const active = activeTab === tab.id;
+          return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`py-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${
-                activeTab === tab.id
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-400 hover:text-gray-600'
-              }`}
+              onClick={() => {
+                if (tab.id === "queue" && activeTab !== "queue") {
+                  navigate("/dashboard/queue");
+                  return;
+                }
+                setActiveTab(tab.id);
+              }}
+              style={{
+                padding: "14px 0",
+                fontSize: 11,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                color: active ? css.ink : css.slate,
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                borderBottom: `2.5px solid ${active ? css.ink : "transparent"}`,
+                marginBottom: -1,
+                transition: "all 0.2s",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
             >
               {tab.label}
               {tab.count > 0 && (
-                <span className={`ml-2 px-2 py-0.5 rounded-full text-[10px] ${activeTab === tab.id ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                <span
+                  style={{
+                    padding: "1px 6px",
+                    borderRadius: css.r_pill,
+                    fontSize: 9,
+                    fontWeight: 800,
+                    background: active ? css.ink : "rgba(20,20,19,0.06)",
+                    color: active ? css.canvas : css.slate,
+                  }}
+                >
                   {tab.count}
                 </span>
               )}
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
-      {/* ── Sent Tab: search + view toggle ── */}
-      {(activeTab === 'sent' || activeTab === 'history') && !loading && broadcasts.length > 0 && (
-        <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-blue-500" />
-              <span className="text-sm font-bold text-gray-700">{broadcasts.length}</span>
-              <span className="text-xs text-gray-400">total posts</span>
-            </div>
-            <div className="w-px h-4 bg-gray-200" />
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-green-500" />
-              <span className="text-sm font-bold text-gray-700">
-                {broadcasts.filter(b => buildPlatforms(b).some(p => p.success)).length}
-              </span>
-              <span className="text-xs text-gray-400">successful</span>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search posts..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-52 text-sm transition-all"
+      {/* ── Toolbar ── */}
+      {(activeTab === "sent" ||
+        activeTab === "queue" ||
+        activeTab === "history") &&
+        !loading &&
+        broadcasts.length > 0 && (
+          <div
+            style={{
+              background: css.canvas,
+              borderBottom: "1px solid rgba(20,20,19,0.06)",
+              padding: "12px 16px",
+              display: "flex",
+              flexDirection: window.innerWidth < 768 ? "column" : "row",
+              alignItems: window.innerWidth < 768 ? "stretch" : "center",
+              justifyContent: "space-between",
+              gap: 16,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 16,
+                overflowX: "auto",
+                paddingBottom: window.innerWidth < 768 ? 4 : 0,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  flexShrink: 0,
+                }}
+              >
+                <Clock size={14} style={{ color: css.arc }} />
+                <span style={{ fontSize: 13, fontWeight: 700, color: css.ink }}>
+                  {filtered.length}
+                </span>
+                <span style={{ fontSize: 12, color: css.slate }}>
+                  {activeTab === "queue" ? "scheduled" : "total"}
+                </span>
+              </div>
+              <div
+                style={{
+                  width: 1,
+                  height: 16,
+                  background: "rgba(20,20,19,0.1)",
+                  flexShrink: 0,
+                }}
               />
+              {activeTab !== "queue" && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    flexShrink: 0,
+                  }}
+                >
+                  <CheckCircle2 size={14} style={{ color: "#22c55e" }} />
+                  <span
+                    style={{ fontSize: 13, fontWeight: 700, color: css.ink }}
+                  >
+                    {
+                      filtered.filter((b) =>
+                        buildPlatforms(b).some((p) => p.success),
+                      ).length
+                    }
+                  </span>
+                  <span style={{ fontSize: 12, color: css.slate }}>
+                    success
+                  </span>
+                </div>
+              )}
             </div>
-            <div className="flex items-center bg-gray-100 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
-                title="Grid view"
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
-                title="List view"
-              >
-                <List className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* ── Main Content ── */}
-      <div className="p-6">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4" />
-            <p className="text-gray-500 text-sm font-medium">Syncing data...</p>
-          </div>
-        ) : (activeTab === 'sent' || activeTab === 'history') && filtered.length > 0 ? (
-          viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-              {filtered.map(post => (
-                <GridCard
-                  key={post.id}
-                  post={post}
-                  onOpen={() => setSelectedPost(post)}
-                  formatDate={formatDate}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                alignSelf: window.innerWidth < 768 ? "stretch" : "auto",
+              }}
+            >
+              <div style={{ position: "relative", flex: 1 }}>
+                <Search
+                  size={14}
+                  style={{
+                    position: "absolute",
+                    left: 12,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    color: css.slate,
+                  }}
                 />
-              ))}
+                <input
+                  type="text"
+                  placeholder="Search…"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    padding: "8px 16px 8px 32px",
+                    background: css.lifted,
+                    border: "1px solid rgba(20,20,19,0.1)",
+                    borderRadius: css.r_pill,
+                    fontSize: 13,
+                    color: css.ink,
+                    fontFamily: "var(--font)",
+                    outline: "none",
+                    width: "100%",
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  background: css.lifted,
+                  border: "1px solid rgba(20,20,19,0.08)",
+                  borderRadius: css.r_pill,
+                  padding: 3,
+                  gap: 2,
+                }}
+              >
+                {[
+                  { mode: "grid", icon: <LayoutGrid size={13} /> },
+                  { mode: "list", icon: <List size={13} /> },
+                ].map(({ mode, icon }) => (
+                  <button
+                    key={mode}
+                    onClick={() => setViewMode(mode)}
+                    title={`${mode} view`}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: css.r_pill,
+                      border: "none",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      background: viewMode === mode ? css.ink : "transparent",
+                      color: viewMode === mode ? css.canvas : css.slate,
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    {icon}
+                  </button>
+                ))}
+              </div>
             </div>
-          ) : (
-            <div className="space-y-4 max-w-4xl mx-auto">
-              {filtered.map(post => (
-                <div key={post.id} onClick={() => setSelectedPost(post)} className="cursor-pointer">
-                  <ListRow
+          </div>
+        )}
+
+      {/* ── Main content ── */}
+      <div
+        style={{ padding: "clamp(16px, 3vw, 28px) clamp(16px, 3vw, 28px) 40px" }}
+      >
+        {loading ? (
+          <Masonry
+            breakpointCols={{
+              default: 4,
+              1400: 3,
+              1100: 3,
+              768: 2,
+              480: 1,
+            }}
+            className="masonry-grid"
+            columnClassName="masonry-grid_column"
+          >
+            {SKELETON_HEIGHTS.map((h, i) => (
+              <SkeletonCard key={i} height={h} />
+            ))}
+          </Masonry>
+        ) : (activeTab === "sent" ||
+            activeTab === "queue" ||
+            activeTab === "history") &&
+          filtered.length > 0 ? (
+          <>
+            {viewMode === "grid" ? (
+              <Masonry
+                breakpointCols={{
+                  default: 4,
+                  1400: 3,
+                  1100: 3,
+                  768: 2,
+                  480: 1,
+                }}
+                className="masonry-grid"
+                columnClassName="masonry-grid_column"
+              >
+                {displayedItems.map((post) => (
+                  <PinterestCard
+                    key={post.id}
                     post={post}
-                    expanded={expandedId === post.id}
-                    onToggle={(e) => { e?.stopPropagation(); toggleExpand(post.id); }}
+                    onOpen={() => setSelectedPost(post)}
                     formatDate={formatDate}
                   />
-                </div>
-              ))}
-            </div>
-          )
+                ))}
+              </Masonry>
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
+                  maxWidth: 860,
+                  margin: "0 auto",
+                }}
+              >
+                {displayedItems.map((post) => (
+                  <div
+                    key={post.id}
+                    onClick={() => setSelectedPost(post)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <ListRow
+                      post={post}
+                      expanded={expandedId === post.id}
+                      onToggle={(e) => {
+                        e?.stopPropagation();
+                        toggleExpand(post.id);
+                      }}
+                      formatDate={formatDate}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ── Infinite scroll sentinel + skeletons ── */}
+            <div ref={loadMoreRef} style={{ marginTop: 8 }} />
+
+            {isLoadingMore && viewMode === "grid" && (
+              <Masonry
+                breakpointCols={{
+                  default: 4,
+                  1400: 3,
+                  1100: 3,
+                  768: 2,
+                  480: 1,
+                }}
+                className="masonry-grid"
+                columnClassName="masonry-grid_column"
+              >
+                {SKELETON_HEIGHTS.slice(0, 8).map((h, i) => (
+                  <SkeletonCard key={i} height={h} />
+                ))}
+              </Masonry>
+            )}
+            {isLoadingMore && viewMode === "list" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 860, margin: "0 auto" }}>
+                {[1,2,3].map((i) => (
+                  <div key={i} className="skeleton-card" style={{ display: "flex", alignItems: "center", gap: 20, padding: "20px 24px" }}>
+                    <div className="skeleton-shimmer" style={{ width: 84, height: 84, borderRadius: 12, flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div className="skeleton-shimmer" style={{ height: 14, borderRadius: 6, marginBottom: 10, width: "60%" }} />
+                      <div className="skeleton-shimmer" style={{ height: 11, borderRadius: 6, marginBottom: 8, width: "85%" }} />
+                      <div className="skeleton-shimmer" style={{ height: 10, borderRadius: 6, width: "40%" }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!hasMore && displayedItems.length > 0 && (
+              <div style={{ textAlign: "center", padding: "32px 0 48px", color: css.slate, fontSize: 12, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", opacity: 0.5 }}>
+                ✦ All posts loaded
+              </div>
+            )}
+          </>
         ) : (
-          <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-20 text-center shadow-sm">
-            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Share2 className="w-8 h-8 text-gray-300" />
+          /* ── Empty state ── */
+          <div
+            style={{
+              background: css.lifted,
+              borderRadius: css.r_hero,
+              border: "1px dashed rgba(20,20,19,0.15)",
+              padding: "80px 40px",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                position: "relative",
+                display: "inline-block",
+                marginBottom: 24,
+              }}
+            >
+              <div
+                className="watermark"
+                style={{
+                  fontSize: 80,
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%,-50%)",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                ✦
+              </div>
+              <div
+                style={{
+                  position: "relative",
+                  width: 64,
+                  height: 64,
+                  borderRadius: "50%",
+                  background: css.ink,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto",
+                }}
+              >
+                <Share2 size={26} style={{ color: css.canvas }} />
+              </div>
             </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2 font-display">
-              {activeTab === 'queue' ? 'Your queue is empty'
-                : activeTab === 'drafts' ? 'No drafts yet'
-                : activeTab === 'history' ? 'No broadcast history yet'
-                : 'Ready for your first boost?'}
+            <h3
+              style={{
+                fontSize: 22,
+                fontWeight: 500,
+                color: css.ink,
+                margin: "0 0 10px",
+                letterSpacing: "-0.02em",
+              }}
+            >
+              {activeTab === "queue"
+                ? "Your queue is empty"
+                : activeTab === "drafts"
+                  ? "No drafts yet"
+                  : activeTab === "history"
+                    ? "No broadcast history yet"
+                    : "Ready for your first boost?"}
             </h3>
-            <p className="text-gray-500 text-sm mb-8 max-w-xs mx-auto">
-              {activeTab === 'sent' || activeTab === 'history'
-                ? 'Create a post and broadcast it across your social channels to see analytics here.'
-                : 'Schedule posts to see them appear here.'}
+            <p
+              style={{
+                fontSize: 14,
+                color: css.slate,
+                margin: "0 0 28px",
+                maxWidth: 300,
+                marginLeft: "auto",
+                marginRight: "auto",
+                lineHeight: 1.5,
+              }}
+            >
+              {activeTab === "sent" || activeTab === "history"
+                ? "Create a post and broadcast it across your social channels to see analytics here."
+                : "Schedule posts to see them appear here."}
             </p>
-            {(activeTab === 'sent' || activeTab === 'history') && (
+            {(activeTab === "sent" || activeTab === "history") && (
               <button
+                className="btn-ink"
                 onClick={() => setComposerOpen(true)}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-blue-200"
+                style={{ fontSize: 15, padding: "12px 32px" }}
               >
                 Launch your first post
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  style={{ marginLeft: 6 }}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 12h14M12 5l7 7-7 7"
+                  />
+                </svg>
               </button>
             )}
           </div>
         )}
       </div>
 
-      <ComposerModal isOpen={composerOpen} onClose={() => setComposerOpen(false)} onPostCreated={fetchBroadcasts} />
-      <PostPreviewModal post={selectedPost} onClose={() => setSelectedPost(null)} />
+      <ComposerModal
+        isOpen={composerOpen}
+        onClose={() => setComposerOpen(false)}
+        onPostCreated={fetchBroadcasts}
+      />
+      <AnimatePresence>
+        {selectedPost && (
+          <PostPreviewModal
+            post={selectedPost}
+            onClose={() => setSelectedPost(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
-  );
-}
-
-/* ── Threads icon ──────────────────────────────────────────────────────── */
-function ThreadsIcon({ className }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.781 3.631 2.695 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142c-.126-.742-.375-1.332-.74-1.763-.507-.598-1.256-.918-2.228-.952-1.281-.046-2.345.335-3.265 1.169l-1.207-1.555c1.319-1.025 2.971-1.531 4.915-1.504 1.5.054 2.682.567 3.513 1.525.799.921 1.276 2.13 1.427 3.598.433.086.838.186 1.212.298 1.438.433 2.455 1.098 3.026 1.977.638 1 .76 2.352.35 3.908-.54 2.055-1.906 3.753-3.838 4.781-1.558.828-3.394 1.256-5.462 1.277z" />
-    </svg>
   );
 }
 

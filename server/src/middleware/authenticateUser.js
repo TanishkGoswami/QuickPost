@@ -1,12 +1,23 @@
-import jwt from 'jsonwebtoken';
+import { createClient } from '@supabase/supabase-js';
+import { createOrUpdateUser } from '../services/supabase.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+// Use Supabase admin client to verify tokens correctly.
+// Supabase JWTs are signed with Supabase's own JWT secret, NOT process.env.JWT_SECRET.
+// The only safe way to verify them server-side is via supabase.auth.getUser().
+const supabaseAdmin = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY ||
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.SUPABASE_ANON_KEY,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
 
 /**
  * Authentication middleware
- * Verifies JWT token from Authorization header
+ * Verifies Supabase JWT via supabase.auth.getUser() — this is the ONLY correct approach.
+ * Using jwt.verify() with a custom secret will always fail against Supabase tokens.
  */
-export function authenticateUser(req, res, next) {
+export async function authenticateUser(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
 
@@ -20,25 +31,51 @@ export function authenticateUser(req, res, next) {
 
     const token = authHeader.substring(7);
 
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      req.user = decoded; // Attach user info to request
-      next();
-    } catch (error) {
-      if (error.name === 'TokenExpiredError') {
-        return res.status(401).json({
-          success: false,
-          error: 'Token expired',
-          message: 'Your session has expired. Please log in again.'
-        });
-      }
-      
+    // ✅ Verify token via Supabase — works regardless of which JWT secret Supabase uses
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+
+    if (error || !user) {
+      console.error('❌ [AUTH] Token verification failed:', error?.message || 'No user found');
+      if (error) console.error('Full error:', error);
       return res.status(401).json({
         success: false,
         error: 'Invalid token',
-        message: 'Authentication token is invalid'
+        message: error?.message || 'Authentication token is invalid or expired'
       });
     }
+
+
+    // Build user info from Supabase user object
+    const userInfo = {
+      userId: user.id,
+      email: user.email,
+      name: user.user_metadata?.full_name || user.email?.split('@')[0],
+      profilePicture: user.user_metadata?.avatar_url || null
+    };
+
+    // Sync with public.users table (important for identity consistency)
+    try {
+      const dbUser = await createOrUpdateUser(
+        userInfo.email,
+        userInfo.name,
+        userInfo.userId,
+        userInfo.profilePicture
+      );
+      
+      // ✅ IMPORTANT: Use the ID from our database record.
+      // If a user has multiple identity providers (Google, Email) for the same email,
+      // Supabase gives them different internal IDs, but we want to map them to the same
+      // record in our public.users table.
+      if (dbUser && dbUser.id) {
+        userInfo.userId = dbUser.id;
+      }
+    } catch (syncError) {
+      console.warn('⚠️ [AUTH] Failed to sync user to public.users:', syncError.message);
+    }
+
+    req.user = userInfo;
+    next();
+
   } catch (error) {
     console.error('Authentication middleware error:', error);
     return res.status(500).json({
@@ -50,11 +87,10 @@ export function authenticateUser(req, res, next) {
 }
 
 /**
- * Generate JWT token
- * @param {Object} payload - Data to encode in token
- * @param {string} expiresIn - Token expiration (default: '7d')
- * @returns {string} JWT token
+ * Generate JWT token (Legacy support)
  */
+import jwt from 'jsonwebtoken';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 export function generateToken(payload, expiresIn = '7d') {
   return jwt.sign(payload, JWT_SECRET, { expiresIn });
 }

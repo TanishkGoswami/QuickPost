@@ -4,112 +4,103 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 /**
- * Post to LinkedIn
- * @param {string} imageUrl - Public URL to image (from Cloudinary) or null for text-only
+ * Post to LinkedIn (Supports single image, multiple images, or text-only)
+ * @param {string|string[]} imageUrls - Public URL(s) to images
  * @param {string} text - Post text/caption
- * @param {Object} tokens - LinkedIn tokens object with accessToken
- * @returns {Object} Result with post ID and URL
+ * @param {Object} tokens - LinkedIn tokens
+ * @returns {Object} Result
  */
-export async function postToLinkedIn(imageUrl, text, tokens) {
+export async function postToLinkedIn(imageUrls, text, tokens) {
   try {
     if (!tokens || !tokens.accessToken) {
       throw new Error('Missing LinkedIn credentials');
     }
 
-    console.log('🔵 Starting LinkedIn post...');
+    console.log('🔵 Starting LinkedIn post process...');
+    
+    // Normalize to array
+    const urls = Array.isArray(imageUrls) ? imageUrls : [imageUrls].filter(Boolean);
 
     // Get user URN
     const userInfoResponse = await axios.get('https://api.linkedin.com/v2/userinfo', {
-      headers: {
-        'Authorization': `Bearer ${tokens.accessToken}`
-      }
+      headers: { 'Authorization': `Bearer ${tokens.accessToken}` }
     });
-
     const userUrn = `urn:li:person:${userInfoResponse.data.sub}`;
-    console.log('User URN:', userUrn);
 
     let postData;
 
-    if (imageUrl) {
-      // Post with image
-      console.log('Posting with image:', imageUrl);
+    if (urls.length > 0) {
+      console.log(`🖼️ Processing ${urls.length} images for LinkedIn...`);
+      const mediaAssets = [];
 
-      // Register the image
-      const registerResponse = await axios.post(
-        'https://api.linkedin.com/v2/assets?action=registerUpload',
-        {
-          registerUploadRequest: {
-            recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
-            owner: userUrn,
-            serviceRelationships: [{
-              relationshipType: 'OWNER',
-              identifier: 'urn:li:userGeneratedContent'
-            }]
+      for (const url of urls) {
+        // Step 1: Register the image
+        const registerResponse = await axios.post(
+          'https://api.linkedin.com/v2/assets?action=registerUpload',
+          {
+            registerUploadRequest: {
+              recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
+              owner: userUrn,
+              serviceRelationships: [{
+                relationshipType: 'OWNER',
+                identifier: 'urn:li:userGeneratedContent'
+              }]
+            }
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${tokens.accessToken}`,
+              'Content-Type': 'application/json',
+              'X-Restli-Protocol-Version': '2.0.0'
+            }
           }
-        },
-        {
+        );
+
+        const uploadUrl = registerResponse.data.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
+        const asset = registerResponse.data.value.asset;
+
+        // Step 2: Upload the image
+        const imageBuffer = await axios.get(url, { responseType: 'arraybuffer' });
+        await axios.put(uploadUrl, imageBuffer.data, {
           headers: {
             'Authorization': `Bearer ${tokens.accessToken}`,
-            'Content-Type': 'application/json',
-            'X-Restli-Protocol-Version': '2.0.0'
+            'Content-Type': 'image/jpeg'
           }
-        }
-      );
+        });
 
-      const uploadUrl = registerResponse.data.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
-      const asset = registerResponse.data.value.asset;
+        mediaAssets.push({
+          status: 'READY',
+          media: asset,
+          title: { text: 'GAP Social-pilot Image' }
+        });
+        console.log(`✓ Image registered and uploaded: ${asset}`);
+      }
 
-      // Upload the image
-      const imageResponse = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-      await axios.put(uploadUrl, imageResponse.data, {
-        headers: {
-          'Authorization': `Bearer ${tokens.accessToken}`,
-          'Content-Type': 'image/jpeg'
-        }
-      });
-
-      console.log('✓ Image uploaded:', asset);
-
-      // Create post with image
+      // Create post with multi-media
       postData = {
         author: userUrn,
         lifecycleState: 'PUBLISHED',
         specificContent: {
           'com.linkedin.ugc.ShareContent': {
-            shareCommentary: {
-              text: text || ''
-            },
+            shareCommentary: { text: text || '' },
             shareMediaCategory: 'IMAGE',
-            media: [{
-              status: 'READY',
-              media: asset,
-              title: {
-                text: 'QuickPost Image'
-              }
-            }]
+            media: mediaAssets
           }
         },
-        visibility: {
-          'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
-        }
+        visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' }
       };
     } else {
       // Text-only post
-      console.log('Posting text only');
       postData = {
         author: userUrn,
         lifecycleState: 'PUBLISHED',
         specificContent: {
           'com.linkedin.ugc.ShareContent': {
-            shareCommentary: {
-              text: text || ''
-            },
+            shareCommentary: { text: text || '' },
             shareMediaCategory: 'NONE'
           }
         },
-        visibility: {
-          'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC'
-        }
+        visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' }
       };
     }
 
@@ -126,32 +117,16 @@ export async function postToLinkedIn(imageUrl, text, tokens) {
       }
     );
 
-    const postId = response.data.id;
-    const postUrl = `https://www.linkedin.com/feed/update/${postId}/`;
-
-    console.log(`✓ LinkedIn post created: ${postId}`);
-    console.log(`URL: ${postUrl}`);
-
     return {
       success: true,
-      postId: postId,
-      url: postUrl,
-      platform: 'LinkedIn',
-      message: 'Successfully posted to LinkedIn'
+      postId: response.data.id,
+      url: `https://www.linkedin.com/feed/update/${response.data.id}/`,
+      platform: 'LinkedIn'
     };
 
   } catch (error) {
-    console.error('❌ LinkedIn post failed:', error.message);
-
-    const errorMessage = error.response?.data?.message || error.message;
-    console.error('Full error details:', error.response?.data);
-
-    return {
-      success: false,
-      platform: 'LinkedIn',
-      error: errorMessage,
-      details: error.response?.data
-    };
+    console.error('❌ LinkedIn post failed:', error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || 'LinkedIn post failed');
   }
 }
 

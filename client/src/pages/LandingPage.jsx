@@ -8,33 +8,37 @@ export default function LandingPage() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect authenticated users to dashboard
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
-    }
+    if (isAuthenticated) navigate('/dashboard');
   }, [isAuthenticated, navigate]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div style={{ minHeight: '100vh', background: 'var(--canvas)', fontFamily: 'var(--font)' }}>
       <LandingNav />
       <Hero />
       <Features />
       <HowItWorks />
       <SocialProof />
       <CallToAction />
-      
+
       {/* Footer */}
-      <footer className="bg-gray-50 py-8 border-t border-gray-200">
-        <div className="landing-container">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="text-gray-600 text-sm">
-              © 2025 QuickPost. All rights reserved.
+      <footer style={{ background: 'var(--canvas)', borderTop: '1px solid rgba(20,20,19,0.08)', padding: '32px 32px' }}>
+        <div className="landing-container" style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 450, color: 'var(--slate)' }}>
+              © 2025 GAP Social-pilot. All rights reserved.
             </div>
-            <div className="flex items-center space-x-6 text-gray-600 text-sm">
-              <Link to="/privacy" className="hover:text-gray-900 transition-colors">Privacy Policy</Link>
-              <Link to="/terms" className="hover:text-gray-900 transition-colors">Terms of Service</Link>
-              <a href="#" className="hover:text-gray-900 transition-colors">Contact</a>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+              {[
+                { label: 'Privacy Policy', to: '/privacy' },
+                { label: 'Terms of Service', to: '/terms' },
+              ].map(({ label, to }) => (
+                <Link key={label} to={to} style={{ fontSize: 13, fontWeight: 500, color: 'var(--slate)', textDecoration: 'none', transition: 'color 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--ink)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--slate)'}>
+                  {label}
+                </Link>
+              ))}
             </div>
           </div>
         </div>
@@ -42,3 +46,4 @@ export default function LandingPage() {
     </div>
   );
 }
+
