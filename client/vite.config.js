@@ -11,12 +11,12 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    hmr: {
-      host: 'shorts-very-joystick.ngrok-free.dev',
-      clientPort: 443,
-      protocol: 'wss'
-    },
-    allowedHosts: ["shorts-very-joystick.ngrok-free.dev"],
+    // hmr: {
+    //   host: 'shorts-very-joystick.ngrok-free.dev',
+    //   clientPort: 443,
+    //   protocol: 'wss'
+    // },
+    allowedHosts: ["shorts-very-joystick.ngrok-free.dev", "localhost", ".ngrok-free.dev"],
     proxy: {
       '/api': {
         target: 'http://localhost:5000',
