@@ -26,13 +26,18 @@ const allowedOrigins = [CLIENT_URL, 'http://localhost:5173', 'http://127.0.0.1:5
 app.use(cors({
   origin: function(origin, callback) {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-        return callback(null, true);
-      }
-      return callback(new Error('CORS Not allowed'), false);
+    
+    // Check if origin is allowed
+    const isLocal = origin.includes('localhost') || origin.includes('127.0.0.1');
+    const isNgrok = origin.includes('ngrok-free.dev');
+    const isAllowed = allowedOrigins.indexOf(origin) !== -1;
+
+    if (isLocal || isNgrok || isAllowed) {
+      return callback(null, true);
     }
-    return callback(null, true);
+
+    console.warn('🔞 [CORS] Blocked origin:', origin);
+    return callback(new Error('CORS Not allowed'), false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
