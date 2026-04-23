@@ -35,12 +35,15 @@ export async function authenticateUser(req, res, next) {
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !user) {
+      console.error('❌ [AUTH] Token verification failed:', error?.message || 'No user found');
+      if (error) console.error('Full error:', error);
       return res.status(401).json({
         success: false,
         error: 'Invalid token',
         message: error?.message || 'Authentication token is invalid or expired'
       });
     }
+
 
     // Build user info from Supabase user object
     const userInfo = {
