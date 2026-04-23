@@ -235,19 +235,6 @@ function Sidebar() {
       onConnect: () => setShowLinkedInModal(true),
     },
     {
-      id: "tiktok",
-      name: "TikTok",
-      connected: connectedAccounts.tiktok,
-      icon: (
-        <img
-          src="/icons/tiktok-circle-icon.svg"
-          style={{ width: 20, height: 20 }}
-          alt=""
-        />
-      ),
-      onConnect: () => setShowTikTokModal(true),
-    },
-    {
       id: "youtube",
       name: "YouTube",
       connected: connectedAccounts.youtube,
@@ -342,7 +329,6 @@ function Sidebar() {
         />
       ),
       onConnect: handleConnectReddit,
-      disabled: true,
     },
   ];
 
