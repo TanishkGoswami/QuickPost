@@ -11,8 +11,6 @@ import onboardingRouter from './routes/onboarding.js';
 import jobsRouter from './routes/jobs.js';
 import { initScheduler } from './services/scheduler.js';
 
-// dotenv.config(); // Removed duplicate call below
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -22,23 +20,25 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 
 // Middleware
 const allowedOrigins = [
-  CLIENT_URL, 
-  'http://localhost:5173', 
+  CLIENT_URL,
+  'http://localhost:5173',
   'http://127.0.0.1:5173',
   'https://social.getaipilot.in',
   'https://api.getaipilot.in',
   /https:\/\/.*\.ngrok-free\.dev$/
 ];
 
-app.use(cors({
+const corsOptions = {
   origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'ngrok-skip-browser-warning', 'X-Requested-With']
-}));
+};
 
-// Explicitly handle preflight requests
-app.options('*', cors());
+app.use(cors(corsOptions));
+
+// Explicitly handle preflight requests with the same options
+app.options('*', cors(corsOptions));
 
 // Add ngrok skip header to all responses
 app.use((req, res, next) => {

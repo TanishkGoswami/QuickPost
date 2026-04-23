@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// In dev, use empty base URL so requests go through Vite's proxy (avoids ngrok CORS/interstitial).
+// In production, use the full API URL from the env.
+const API_BASE_URL = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || '');
 
 // Create axios instance with base configuration
 const apiClient = axios.create({
