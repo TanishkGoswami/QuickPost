@@ -74,7 +74,15 @@ We need Nginx to forward requests from `api.getaipilot.in` to port `5000`. We ha
    ```
 2. Copy the contents from `nginx.conf.example` into this file and save it.
    *(Make sure to adjust the `/var/www/quickpost/server/` path inside the file if you placed your project somewhere else).*
-3. Enable the configuration by creating a symlink:
+
+3. **CRITICAL: Increase Upload Limit**
+   Ensure your Nginx configuration includes the `client_max_body_size` directive inside the `server` or `location` block:
+   ```nginx
+   client_max_body_size 100M;
+   ```
+   *Without this, uploads larger than 1MB will fail with a 413 error.*
+
+4. Enable the configuration by creating a symlink:
    ```bash
    ln -s /etc/nginx/sites-available/api.getaipilot.in /etc/nginx/sites-enabled/
    ```
