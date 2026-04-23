@@ -1,5 +1,7 @@
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Share2, Clock, BarChart2, Zap } from 'lucide-react';
+
 
 const FEATURES = [
   {
