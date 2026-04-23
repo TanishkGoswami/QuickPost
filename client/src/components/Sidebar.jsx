@@ -21,7 +21,7 @@ import LinkedInConnectModal from "./LinkedInConnectModal";
 import MastodonConnectModal from "./MastodonConnectModal";
 import TikTokConnectModal from "./TikTokConnectModal";
 
-const API_BASE_URL = '/';
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
 /* ── tiny SVG orbital arc decoration ── */
 const OrbitalArc = () => (
@@ -87,7 +87,8 @@ function Sidebar() {
       alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
       return;
     }
-    window.location.href = `/api/auth/instagram?token=${token}`;
+    const apiUrl = import.meta.env.VITE_API_URL || "";
+    window.location.href = `${apiUrl}/api/auth/instagram?token=${token}`;
   };
   const handleConnectFacebook = () => {
     const token = localStorage.getItem("quickpost_token");
@@ -95,7 +96,8 @@ function Sidebar() {
       alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
       return;
     }
-    window.location.href = `/api/auth/facebook?token=${token}`;
+    const apiUrl = import.meta.env.VITE_API_URL || "";
+    window.location.href = `${apiUrl}/api/auth/facebook?token=${token}`;
   };
   const handleConnectThreads = () => {
     const token = localStorage.getItem("quickpost_token");
@@ -103,7 +105,8 @@ function Sidebar() {
       alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
       return;
     }
-    window.location.href = `/api/auth/threads?token=${token}`;
+    const apiUrl = import.meta.env.VITE_API_URL || "";
+    window.location.href = `${apiUrl}/api/auth/threads?token=${token}`;
   };
   const handleConnectX = () => {
     const token = localStorage.getItem("quickpost_token");
@@ -111,8 +114,9 @@ function Sidebar() {
       alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
       return;
     }
+    const apiUrl = import.meta.env.VITE_API_URL || "";
     setConnectingPlatform("x");
-    window.location.href = `/api/auth/x?token=${token}`;
+    window.location.href = `${apiUrl}/api/auth/x?token=${token}`;
   };
   const handleConnectReddit = () => {
     const token = localStorage.getItem("quickpost_token");
@@ -120,8 +124,9 @@ function Sidebar() {
       alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
       return;
     }
+    const apiUrl = import.meta.env.VITE_API_URL || "";
     setConnectingPlatform("reddit");
-    window.location.href = `/api/auth/reddit?token=${token}`;
+    window.location.href = `${apiUrl}/api/auth/reddit?token=${token}`;
   };
   const handleConnectYouTube = () => {
     const token = localStorage.getItem("quickpost_token");
@@ -129,7 +134,8 @@ function Sidebar() {
       alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
       return;
     }
-    window.location.href = `/api/auth/youtube?token=${token}`;
+    const apiUrl = import.meta.env.VITE_API_URL || "";
+    window.location.href = `${apiUrl}/api/auth/youtube?token=${token}`;
   };
   const handleDisconnect = async (platform) => {
     const confirmed = await confirm(
