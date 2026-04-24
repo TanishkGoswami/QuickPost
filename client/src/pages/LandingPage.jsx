@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Hero, Features, HowItWorks, SocialProof, CallToAction, LandingNav } from '../features/landing';
+import { Hero, Features, HowItWorks, Pricing, SocialProof, CallToAction, LandingNav } from '../features/landing';
 import '../styles/landing.css';
 
 export default function LandingPage() {
@@ -18,6 +18,7 @@ export default function LandingPage() {
       <Hero />
       <Features />
       <HowItWorks />
+      <Pricing />
       <SocialProof />
       <CallToAction />
 
