@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import apiClient from "../utils/apiClient";
 import ComposerModal from "../components/ComposerModal";
+import { Skeleton } from "boneyard-js/react";
 
 // ─── Platform icon helper ────────────────────────────────────────────────────
 function getPlatformIcon(id) {
@@ -29,7 +30,7 @@ function getPlatformIcon(id) {
     instagram: "/icons/ig-instagram-icon.svg",
     x: "/icons/x-social-media-round-icon.svg",
     linkedin: "/icons/linkedin-icon.svg",
-    tiktok: "/icons/tiktok-circle-icon.svg",
+
     youtube: "/icons/youtube-color-icon.svg",
     pinterest: "/icons/pinterest-round-color-icon.svg",
     threads: "/icons/threads-icon.svg",
@@ -602,69 +603,89 @@ export default function ScheduledQueue() {
 
       {/* ── Content ── */}
       <div className="px-8 md:px-16 py-8 mx-auto max-w-[1600px]">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-24">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-4" />
-            <p className="text-gray-400 text-sm">Loading queue...</p>
-          </div>
-        ) : filtered.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-2xl border border-dashed border-gray-200 p-20 text-center shadow-sm"
-          >
-            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CalendarClock className="w-8 h-8 text-blue-300" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">
-              {activeFilter === "all"
-                ? "No scheduled posts yet"
-                : `No ${activeFilter} posts`}
-            </h3>
-            <p className="text-gray-400 text-sm mb-8 max-w-xs mx-auto">
-              Create a post in the Composer and toggle "Schedule Post" to pick a
-              future time.
-            </p>
-            <button
-              onClick={() => setComposerOpen(true)}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors shadow-lg"
-            >
-              <span className="flex items-center gap-2">
-                <Zap className="w-4 h-4" /> Schedule your first post
-              </span>
-            </button>
-          </motion.div>
-        ) : (
-          <div className="space-y-8">
-            <AnimatePresence>
-              {Object.entries(grouped).map(([date, datePosts]) => (
-                <div key={date}>
+        <Skeleton
+          name="scheduled-queue"
+          loading={loading}
+          fixture={
+            <div className="space-y-8">
+              {[1, 2].map((i) => (
+                <div key={i}>
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-widest">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {date}
-                    </div>
+                    <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
                     <div className="flex-1 h-px bg-gray-100" />
-                    <span className="text-[10px] font-bold text-gray-300">
-                      {datePosts.length} post{datePosts.length > 1 ? "s" : ""}
-                    </span>
                   </div>
                   <div className="space-y-3">
-                    {datePosts.map((post) => (
-                      <QueueCard
-                        key={post.id}
-                        post={post}
-                        onCancel={handleCancel}
-                        onRetry={handleRetry}
-                        onRefresh={() => fetchQueue(true)}
+                    {[1, 2, 3].map((j) => (
+                      <div
+                        key={j}
+                        className="h-32 bg-white rounded-2xl border border-gray-100 shadow-sm"
                       />
                     ))}
                   </div>
                 </div>
               ))}
-            </AnimatePresence>
-          </div>
-        )}
+            </div>
+          }
+        >
+          {filtered.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-2xl border border-dashed border-gray-200 p-20 text-center shadow-sm"
+            >
+              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CalendarClock className="w-8 h-8 text-blue-300" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                {activeFilter === "all"
+                  ? "No scheduled posts yet"
+                  : `No ${activeFilter} posts`}
+              </h3>
+              <p className="text-gray-400 text-sm mb-8 max-w-xs mx-auto">
+                Create a post in the Composer and toggle "Schedule Post" to pick
+                a future time.
+              </p>
+              <button
+                onClick={() => setComposerOpen(true)}
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors shadow-lg"
+              >
+                <span className="flex items-center gap-2">
+                  <Zap className="w-4 h-4" /> Schedule your first post
+                </span>
+              </button>
+            </motion.div>
+          ) : (
+            <div className="space-y-8">
+              <AnimatePresence>
+                {Object.entries(grouped).map(([date, datePosts]) => (
+                  <div key={date}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 uppercase tracking-widest">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {date}
+                      </div>
+                      <div className="flex-1 h-px bg-gray-100" />
+                      <span className="text-[10px] font-bold text-gray-300">
+                        {datePosts.length} post{datePosts.length > 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      {datePosts.map((post) => (
+                        <QueueCard
+                          key={post.id}
+                          post={post}
+                          onCancel={handleCancel}
+                          onRetry={handleRetry}
+                          onRefresh={() => fetchQueue(true)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </Skeleton>
       </div>
 
       <ComposerModal

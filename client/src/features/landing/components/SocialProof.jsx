@@ -25,7 +25,7 @@ const PLATFORMS = [
   '/icons/youtube-color-icon.svg',
   '/icons/x-social-media-round-icon.svg',
   '/icons/linkedin-icon.svg',
-  '/icons/tiktok-circle-icon.svg',
+
   '/icons/facebook-round-color-icon.svg',
   '/icons/pinterest-round-color-icon.svg',
   '/icons/threads-icon.svg',

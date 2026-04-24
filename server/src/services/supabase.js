@@ -48,7 +48,7 @@ export async function getTokensForUser(userId) {
       bluesky: null,
       linkedin: null,
       mastodon: null,
-      tiktok: null,
+
       x: null
     };
 
@@ -119,15 +119,7 @@ export async function getTokensForUser(userId) {
         };
       }
 
-      if (row.provider === 'tiktok') {
-        tokens.tiktok = {
-          accessToken: row.access_token,
-          refreshToken: row.refresh_token,
-          openId: row.account_id,
-          tokenExpiry: row.expires_at,
-          username: row.username
-        };
-      }
+
 
       if (row.provider === 'threads') {
         tokens.threads = {
@@ -289,7 +281,7 @@ export async function getConnectedAccounts(userId) {
        // but we shouldn't throw a generic error that hides everything else if we can help it.
     }
 
-    const providers = ['youtube', 'instagram', 'facebook', 'pinterest', 'bluesky', 'linkedin', 'mastodon', 'tiktok', 'threads', 'x', 'reddit'];
+    const providers = ['youtube', 'instagram', 'facebook', 'pinterest', 'bluesky', 'linkedin', 'mastodon', 'threads', 'x', 'reddit'];
     const result = {};
     for (const p of providers) result[p] = { connected: false };
 
@@ -320,7 +312,7 @@ export async function getConnectedAccounts(userId) {
       bluesky: { connected: false },
       linkedin: { connected: false },
       mastodon: { connected: false },
-      tiktok: { connected: false },
+
       threads: { connected: false },
       x: { connected: false },
       reddit: { connected: false }

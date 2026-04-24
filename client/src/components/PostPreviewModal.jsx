@@ -65,15 +65,7 @@ const PLATFORM_CONFIG = {
     headerBg: '#fff',
     textColor: '#000',
   },
-  tiktok: {
-    name: 'TikTok', color: '#000', bg: '#000',
-    icon: '/icons/tiktok-circle-icon.svg',
-    formats: [
-      { id: 'tk_video', label: 'Video',       ratio: '9:16', w: 1080, h: 1920, css: 'aspect-[9/16]', full: true },
-    ],
-    headerBg: '#000',
-    textColor: '#fff',
-  },
+
   pinterest: {
     name: 'Pinterest', color: '#BD081C', bg: '#fff',
     icon: '/icons/pinterest-round-color-icon.svg',
@@ -354,48 +346,7 @@ const XOverlay = ({ format, caption, children, isFull }) => {
   );
 };
 
-const TikTokOverlay = ({ format, caption, children, isFull }) => {
-  return (
-    <div className="absolute inset-0 flex flex-col pointer-events-none text-white p-3 justify-end bg-gradient-to-t from-black/40 to-transparent">
-      <div className="absolute inset-0 z-[-1] bg-black">{children}</div>
-      <div className="flex justify-between items-end gap-2">
-        <div className="flex-1 pr-2">
-          <p className="text-[11px] font-bold mb-1">@username</p>
-          <p className="text-[10px] mb-3">{caption}</p>
-          <div className="flex items-center gap-2">
-            <Music2 className="w-3 h-3" />
-            <span className="text-[9px]">Original sound - username</span>
-          </div>
-        </div>
-        <div className="flex flex-col gap-3 items-center mb-1">
-          <div className="relative mb-2">
-            <div className="w-9 h-9 rounded-full bg-gray-500 border-2 border-white" />
-            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-[#FE2C55] rounded-full p-0.5">
-              <Plus className="w-2.5 h-2.5" />
-            </div>
-          </div>
-          <div className="flex flex-col items-center gap-0.5">
-            <Heart className="w-6 h-6 fill-white/10" />
-            <span className="text-[9px] font-bold">123K</span>
-          </div>
-          <div className="flex flex-col items-center gap-0.5">
-            <MessageCircle className="w-6 h-6 fill-white/10" />
-            <span className="text-[9px] font-bold">1234</span>
-          </div>
-          <div className="flex flex-col items-center gap-0.5">
-            <Bookmark className="w-6 h-6 fill-white/10" />
-            <span className="text-[9px] font-bold">567</span>
-          </div>
-          <div className="flex flex-col items-center gap-0.5">
-            <Share2 className="w-6 h-6 fill-white/10" />
-            <span className="text-[9px] font-bold">89</span>
-          </div>
-          <div className="w-8 h-8 rounded-full border-4 border-gray-800 bg-gray-600 mt-1 animate-spin-slow" />
-        </div>
-      </div>
-    </div>
-  );
-};
+
 
 const FacebookOverlay = ({ format, caption, children, isFull }) => {
   if (isFull) {
@@ -578,7 +529,7 @@ function PreviewContainer({ children, config, format, caption }) {
     if (name === 'youtube') return <YouTubeOverlay {...props} />;
     if (name === 'linkedin') return <LinkedInOverlay {...props} />;
     if (name === 'x (twitter)') return <XOverlay {...props} />;
-    if (name === 'tiktok') return <TikTokOverlay {...props} />;
+
     if (name === 'facebook') return <FacebookOverlay {...props} />;
     if (name === 'threads') return <ThreadsOverlay {...props} />;
     if (name === 'pinterest') return <PinterestOverlay {...props} />;

@@ -28,6 +28,16 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            gsap: ['gsap'],
+            framer: ['framer-motion'],
+          },
+        },
+      },
+    },
   }
 })
 

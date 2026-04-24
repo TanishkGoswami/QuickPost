@@ -19,7 +19,6 @@ import BlueskyConnectModal from "./BlueskyConnectModal";
 import PinterestConnectModal from "./PinterestConnectModal";
 import LinkedInConnectModal from "./LinkedInConnectModal";
 import MastodonConnectModal from "./MastodonConnectModal";
-import TikTokConnectModal from "./TikTokConnectModal";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
@@ -57,7 +56,6 @@ function Sidebar() {
   const [showPinterestModal, setShowPinterestModal] = useState(false);
   const [showLinkedInModal, setShowLinkedInModal] = useState(false);
   const [showMastodonModal, setShowMastodonModal] = useState(false);
-  const [showTikTokModal, setShowTikTokModal] = useState(false);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
   const [connectingPlatform, setConnectingPlatform] = useState(null);
   const [connectedOpen, setConnectedOpen] = useState(true);
@@ -84,7 +82,9 @@ function Sidebar() {
     setShowBusinessSetupModal(false);
     const token = localStorage.getItem("quickpost_token");
     if (!token) {
-      alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
+      alert("Error", "Authentication token missing. Please log in again.", {
+        intent: "danger",
+      });
       return;
     }
     const apiUrl = import.meta.env.VITE_API_URL || "";
@@ -93,7 +93,9 @@ function Sidebar() {
   const handleConnectFacebook = () => {
     const token = localStorage.getItem("quickpost_token");
     if (!token) {
-      alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
+      alert("Error", "Authentication token missing. Please log in again.", {
+        intent: "danger",
+      });
       return;
     }
     const apiUrl = import.meta.env.VITE_API_URL || "";
@@ -102,7 +104,9 @@ function Sidebar() {
   const handleConnectThreads = () => {
     const token = localStorage.getItem("quickpost_token");
     if (!token) {
-      alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
+      alert("Error", "Authentication token missing. Please log in again.", {
+        intent: "danger",
+      });
       return;
     }
     const apiUrl = import.meta.env.VITE_API_URL || "";
@@ -111,7 +115,9 @@ function Sidebar() {
   const handleConnectX = () => {
     const token = localStorage.getItem("quickpost_token");
     if (!token) {
-      alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
+      alert("Error", "Authentication token missing. Please log in again.", {
+        intent: "danger",
+      });
       return;
     }
     const apiUrl = import.meta.env.VITE_API_URL || "";
@@ -121,7 +127,9 @@ function Sidebar() {
   const handleConnectReddit = () => {
     const token = localStorage.getItem("quickpost_token");
     if (!token) {
-      alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
+      alert("Error", "Authentication token missing. Please log in again.", {
+        intent: "danger",
+      });
       return;
     }
     const apiUrl = import.meta.env.VITE_API_URL || "";
@@ -131,7 +139,9 @@ function Sidebar() {
   const handleConnectYouTube = () => {
     const token = localStorage.getItem("quickpost_token");
     if (!token) {
-      alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
+      alert("Error", "Authentication token missing. Please log in again.", {
+        intent: "danger",
+      });
       return;
     }
     const apiUrl = import.meta.env.VITE_API_URL || "";
@@ -151,16 +161,13 @@ function Sidebar() {
     setDisconnectingPlatform(platform);
     try {
       const token = localStorage.getItem("quickpost_token");
-      const response = await fetch(
-        `/api/auth/disconnect/${platform}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+      const response = await fetch(`/api/auth/disconnect/${platform}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-      );
+      });
       const data = await response.json();
       if (data.success) {
         await refreshAccounts();
@@ -219,7 +226,11 @@ function Sidebar() {
           alt=""
         />
       ),
-      onConnect: handleConnectX,
+      onConnect: () =>
+        alert("Coming Soon", "X integration coming soon!", {
+          intent: "warning",
+        }),
+      disabled: true,
     },
     {
       id: "linkedin",
@@ -258,7 +269,11 @@ function Sidebar() {
           alt=""
         />
       ),
-      onConnect: () => setShowPinterestModal(true),
+      onConnect: () =>
+        alert("Coming Soon", "Pinterest integration coming soon!", {
+          intent: "warning",
+        }),
+      disabled: true,
     },
     {
       id: "threads",
@@ -284,7 +299,11 @@ function Sidebar() {
           alt=""
         />
       ),
-      onConnect: () => setShowMastodonModal(true),
+      onConnect: () =>
+        alert("Coming Soon", "Mastodon integration coming soon!", {
+          intent: "warning",
+        }),
+      disabled: true,
     },
     {
       id: "bluesky",
@@ -328,7 +347,11 @@ function Sidebar() {
           alt=""
         />
       ),
-      onConnect: handleConnectReddit,
+      onConnect: () =>
+        alert("Coming Soon", "Reddit integration coming soon!", {
+          intent: "warning",
+        }),
+      disabled: true,
     },
   ];
 
@@ -989,11 +1012,7 @@ function Sidebar() {
             onClose={() => setShowMastodonModal(false)}
             onSuccess={refreshAccounts}
           />
-          <TikTokConnectModal
-            isOpen={showTikTokModal}
-            onClose={() => setShowTikTokModal(false)}
-            onSuccess={refreshAccounts}
-          />
+
         </>,
         document.body,
       )}

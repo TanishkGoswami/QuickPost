@@ -13,15 +13,16 @@ import logo from '/logo.png';
 const PLATFORMS = [
   { id: 'instagram', label: 'Instagram',      icon: '/icons/ig-instagram-icon.svg' },
   { id: 'facebook',  label: 'Facebook',        icon: '/icons/facebook-round-color-icon.svg' },
-  { id: 'x',         label: 'X / Twitter',     icon: '/icons/x-social-media-round-icon.svg' },
+  { id: 'x',         label: 'X / Twitter',     icon: '/icons/x-social-media-round-icon.svg', comingSoon: true },
   { id: 'linkedin',  label: 'LinkedIn',        icon: '/icons/linkedin-icon.svg' },
-  { id: 'tiktok',    label: 'TikTok',          icon: '/icons/tiktok-circle-icon.svg' },
+
   { id: 'youtube',   label: 'YouTube',         icon: '/icons/youtube-color-icon.svg' },
-  { id: 'pinterest', label: 'Pinterest',       icon: '/icons/pinterest-round-color-icon.svg' },
+  { id: 'pinterest', label: 'Pinterest',       icon: '/icons/pinterest-round-color-icon.svg', comingSoon: true },
   { id: 'threads',   label: 'Threads',         icon: '/icons/threads-icon.svg' },
   { id: 'bluesky',   label: 'Bluesky',         icon: '/icons/bluesky-circle-color-icon.svg' },
-  { id: 'mastodon',  label: 'Mastodon',        icon: '/icons/mastodon-round-icon.svg' },
-  { id: 'google',    label: 'Google Business', icon: '/icons/google-icon.svg' },
+  { id: 'mastodon',  label: 'Mastodon',        icon: '/icons/mastodon-round-icon.svg', comingSoon: true },
+  { id: 'google',    label: 'Google Business', icon: '/icons/google-icon.svg', comingSoon: true },
+  { id: 'reddit',    label: 'Reddit',          icon: '/icons/reddit-icon.svg', comingSoon: true },
 ];
 
 const TOOLS = [
@@ -202,7 +203,7 @@ export default function Onboarding() {
           { src: '/icons/ig-instagram-icon.svg',   style: { top: '15%', left: '8%',   opacity: 0.12, width: 44 } },
           { src: '/icons/youtube-color-icon.svg',  style: { top: '60%', left: '5%',   opacity: 0.12, width: 40 } },
           { src: '/icons/linkedin-icon.svg',       style: { top: '30%', left: '18%',  opacity: 0.10, width: 32 } },
-          { src: '/icons/tiktok-circle-icon.svg',  style: { bottom: '20%', left: '14%', opacity: 0.10, width: 34 } },
+
           { src: '/icons/bluesky-circle-color-icon.svg', style: { top: '20%', right: '8%', opacity: 0.12, width: 36 } },
           { src: '/icons/pinterest-round-color-icon.svg', style: { top: '55%', right: '5%', opacity: 0.12, width: 40 } },
         ].map((icon, i) => (
@@ -287,20 +288,27 @@ export default function Onboarding() {
             return (
               <button
                 key={p.id}
-                onClick={() => toggleChannel(p.id)}
+                onClick={() => !p.comingSoon && toggleChannel(p.id)}
+                disabled={p.comingSoon}
                 style={{
                   position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
                   padding: '16px 8px', borderRadius: 'var(--r-hero)',
                   border: `1.5px solid ${sel ? 'var(--ink)' : 'rgba(20,20,19,0.10)'}`,
                   background: sel ? 'rgba(20,20,19,0.04)' : 'var(--canvas-lifted)',
-                  cursor: 'pointer', transition: 'all 0.15s',
+                  cursor: p.comingSoon ? 'not-allowed' : 'pointer', transition: 'all 0.15s',
+                  opacity: p.comingSoon ? 0.6 : 1,
                 }}
-                onMouseEnter={e => { if (!sel) e.currentTarget.style.borderColor = 'rgba(20,20,19,0.25)'; }}
-                onMouseLeave={e => { if (!sel) e.currentTarget.style.borderColor = 'rgba(20,20,19,0.10)'; }}
+                onMouseEnter={e => { if (!sel && !p.comingSoon) e.currentTarget.style.borderColor = 'rgba(20,20,19,0.25)'; }}
+                onMouseLeave={e => { if (!sel && !p.comingSoon) e.currentTarget.style.borderColor = 'rgba(20,20,19,0.10)'; }}
               >
                 {sel && (
                   <div style={{ position: 'absolute', top: 8, right: 8, width: 16, height: 16, background: 'var(--ink)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Check size={9} color="white" strokeWidth={3} />
+                  </div>
+                )}
+                {p.comingSoon && (
+                  <div style={{ position: 'absolute', top: 6, right: 6, fontSize: 8, fontWeight: 800, background: 'var(--arc)', color: 'white', padding: '1px 4px', borderRadius: 4, textTransform: 'uppercase' }}>
+                    Soon
                   </div>
                 )}
                 <img src={p.icon} alt={p.label} style={{ width: 32, height: 32, objectFit: 'contain' }} />

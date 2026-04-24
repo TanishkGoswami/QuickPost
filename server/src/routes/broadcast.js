@@ -12,7 +12,7 @@ import { postToFacebook, postVideoToFacebook } from "../services/facebook.js";
 import { postToBluesky } from "../services/bluesky.js";
 import { postToLinkedIn } from "../services/linkedin.js";
 import mastodon from "../services/mastodon.js";
-import tiktok from "../services/tiktok.js";
+
 import { postToThreads } from "../services/threads.js";
 import { broadcastToX } from "../services/x.js";
 import { postToReddit } from "../services/reddit.js";
@@ -498,14 +498,7 @@ async function processBroadcastJob({
   }
 
   // TikTok, Mastodon, Reddit, Threads...
-  if (channels.includes("tiktok") && tokens.tiktok && primaryVideoPath) {
-    const resolvedCaption = resolveMentions(caption, 'tiktok', tokens.tiktok);
-    platformPromises.push(
-      tiktok
-        .publishVideo(tokens.tiktok.accessToken, primaryVideoPath, resolvedCaption)
-        .then((r) => onChannelComplete("TikTok", r)),
-    );
-  }
+
   if (channels.includes("mastodon") && tokens.mastodon) {
     const resolvedCaption = resolveMentions(caption, 'mastodon', tokens.mastodon);
     platformPromises.push(
