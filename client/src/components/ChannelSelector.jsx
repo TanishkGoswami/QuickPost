@@ -67,8 +67,8 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect }) {
   const moreRef = useRef(null);
 
   // Split platforms
-  const connectedPlatforms = PLATFORMS.filter(p => connectedAccounts?.[p.id]);
-  const unconnectedPlatforms = PLATFORMS.filter(p => !connectedAccounts?.[p.id]);
+  const connectedPlatforms = PLATFORMS.filter(p => connectedAccounts?.[p.id]?.connected);
+  const unconnectedPlatforms = PLATFORMS.filter(p => !connectedAccounts?.[p.id]?.connected);
   const visibleUnconnected = unconnectedPlatforms.slice(0, 3);
   const hiddenUnconnected = unconnectedPlatforms.slice(3);
 

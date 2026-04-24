@@ -64,7 +64,7 @@ function StatusDot({ color }) {
 }
 
 /* Single job card */
-function JobCard({ job, onRetry, onDismiss }) {
+const JobCard = React.forwardRef(function JobCard({ job, onRetry, onDismiss }, ref) {
   const { progress, status, step, error, meta } = job;
   const p = phase(progress, status);
   const isActive = status === 'pending' || status === 'processing';
@@ -87,6 +87,7 @@ function JobCard({ job, onRetry, onDismiss }) {
 
   return (
     <motion.div
+      ref={ref}
       layout
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
@@ -290,7 +291,7 @@ function JobCard({ job, onRetry, onDismiss }) {
       </div>
     </motion.div>
   );
-}
+});
 
 /* ── Main Panel ─────────────────────────────────────────────────────────── */
 export default function UploadManagerPanel() {
