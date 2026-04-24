@@ -7,7 +7,6 @@ import { postToFacebook, postVideoToFacebook } from './facebook.js';
 import { postToBluesky } from './bluesky.js';
 import { postToLinkedIn } from './linkedin.js';
 import mastodon from './mastodon.js';
-import tiktok from './tiktok.js';
 import { postToThreads } from './threads.js';
 import { broadcastToX } from './x.js';
 import { postToReddit } from './reddit.js';
@@ -134,17 +133,7 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
       }
     }
     
-    // TikTok
-    if (channels.includes('tiktok') && tokens.tiktok) {
-      const resolvedCaption = resolveMentions(caption, 'tiktok', tokens.tiktok);
-      const primaryVideoPath = filePaths.find(p => p.includes('video-'));
-      if (primaryVideoPath && fs.existsSync(primaryVideoPath)) {
-        platformPromises.push(
-          tiktok.publishVideo(tokens.tiktok.accessToken, primaryVideoPath, resolvedCaption)
-            .then(result => ({ platform: 'tiktok', result }))
-        );
-      }
-    }
+
 
     // Mastodon
     if (channels.includes('mastodon') && tokens.mastodon) {

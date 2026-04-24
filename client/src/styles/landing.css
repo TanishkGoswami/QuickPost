@@ -54,6 +54,20 @@
   border-color: rgba(20,20,19,0.16);
   transform: translateY(-5px) scale(1.08);
   box-shadow: var(--shadow-card);
+  will-change: transform;
+}
+
+/* Infinite marquee track */
+.marquee-outer {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  gap: 16px;
+  align-items: center;
 }
 
 /* ── Stat card ── */
@@ -131,6 +145,20 @@
   box-shadow: var(--shadow-card);
   transform: translateY(-6px);
   border-color: rgba(20,20,19,0.12);
+  will-change: transform;
+}
+
+/* Connector SVG line between HowItWorks steps (desktop only) */
+.step-connector-svg {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+@media (max-width: 768px) {
+  .step-connector-svg { display: none; }
 }
 
 /* ── Step circle ── */

@@ -76,10 +76,7 @@ export async function saveBroadcast(
       mastodon_url: results.mastodon?.url || null,
       mastodon_error: results.mastodon?.error || null,
 
-      // TikTok results
-      tiktok_success: results.tiktok?.success || false,
-      tiktok_publish_id: results.tiktok?.publishId || null,
-      tiktok_error: results.tiktok?.error || null,
+
 
       // Bluesky results
       bluesky_success: results.bluesky?.success || false,
@@ -181,10 +178,7 @@ export async function updateBroadcastResults(
       mastodon_url: results.mastodon?.url || null,
       mastodon_error: results.mastodon?.error || null,
 
-      // TikTok results
-      tiktok_success: results.tiktok?.success || false,
-      tiktok_publish_id: results.tiktok?.publishId || null,
-      tiktok_error: results.tiktok?.error || null,
+
 
       // Bluesky results
       bluesky_success: results.bluesky?.success || false,

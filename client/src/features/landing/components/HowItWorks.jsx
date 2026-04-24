@@ -27,8 +27,82 @@ const STEPS = [
 ];
 
 export default function HowItWorks() {
+  const sectionRef = useRef(null);
+  const headerRef = useRef(null);
+  const stepsRef = useRef([]);
+  const numsRef = useRef([]);
+  const lineRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      // Header entrance
+      gsap.from(headerRef.current, {
+        opacity: 0,
+        y: 24,
+        duration: 0.6,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 80%',
+          toggleActions: 'play none none none',
+        },
+      });
+
+      // Step cards stagger
+      gsap.from(stepsRef.current.filter(Boolean), {
+        opacity: 0,
+        x: -20,
+        stagger: 0.15,
+        duration: 0.6,
+        ease: 'back.out(1.2)',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 70%',
+          toggleActions: 'play none none none',
+        },
+      });
+
+      // Watermark step numbers
+      gsap.from(numsRef.current.filter(Boolean), {
+        scale: 0.7,
+        opacity: 0,
+        stagger: 0.2,
+        duration: 0.5,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 70%',
+          toggleActions: 'play none none none',
+        },
+      });
+
+      // Connector line draw-on-scroll
+      if (lineRef.current) {
+        const len = lineRef.current.getTotalLength?.() ?? 600;
+        gsap.set(lineRef.current, { strokeDasharray: len, strokeDashoffset: len });
+        gsap.to(lineRef.current, {
+          strokeDashoffset: 0,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: 'top 60%',
+            end: 'bottom 60%',
+            scrub: 1,
+          },
+        });
+      }
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <section id="how-it-works" className="landing-section" style={{ padding: 'clamp(64px, 10vh, 104px) 24px', background: 'var(--canvas-lifted)' }}>
+    <section
+      ref={sectionRef}
+      id="how-it-works"
+      className="landing-section"
+      style={{ padding: 'clamp(60px, 10vh, 100px) 24px', background: 'var(--canvas-lifted)' }}
+    >
       <div className="landing-container" style={{ maxWidth: 1280, margin: '0 auto' }}>
 
         {/* Header */}

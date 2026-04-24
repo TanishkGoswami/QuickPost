@@ -1,6 +1,6 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useLayoutEffect, useRef } from 'react';
 import { Share2, Clock, BarChart2, Zap } from 'lucide-react';
+import { gsap } from '../../../lib/gsap';
 
 const FEATURES = [
   {
@@ -42,20 +42,53 @@ const FEATURES = [
 ];
 
 export default function Features() {
-  return (
-    <section id="features" className="landing-section" style={{ padding: 'clamp(64px, 10vh, 104px) 24px', background: 'var(--canvas)' }}>
-      <div className="landing-container" style={{ maxWidth: 1280, margin: '0 auto' }}>
+  const sectionRef = useRef(null);
+  const headerRef = useRef(null);
+  const cardsRef = useRef([]);
 
+  useLayoutEffect(() => {
+    const ctx = gsap.context(() => {
+      gsap.from(headerRef.current, {
+        opacity: 0,
+        y: 24,
+        duration: 0.6,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 80%',
+          toggleActions: 'play none none none',
+        },
+      });
+
+      gsap.from(cardsRef.current.filter(Boolean), {
+        opacity: 0,
+        y: 40,
+        stagger: { amount: 0.45 },
+        duration: 0.65,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 72%',
+          toggleActions: 'play none none none',
+        },
+      });
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
+  return (
+    <section
+      ref={sectionRef}
+      id="features"
+      className="landing-section"
+      style={{ padding: 'clamp(60px, 10vh, 100px) 24px', background: 'var(--canvas)' }}
+    >
+      <div className="landing-container" style={{ maxWidth: '1280px', margin: '0 auto' }}>
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          style={{ textAlign: 'center', marginBottom: 'clamp(44px, 6vw, 60px)' }}
-        >
-          <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: 16 }}>Features</div>
-          <h2 style={{ fontSize: 'clamp(28px, 4.5vw, 54px)', fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.035em', margin: '0 0 14px', lineHeight: 1.05 }}>
+        <div ref={headerRef} style={{ textAlign: 'center', marginBottom: 'clamp(40px, 6vw, 56px)' }}>
+          <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: '16px' }}>Features</div>
+          <h2 style={{ fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.02em', margin: '0 0 14px', lineHeight: 1.1 }}>
             Built for serious creators
           </h2>
           <p style={{ fontSize: 'clamp(15px, 2vw, 17px)', fontWeight: 450, color: 'var(--slate)', maxWidth: 460, margin: '0 auto', lineHeight: 1.55 }}>
@@ -66,7 +99,7 @@ export default function Features() {
         {/* Feature grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'clamp(14px, 2.5vw, 20px)' }}>
           {FEATURES.map((f, i) => (
-            <motion.div
+            <div
               key={f.title}
               initial={{ opacity: 0, y: 28 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -120,7 +153,7 @@ export default function Features() {
               <p style={{ fontSize: 14, fontWeight: 450, color: 'var(--slate)', lineHeight: 1.65, margin: 0, position: 'relative' }}>
                 {f.desc}
               </p>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>

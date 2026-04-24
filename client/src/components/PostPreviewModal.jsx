@@ -65,15 +65,7 @@ const PLATFORM_CONFIG = {
     headerBg: '#fff',
     textColor: '#000',
   },
-  tiktok: {
-    name: 'TikTok', color: '#000', bg: '#000',
-    icon: '/icons/tiktok-circle-icon.svg',
-    formats: [
-      { id: 'tk_video', label: 'Video',       ratio: '9:16', w: 1080, h: 1920, css: 'aspect-[9/16]', full: true },
-    ],
-    headerBg: '#000',
-    textColor: '#fff',
-  },
+
   pinterest: {
     name: 'Pinterest', color: '#BD081C', bg: '#fff',
     icon: '/icons/pinterest-round-color-icon.svg',
@@ -90,6 +82,35 @@ const PLATFORM_CONFIG = {
     formats: [
       { id: 'th_feed',  label: 'Feed Post',   ratio: '1:1',  w: 1080, h: 1080, css: 'aspect-square'  },
       { id: 'th_port',  label: 'Portrait',    ratio: '4:5',  w: 1080, h: 1350, css: 'aspect-[4/5]'   },
+    ],
+    headerBg: '#fff',
+    textColor: '#000',
+  },
+  bluesky: {
+    name: 'Bluesky', color: '#0085FF', bg: '#fff',
+    icon: '/icons/bluesky-circle-color-icon.svg',
+    formats: [
+      { id: 'bsky_post', label: 'Post', ratio: '16:9', w: 1200, h: 675, css: 'aspect-video' },
+      { id: 'bsky_sq',   label: 'Square', ratio: '1:1',  w: 1080, h: 1080, css: 'aspect-square' },
+    ],
+    headerBg: '#fff',
+    textColor: '#000',
+  },
+  mastodon: {
+    name: 'Mastodon', color: '#6364FF', bg: '#191b22',
+    icon: '/icons/mastodon-round-icon.svg',
+    formats: [
+      { id: 'masto_post', label: 'Post', ratio: '16:9', w: 1200, h: 675, css: 'aspect-video' },
+      { id: 'masto_sq',   label: 'Square', ratio: '1:1',  w: 1080, h: 1080, css: 'aspect-square' },
+    ],
+    headerBg: '#191b22',
+    textColor: '#fff',
+  },
+  reddit: {
+    name: 'Reddit', color: '#FF4500', bg: '#fff',
+    icon: '/icons/reddit-icon.svg',
+    formats: [
+      { id: 'rd_post', label: 'Post', ratio: '1:1', w: 1080, h: 1080, css: 'aspect-square' },
     ],
     headerBg: '#fff',
     textColor: '#000',
@@ -325,48 +346,7 @@ const XOverlay = ({ format, caption, children, isFull }) => {
   );
 };
 
-const TikTokOverlay = ({ format, caption, children, isFull }) => {
-  return (
-    <div className="absolute inset-0 flex flex-col pointer-events-none text-white p-3 justify-end bg-gradient-to-t from-black/40 to-transparent">
-      <div className="absolute inset-0 z-[-1] bg-black">{children}</div>
-      <div className="flex justify-between items-end gap-2">
-        <div className="flex-1 pr-2">
-          <p className="text-[11px] font-bold mb-1">@username</p>
-          <p className="text-[10px] mb-3">{caption}</p>
-          <div className="flex items-center gap-2">
-            <Music2 className="w-3 h-3" />
-            <span className="text-[9px]">Original sound - username</span>
-          </div>
-        </div>
-        <div className="flex flex-col gap-3 items-center mb-1">
-          <div className="relative mb-2">
-            <div className="w-9 h-9 rounded-full bg-gray-500 border-2 border-white" />
-            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-[#FE2C55] rounded-full p-0.5">
-              <Plus className="w-2.5 h-2.5" />
-            </div>
-          </div>
-          <div className="flex flex-col items-center gap-0.5">
-            <Heart className="w-6 h-6 fill-white/10" />
-            <span className="text-[9px] font-bold">123K</span>
-          </div>
-          <div className="flex flex-col items-center gap-0.5">
-            <MessageCircle className="w-6 h-6 fill-white/10" />
-            <span className="text-[9px] font-bold">1234</span>
-          </div>
-          <div className="flex flex-col items-center gap-0.5">
-            <Bookmark className="w-6 h-6 fill-white/10" />
-            <span className="text-[9px] font-bold">567</span>
-          </div>
-          <div className="flex flex-col items-center gap-0.5">
-            <Share2 className="w-6 h-6 fill-white/10" />
-            <span className="text-[9px] font-bold">89</span>
-          </div>
-          <div className="w-8 h-8 rounded-full border-4 border-gray-800 bg-gray-600 mt-1 animate-spin-slow" />
-        </div>
-      </div>
-    </div>
-  );
-};
+
 
 const FacebookOverlay = ({ format, caption, children, isFull }) => {
   if (isFull) {
@@ -468,6 +448,49 @@ const ThreadsOverlay = ({ format, caption, children, isFull }) => {
   );
 };
 
+const BlueskyOverlay = ({ format, caption, children, isFull }) => {
+  return (
+    <div className="flex flex-col bg-[#161e27] p-4 pointer-events-none text-white">
+      <div className="flex gap-3">
+        <div className="w-10 h-10 rounded-full bg-gray-600 flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-0.5">
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="text-[14px] font-bold text-white truncate">Your Name</span>
+              <span className="text-[13px] text-gray-400 truncate">@handle.bsky.social</span>
+              <span className="text-gray-500 mx-1">·</span>
+              <span className="text-[13px] text-gray-500">1h</span>
+            </div>
+          </div>
+          <p className="text-[14px] text-white leading-normal mb-3 whitespace-pre-wrap">{caption}</p>
+          <div className={`relative overflow-hidden rounded-xl border border-white/10 ${format.css} w-full mb-3`}>
+            {children}
+          </div>
+          <div className="flex items-center justify-between text-gray-400 max-w-[300px]">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              <span className="text-[11px]">12</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Repeat className="w-4 h-4" />
+              <span className="text-[11px]">34</span>
+            </div>
+            <div className="flex items-center gap-2 text-pink-500/80">
+              <Heart className="w-4 h-4" />
+              <span className="text-[11px]">56</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Bookmark className="w-4 h-4" />
+            </div>
+            <Share2 className="w-4 h-4" />
+            <MoreHorizontal className="w-4 h-4" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const PinterestOverlay = ({ format, caption, children, isFull }) => {
   return (
     <div className="flex flex-col bg-white pointer-events-none">
@@ -506,10 +529,11 @@ function PreviewContainer({ children, config, format, caption }) {
     if (name === 'youtube') return <YouTubeOverlay {...props} />;
     if (name === 'linkedin') return <LinkedInOverlay {...props} />;
     if (name === 'x (twitter)') return <XOverlay {...props} />;
-    if (name === 'tiktok') return <TikTokOverlay {...props} />;
+
     if (name === 'facebook') return <FacebookOverlay {...props} />;
     if (name === 'threads') return <ThreadsOverlay {...props} />;
     if (name === 'pinterest') return <PinterestOverlay {...props} />;
+    if (name === 'bluesky') return <BlueskyOverlay {...props} />;
     return children;
   };
 

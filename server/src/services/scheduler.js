@@ -125,7 +125,7 @@ async function processOneBroadcast(post) {
   const existingFilePaths = filePaths.filter(p => p && fs.existsSync(p));
   const missingFiles = filePaths.filter(p => p && !fs.existsSync(p));
   if (missingFiles.length > 0) {
-    log('warn', id, `⚠️ ${missingFiles.length} local file(s) missing (may affect YouTube/TikTok/Bluesky)`, { missingFiles });
+    log('warn', id, `⚠️ ${missingFiles.length} local file(s) missing (may affect YouTube/Bluesky)`, { missingFiles });
   }
 
   try {
