@@ -85,6 +85,35 @@ const PLATFORM_CONFIG = {
     ],
     headerBg: '#fff',
     textColor: '#000',
+  },
+  bluesky: {
+    name: 'Bluesky', color: '#0085FF', bg: '#fff',
+    icon: '/icons/bluesky-circle-color-icon.svg',
+    formats: [
+      { id: 'bsky_post', label: 'Post', ratio: '16:9', w: 1200, h: 675, css: 'aspect-video' },
+      { id: 'bsky_sq',   label: 'Square', ratio: '1:1',  w: 1080, h: 1080, css: 'aspect-square' },
+    ],
+    headerBg: '#fff',
+    textColor: '#000',
+  },
+  mastodon: {
+    name: 'Mastodon', color: '#6364FF', bg: '#191b22',
+    icon: '/icons/mastodon-round-icon.svg',
+    formats: [
+      { id: 'masto_post', label: 'Post', ratio: '16:9', w: 1200, h: 675, css: 'aspect-video' },
+      { id: 'masto_sq',   label: 'Square', ratio: '1:1',  w: 1080, h: 1080, css: 'aspect-square' },
+    ],
+    headerBg: '#191b22',
+    textColor: '#fff',
+  },
+  reddit: {
+    name: 'Reddit', color: '#FF4500', bg: '#fff',
+    icon: '/icons/reddit-icon.svg',
+    formats: [
+      { id: 'rd_post', label: 'Post', ratio: '1:1', w: 1080, h: 1080, css: 'aspect-square' },
+    ],
+    headerBg: '#fff',
+    textColor: '#000',
   }
 };
 
@@ -419,6 +448,49 @@ const ThreadsOverlay = ({ format, caption, children, isFull }) => {
   );
 };
 
+const BlueskyOverlay = ({ format, caption, children, isFull }) => {
+  return (
+    <div className="flex flex-col bg-[#161e27] p-4 pointer-events-none text-white">
+      <div className="flex gap-3">
+        <div className="w-10 h-10 rounded-full bg-gray-600 flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-0.5">
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="text-[14px] font-bold text-white truncate">Your Name</span>
+              <span className="text-[13px] text-gray-400 truncate">@handle.bsky.social</span>
+              <span className="text-gray-500 mx-1">·</span>
+              <span className="text-[13px] text-gray-500">1h</span>
+            </div>
+          </div>
+          <p className="text-[14px] text-white leading-normal mb-3 whitespace-pre-wrap">{caption}</p>
+          <div className={`relative overflow-hidden rounded-xl border border-white/10 ${format.css} w-full mb-3`}>
+            {children}
+          </div>
+          <div className="flex items-center justify-between text-gray-400 max-w-[300px]">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              <span className="text-[11px]">12</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Repeat className="w-4 h-4" />
+              <span className="text-[11px]">34</span>
+            </div>
+            <div className="flex items-center gap-2 text-pink-500/80">
+              <Heart className="w-4 h-4" />
+              <span className="text-[11px]">56</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Bookmark className="w-4 h-4" />
+            </div>
+            <Share2 className="w-4 h-4" />
+            <MoreHorizontal className="w-4 h-4" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const PinterestOverlay = ({ format, caption, children, isFull }) => {
   return (
     <div className="flex flex-col bg-white pointer-events-none">
@@ -461,6 +533,7 @@ function PreviewContainer({ children, config, format, caption }) {
     if (name === 'facebook') return <FacebookOverlay {...props} />;
     if (name === 'threads') return <ThreadsOverlay {...props} />;
     if (name === 'pinterest') return <PinterestOverlay {...props} />;
+    if (name === 'bluesky') return <BlueskyOverlay {...props} />;
     return children;
   };
 
