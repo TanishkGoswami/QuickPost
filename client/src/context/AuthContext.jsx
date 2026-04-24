@@ -15,7 +15,6 @@ export function AuthProvider({ children }) {
     bluesky: false,
     linkedin: false,
     mastodon: false,
-    tiktok: false,
     threads: false,
     x: false,
     reddit: false
@@ -35,7 +34,6 @@ export function AuthProvider({ children }) {
           bluesky: accounts.bluesky?.connected || false,
           linkedin: accounts.linkedin?.connected || false,
           mastodon: accounts.mastodon?.connected || false,
-          tiktok: accounts.tiktok?.connected || false,
           threads: accounts.threads?.connected || false,
           x: accounts.x?.connected || false,
           reddit: accounts.reddit?.connected || false,
@@ -79,7 +77,7 @@ export function AuthProvider({ children }) {
         localStorage.removeItem('quickpost_token');
         setConnectedAccounts({ 
           instagram: false, youtube: false, pinterest: false, facebook: false, 
-          bluesky: false, linkedin: false, mastodon: false, tiktok: false, threads: false, x: false, reddit: false
+          bluesky: false, linkedin: false, mastodon: false, threads: false, x: false, reddit: false
         });
       }
       setLoading(false);

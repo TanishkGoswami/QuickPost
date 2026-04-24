@@ -73,15 +73,6 @@ const PLATFORM_META = {
     imgAspect: "aspect-video",
     actions: ["👍", "👎", "↗️ Share", "⬇️ Save"],
   },
-  tiktok: {
-    label: "TikTok",
-    icon: "/icons/tiktok-circle-icon.svg",
-    headerBg: "#000",
-    bodyBg: "#000",
-    textColor: "#fff",
-    imgAspect: "aspect-[9/16]",
-    actions: ["❤️", "💬", "🔖", "↗️"],
-  },
   threads: {
     label: "Threads",
     icon: "/icons/threads-icon.svg",
@@ -250,9 +241,7 @@ const PLATFORM_LAYOUT_PRESETS = {
   pinterest: [
     { id: "pin-standard", ratio: "2:3", title: "Pin", subtitle: "1000x1500" },
   ],
-  tiktok: [
-    { id: "tt-video", ratio: "9:16", title: "Video", subtitle: "1080x1920" },
-  ],
+
   threads: [
     { id: "threads-post", ratio: "1:1", title: "Post", subtitle: "1080x1080" },
     {
@@ -285,7 +274,6 @@ const PLATFORM_SHORT_LABELS = {
   linkedin: "LinkedIn",
   x: "X",
   threads: "Threads",
-  tiktok: "TikTok",
   bluesky: "Bluesky",
   mastodon: "Mastodon",
 };
@@ -294,7 +282,7 @@ const PLATFORM_POST_TYPES = {
   instagram: ["post", "story", "reel"],
   facebook: ["post", "story", "reel"],
   youtube: ["post", "reel"],
-  tiktok: ["post", "reel"],
+
   x: ["post"],
   linkedin: ["post"],
   threads: ["post"],
@@ -985,7 +973,7 @@ function PlatformPreviewPanel({
                       className="text-[11px] font-bold truncate"
                       style={{
                         color:
-                          activeId === "tiktok" || activeId === "mastodon"
+                          activeId === "mastodon"
                             ? "#fff"
                             : "#111",
                       }}
@@ -996,7 +984,7 @@ function PlatformPreviewPanel({
                       className="text-[9px]"
                       style={{
                         color:
-                          activeId === "tiktok" || activeId === "mastodon"
+                          activeId === "mastodon"
                             ? "#aaa"
                             : "#888",
                       }}
@@ -1004,13 +992,8 @@ function PlatformPreviewPanel({
                       Just now
                     </p>
                   </div>
-                  {activeId === "tiktok" && (
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border border-white text-white">
-                      Follow
-                    </span>
-                  )}
                 </div>
-                {!["pinterest", "tiktok"].includes(activeId) && caption && (
+                {!["pinterest"].includes(activeId) && caption && (
                   <p
                     className="px-3 pb-2 text-[11px] leading-relaxed"
                     style={{ color: activeId === "mastodon" ? "#eee" : "#222" }}
@@ -1020,13 +1003,6 @@ function PlatformPreviewPanel({
                 )}
                 <div className="relative">
                   {renderPreviewMediaContent()}
-                  {activeId === "tiktok" && caption && (
-                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/70 to-transparent">
-                      <p className="text-white text-[10px] leading-tight">
-                        {truncatedCaption}
-                      </p>
-                    </div>
-                  )}
                 </div>
                 {activeId === "pinterest" && caption && (
                   <p className="px-3 pt-2 pb-1 text-[11px] leading-relaxed text-gray-800">
@@ -1045,7 +1021,7 @@ function PlatformPreviewPanel({
                       className="text-[11px]"
                       style={{
                         color:
-                          activeId === "tiktok" || activeId === "mastodon"
+                          activeId === "mastodon"
                             ? "#ccc"
                             : "#555",
                       }}
