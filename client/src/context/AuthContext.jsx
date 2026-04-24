@@ -15,17 +15,16 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
   const [connectedAccounts, setConnectedAccounts] = useState({
-    instagram: false,
-    youtube: false,
-    pinterest: false,
-    facebook: false,
-    bluesky: false,
-    linkedin: false,
-    mastodon: false,
-    tiktok: false,
-    threads: false,
-    x: false,
-    reddit: false,
+    instagram: { connected: false },
+    youtube: { connected: false },
+    pinterest: { connected: false },
+    facebook: { connected: false },
+    bluesky: { connected: false },
+    linkedin: { connected: false },
+    mastodon: { connected: false },
+    threads: { connected: false },
+    x: { connected: false },
+    reddit: { connected: false },
   });
   const [loading, setLoading] = useState(true);
 
@@ -34,20 +33,7 @@ export function AuthProvider({ children }) {
       const response = await apiClient.get("/api/auth/accounts");
       if (response.data.success) {
         const accounts = response.data.accounts;
-        const transformedAccounts = {
-          instagram: accounts.instagram?.connected || false,
-          youtube: accounts.youtube?.connected || false,
-          pinterest: accounts.pinterest?.connected || false,
-          facebook: accounts.facebook?.connected || false,
-          bluesky: accounts.bluesky?.connected || false,
-          linkedin: accounts.linkedin?.connected || false,
-          mastodon: accounts.mastodon?.connected || false,
-          tiktok: accounts.tiktok?.connected || false,
-          threads: accounts.threads?.connected || false,
-          x: accounts.x?.connected || false,
-          reddit: accounts.reddit?.connected || false,
-        };
-        setConnectedAccounts(transformedAccounts);
+        setConnectedAccounts(accounts);
       }
     } catch (error) {
       console.error("Error fetching connected accounts:", error);
@@ -91,17 +77,16 @@ export function AuthProvider({ children }) {
         setUser(null);
         localStorage.removeItem("quickpost_token");
         setConnectedAccounts({
-          instagram: false,
-          youtube: false,
-          pinterest: false,
-          facebook: false,
-          bluesky: false,
-          linkedin: false,
-          mastodon: false,
-          tiktok: false,
-          threads: false,
-          x: false,
-          reddit: false,
+          instagram: { connected: false },
+          youtube: { connected: false },
+          pinterest: { connected: false },
+          facebook: { connected: false },
+          bluesky: { connected: false },
+          linkedin: { connected: false },
+          mastodon: { connected: false },
+          threads: { connected: false },
+          x: { connected: false },
+          reddit: { connected: false },
         });
       }
       setLoading(false);
