@@ -25,11 +25,13 @@ const PLATFORMS = [
   },
   {
     id: 'x', name: 'X', borderColor: 'border-black',
-    icon: <img src="/icons/x-social-media-round-icon.svg" className="w-5 h-5 object-contain" alt="X" />
+    icon: <img src="/icons/x-social-media-round-icon.svg" className="w-5 h-5 object-contain" alt="X" />,
+    comingSoon: true,
   },
   {
     id: 'pinterest', name: 'Pinterest', borderColor: 'border-red-600',
-    icon: <img src="/icons/pinterest-round-color-icon.svg" className="w-5 h-5 object-contain" alt="Pinterest" />
+    icon: <img src="/icons/pinterest-round-color-icon.svg" className="w-5 h-5 object-contain" alt="Pinterest" />,
+    comingSoon: true,
   },
   {
     id: 'bluesky', name: 'Bluesky', borderColor: 'border-blue-500',
@@ -37,12 +39,10 @@ const PLATFORMS = [
   },
   {
     id: 'mastodon', name: 'Mastodon', borderColor: 'border-purple-600',
-    icon: <img src="/icons/mastodon-round-icon.svg" className="w-5 h-5 object-contain" alt="Mastodon" />
+    icon: <img src="/icons/mastodon-round-icon.svg" className="w-5 h-5 object-contain" alt="Mastodon" />,
+    comingSoon: true,
   },
-  {
-    id: 'tiktok', name: 'TikTok', borderColor: 'border-black',
-    icon: <img src="/icons/tiktok-circle-icon.svg" className="w-5 h-5 object-contain" alt="TikTok" />
-  },
+
   {
     id: 'reddit',
     name: 'Reddit',

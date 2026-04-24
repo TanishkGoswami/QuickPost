@@ -7,7 +7,7 @@ const PLATFORMS = [
   { src: '/icons/youtube-color-icon.svg', label: 'YouTube' },
   { src: '/icons/x-social-media-round-icon.svg', label: 'X' },
   { src: '/icons/linkedin-icon.svg', label: 'LinkedIn' },
-  { src: '/icons/tiktok-circle-icon.svg', label: 'TikTok' },
+
   { src: '/icons/facebook-round-color-icon.svg', label: 'Facebook' },
   { src: '/icons/pinterest-round-color-icon.svg', label: 'Pinterest' },
   { src: '/icons/threads-icon.svg', label: 'Threads' },
@@ -109,7 +109,7 @@ export default function Hero() {
       // Count-up "11+"
       const obj = { val: 0 };
       gsap.to(obj, {
-        val: 11,
+        val: 10,
         duration: 1.8,
         ease: 'power2.out',
         delay: 0.8,
@@ -171,7 +171,7 @@ export default function Hero() {
             ref={paraRef}
             style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', fontWeight: 450, color: 'var(--slate)', lineHeight: 1.5, margin: '0 0 32px', maxWidth: 540, marginLeft: 'auto', marginRight: 'auto' }}
           >
-            GAP Social‑pilot broadcasts your content to Instagram, YouTube, LinkedIn + 8 more — simultaneously, with zero friction.
+            GAP Social‑pilot broadcasts your content to Instagram, YouTube, LinkedIn + 7 more — simultaneously, with zero friction.
           </p>
           <div
             ref={buttonsRef}
@@ -245,7 +245,7 @@ export default function Hero() {
           }}
         >
           {[
-            { value: '11+', label: 'Platforms', isCounter: true },
+            { value: '10+', label: 'Platforms', isCounter: true },
             { value: '1-click', label: 'Broadcast' },
             { value: '∞', label: 'Scheduling' },
           ].map(({ value, label, isCounter }) => (

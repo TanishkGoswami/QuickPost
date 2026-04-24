@@ -1,12 +1,12 @@
-import axios from 'axios';
-import { google } from 'googleapis';
-import supabase from './supabase.js';
+import axios from "axios";
+import { google } from "googleapis";
+import supabase from "./supabase.js";
 
 const YOUTUBE_SCOPES = [
-  'https://www.googleapis.com/auth/youtube.upload',
-  'https://www.googleapis.com/auth/youtube.readonly',
-  'https://www.googleapis.com/auth/userinfo.email',
-  'https://www.googleapis.com/auth/userinfo.profile'
+  "https://www.googleapis.com/auth/youtube.upload",
+  "https://www.googleapis.com/auth/youtube.readonly",
+  "https://www.googleapis.com/auth/userinfo.email",
+  "https://www.googleapis.com/auth/userinfo.profile",
 ];
 
 /**
@@ -14,7 +14,7 @@ const YOUTUBE_SCOPES = [
  * Handles YouTube authentication via Google OAuth 2.0
  */
 function base64urlEncode(obj) {
-  return Buffer.from(JSON.stringify(obj)).toString('base64url');
+  return Buffer.from(JSON.stringify(obj)).toString("base64url");
 }
 
 class GoogleOAuthService {
@@ -22,16 +22,17 @@ class GoogleOAuthService {
     this.oauth2Client = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/auth/google/callback'
+      process.env.GOOGLE_REDIRECT_URI ||
+        "http://localhost:5000/api/auth/google/callback",
     );
   }
 
   makeState(userId) {
     return base64urlEncode({
       userId,
-      provider: 'youtube',
+      provider: "youtube",
       nonce: Math.random().toString(36).substring(7),
-      ts: Date.now()
+      ts: Date.now(),
     });
   }
 
@@ -41,10 +42,10 @@ class GoogleOAuthService {
    */
   getAuthorizationUrl(state) {
     const authUrl = this.oauth2Client.generateAuthUrl({
-      access_type: 'offline', // Request refresh token
+      access_type: "offline", // Request refresh token
       scope: YOUTUBE_SCOPES,
-      prompt: 'consent', // Force consent screen to get refresh token
-      state
+      prompt: "consent", // Force consent screen to get refresh token
+      state,
     });
     return authUrl;
   }
@@ -61,22 +62,28 @@ class GoogleOAuthService {
       this.oauth2Client.setCredentials(tokens);
 
       // Get user info
-      const oauth2 = google.oauth2({ version: 'v2', auth: this.oauth2Client });
+      const oauth2 = google.oauth2({ version: "v2", auth: this.oauth2Client });
       const { data: userInfo } = await oauth2.userinfo.get();
 
       // Get YouTube Channel info (to get the channel name/handle)
-      const youtube = google.youtube({ version: 'v3', auth: this.oauth2Client });
+      const youtube = google.youtube({
+        version: "v3",
+        auth: this.oauth2Client,
+      });
       let channelTitle = userInfo.name; // Fallback to Google name
       try {
         const channelRes = await youtube.channels.list({
-          part: 'snippet',
-          mine: true
+          part: "snippet",
+          mine: true,
         });
         if (channelRes.data.items && channelRes.data.items.length > 0) {
           channelTitle = channelRes.data.items[0].snippet.title;
         }
       } catch (err) {
-        console.warn('⚠️ [GOOGLE_OAUTH] Failed to fetch YT channel info:', err.message);
+        console.warn(
+          "⚠️ [GOOGLE_OAUTH] Failed to fetch YT channel info:",
+          err.message,
+        );
       }
 
       return {
@@ -88,12 +95,81 @@ class GoogleOAuthService {
           name: userInfo.name,
           picture: userInfo.picture,
           googleId: userInfo.id,
-          username: channelTitle
-        }
+          username: channelTitle,
+        },
       };
     } catch (error) {
-      console.error('Error exchanging code for tokens:', error);
-      throw new Error('Failed to authenticate with Google');
+      console.error("Error exchanging code for tokens:", error);
+      throw new Error("Failed to authenticate with Google");
+    }
+  }
+
+  /**
+   * Build token payload from an already-issued Google provider token
+   * (e.g. Supabase OAuth session provider_token/provider_refresh_token).
+   * @param {Object} params
+   * @param {string} params.accessToken
+   * @param {string|null} params.refreshToken
+   * @param {number|string|Date|null} params.expiryDate
+   * @returns {Promise<Object>} Token payload compatible with storeTokens()
+   */
+  async buildTokenDataFromProviderTokens({
+    accessToken,
+    refreshToken = null,
+    expiryDate = null,
+  }) {
+    try {
+      this.oauth2Client.setCredentials({
+        access_token: accessToken,
+        refresh_token: refreshToken || undefined,
+      });
+
+      const oauth2 = google.oauth2({ version: "v2", auth: this.oauth2Client });
+      const { data: userInfo } = await oauth2.userinfo.get();
+
+      const youtube = google.youtube({
+        version: "v3",
+        auth: this.oauth2Client,
+      });
+      let channelTitle = userInfo.name;
+      try {
+        const channelRes = await youtube.channels.list({
+          part: "snippet",
+          mine: true,
+        });
+        if (channelRes.data.items && channelRes.data.items.length > 0) {
+          channelTitle = channelRes.data.items[0].snippet.title;
+        }
+      } catch (err) {
+        console.warn(
+          "⚠️ [GOOGLE_OAUTH] Failed to fetch YT channel info from provider token:",
+          err.message,
+        );
+      }
+
+      const normalizedExpiry = expiryDate
+        ? new Date(expiryDate)
+        : new Date(Date.now() + 50 * 60 * 1000);
+
+      return {
+        accessToken,
+        refreshToken,
+        expiryDate: Number.isNaN(normalizedExpiry.getTime())
+          ? Date.now() + 50 * 60 * 1000
+          : normalizedExpiry.getTime(),
+        userInfo: {
+          email: userInfo.email,
+          name: userInfo.name,
+          picture: userInfo.picture,
+          googleId: userInfo.id,
+          username: channelTitle,
+        },
+      };
+    } catch (error) {
+      console.error("Error building token data from provider token:", error);
+      throw new Error(
+        "Failed to build YouTube token data from provider session",
+      );
     }
   }
 
@@ -104,32 +180,51 @@ class GoogleOAuthService {
    */
   async storeTokens(userId, tokenData) {
     try {
-      const expiryDate = new Date(tokenData.expiryDate);
+      const expiryDate = tokenData?.expiryDate
+        ? new Date(tokenData.expiryDate)
+        : new Date(Date.now() + 50 * 60 * 1000);
+      const finalExpiryDate = Number.isNaN(expiryDate.getTime())
+        ? new Date(Date.now() + 50 * 60 * 1000)
+        : expiryDate;
+
+      let refreshToken = tokenData.refreshToken;
+      if (!refreshToken) {
+        const { data: existing } = await supabase
+          .from("social_tokens")
+          .select("refresh_token")
+          .eq("user_id", userId)
+          .eq("provider", "youtube")
+          .maybeSingle();
+        refreshToken = existing?.refresh_token || null;
+      }
 
       const { data, error } = await supabase
-        .from('social_tokens')
-        .upsert({
-          user_id: userId,
-          provider: 'youtube',
-          access_token: tokenData.accessToken,
-          refresh_token: tokenData.refreshToken,
-          token_expiry: expiryDate.toISOString(),
-          username: tokenData.userInfo?.username,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,provider'
-        })
+        .from("social_tokens")
+        .upsert(
+          {
+            user_id: userId,
+            provider: "youtube",
+            access_token: tokenData.accessToken,
+            refresh_token: refreshToken,
+            token_expiry: finalExpiryDate.toISOString(),
+            username: tokenData.userInfo?.username,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "user_id,provider",
+          },
+        )
         .select();
 
       if (error) {
-        console.error('Supabase error storing tokens:', error);
+        console.error("Supabase error storing tokens:", error);
         throw error;
       }
 
       return data;
     } catch (error) {
-      console.error('Error storing tokens:', error);
-      throw new Error('Failed to store authentication tokens');
+      console.error("Error storing tokens:", error);
+      throw new Error("Failed to store authentication tokens");
     }
   }
 
@@ -140,18 +235,18 @@ class GoogleOAuthService {
    */
   async refreshAccessToken(refreshToken) {
     try {
-      console.log('🔄 [GOOGLE_OAUTH] Refreshing access token...');
+      console.log("🔄 [GOOGLE_OAUTH] Refreshing access token...");
       this.oauth2Client.setCredentials({ refresh_token: refreshToken });
       const { credentials } = await this.oauth2Client.refreshAccessToken();
-      console.log('✅ [GOOGLE_OAUTH] Access token refreshed');
+      console.log("✅ [GOOGLE_OAUTH] Access token refreshed");
 
       return {
         accessToken: credentials.access_token,
-        expiryDate: credentials.expiry_date
+        expiryDate: credentials.expiry_date,
       };
     } catch (error) {
-      console.error('Error refreshing token:', error);
-      throw new Error('Failed to refresh access token');
+      console.error("Error refreshing token:", error);
+      throw new Error("Failed to refresh access token");
     }
   }
 
@@ -162,17 +257,19 @@ class GoogleOAuthService {
    */
   async getValidAccessToken(userId) {
     try {
-      console.log(`🔍 [GOOGLE_OAUTH] Fetching tokens for user ${userId} from DB...`);
+      console.log(
+        `🔍 [GOOGLE_OAUTH] Fetching tokens for user ${userId} from DB...`,
+      );
       const { data, error } = await supabase
-        .from('social_tokens')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('provider', 'youtube')
+        .from("social_tokens")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("provider", "youtube")
         .single();
-      console.log('✅ [GOOGLE_OAUTH] DB fetch complete. Token found:', !!data);
+      console.log("✅ [GOOGLE_OAUTH] DB fetch complete. Token found:", !!data);
 
       if (error || !data) {
-        throw new Error('YouTube account not connected');
+        throw new Error("YouTube account not connected");
       }
 
       const now = new Date();
@@ -180,14 +277,14 @@ class GoogleOAuthService {
 
       // If token expires in less than 5 minutes, refresh it
       if (expiry - now < 5 * 60 * 1000) {
-        console.log('Token expired or expiring soon, refreshing...');
+        console.log("Token expired or expiring soon, refreshing...");
         const refreshed = await this.refreshAccessToken(data.refresh_token);
-        
+
         // Update token in database
         await this.storeTokens(userId, {
           accessToken: refreshed.accessToken,
           refreshToken: data.refresh_token,
-          expiryDate: refreshed.expiryDate
+          expiryDate: refreshed.expiryDate,
         });
 
         return refreshed.accessToken;
@@ -195,7 +292,7 @@ class GoogleOAuthService {
 
       return data.access_token;
     } catch (error) {
-      console.error('Error getting valid access token:', error);
+      console.error("Error getting valid access token:", error);
       throw error;
     }
   }

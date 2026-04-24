@@ -5,7 +5,7 @@ const STEPS = [
   {
     num: '01',
     title: 'Connect your channels',
-    desc: 'Link Instagram, YouTube, LinkedIn, TikTok and 7 more social accounts via secure OAuth. Takes under 2 minutes.',
+    desc: 'Link Instagram, YouTube, LinkedIn and 7 more social accounts via secure OAuth. Takes under 2 minutes.',
   },
   {
     num: '02',

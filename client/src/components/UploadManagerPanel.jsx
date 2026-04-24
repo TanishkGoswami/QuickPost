@@ -18,7 +18,7 @@ const PLATFORM_ICONS = {
   facebook: '/icons/facebook-round-color-icon.svg',
   x: '/icons/x-social-media-round-icon.svg',
   linkedin: '/icons/linkedin-icon.svg',
-  tiktok: '/icons/tiktok-circle-icon.svg',
+
   pinterest: '/icons/pinterest-round-color-icon.svg',
   threads: '/icons/threads-icon.svg',
   mastodon: '/icons/mastodon-round-icon.svg',

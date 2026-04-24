@@ -24,21 +24,25 @@ const DashboardLayout = () => {
   // ── Wait for Supabase to restore session before deciding ──
   if (loading) {
     return (
-      <div style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: "var(--canvas, #f5f0eb)",
-      }}>
-        <div style={{
-          width: 36,
-          height: 36,
-          borderRadius: "50%",
-          border: "3px solid rgba(20,20,19,0.08)",
-          borderTopColor: "var(--r-hero, #5b47e0)",
-          animation: "spin 0.7s linear infinite",
-        }} />
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--canvas, #f5f0eb)",
+        }}
+      >
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: "50%",
+            border: "3px solid rgba(20,20,19,0.08)",
+            borderTopColor: "var(--r-hero, #5b47e0)",
+            animation: "spin 0.7s linear infinite",
+          }}
+        />
       </div>
     );
   }
