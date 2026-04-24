@@ -1,127 +1,80 @@
-import React, { useState, useRef, useMemo, useEffect } from "react";
-import apiClient from "../utils/apiClient";
+/**
+ * ComposerModal.jsx — v3.0 (Modular Architecture)
+ * ─────────────────────────────────────────────────────────────────
+ * ORCHESTRATOR ONLY — no business logic inline.
+ *
+ * Architecture:
+ *   /data/platforms.js              — constants
+ *   /engines/PostIntelligenceEngine — analysis logic
+ *   /engines/SmartSizeEngine        — size compatibility logic
+ *   /hooks/usePostIntelligence      — memoized engine wrapper
+ *   /hooks/useSmartSizes            — memoized size wrapper
+ *   /components/IntelligencePanel   — "What will happen?" UI
+ *   /components/MediaUploader       — drag/drop + reorder
+ *   /components/PreviewPanel        — live platform previews
+ */
+
+import React, {
+  useState,
+  useRef,
+  useMemo,
+  useEffect,
+  useCallback,
+  memo,
+} from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
-  Upload,
   Loader2,
   Sparkles,
-  Eye,
   ChevronDown,
-  Image as ImageIcon,
-  GripVertical,
+  AtSign,
+  Calendar,
+  Clock,
+  AlertCircle,
+  Zap,
+  CheckCircle2,
   Monitor,
   Smartphone,
   Square,
   RectangleVertical,
-  AtSign,
-  ChevronLeft,
-  ChevronRight,
-  Calendar,
-  Clock,
 } from "lucide-react";
-import { Reorder, AnimatePresence, motion } from "framer-motion";
+import { Reorder } from "framer-motion";
+
+import apiClient from "../utils/apiClient";
 import { useAuth } from "../context/AuthContext";
 import { useUploadJobs } from "../context/UploadJobContext";
 import { useDialog } from "../context/DialogContext";
 import ChannelSelector from "./ChannelSelector";
 import PlatformCustomization from "./PlatformCustomization";
 
-/* ── Platform meta ── */
-const PLATFORM_META = {
-  instagram: {
-    label: "Instagram",
-    icon: "/icons/ig-instagram-icon.svg",
-    headerBg: "linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)",
-    bodyBg: "#fff",
-    textColor: "#fff",
-    imgAspect: "aspect-square",
-    actions: ["❤️", "💬", "✈️", "🔖"],
-  },
-  facebook: {
-    label: "Facebook",
-    icon: "/icons/facebook-round-color-icon.svg",
-    headerBg: "#1877F2",
-    bodyBg: "#f0f2f5",
-    textColor: "#fff",
-    imgAspect: "aspect-video",
-    actions: ["👍 Like", "💬 Comment", "↗️ Share"],
-  },
-  x: {
-    label: "X",
-    icon: "/icons/x-social-media-round-icon.svg",
-    headerBg: "#000",
-    bodyBg: "#fff",
-    textColor: "#fff",
-    imgAspect: "aspect-video",
-    actions: ["💬", "🔍", "❤️", "📊"],
-  },
-  linkedin: {
-    label: "LinkedIn",
-    icon: "/icons/linkedin-icon.svg",
-    headerBg: "#0A66C2",
-    bodyBg: "#f3f2ef",
-    textColor: "#fff",
-    imgAspect: "aspect-[1.91/1]",
-    actions: ["👍 Like", "💬 Comment", "↗️ Share"],
-  },
-  youtube: {
-    label: "YouTube",
-    icon: "/icons/youtube-color-icon.svg",
-    headerBg: "#FF0000",
-    bodyBg: "#0f0f0f",
-    textColor: "#fff",
-    imgAspect: "aspect-video",
-    actions: ["👍", "👎", "↗️ Share", "⬇️ Save"],
-  },
-  threads: {
-    label: "Threads",
-    icon: "/icons/threads-icon.svg",
-    headerBg: "#000",
-    bodyBg: "#fff",
-    textColor: "#fff",
-    imgAspect: "aspect-square",
-    actions: ["❤️", "💬", "🔍", "↗️"],
-  },
-  pinterest: {
-    label: "Pinterest",
-    icon: "/icons/pinterest-round-color-icon.svg",
-    headerBg: "#BD081C",
-    bodyBg: "#fff",
-    textColor: "#fff",
-    imgAspect: "aspect-[2/3]",
-    actions: ["Save"],
-  },
-  bluesky: {
-    label: "Bluesky",
-    icon: "/icons/bluesky-circle-color-icon.svg",
-    headerBg: "#0085FF",
-    bodyBg: "#fff",
-    textColor: "#fff",
-    imgAspect: "aspect-video",
-    actions: ["❤️", "🔍", "💬", "↗️"],
-  },
-  mastodon: {
-    label: "Mastodon",
-    icon: "/icons/mastodon-round-icon.svg",
-    headerBg: "#6364FF",
-    bodyBg: "#191b22",
-    textColor: "#fff",
-    imgAspect: "aspect-video",
-    actions: ["↩️ Reply", "🔍 Boost", "⭐ Fav", "↗️"],
-  },
-};
+// Modular imports
+import {
+  PLATFORM_META,
+  PLATFORM_POST_TYPES,
+  PLATFORM_LAYOUT_PRESETS,
+  getPresetsForPlatform,
+} from "./composer/data/platforms.js";
+import { usePostIntelligence } from "./composer/hooks/usePostIntelligence.js";
+import { useSmartSizes } from "./composer/hooks/useSmartSizes.js";
+import IntelligencePanel from "./composer/components/IntelligencePanel.jsx";
+import MediaUploader from "./composer/components/MediaUploader.jsx";
+import PreviewPanel from "./composer/components/PreviewPanel.jsx";
 
+/* ─────────────────────────────────────────────────────────────────
+   CONSTANTS
+   ───────────────────────────────────────────────────────────────── */
 const QUICK_SUGGESTIONS = [
-  "Hell yeh !!",
-  "Excited to share this! ",
-  "What do you think? ",
-  "Check out my latest post! ",
-  "Behind the scenes ",
-  "Stay tuned for more! ",
-  "New update alert! ",
-  "Link in bio! ",
-  "Happy Monday! ",
-  "Weekend vibes!",
+  "Hell yeh !! 🔥",
+  "Excited to share this! ✨",
+  "What do you think? 💭",
+  "Check it out! 👀",
+  "Behind the scenes 🎬",
+  "New update! 🚀",
+  "Link in bio! 🔗",
+  "Weekend vibes 🌴",
+  "Stay tuned! 📢",
+  "New update! 🚀",
 ];
 
 const SUGGESTED_HASHTAGS = [
@@ -132,1445 +85,270 @@ const SUGGESTED_HASHTAGS = [
   "#creator",
   "#digitalmarketing",
   "#branding",
-  "#socialstrategy",
 ];
 
-const ASPECT_RATIOS = [
-  {
-    id: "1:1",
-    label: "Feed",
-    desc: "Square",
-    aspect: "aspect-square",
-    icon: Square,
-    preview: "w-6 h-6 border-2",
-  },
-  {
-    id: "4:5",
-    label: "Portrait",
-    desc: "4:5 Format",
-    aspect: "aspect-[4/5]",
-    icon: RectangleVertical,
-    preview: "w-5 h-6 border-2",
-  },
-  {
-    id: "9:16",
-    label: "Reel / Story",
-    desc: "Full Vertical",
-    aspect: "aspect-[9/16]",
-    icon: Smartphone,
-    preview: "w-4 h-7 border-2",
-  },
-  {
-    id: "1.91:1",
-    label: "Landscape",
-    desc: "Wide Image",
-    aspect: "aspect-[1.91/1]",
-    icon: Monitor,
-    preview: "w-8 h-4 border-2",
-  },
-  {
-    id: "2:3",
-    label: "Pin",
-    desc: "Pinterest Vertical",
-    aspect: "aspect-[2/3]",
-    icon: RectangleVertical,
-    preview: "w-5 h-7 border-2",
-  },
-  {
-    id: "16:9",
-    label: "Landscape",
-    desc: "Wide",
-    aspect: "aspect-video",
-    icon: Monitor,
-    preview: "w-8 h-4.5 border-2",
-  },
-];
-
-const PLATFORM_LAYOUT_PRESETS = {
-  instagram: [
-    {
-      id: "ig-post-square",
-      ratio: "1:1",
-      title: "Post Square",
-      subtitle: "1080x1080",
-    },
-    {
-      id: "ig-portrait",
-      ratio: "4:5",
-      title: "Portrait",
-      subtitle: "1080x1350",
-    },
-    { id: "ig-reel", ratio: "9:16", title: "Reel", subtitle: "1080x1920" },
-    { id: "ig-story", ratio: "9:16", title: "Story", subtitle: "1080x1920" },
-    {
-      id: "ig-landscape",
-      ratio: "16:9",
-      title: "Landscape Post",
-      subtitle: "16:9",
-    },
-  ],
-  youtube: [
-    { id: "yt-video", ratio: "16:9", title: "Video", subtitle: "1920x1080" },
-    { id: "yt-shorts", ratio: "9:16", title: "Shorts", subtitle: "1080x1920" },
-    {
-      id: "yt-thumbnail",
-      ratio: "16:9",
-      title: "Thumbnail",
-      subtitle: "1280x720",
-    },
-  ],
-  linkedin: [
-    { id: "li-image", ratio: "1.91:1", title: "Image", subtitle: "1200x627" },
-    { id: "li-square", ratio: "1:1", title: "Square", subtitle: "1080x1080" },
-    {
-      id: "li-carousel",
-      ratio: "1:1",
-      title: "Carousel",
-      subtitle: "1080x1080 (PDF pages)",
-    },
-  ],
-  x: [
-    { id: "x-image", ratio: "16:9", title: "Image", subtitle: "1200x675" },
-    { id: "x-square", ratio: "1:1", title: "Square", subtitle: "1080x1080" },
-  ],
-  facebook: [
-    { id: "fb-image", ratio: "1:1", title: "Image", subtitle: "1200x1200" },
-    { id: "fb-reel", ratio: "9:16", title: "Reel", subtitle: "1080x1920" },
-    { id: "fb-story", ratio: "9:16", title: "Story", subtitle: "1080x1920" },
-  ],
-  pinterest: [
-    { id: "pin-standard", ratio: "2:3", title: "Pin", subtitle: "1000x1500" },
-  ],
-
-  threads: [
-    { id: "threads-post", ratio: "1:1", title: "Post", subtitle: "1080x1080" },
-    {
-      id: "threads-vertical",
-      ratio: "9:16",
-      title: "Vertical",
-      subtitle: "1080x1920",
-    },
-  ],
-  bluesky: [
-    { id: "bluesky-image", ratio: "16:9", title: "Image", subtitle: "16:9" },
-    { id: "bluesky-square", ratio: "1:1", title: "Square", subtitle: "1:1" },
-  ],
-  mastodon: [
-    { id: "mastodon-image", ratio: "16:9", title: "Image", subtitle: "16:9" },
-    { id: "mastodon-square", ratio: "1:1", title: "Square", subtitle: "1:1" },
-  ],
-  whatsapp: [
-    { id: "wa-status", ratio: "9:16", title: "Status", subtitle: "1080x1920" },
-  ],
-  telegram: [
-    { id: "tg-status", ratio: "9:16", title: "Status", subtitle: "1080x1920" },
-  ],
-};
-
-const PLATFORM_SHORT_LABELS = {
-  youtube: "YouTube",
-  instagram: "Instagram",
-  facebook: "Facebook",
-  linkedin: "LinkedIn",
-  x: "X",
-  threads: "Threads",
-  bluesky: "Bluesky",
-  mastodon: "Mastodon",
-};
-
-const PLATFORM_POST_TYPES = {
-  instagram: ["post", "story", "reel"],
-  facebook: ["post", "story", "reel"],
-  youtube: ["post", "reel"],
-
-  x: ["post"],
-  linkedin: ["post"],
-  threads: ["post"],
-  pinterest: ["post"],
-  bluesky: ["post"],
-  mastodon: ["post"],
-  reddit: ["post"]
-};
-
-function getPresetsForPlatform(platformId) {
-  return PLATFORM_LAYOUT_PRESETS[platformId] || [];
-}
-
-function XIcon({ className }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932 6.064-6.932zm-1.294 19.497h2.039L6.482 3.239H4.293L17.607 20.65z" />
-    </svg>
+/* ─────────────────────────────────────────────────────────────────
+   CALENDAR / CLOCK PICKERS
+   (Self-contained — kept here since they are small and modal-specific)
+   ───────────────────────────────────────────────────────────────── */
+const CalendarView = memo(function CalendarView({ value, onChange }) {
+  const today = new Date();
+  const [viewDate, setViewDate] = useState(
+    value ? new Date(value + "T00:00:00") : today,
   );
-}
-
-function LinkedInIcon({ className }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
-    </svg>
-  );
-}
-
-/* ── Platform Preview Panel ── */
-function PlatformPreviewPanel({
-  selectedChannels,
-  caption,
-  mediaFiles,
-  mediaType,
-  selectedRatio,
-  youtubeThumbnail,
-  activePlatform,
-  onActivePlatformChange,
-  onPlatformRemove,
-  connectedAccounts,
-}) {
-  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
-  const activeId = activePlatform || selectedChannels[0] || null;
-  const scrollRef = useRef(null);
-
-  const meta = PLATFORM_META[activeId] || PLATFORM_META.instagram;
-
-  // Use user selected ratio if available, otherwise fallback to platform default
-  const currentAspect = selectedRatio
-    ? ASPECT_RATIOS.find((r) => r.id === selectedRatio)?.aspect
-    : meta.imgAspect;
-
-  // Reset index when files change or platform changes
-  useEffect(() => {
-    setActiveMediaIndex(0);
-  }, [mediaFiles.length, activeId]);
-
-  const resolveMentions = (text, platform) => {
-    if (!text) return text;
-    const username = connectedAccounts[platform]?.username || "your_account";
-    const prefix = ["facebook", "linkedin", "youtube"].includes(platform)
-      ? ""
-      : "@";
-    return text.replaceAll("{{MENTION_SELF}}", `${prefix}${username}`);
-  };
-
-  const resolvedCaption = useMemo(
-    () => resolveMentions(caption, activeId),
-    [caption, activeId, connectedAccounts]
-  );
-
-  /* ── Stable Blob URL management ── */
-  const [ytThumbUrl, setYtThumbUrl] = useState(null);
-  const [mediaUrls, setMediaUrls] = useState([]);
-
-  useEffect(() => {
-    if (!youtubeThumbnail) {
-      setYtThumbUrl(null);
-    } else {
-      const url = URL.createObjectURL(youtubeThumbnail);
-      setYtThumbUrl(url);
-      return () => URL.revokeObjectURL(url);
-    }
-  }, [youtubeThumbnail]);
-
-  useEffect(() => {
-    if (!mediaFiles || mediaFiles.length === 0) {
-      setMediaUrls([]);
-      return;
-    }
-    const urls = mediaFiles.map((m) => ({
-      id: m.id,
-      url: URL.createObjectURL(m.file),
-      type: m.file.type.startsWith("video/") ? "video" : "image",
-    }));
-    setMediaUrls(urls);
-    return () => urls.forEach((u) => URL.revokeObjectURL(u.url));
-  }, [mediaFiles]);
-
-  /* ── INTERNAL COMPONENT: PreviewMedia ── */
-  const renderPreviewMediaContent = (forceRatio) => {
-    if (!mediaUrls || mediaUrls.length === 0) {
-      return (
-        <div
-          className={`w-full ${forceRatio || currentAspect} flex flex-col items-center justify-center bg-gray-100`}
-        >
-          <ImageIcon className="w-8 h-8 text-gray-300 mb-1" />
-          <span className="text-[10px] text-gray-400">No media yet</span>
-        </div>
-      );
-    }
-
-    return (
-      <div
-        className={`relative w-full ${forceRatio || currentAspect} bg-gray-900 group overflow-hidden`}
-      >
-        <div
-          className="flex w-full h-full overflow-x-auto snap-x snap-mandatory no-scrollbar"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-          onScroll={(e) => {
-            const index = Math.round(e.target.scrollLeft / e.target.clientWidth);
-            if (index !== activeMediaIndex) setActiveMediaIndex(index);
-          }}
-          ref={scrollRef}
-        >
-          {mediaUrls.map((media) => (
-            <div key={media.id} className="w-full h-full flex-shrink-0 snap-center relative bg-black/10">
-              {media.type === "image" ? (
-                <img src={media.url} alt="Post" className="w-full h-full object-cover pointer-events-none" />
-              ) : (
-                <video src={media.url} className="w-full h-full object-cover pointer-events-none" muted playsInline autoPlay loop />
-              )}
-            </div>
-          ))}
-        </div>
-
-        {mediaUrls.length > 1 && (
-          <>
-            {activeMediaIndex > 0 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (scrollRef.current) {
-                    const newIndex = activeMediaIndex - 1;
-                    scrollRef.current.scrollTo({ left: newIndex * scrollRef.current.clientWidth, behavior: 'smooth' });
-                  }
-                }}
-                className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100 z-10"
-              >
-                <ChevronLeft size={16} />
-              </button>
-            )}
-            {activeMediaIndex < mediaUrls.length - 1 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (scrollRef.current) {
-                    const newIndex = activeMediaIndex + 1;
-                    scrollRef.current.scrollTo({ left: newIndex * scrollRef.current.clientWidth, behavior: 'smooth' });
-                  }
-                }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/60 transition-all opacity-0 group-hover:opacity-100 z-10"
-              >
-                <ChevronRight size={16} />
-              </button>
-            )}
-            <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md rounded-full px-2 py-0.5 flex items-center gap-1 border border-white/10 shadow-lg z-10">
-              <ImageIcon className="w-2.5 h-2.5 text-white" />
-              <span className="text-[10px] font-bold text-white leading-none">
-                {activeMediaIndex + 1}/{mediaUrls.length}
-              </span>
-            </div>
-            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1 z-10">
-              {mediaUrls.map((_, i) => (
-                <div
-                  key={i}
-                  className={`w-1 h-1 rounded-full transition-all ${
-                    i === activeMediaIndex ? "bg-white scale-125" : "bg-white/40"
-                  }`}
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-    );
-  };
-
-  const truncatedCaption =
-    resolvedCaption?.length > 120
-      ? resolvedCaption.slice(0, 120) + "…"
-      : resolvedCaption;
-  const videoTitle =
-    resolvedCaption?.length > 60
-      ? resolvedCaption.slice(0, 60) + "…"
-      : resolvedCaption || "Your Video Title";
-  const platformUsername = connectedAccounts[activeId]?.username || "your_account";
-
-  return (
-    <div className="flex flex-col flex-1 overflow-hidden">
-      {/* Platform tabs */}
-      <div className="flex gap-1 px-3 py-2 overflow-x-auto border-b border-gray-200 bg-white flex-shrink-0">
-        {selectedChannels.map((id) => {
-          const m = PLATFORM_META[id];
-          if (!m) return null;
-          const isActive = activeId === id;
-          return (
-            <div
-              key={id}
-              className="relative flex-shrink-0 group/tab"
-            >
-              <button
-                onClick={() => onActivePlatformChange?.(id)}
-                title={m.label}
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                  isActive
-                    ? "bg-gray-100 ring-2 ring-indigo-400 ring-offset-1"
-                    : "hover:bg-gray-50"
-                }`}
-              >
-                <img
-                  src={m.icon}
-                  alt={m.label}
-                  className="w-5 h-5 object-contain"
-                />
-              </button>
-              {/* Remove (deselect) button — appears on hover */}
-              {onPlatformRemove && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onPlatformRemove(id);
-                  }}
-                  title={`Remove ${m.label} from this post`}
-                  className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-gray-800 text-white flex items-center justify-center opacity-0 group-hover/tab:opacity-100 transition-all hover:bg-red-500 hover:scale-110 z-10 shadow-md"
-                  style={{ fontSize: 8, lineHeight: 1 }}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Scrollable preview area */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {activeId &&
-          (activeId === "youtube" ? (
-            /* ── YouTube video card layout ── */
-            <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100">
-              {/* Thumbnail */}
-              <div
-                className={`relative w-full ${currentAspect} bg-gray-900 group`}
-              >
-                {ytThumbUrl ? (
-                  <img
-                    src={ytThumbUrl}
-                    alt="Thumbnail"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  renderPreviewMediaContent()
-                )}
-                {/* Duration badge */}
-                <span className="absolute bottom-1.5 right-1.5 bg-black/80 text-white text-[10px] font-semibold px-1.5 py-0.5 rounded shadow-sm">
-                  0:00
-                </span>
-
-                {/* YouTube Red Progress Bar Shimmer */}
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-700/50">
-                  <div className="h-full w-1/3 bg-[#FF0000] shadow-[0_0_8px_rgba(255,0,0,0.5)]" />
-                </div>
-              </div>
-
-              {/* Video info row */}
-              <div className="p-3">
-                <div className="flex gap-3">
-                  {/* Channel avatar */}
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[12px] font-bold text-white">Y</span>
-                  </div>
-                  {/* Title + meta */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-[13px] font-bold text-gray-900 leading-snug line-clamp-2 mb-1">
-                      {videoTitle || "Your Video Title"}
-                    </h3>
-                    <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-medium">
-                      <span>{platformUsername}</span>
-                      <span className="w-0.5 h-0.5 rounded-full bg-gray-400" />
-                      <span>1.2K views</span>
-                      <span className="w-0.5 h-0.5 rounded-full bg-gray-400" />
-                      <span>Just now</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Integration: YT Actions Row (Like/Dislike/Share) */}
-                <div className="flex items-center gap-2 mt-4 pt-3 border-t border-gray-50">
-                  <div className="flex items-center bg-gray-100 rounded-full py-1.5 px-3 gap-3">
-                    <div className="flex items-center gap-1.5 pr-2 border-r border-gray-300">
-                      <span className="text-xs">👍</span>
-                      <span className="text-[10px] font-bold text-gray-700">
-                        12
-                      </span>
-                    </div>
-                    <span className="text-xs">👎</span>
-                  </div>
-                  <div className="flex items-center bg-gray-100 rounded-full py-1.5 px-3 gap-2">
-                    <span className="text-[10px] font-bold text-gray-700">
-                      ↗️ Share
-                    </span>
-                  </div>
-                  <div className="flex items-center bg-gray-100 rounded-full p-1.5">
-                    <span className="text-xs">⬇️</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : activeId === "instagram" ? (
-            <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-200">
-              <div className="flex items-center gap-2.5 px-3 py-2.5">
-                <div
-                  className="p-[2px] rounded-full flex-shrink-0"
-                  style={{
-                    background:
-                      "linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)",
-                  }}
-                >
-                  <div className="w-7 h-7 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center">
-                    <span className="text-[10px] font-bold text-white">Y</span>
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1">
-                    <span className="text-[12px] font-semibold text-gray-900 leading-tight">
-                      {platformUsername}
-                    </span>
-                    <svg
-                      className="w-3 h-3 flex-shrink-0"
-                      viewBox="0 0 24 24"
-                      fill="#3897f0"
-                    >
-                      <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm-1.25 17.292l-4.5-4.364 1.857-1.858 2.643 2.506 5.643-5.784 1.857 1.857-7.5 7.643z" />
-                    </svg>
-                  </div>
-                </div>
-                <button className="text-[11px] font-bold text-gray-800 border border-gray-300 rounded-md px-3 py-0.5 mr-1">
-                  Follow
-                </button>
-                <div className="flex flex-col gap-[3px]">
-                  {[0, 1, 2].map((i) => (
-                    <div
-                      key={i}
-                      className="w-[3px] h-[3px] rounded-full bg-gray-500"
-                    />
-                  ))}
-                </div>
-              </div>
-              {renderPreviewMediaContent()}
-              <div className="px-3 pt-2.5 pb-1">
-                <div className="flex items-center">
-                  <div className="flex items-center gap-3 flex-1">
-                    <svg
-                      className="w-6 h-6 text-gray-800"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={1.8}
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                      />
-                    </svg>
-                    <svg
-                      className="w-6 h-6 text-gray-800"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={1.8}
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                      />
-                    </svg>
-                    <svg
-                      className="w-6 h-6 text-gray-800"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={1.8}
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                      />
-                    </svg>
-                  </div>
-                  <svg
-                    className="w-6 h-6 text-gray-800"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={1.8}
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                    />
-                  </svg>
-                </div>
-                <p className="text-[11px] font-semibold text-gray-900 mt-1.5">
-                  4,117 likes
-                </p>
-                {caption && (
-                  <p className="text-[11px] text-gray-900 mt-1 leading-relaxed">
-                    <span className="font-semibold mr-1">{platformUsername}</span>
-                    {truncatedCaption}
-                  </p>
-                )}
-                <p className="text-[10px] text-gray-500 mt-1 mb-2">
-                  View all 31 comments
-                </p>
-              </div>
-            </div>
-          ) : activeId === "facebook" ? (
-            <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-200">
-              {/* FB Header */}
-              <div className="flex items-center gap-2.5 px-3 py-2.5">
-                <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
-                  <span className="text-[13px] font-bold text-white">Y</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-semibold text-gray-900 leading-tight">
-                    {platformUsername}
-                  </p>
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-gray-500">Just now</span>
-                    <span className="text-gray-400">·</span>
-                    <svg
-                      className="w-3 h-3 text-gray-400"
-                      viewBox="0 0 24 24"
-                      fill="currentColor"
-                    >
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93V18c0-.55.45-1 1-1s1 .45 1 1v1.93c-2.06-.23-3.88-1.19-5.22-2.64l1.37-1.37c.39-.39 1.02-.39 1.41 0 .38.38.38 1.02 0 1.41l-.15.14c.87.87 1.9 1.53 3.06 1.9zM7.07 17.66l-1.41-1.41c-1.45-1.34-2.41-3.16-2.64-5.22H4.99c.55 0 1 .45 1 1s-.45 1-1 1H3.07c.23 2.06 1.19 3.88 2.64 5.22zM5 12c0-.55.45-1 1-1h1c.55 0 1 .45 1 1s-.45 1-1 1H6c-.55 0-1-.45-1-1zm7-8c.55 0 1 .45 1 1v1c.55 0 1 .45 1 1s-.45 1-1 1H12c-.55 0-1-.45-1-1V5c0-.55.45-1 1-1z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-[3px]">
-                  {[0, 1, 2].map((i) => (
-                    <div
-                      key={i}
-                      className="w-[4px] h-[4px] rounded-full bg-gray-400"
-                    />
-                  ))}
-                </div>
-              </div>
-              {/* Caption */}
-              {caption && (
-                <p className="px-3 pb-2 text-[12px] leading-relaxed text-gray-900">
-                  {truncatedCaption}
-                </p>
-              )}
-              {/* Media */}
-              {renderPreviewMediaContent()}
-              {/* Reaction counts */}
-              <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-100">
-                <div className="flex items-center gap-1">
-                  <span className="text-[14px]">👍</span>
-                  <span className="text-[10px] text-gray-500">124</span>
-                </div>
-                <span className="text-[10px] text-gray-400">
-                  12 comments · 4 shares
-                </span>
-              </div>
-              {/* Action bar */}
-              <div className="flex items-center divide-x divide-gray-100">
-                {[
-                  ["👍", "Like"],
-                  ["💬", "Comment"],
-                  ["↗️", "Share"],
-                ].map(([icon, label]) => (
-                  <button
-                    key={label}
-                    className="flex-1 flex items-center justify-center gap-1 py-2 hover:bg-gray-50 transition-colors"
-                  >
-                    <span className="text-[13px]">{icon}</span>
-                    <span className="text-[11px] font-medium text-gray-600">
-                      {label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : activeId === "linkedin" ? (
-            <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-200">
-              {/* LI Header */}
-              <div className="flex items-start gap-2.5 px-3 py-2.5">
-                <div className="w-10 h-10 rounded-full bg-[#0A66C2] flex items-center justify-center flex-shrink-0">
-                  <span className="text-[13px] font-bold text-white">Y</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-semibold text-gray-900 leading-tight">
-                    {platformUsername}
-                  </p>
-                  <p className="text-[10px] text-gray-500">Your Title · 1st</p>
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-gray-400">
-                      Just now ·
-                    </span>
-                    <svg
-                      className="w-3 h-3 text-gray-400"
-                      viewBox="0 0 16 16"
-                      fill="currentColor"
-                    >
-                      <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0zm0 14.5a6.5 6.5 0 1 1 0-13 6.5 6.5 0 0 1 0 13zM8 3.5a.75.75 0 1 1 0 1.5.75.75 0 0 1 0-1.5zm.75 3.25v4.5a.75.75 0 0 1-1.5 0v-4.5a.75.75 0 0 1 1.5 0z" />
-                    </svg>
-                  </div>
-                </div>
-                <button className="text-[11px] font-semibold text-[#0A66C2] border border-[#0A66C2] rounded-full px-3 py-0.5 flex-shrink-0">
-                  + Follow
-                </button>
-              </div>
-              {/* Caption */}
-              {caption && (
-                <p className="px-3 pb-2 text-[12px] leading-relaxed text-gray-900">
-                  {truncatedCaption}{" "}
-                  <span className="text-[#0A66C2] font-medium cursor-pointer">
-                    ...see more
-                  </span>
-                </p>
-              )}
-              {/* Media */}
-              {renderPreviewMediaContent()}
-              {/* Reactions */}
-              <div className="flex items-center justify-between px-3 py-1.5">
-                <div className="flex items-center gap-1">
-                  <span className="text-[13px]">👍❤️🎉</span>
-                  <span className="text-[10px] text-gray-500">84</span>
-                </div>
-                <span className="text-[10px] text-gray-400">12 comments</span>
-              </div>
-              {/* Action bar */}
-              <div className="flex items-center border-t border-gray-100 divide-x divide-gray-100">
-                {[
-                  ["👍", "Like"],
-                  ["💬", "Comment"],
-                  ["🔁", "Repost"],
-                  ["↗️", "Send"],
-                ].map(([icon, label]) => (
-                  <button
-                    key={label}
-                    className="flex-1 flex items-center justify-center gap-1 py-2 hover:bg-gray-50 transition-colors"
-                  >
-                    <span className="text-[12px]">{icon}</span>
-                    <span className="text-[10px] font-medium text-gray-600">
-                      {label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : activeId === "threads" ? (
-            <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-200">
-              {/* Threads Header */}
-              <div className="flex items-start gap-2.5 px-3 py-3">
-                <div className="flex flex-col items-center">
-                  <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[11px] font-bold text-white">Y</span>
-                  </div>
-                  {/* Thread line */}
-                  <div className="w-px flex-1 bg-gray-200 mt-1 min-h-[20px]"></div>
-                </div>
-                <div className="flex-1 min-w-0 pb-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[12px] font-semibold text-gray-900">
-                      {platformUsername}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-gray-400">1m</span>
-                      <div className="flex flex-col gap-[3px]">
-                        {[0, 1, 2].map((i) => (
-                          <div
-                            key={i}
-                            className="w-[3px] h-[3px] rounded-full bg-gray-400"
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  {caption && (
-                    <p className="text-[12px] text-gray-900 leading-relaxed mb-2">
-                      {truncatedCaption}
-                    </p>
-                  )}
-                  <div className="mb-2">
-                    {renderPreviewMediaContent("aspect-auto rounded-xl overflow-hidden shadow-sm border border-gray-100")}
-                  </div>
-                  {/* Action icons */}
-                  <div className="flex items-center gap-4">
-                    <svg
-                      className="w-5 h-5 text-gray-700"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={1.8}
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                      />
-                    </svg>
-                    <svg
-                      className="w-5 h-5 text-gray-700"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={1.8}
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                      />
-                    </svg>
-                    <svg
-                      className="w-5 h-5 text-gray-700"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={1.8}
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                      />
-                    </svg>
-                    <svg
-                      className="w-5 h-5 text-gray-700"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth={1.8}
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-              {/* Replies + likes */}
-              <div className="flex items-center gap-2 px-3 pb-3">
-                <div className="flex -space-x-1.5">
-                  {["bg-purple-400", "bg-blue-400", "bg-green-400"].map(
-                    (c, i) => (
-                      <div
-                        key={i}
-                        className={`w-4 h-4 rounded-full ${c} border border-white`}
-                      />
-                    ),
-                  )}
-                </div>
-                <span className="text-[10px] text-gray-500">
-                  3 replies · 12 likes
-                </span>
-              </div>
-            </div>
-          ) : (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div
-                className="flex items-center gap-2 px-3 py-2"
-                style={{ background: meta.headerBg }}
-              >
-                <img
-                  src={meta.icon}
-                  alt={meta.label}
-                  className="w-4 h-4 object-contain brightness-200"
-                />
-                <span
-                  className="text-[11px] font-bold tracking-wide"
-                  style={{ color: meta.textColor }}
-                >
-                  {meta.label}
-                </span>
-              </div>
-              <div style={{ background: meta.bodyBg }}>
-                <div className="flex items-center gap-2 px-3 pt-3 pb-2">
-                  <div className="w-7 h-7 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[10px] font-bold text-gray-600">
-                      U
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className="text-[11px] font-bold truncate"
-                      style={{
-                        color:
-                          activeId === "mastodon"
-                            ? "#fff"
-                            : "#111",
-                      }}
-                    >
-                      {platformUsername}
-                    </p>
-                    <p
-                      className="text-[9px]"
-                      style={{
-                        color:
-                          activeId === "mastodon"
-                            ? "#aaa"
-                            : "#888",
-                      }}
-                    >
-                      Just now
-                    </p>
-                  </div>
-                </div>
-                {!["pinterest"].includes(activeId) && caption && (
-                  <p
-                    className="px-3 pb-2 text-[11px] leading-relaxed"
-                    style={{ color: activeId === "mastodon" ? "#eee" : "#222" }}
-                  >
-                    {truncatedCaption}
-                  </p>
-                )}
-                <div className="relative">
-                  {renderPreviewMediaContent()}
-                </div>
-                {activeId === "pinterest" && caption && (
-                  <p className="px-3 pt-2 pb-1 text-[11px] leading-relaxed text-gray-800">
-                    {truncatedCaption}
-                  </p>
-                )}
-                <div
-                  className="flex items-center gap-3 px-3 py-2 border-t"
-                  style={{
-                    borderColor: activeId === "mastodon" ? "#333" : "#f0f0f0",
-                  }}
-                >
-                  {meta.actions.map((a, i) => (
-                    <span
-                      key={i}
-                      className="text-[11px]"
-                      style={{
-                        color:
-                          activeId === "mastodon"
-                            ? "#ccc"
-                            : "#555",
-                      }}
-                    >
-                      {a}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-
-        {/* Platform label */}
-        {activeId && (
-          <p className="text-center text-[10px] text-gray-400 mt-3 font-medium">
-            Preview — {PLATFORM_META[activeId]?.label}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-const CalendarView = ({ value, onChange }) => {
-  const [viewDate, setViewDate] = useState(new Date(value || Date.now()));
-  const daysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
-  const firstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
-
-  const month = viewDate.getMonth();
   const year = viewDate.getFullYear();
-
-  const handlePrevMonth = () => setViewDate(new Date(year, month - 1, 1));
-  const handleNextMonth = () => setViewDate(new Date(year, month + 1, 1));
+  const month = viewDate.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const days = [];
-  const startDay = firstDayOfMonth(year, month);
-  const totalDays = daysInMonth(year, month);
+  for (let i = 0; i < firstDay; i++) days.push(null);
+  for (let i = 1; i <= daysInMonth; i++) days.push(i);
 
-  // Padding for start of month
-  for (let i = 0; i < startDay; i++) days.push(null);
-  for (let i = 1; i <= totalDays; i++) days.push(i);
-
-  const isSelected = (day) => {
-    if (!day) return false;
-    const d = new Date(year, month, day);
-    const selected = new Date(value);
-    return (
-      d.getDate() === selected.getDate() &&
-      d.getMonth() === selected.getMonth() &&
-      d.getFullYear() === selected.getFullYear()
-    );
-  };
-
-  const isToday = (day) => {
-    if (!day) return false;
-    const d = new Date(year, month, day);
-    const today = new Date();
-    return (
-      d.getDate() === today.getDate() &&
-      d.getMonth() === today.getMonth() &&
-      d.getFullYear() === today.getFullYear()
-    );
-  };
-
-  const isPast = (day) => {
-    if (!day) return true;
-    const d = new Date(year, month, day);
-    d.setHours(23, 59, 59, 999);
-    return d < new Date();
-  };
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
 
   return (
-    <div className="p-4 w-[280px]">
-      <div className="flex items-center justify-between mb-4">
-        <h4 className="text-[13px] font-bold text-gray-900">
-          {viewDate.toLocaleString("default", {
-            month: "long",
-            year: "numeric",
-          })}
-        </h4>
-        <div className="flex gap-1">
-          <button
-            onClick={handlePrevMonth}
-            className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900 transition-colors"
-          >
-            <ChevronLeft size={16} />
-          </button>
-          <button
-            onClick={handleNextMonth}
-            className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900 transition-colors"
-          >
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
-      <div className="grid grid-cols-7 gap-1 mb-1">
-        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
-          <div
-            key={d}
-            className="text-[10px] font-bold text-gray-400 text-center uppercase py-1"
-          >
-            {d}
-          </div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {days.map((day, i) => (
-          <button
-            key={i}
-            disabled={!day || isPast(day)}
-            onClick={() => {
-              const selected = new Date(year, month, day);
-              const local = new Date(
-                selected.getTime() - selected.getTimezoneOffset() * 60000,
-              );
-              onChange(local.toISOString().slice(0, 10));
-            }}
-            className={`
-              aspect-square rounded-lg text-[11px] font-semibold transition-all flex items-center justify-center
-              ${!day ? "invisible" : ""}
-              ${isPast(day) ? "text-gray-300 cursor-not-allowed" : "hover:bg-[#f37338]/10 hover:text-[#f37338]"}
-              ${isSelected(day) ? "bg-[#f37338] text-white shadow-lg shadow-[#f37338]/30 scale-110" : ""}
-              ${isToday(day) && !isSelected(day) ? "text-[#f37338] border border-[#f37338]/20 bg-[#f37338]/5" : ""}
-            `}
-          >
-            {day}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const ClockPickerView = ({ value, onChange, onClose, minTime }) => {
-  const [h24, minute] = (value || "00:00").split(":");
-  const h24Int = parseInt(h24);
-  const period = h24Int >= 12 ? "PM" : "AM";
-  const hour12 = h24Int % 12 || 12;
-  const [view, setView] = useState("hours"); // "hours" | "minutes"
-  const clockRef = useRef(null);
-  const [isDragging, setIsDragging] = useState(false);
-
-  const periods = ["AM", "PM"];
-  const hours = [12, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-  const minutes = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
-
-  const minH24 = minTime ? parseInt(minTime.split(":")[0]) : -1;
-  const minMin = minTime ? parseInt(minTime.split(":")[1]) : -1;
-
-  const isHourDisabled = (h12, p) => {
-    if (!minTime) return false;
-    let h24Val = parseInt(h12);
-    if (p === "PM" && h24Val < 12) h24Val += 12;
-    if (p === "AM" && h24Val === 12) h24Val = 0;
-    return h24Val < minH24;
-  };
-
-  const isMinuteDisabled = (m) => {
-    if (!minTime) return false;
-    return h24Int === minH24 && parseInt(m) < minMin;
-  };
-
-  const isPeriodDisabled = (p) => {
-    if (!minTime) return false;
-    if (p === "AM") return minH24 >= 12;
-    return false; // PM is only fully disabled if minTime is in the next day, which shouldn't happen here
-  };
-
-  const handleUpdate = (h12, min, p) => {
-    if (isHourDisabled(h12, p)) return;
-    
-    let h24Val = parseInt(h12);
-    if (p === "PM" && h24Val < 12) h24Val += 12;
-    if (p === "AM" && h24Val === 12) h24Val = 0;
-    
-    // If hour is at min, ensure minutes aren't past
-    let finalMin = min;
-    if (h24Val === minH24 && parseInt(min) < minMin) {
-      finalMin = minMin.toString().padStart(2, "0");
-    }
-    
-    onChange(`${h24Val.toString().padStart(2, "0")}:${finalMin.padStart(2, "0")}`);
-  };
-
-  const calculateFromPoint = (e) => {
-    if (!clockRef.current) return;
-    const rect = clockRef.current.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const px = e.clientX || (e.touches && e.touches[0].clientX);
-    const py = e.clientY || (e.touches && e.touches[0].clientY);
-
-    const dx = px - cx;
-    const dy = py - cy;
-    let angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
-    if (angle < 0) angle += 360;
-
-    if (view === "hours") {
-      let h = Math.round(angle / 30);
-      if (h === 0) h = 12;
-      if (h > 12) h = 1;
-      
-      if (!isHourDisabled(h, period)) {
-        handleUpdate(h, minute, period);
-      }
-    } else {
-      let m = Math.round(angle / 6);
-      if (m >= 60) m = 0;
-      if (!isMinuteDisabled(m)) {
-        handleUpdate(hour12, m.toString(), period);
-      }
-    }
-  };
-
-  const handleMouseDown = (e) => {
-    setIsDragging(true);
-    calculateFromPoint(e);
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (isDragging) {
-        calculateFromPoint(e);
-      }
-    };
-    const handleMouseUp = () => {
-      if (isDragging) {
-        setIsDragging(false);
-        if (view === "hours") setView("minutes");
-      }
-    };
-
-    if (isDragging) {
-      window.addEventListener("mousemove", handleMouseMove);
-      window.addEventListener("mouseup", handleMouseUp);
-      window.addEventListener("touchmove", handleMouseMove);
-      window.addEventListener("touchend", handleMouseUp);
-    }
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-      window.removeEventListener("touchmove", handleMouseMove);
-      window.removeEventListener("touchend", handleMouseUp);
-    };
-  }, [isDragging, view, hour12, minute, period]);
-
-  const getPosition = (index, total, radius) => {
-    const angle = (index / total) * 360 - 90;
-    const x = radius * Math.cos((angle * Math.PI) / 180);
-    const y = radius * Math.sin((angle * Math.PI) / 180);
-    return { x, y };
-  };
-
-  return (
-    <div className="p-5 w-[280px] bg-white select-none">
-      <div className="flex flex-col gap-4 mb-6">
-        <div className="flex items-center justify-between">
-          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
-            {periods.map((p) => {
-              const disabled = isPeriodDisabled(p);
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => handleUpdate(hour12, minute, p)}
-                  className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all 
-                    ${disabled ? "opacity-30 cursor-not-allowed" : ""}
-                    ${p === period && !disabled ? "bg-white text-[#f37338] shadow-sm" : "text-gray-400 hover:text-gray-600"}`}
-                >
-                  {p}
-                </button>
-              );
-            })}
-          </div>
-          <div className="flex items-center gap-2 text-[15px] font-black">
-            <button
-              type="button"
-              onClick={() => setView("hours")}
-              className={`${view === "hours" ? "text-[#f37338]" : "text-gray-300"}`}
-            >
-              {hour12.toString().padStart(2, "0")}
-            </button>
-            <span className="text-gray-200">:</span>
-            <button
-              type="button"
-              onClick={() => setView("minutes")}
-              className={`${view === "minutes" ? "text-[#f37338]" : "text-gray-300"}`}
-            >
-              {minute.padStart(2, "0")}
-            </button>
-          </div>
-        </div>
-      </div>
-
+    <div style={{ width: 220, padding: 4 }}>
       <div
-        ref={clockRef}
-        onMouseDown={handleMouseDown}
-        onTouchStart={handleMouseDown}
-        className="relative w-52 h-52 mx-auto bg-gray-50 rounded-full border border-gray-100 shadow-inner flex items-center justify-center cursor-crosshair"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 10,
+        }}
       >
-        <div className="absolute w-2 h-2 bg-[#f37338] rounded-full z-20" />
-
-        {(view === "hours" ? hours : minutes).map((num, i) => {
-          const { x, y } = getPosition(i, 12, 80);
-          const isSelected =
-            view === "hours" ? num === hour12 : parseInt(minute) === num;
-          const disabled = view === "hours" ? isHourDisabled(num, period) : isMinuteDisabled(num);
-
-          return (
-            <div
-              key={num}
-              className={`absolute w-10 h-10 flex items-center justify-center text-[13px] font-bold rounded-full transition-all z-30 pointer-events-none 
-                ${disabled ? "text-gray-200" : isSelected ? "text-white bg-[#f37338] shadow-lg scale-110" : "text-gray-400/60"}`}
-              style={{
-                transform: `translate(${x}px, ${y}px)`,
-              }}
-            >
-              {num === 0 && view === "minutes" ? "00" : num}
-            </div>
-          );
-        })}
-
-        <div
-          className="absolute w-0.5 bg-[#f37338]/30 origin-bottom z-0 pointer-events-none"
-          style={{
-            height: "80px",
-            bottom: "50%",
-            transform: `rotate(${(view === "hours" ? hour12 % 12 : parseInt(minute)) * (view === "hours" ? 30 : 6)}deg)`,
-            transition: isDragging
-              ? "none"
-              : "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-          }}
-        />
-
-        <div
-          className={`absolute w-11 h-11 bg-[#f37338] rounded-full shadow-2xl flex items-center justify-center text-white text-[14px] font-black z-40 pointer-events-none border-2 border-white`}
-          style={{
-            transform: `rotate(${(view === "hours" ? hour12 % 12 : parseInt(minute)) * (view === "hours" ? 30 : 6)}deg) translateY(-80px) rotate(-${(view === "hours" ? hour12 % 12 : parseInt(minute)) * (view === "hours" ? 30 : 6)}deg)`,
-            transition: isDragging
-              ? "none"
-              : "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-            boxShadow: "0 0 20px rgba(243, 115, 56, 0.4)",
-          }}
-        >
-          {view === "hours" ? hour12 : minute.padStart(2, "0")}
-        </div>
-      </div>
-
-      <div className="mt-8 flex items-center justify-between">
-        <p className="text-[10px] font-medium text-gray-400">
-          {view === "hours" ? "Select hour" : "Select minutes"}
-        </p>
         <button
-          type="button"
-          onClick={onClose}
-          className="px-4 py-2 bg-[#f37338] text-white text-[11px] font-bold rounded-lg shadow-md hover:bg-[#e0662d] transition-all"
+          onClick={() => setViewDate(new Date(year, month - 1, 1))}
+          style={{
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            color: "var(--slate)",
+          }}
         >
-          Done
+          <ChevronDown size={14} style={{ transform: "rotate(90deg)" }} />
+        </button>
+        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink)" }}>
+          {monthNames[month]} {year}
+        </span>
+        <button
+          onClick={() => setViewDate(new Date(year, month + 1, 1))}
+          style={{
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            color: "var(--slate)",
+          }}
+        >
+          <ChevronDown size={14} style={{ transform: "rotate(-90deg)" }} />
         </button>
       </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(7, 1fr)",
+          gap: 2,
+        }}
+      >
+        {["S", "M", "T", "W", "T", "F", "S"].map((d) => (
+          <span
+            key={d}
+            style={{
+              fontSize: 9,
+              fontWeight: 800,
+              textAlign: "center",
+              color: "var(--slate)",
+              opacity: 0.5,
+            }}
+          >
+            {d}
+          </span>
+        ))}
+        {days.map((d, i) => {
+          if (!d) return <div key={`empty-${i}`} />;
+          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+          const isSelected = value === dateStr;
+          const isToday =
+            d === today.getDate() &&
+            month === today.getMonth() &&
+            year === today.getFullYear();
+          const isPast = new Date(year, month, d) < today && !isToday;
+
+          return (
+            <button
+              key={i}
+              onClick={() => !isPast && onChange(dateStr)}
+              style={{
+                border: "none",
+                background: isSelected
+                  ? "var(--arc,#f37338)"
+                  : isToday
+                    ? "rgba(243,115,56,0.1)"
+                    : "none",
+                borderRadius: 6,
+                fontSize: 10,
+                fontWeight: isSelected || isToday ? 700 : 500,
+                color: isSelected
+                  ? "white"
+                  : isPast
+                    ? "#ccc"
+                    : isToday
+                      ? "var(--arc)"
+                      : "var(--ink)",
+                padding: "4px 0",
+                cursor: isPast ? "default" : "pointer",
+              }}
+            >
+              {d}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
-};
+});
 
-const CustomSelect = ({
+const CustomSelect = memo(function CustomSelect({
   value,
   options,
   onChange,
   icon: Icon,
-  isCalendar,
-  isTime,
+  isCalendar = false,
+  isTime = false,
   minTime,
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
+  align = "left",
+}) {
+  const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
-  const [localTime, setLocalTime] = useState(value);
 
   useEffect(() => {
-    setLocalTime(value);
-  }, [value]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target)
-      ) {
-        setIsOpen(false);
-      }
+    const fn = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target))
+        setOpen(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    window.addEventListener("mousedown", fn);
+    return () => window.removeEventListener("mousedown", fn);
   }, []);
 
-  const handleTimeInput = (e) => {
-    const val = e.target.value.replace(/[^0-9:]/g, "");
-    setLocalTime(val);
-
-    // Validate HH:MM format
-    if (/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(val)) {
-      const formatted = val.includes(":")
-        ? val
-            .split(":")
-            .map((s) => s.padStart(2, "0"))
-            .join(":")
-        : val;
-      
-      // Check against minTime
-      if (minTime && formatted < minTime) {
-        onChange(minTime);
-        setLocalTime(minTime);
-      } else {
-        onChange(formatted);
-      }
-    }
-  };
-
-  const selectedOption = isCalendar
-    ? {
-        label: new Date(value).toLocaleDateString(undefined, {
-          weekday: "short",
-          day: "2-digit",
-          month: "short",
-        }),
-      }
-    : isTime
-      ? {
-          label: (() => {
-            const [h24, min] = (value || "00:00").split(":");
-            const h24Int = parseInt(h24);
-            const period = h24Int >= 12 ? "PM" : "AM";
-            const h12 = h24Int % 12 || 12;
-            return `${h12.toString().padStart(2, "0")}:${min} ${period}`;
-          })(),
-        }
-      : options.find((o) => (o.value || o) === value);
-
-  const displayTime = isTime
-    ? (() => {
-        const [h24, min] = (localTime || "00:00").split(":");
-        if (!h24 || !min) return localTime;
-        const h24Int = parseInt(h24);
-        if (isNaN(h24Int)) return localTime;
-        const period = h24Int >= 12 ? "PM" : "AM";
-        const h12 = h24Int % 12 || 12;
-        return `${h12.toString().padStart(2, "0")}:${min} ${period}`;
-      })()
-    : "";
+  const label = isCalendar
+    ? new Date(value + "T00:00:00").toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      })
+    : value;
 
   return (
-    <div className="relative" ref={containerRef}>
-      <div
-        className={`w-full flex items-center justify-between pl-10 pr-4 py-3 bg-gray-50 border border-gray-100 rounded-xl transition-all ${isOpen ? "ring-2 ring-[#f37338]/10 border-[#f37338] bg-white" : "hover:bg-white"}`}
+    <div ref={containerRef} style={{ position: "relative", flex: 1 }}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        style={{
+          width: "100%",
+          padding: "7px 10px",
+          background: "white",
+          border: "1px solid rgba(20,20,19,0.1)",
+          borderRadius: 8,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          cursor: "pointer",
+          fontFamily: "inherit",
+        }}
       >
-        <Icon
-          className={`absolute left-3 w-4 h-4 transition-colors ${isOpen ? "text-[#f37338]" : "text-gray-400"}`}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {Icon && <Icon size={12} style={{ color: "var(--slate)" }} />}
+          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink)" }}>
+            {label}
+          </span>
+        </div>
+        <ChevronDown
+          size={11}
+          style={{
+            color: "var(--slate)",
+            transform: open ? "rotate(180deg)" : "none",
+            transition: "0.2s",
+          }}
         />
-        {isTime ? (
-          <input
-            type="text"
-            value={displayTime}
-            onChange={handleTimeInput}
-            onFocus={() => setIsOpen(true)}
-            placeholder="00:00 AM"
-            className="w-full bg-transparent border-none outline-none text-[13px] font-semibold text-gray-900 placeholder:text-gray-300"
-            readOnly={!isOpen}
-          />
-        ) : (
-          <button
-            type="button"
-            onClick={() => setIsOpen(!isOpen)}
-            className="w-full text-left truncate outline-none text-[13px] font-semibold text-gray-900"
-          >
-            {selectedOption?.label || selectedOption}
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex-shrink-0 ml-2"
-        >
-          <ChevronDown
-            className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-          />
-        </button>
-      </div>
+      </button>
 
       <AnimatePresence>
-        {isOpen && (
+        {open && (
           <motion.div
-            initial={{ opacity: 0, y: 5, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 5, scale: 0.95 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className={`absolute z-[100] mt-2 bg-white border border-gray-100 rounded-2xl shadow-2xl overflow-hidden ${isCalendar || isTime ? "left-0" : "w-full"}`}
-            style={{ top: "100%" }}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 5 }}
+            style={{
+              position: "absolute",
+              bottom: "100%",
+              marginBottom: 8,
+              [align]: 0,
+              zIndex: 1000,
+              background: "white",
+              borderRadius: 12,
+              border: "1px solid rgba(20,20,19,0.08)",
+              boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+              overflow: "hidden",
+            }}
           >
             {isCalendar ? (
               <CalendarView
                 value={value}
-                onChange={(val) => {
-                  onChange(val);
-                  setIsOpen(false);
+                onChange={(v) => {
+                  onChange(v);
+                  setOpen(false);
                 }}
-              />
-            ) : isTime ? (
-              <ClockPickerView
-                value={value}
-                minTime={minTime}
-                onChange={(val) => {
-                  onChange(val);
-                }}
-                onClose={() => setIsOpen(false)}
               />
             ) : (
-              <div className="py-1 max-h-60 overflow-y-auto custom-scrollbar">
+              <div
+                style={{
+                  maxHeight: 200,
+                  overflowY: "auto",
+                  width: 120,
+                  padding: 4,
+                }}
+              >
                 {options.map((opt) => {
-                  const val = opt.value || opt;
-                  const lbl = opt.label || opt;
-                  const isSelected = val === value;
+                  const val = typeof opt === "string" ? opt : opt.value;
+                  const lbl = typeof opt === "string" ? opt : opt.label;
+                  const disabled = minTime && val < minTime;
                   return (
                     <button
                       key={val}
-                      type="button"
                       onClick={() => {
-                        onChange(val);
-                        setIsOpen(false);
+                        if (!disabled) {
+                          onChange(val);
+                          setOpen(false);
+                        }
                       }}
-                      className={`w-full text-left px-4 py-2.5 text-[13px] font-medium transition-colors hover:bg-[#f37338]/5 ${isSelected ? "text-[#f37338] bg-[#f37338]/5" : "text-gray-700"}`}
+                      style={{
+                        width: "100%",
+                        padding: "6px 10px",
+                        textAlign: "left",
+                        background: value === val ? "rgba(243,115,56,0.08)" : "none",
+                        border: "none",
+                        borderRadius: 6,
+                        fontSize: 11,
+                        fontWeight: value === val ? 700 : 500,
+                        color: disabled
+                          ? "#ccc"
+                          : value === val
+                            ? "var(--arc)"
+                            : "var(--ink)",
+                        cursor: disabled ? "default" : "pointer",
+                      }}
                     >
                       {lbl}
                     </button>
@@ -1583,1415 +361,1446 @@ const CustomSelect = ({
       </AnimatePresence>
     </div>
   );
-};
+});
 
-function ComposerModal({ isOpen, onClose, onPostCreated }) {
-  const { connectedAccounts } = useAuth();
+/* ─────────────────────────────────────────────────────────────────
+   SIZE BUTTONS
+   ───────────────────────────────────────────────────────────────── */
+const SizeButton = memo(function SizeButton({ size, isSelected, onClick }) {
+  const Icon = size.ratio === "1:1" ? Square : RectangleVertical;
+  return (
+    <motion.button
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      style={{
+        padding: "8px 12px",
+        borderRadius: 10,
+        border: "1.5px solid",
+        borderColor: isSelected ? "var(--ink)" : "rgba(20,20,19,0.08)",
+        background: isSelected ? "var(--ink)" : "white",
+        color: isSelected ? "white" : "var(--slate)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 4,
+        flex: 1,
+        minWidth: 70,
+        cursor: "pointer",
+        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+      }}
+    >
+      <Icon
+        size={14}
+        style={{ opacity: isSelected ? 1 : 0.6 }}
+        strokeWidth={isSelected ? 2.5 : 2}
+      />
+      <div style={{ textAlign: "center" }}>
+        <p
+          style={{
+            fontSize: 10,
+            fontWeight: 800,
+            margin: 0,
+            letterSpacing: "0.02em",
+          }}
+        >
+          {size.ratio}
+        </p>
+        <p style={{ fontSize: 8, margin: 0, opacity: 0.6, fontWeight: 600 }}>
+          {size.label}
+        </p>
+      </div>
+      {size.badge !== "none" && !isSelected && (
+        <span
+          style={{
+            fontSize: 7,
+            fontWeight: 800,
+            background:
+              size.badge === "safe"
+                ? "rgba(5,150,105,0.1)"
+                : "rgba(243,115,56,0.1)",
+            color: size.badge === "safe" ? "#059669" : "#f37338",
+            padding: "1px 4px",
+            borderRadius: 4,
+            marginTop: 2,
+            textTransform: "uppercase",
+          }}
+        >
+          {size.badge}
+        </span>
+      )}
+    </motion.button>
+  );
+});
+
+/* ─────────────────────────────────────────────────────────────────
+   MAIN COMPONENT
+   ───────────────────────────────────────────────────────────────── */
+function ComposerModal({ isOpen, onClose, initialData = null }) {
+  const { user, connectedAccounts } = useAuth();
   const { addJob } = useUploadJobs();
-  const { confirm } = useDialog();
+  const { alert, confirm } = useDialog();
+  const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  /* ── State ── */
+  const [selectedChannels, setSelectedChannels] = useState([]);
   const [caption, setCaption] = useState("");
   const [mediaFiles, setMediaFiles] = useState([]);
-  const [selectedChannels, setSelectedChannels] = useState([]);
-  const [postType, setPostType] = useState("post");
-  const [platformData, setPlatformData] = useState({
-    pinterest: { title: "", link: "", boardId: "" },
-    instagram: { firstComment: "" },
-    youtube: {},
-    reddit: { subreddit: "" },
-  });
-  const [customizationExpanded, setCustomizationExpanded] = useState(false);
-  const [youtubeThumbnail, setYoutubeThumbnail] = useState(null);
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
-  const [userTimezone] = useState(
-    () => Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-  );
+  const [postType, setPostType] = useState("post");
+  const [platformData, setPlatformData] = useState({
+    instagram: { type: "post" },
+    youtube: { type: "short" },
+    facebook: { type: "post" },
+    pinterest: { boardId: "", title: "", link: "" },
+    reddit: { subreddit: "", title: "", flairId: "" },
+  });
+  const [youtubeThumbnail, setYoutubeThumbnail] = useState(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [dragActive, setDragActive] = useState(false);
-  const [selectedSizePreset, setSelectedSizePreset] =
-    useState("ig-post-square");
   const [activePreviewPlatform, setActivePreviewPlatform] =
     useState("instagram");
-  const [mobileActiveTab, setMobileActiveTab] = useState("edit"); // "edit" | "preview"
+  const [selectedSizePreset, setSelectedSizePreset] = useState("li_sq"); // default
+  const [customizationExpanded, setCustomizationExpanded] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-  const fileInputRef = useRef(null);
-
-  React.useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const [mobileActiveTab, setMobileActiveTab] = useState("compose"); // compose, preview, insights
+  const [autoFixMsg, setAutoFixMsg] = useState(null);
 
   const isMobile = windowWidth < 768;
 
-  const availableSizePresets = useMemo(() => {
-    const targetPlatform =
-      selectedChannels.length > 0 ? activePreviewPlatform : "instagram";
+  useEffect(() => {
+    const fn = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, []);
 
-    return getPresetsForPlatform(targetPlatform).map((preset) => ({
-      ...preset,
-      matchedPlatforms: [targetPlatform],
-      matchCount: 1,
-    }));
-  }, [selectedChannels, activePreviewPlatform]);
+  /* ── Intelligence engine ── */
+  const { panelItems, hasBlockingError, totalIssues } = usePostIntelligence({
+    selectedChannels,
+    mediaFiles,
+    platformData,
+    youtubeThumbnail,
+    postType,
+    caption,
+    scheduledAt,
+    isScheduled,
+    connectedAccounts,
+  });
 
+  /* ── Smart size engine ── */
+  const { smartSizes, availablePresets, selectedRatio } = useSmartSizes({
+    selectedChannels,
+    activePlatform: activePreviewPlatform,
+    selectedSizePreset,
+    setSelectedSizePreset,
+    onAutoFixed: (msg) => {
+      setAutoFixMsg(msg);
+      setTimeout(() => setAutoFixMsg(null), 3500);
+    },
+  });
+
+  /* ── Available post types (intersection) ── */
   const availablePostTypes = useMemo(() => {
     if (selectedChannels.length === 0) return ["post", "story", "reel"];
-
     let common = PLATFORM_POST_TYPES[selectedChannels[0]] || ["post"];
     for (let i = 1; i < selectedChannels.length; i++) {
       const types = PLATFORM_POST_TYPES[selectedChannels[i]] || ["post"];
-      common = common.filter(t => types.includes(t));
+      common = common.filter((t) => types.includes(t));
     }
-
     return common.length > 0 ? common : ["post"];
-  }, [selectedChannels]);
+  }, [JSON.stringify(selectedChannels)]);
 
-  React.useEffect(() => {
-    if (!availablePostTypes.includes(postType)) {
+  useEffect(() => {
+    if (!availablePostTypes.includes(postType))
       setPostType(availablePostTypes[0] || "post");
-    }
   }, [availablePostTypes, postType]);
 
-  const toLocalDateTimeValue = (date) => {
-    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-    return local.toISOString().slice(0, 16);
-  };
-
-  // Min datetime for scheduling = now + 2 minutes
-  const minScheduleDateTime = React.useMemo(() => {
-    const d = new Date(Date.now() + 2 * 60 * 1000);
-    return toLocalDateTimeValue(d);
-  }, []);
-
-  const minScheduleDate = minScheduleDateTime.slice(0, 10);
-  const minScheduleTime = minScheduleDateTime.slice(11, 16);
-  const scheduledDatePart = scheduledAt ? scheduledAt.slice(0, 10) : "";
-  const scheduledTimePart = scheduledAt ? scheduledAt.slice(11, 16) : "";
-
-  const scheduleDateOptions = useMemo(() => {
-    const options = [];
-    const base = new Date();
-    base.setHours(0, 0, 0, 0);
-
-    for (let i = 0; i < 30; i++) {
-      const d = new Date(base);
-      d.setDate(base.getDate() + i);
-
-      const value = toLocalDateTimeValue(d).slice(0, 10);
-      const label = d.toLocaleDateString(undefined, {
-        weekday: "short",
-        day: "2-digit",
-        month: "short",
-      });
-
-      options.push({ value, label });
-    }
-
-    return options;
-  }, []);
-
-  const getMinimumTimeForDate = (datePart) => {
-    if (datePart !== minScheduleDate) return "00:00";
-    return minScheduleTime;
-  };
-
-  const buildTimeOptions = (datePart) => {
-    const options = [];
-    const minTime = getMinimumTimeForDate(datePart || minScheduleDate);
-
-    for (let hour = 0; hour < 24; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
-        const value = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-        if (value >= minTime) {
-          options.push(value);
-        }
-      }
-    }
-
-    return options;
-  };
-
-  const scheduleTimeOptions = useMemo(
-    () => buildTimeOptions(scheduledDatePart || minScheduleDate),
-    [scheduledDatePart, minScheduleDate, minScheduleTime],
-  );
-
-  const updateScheduledAt = (datePart, timePart) => {
-    if (!datePart || !timePart) {
-      setScheduledAt("");
-      return;
-    }
-
-    setScheduledAt(`${datePart}T${timePart}`);
-  };
-
-  React.useEffect(() => {
-    if (!isScheduled) return;
-
-    const dateValue = scheduledDatePart || minScheduleDate;
-    const options = buildTimeOptions(dateValue);
-    const nextTime =
-      scheduledTimePart && options.includes(scheduledTimePart)
-        ? scheduledTimePart
-        : options[0] || "";
-
-    if (!nextTime) return;
-
-    const nextValue = `${dateValue}T${nextTime}`;
-    if (scheduledAt !== nextValue) {
-      setScheduledAt(nextValue);
-    }
-  }, [isScheduled, scheduledDatePart, minScheduleDate, minScheduleTime]);
-
-  const selectedRatio = useMemo(() => {
-    return (
-      availableSizePresets.find((preset) => preset.id === selectedSizePreset)
-        ?.ratio ||
-      availableSizePresets[0]?.ratio ||
-      "1:1"
-    );
-  }, [availableSizePresets, selectedSizePreset]);
-
-  React.useEffect(() => {
+  /* ── Platform preview sync ── */
+  useEffect(() => {
     if (selectedChannels.length === 0) {
       setActivePreviewPlatform("instagram");
       return;
     }
-
-    if (!selectedChannels.includes(activePreviewPlatform)) {
+    if (!selectedChannels.includes(activePreviewPlatform))
       setActivePreviewPlatform(selectedChannels[0]);
-    }
-  }, [selectedChannels, activePreviewPlatform]);
+  }, [JSON.stringify(selectedChannels), activePreviewPlatform]);
 
-  React.useEffect(() => {
-    if (
-      availableSizePresets.length > 0 &&
-      !availableSizePresets.some((preset) => preset.id === selectedSizePreset)
-    ) {
-      setSelectedSizePreset(availableSizePresets[0].id);
-    }
-  }, [availableSizePresets, selectedSizePreset]);
-
-  // Auto-select connected channels on mount
-  React.useEffect(() => {
+  /* ── Auto-select connected channels on open ── */
+  useEffect(() => {
     if (isOpen && selectedChannels.length === 0) {
-      const connected = [];
-      if (connectedAccounts.youtube) connected.push("youtube");
-      if (connectedAccounts.instagram) connected.push("instagram");
-      if (connectedAccounts.pinterest) connected.push("pinterest");
-      if (connectedAccounts.facebook) connected.push("facebook");
-      if (connectedAccounts.threads) connected.push("threads");
-      if (connectedAccounts.x) connected.push("x");
-      if (connectedAccounts.reddit) connected.push("reddit");
+      const connected = Object.keys(connectedAccounts).filter(
+        (k) => connectedAccounts[k]?.connected && PLATFORM_META[k],
+      );
       setSelectedChannels(connected);
     }
-  }, [isOpen, connectedAccounts]);
+  }, [isOpen]);
 
-  const handleChannelToggle = (platformId) => {
+  /* ── Scheduling helpers ── */
+  const toLocalDT = (date) => {
+    const l = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return l.toISOString().slice(0, 16);
+  };
+  const minDT = useMemo(
+    () => toLocalDT(new Date(Date.now() + 2 * 60 * 1000)),
+    [],
+  );
+  const minDate = minDT.slice(0, 10);
+  const minTime = minDT.slice(11, 16);
+  const datePart = scheduledAt ? scheduledAt.slice(0, 10) : "";
+  const timePart = scheduledAt ? scheduledAt.slice(11, 16) : "";
+
+  const scheduleDateOptions = useMemo(() => {
+    const opts = [];
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(base);
+      d.setDate(base.getDate() + i);
+      opts.push({
+        value: toLocalDT(d).slice(0, 10),
+        label: d.toLocaleDateString(undefined, {
+          weekday: "short",
+          day: "2-digit",
+          month: "short",
+        }),
+      });
+    }
+    return opts;
+  }, []);
+
+  const buildTimeOpts = (dp) => {
+    const min = dp !== minDate ? "00:00" : minTime;
+    const opts = [];
+    for (let h = 0; h < 24; h++)
+      for (let m = 0; m < 60; m += 15) {
+        const v = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+        if (v >= min) opts.push(v);
+      }
+    return opts;
+  };
+  const scheduleTimeOpts = useMemo(
+    () => buildTimeOpts(datePart || minDate),
+    [datePart, minDate, minTime],
+  );
+
+  useEffect(() => {
+    if (!isScheduled) return;
+    const dv = datePart || minDate;
+    const opts = buildTimeOpts(dv);
+    const nt = timePart && opts.includes(timePart) ? timePart : opts[0] || "";
+    if (!nt) return;
+    const nv = `${dv}T${nt}`;
+    if (scheduledAt !== nv) setScheduledAt(nv);
+  }, [isScheduled, datePart, minDate, minTime]);
+
+  /* ── Handlers ── */
+  const handleChannelToggle = useCallback((id) => {
     setSelectedChannels((prev) =>
-      prev.includes(platformId)
-        ? prev.filter((id) => id !== platformId)
-        : [...prev, platformId],
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
     );
-  };
+    setError(null);
+  }, []);
 
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const files = Array.from(e.dataTransfer.files).filter(
-        (f) => f.type.startsWith("image/") || f.type.startsWith("video/"),
-      );
-
-      if (files.length > 0) {
-        const newFiles = files.map((file) => ({
-          id: Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
-          file,
-        }));
-        setMediaFiles((prev) => [...prev, ...newFiles].slice(0, 10));
-        setError(null);
-      } else {
-        setError("Please upload image or video files");
-      }
-    }
-  };
-
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const files = Array.from(e.target.files).filter(
-        (f) => f.type.startsWith("image/") || f.type.startsWith("video/"),
-      );
-
-      if (files.length > 0) {
-        const newFiles = files.map((file) => ({
-          id: Math.random().toString(36).substr(2, 9) + Date.now().toString(36),
-          file,
-        }));
-        setMediaFiles((prev) => [...prev, ...newFiles].slice(0, 10));
-        setError(null);
-      } else {
-        setError("Please upload image or video files");
-      }
-    }
-  };
-
-  const removeFile = (index) => {
-    setMediaFiles((prev) => prev.filter((_, i) => i !== index));
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  const validateForm = () => {
+  /* ── Validation ── */
+  const validateForm = useCallback(() => {
     if (selectedChannels.length === 0) {
-      setError("Please select at least one channel");
+      setError("Please select at least one platform");
       return false;
     }
-
     if (!caption.trim()) {
-      setError("Please enter a caption");
+      setError("Please add a caption");
       return false;
     }
-
     if (mediaFiles.length === 0) {
-      setError("Please upload at least one image or video");
+      setError("Please upload at least one file");
       return false;
     }
 
-    // Validate Pinterest fields if Pinterest is selected
-    if (selectedChannels.includes("pinterest")) {
-      if (!platformData.pinterest?.title?.trim()) {
-        setError("Pinterest requires a title");
-        return false;
-      }
-      if (!platformData.pinterest?.boardId) {
-        setError("Pinterest requires a board selection");
-        return false;
-      }
-    }
+    const hasImg = mediaFiles.some((m) => m.file?.type?.startsWith("image/"));
+    const hasVid = mediaFiles.some((m) => m.file?.type?.startsWith("video/"));
 
-    // Validate YouTube media type
-    if (
-      selectedChannels.includes("youtube") &&
-      mediaFiles.some((m) => m.file.type.startsWith("image/"))
-    ) {
+    if (selectedChannels.includes("youtube") && hasImg && !hasVid) {
       setError(
-        "Posting on YouTube via app is not possible for images. You can only upload video.",
+        "YouTube only supports video — please upload a video or deselect YouTube.",
       );
       return false;
     }
-
-    // Validate scheduling time
+    if (
+      selectedChannels.includes("pinterest") &&
+      !platformData.pinterest?.title?.trim()
+    ) {
+      setError("Pinterest requires a title in Platform Customization.");
+      return false;
+    }
+    if (
+      selectedChannels.includes("pinterest") &&
+      !platformData.pinterest?.boardId
+    ) {
+      setError("Pinterest requires a board selection.");
+      return false;
+    }
+    if (
+      selectedChannels.includes("reddit") &&
+      !platformData.reddit?.subreddit?.trim()
+    ) {
+      setError("Reddit requires a subreddit.");
+      return false;
+    }
     if (isScheduled) {
       if (!scheduledAt) {
         setError("Please select a date and time for scheduling.");
         return false;
       }
-      const schedTime = new Date(scheduledAt).getTime();
-      if (schedTime < Date.now() + 2 * 60 * 1000) {
+      if (new Date(scheduledAt).getTime() < Date.now() + 2 * 60 * 1000) {
         setError("Scheduled time must be at least 2 minutes in the future.");
         return false;
       }
     }
-
     return true;
-  };
+  }, [
+    selectedChannels,
+    caption,
+    mediaFiles,
+    platformData,
+    isScheduled,
+    scheduledAt,
+  ]);
 
   const handleSubmit = async () => {
+    if (!validateForm()) return;
+    setLoading(true);
     setError(null);
 
-    if (!validateForm()) {
-      return;
-    }
-
-    // YouTube Thumbnail Check
-    const isVideo = mediaFiles[0]?.file?.type?.startsWith("video/");
-    if (selectedChannels.includes("youtube") && isVideo && !youtubeThumbnail) {
-      const proceed = await confirm(
-        "Missing YouTube Thumbnail",
-        "You haven't selected a custom thumbnail for your YouTube video. YouTube will pick a default frame from the video. Do you want to set one now?",
-        {
-          confirmText: "Post Anyway",
-          cancelText: "Add Thumbnail",
-          intent: "warning",
-        },
-      );
-      if (!proceed) {
-        setCustomizationExpanded(true);
-        return;
-      }
-    }
-
-    setLoading(true);
-
     try {
+      // 1. Prep data
       const formData = new FormData();
-      // Important: Append text fields BEFORE files for some multipart parsers
       formData.append("caption", caption);
-      formData.append("selectedChannels", JSON.stringify(selectedChannels));
-      formData.append(
-        "platformData",
-        JSON.stringify({
-          ...platformData,
-          composer: {
-            sizePreset: selectedSizePreset,
-            aspectRatio: selectedRatio,
-          },
-        }),
-      );
-      formData.append("selectedPostSizePreset", selectedSizePreset);
-      formData.append("selectedAspectRatio", selectedRatio);
-      if (youtubeThumbnail && selectedChannels.includes("youtube")) {
-        formData.append("youtubeThumbnail", youtubeThumbnail);
-      }
-      formData.append("isScheduled", isScheduled ? "true" : "false");
-      formData.append("userTimezone", userTimezone);
+      formData.append("platforms", JSON.stringify(selectedChannels));
+      formData.append("postType", postType);
+      formData.append("platformData", JSON.stringify(platformData));
 
-      if (isScheduled && scheduledAt) {
-        // Convert local datetime-local string to UTC ISO string
-        const scheduledDate = new Date(scheduledAt);
-        formData.append("scheduledAt", scheduledDate.toISOString());
+      if (isScheduled) {
+        formData.append("scheduledAt", new Date(scheduledAt).toISOString());
       }
 
       mediaFiles.forEach((m) => {
         formData.append("media", m.file);
       });
 
-      // ── POST and get jobId back immediately (< 1 second) ──────────────
-      const response = await apiClient.post("/api/broadcast", formData, {
+      if (youtubeThumbnail) {
+        formData.append("youtubeThumbnail", youtubeThumbnail);
+      }
+
+      // 2. Start broadcast via API
+      const res = await apiClient.post("/broadcasts", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      const { jobId } = response.data;
+      // 3. Add to background manager
+      addJob({
+        id: res.data.broadcastId,
+        meta: {
+          caption,
+          channels: selectedChannels,
+          fileCount: mediaFiles.length,
+          mediaType: mediaFiles[0]?.file.type.startsWith("video/")
+            ? "video"
+            : "image",
+          previewUrl: URL.createObjectURL(mediaFiles[0].file),
+        },
+      });
 
-      if (jobId) {
-        // Create a local blob URL for immediate preview in the Task Manager
-        const localPreviewUrl = youtubeThumbnail
-          ? URL.createObjectURL(youtubeThumbnail)
-          : mediaFiles[0]
-            ? URL.createObjectURL(mediaFiles[0].file)
-            : null;
-
-        // Register the job in the Upload Manager Panel
-        addJob(
-          jobId,
-          {
-            caption,
-            channels: selectedChannels,
-            mediaType: isVideo ? "video" : "image",
-            postType,
-            fileCount: mediaFiles.length,
-            previewUrl: localPreviewUrl,
-          },
-          onPostCreated,
-        ); // onPostCreated is called when the job completes
-      } else {
-        // Fallback for non-async or scheduled responses
-        onPostCreated(response.data);
-      }
-
-      // Close modal immediately — UI is unblocked!
-      handleClose();
-    } catch (error) {
-      console.error("Broadcast error:", error);
-      setError(
-        error.response?.data?.error || "Failed to broadcast. Please try again.",
-      );
+      // 4. Reset & Close
+      onClose();
+      setCaption("");
+      setMediaFiles([]);
+      setSelectedChannels([]);
+      setError(null);
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to start broadcast");
     } finally {
       setLoading(false);
     }
   };
 
   const handleClose = () => {
-    setCaption("");
-    setMediaFiles([]);
-    setSelectedChannels([]);
-    setPostType("post");
-    setPlatformData({
-      pinterest: { title: "", link: "", boardId: "" },
-      instagram: { firstComment: "" },
-      youtube: {},
-      reddit: { subreddit: "" },
-    });
-    setYoutubeThumbnail(null);
-    setCustomizationExpanded(false);
-    setIsScheduled(false);
-    setScheduledAt("");
-    setSelectedSizePreset("ig-post-square");
-    setActivePreviewPlatform("instagram");
-    setError(null);
-    onClose();
+    if (caption || mediaFiles.length > 0) {
+      confirm(
+        "Discard post?",
+        "You have unsaved changes. Are you sure you want to discard this post?",
+        {
+          confirmLabel: "Discard",
+          intent: "danger",
+        },
+      ).then((ok) => ok && onClose());
+    } else {
+      onClose();
+    }
   };
 
   if (!isOpen) return null;
 
-  const mediaType = mediaFiles[0]?.file?.type?.startsWith("video/")
-    ? "video"
-    : "image";
+  const publishDisabled = loading || hasBlockingError;
 
+  const MOBILE_TABS = [
+    { id: "compose", label: "Compose" },
+    { id: "preview", label: "Preview" },
+    { id: "insights", label: "Insights" },
+  ];
+
+  /* ── JSX ── */
   return (
-    <div className="modal-overlay" onClick={handleClose}>
-      <div
-        style={{
-          background: 'var(--canvas-lifted)',
-          borderRadius: isMobile ? '0' : 'var(--r-hero)',
-          boxShadow: 'var(--shadow-deep)',
-          width: '100%',
-          maxWidth: isMobile ? '100%' : '1100px',
-          height: isMobile ? '100%' : 'auto',
-          maxHeight: isMobile ? '100%' : '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          position: isMobile ? 'fixed' : 'relative',
-          inset: isMobile ? 0 : 'auto',
-        }}
-        onClick={(e) => e.stopPropagation()}
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px]"
       >
-        {/* Header */}
-        <div style={{ borderBottom: '1px solid rgba(20,20,19,0.08)', padding: isMobile ? '12px 16px' : '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--canvas-lifted)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <h2 style={{ fontSize: isMobile ? 15 : 16, fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>
-              {isMobile ? "Composer" : "Create Post"}
-            </h2>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <button
-              type="button"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "6px 12px",
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--slate)",
-                background: "transparent",
-                border: "1px solid rgba(20,20,19,0.10)",
-                borderRadius: "var(--r-btn)",
-                cursor: "pointer",
-                fontFamily: "var(--font)",
-                transition: "background 0.15s",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "rgba(20,20,19,0.05)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "transparent")
-              }
-              title="AI Assistant"
-            >
-              <Sparkles size={13} />
-              {!isMobile && <span>AI Assistant</span>}
-            </button>
-            <button
-              type="button"
-              onClick={handleClose}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
-                border: "1px solid rgba(20,20,19,0.10)",
-                background: "transparent",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "var(--slate)",
-                transition: "background 0.15s",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "rgba(20,20,19,0.05)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "transparent")
-              }
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Tab Switcher */}
-        {isMobile && (
-          <div style={{ display: 'flex', background: 'var(--canvas-lifted)', borderBottom: '1px solid rgba(20,20,19,0.08)' }}>
-            <button
-              onClick={() => setMobileActiveTab("edit")}
-              style={{ flex: 1, padding: '12px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: mobileActiveTab === "edit" ? 'var(--ink)' : 'var(--slate)', border: 'none', background: 'transparent', borderBottom: `2.5px solid ${mobileActiveTab === "edit" ? 'var(--ink)' : 'transparent'}`, transition: 'all 0.2s' }}
-            >
-              1. Compose
-            </button>
-            <button
-              onClick={() => setMobileActiveTab("preview")}
-              style={{ flex: 1, padding: '12px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: mobileActiveTab === "preview" ? 'var(--ink)' : 'var(--slate)', border: 'none', background: 'transparent', borderBottom: `2.5px solid ${mobileActiveTab === "preview" ? 'var(--ink)' : 'transparent'}`, transition: 'all 0.2s' }}
-            >
-              2. Preview
-            </button>
-          </div>
-        )}
-
-        {/* Body - Split Layout */}
-        <div style={{ display: 'flex', height: isMobile ? 'calc(100vh - 110px)' : 'calc(90vh - 120px)', flex: 1 }}>
-          
-          {/* Left Panel - Live Platform Previews */}
-          <div
-            style={{
-              width: 320,
-              flexShrink: 0,
-              borderLeft: "1px solid rgba(20,20,19,0.08)",
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-              background: "var(--canvas-lifted)",
-            }}
-          >
-            <div
-              style={{
-                padding: "12px 16px",
-                borderBottom: "1px solid rgba(20,20,19,0.08)",
-                background: "var(--canvas-lifted)",
-              }}
-            >
-              <h3
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "var(--ink)",
-                  letterSpacing: "-0.01em",
-                  margin: 0,
-                  textTransform: "uppercase",
-                }}
-              >
-                Post Preview
-              </h3>
-            </div>
-
-            {selectedChannels.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
-                  <Eye className="w-6 h-6 text-gray-300" />
-                </div>
-                <p className="text-sm font-medium text-gray-400">
-                  Select a channel to see preview
-                </p>
-              </div>
-            ) : (
-              <PlatformPreviewPanel
-                selectedChannels={selectedChannels}
-                caption={caption}
-                mediaFiles={mediaFiles}
-                mediaType={mediaType}
-                selectedRatio={selectedRatio}
-                youtubeThumbnail={youtubeThumbnail}
-                activePlatform={activePreviewPlatform}
-                onActivePlatformChange={setActivePreviewPlatform}
-                connectedAccounts={connectedAccounts}
-              />
-            )}
-          </div>
-          
-          {/* Right Panel - Composer */}
-          <div
-            className="flex-1 overflow-y-auto"
-            style={{
-              padding: isMobile ? '20px 16px' : '24px',
-              borderRight: isMobile ? 'none' : '1px solid rgba(20,20,19,0.08)',
-              background: 'var(--canvas)',
-              display: isMobile && mobileActiveTab !== "edit" ? 'none' : 'block'
-            }}
-          >
-            {/* Channel Selection with Remove Badges */}
-            <div className="mb-6">
-              <ChannelSelector
-                selectedChannels={selectedChannels}
-                onChannelToggle={handleChannelToggle}
-                onBulkSelect={setSelectedChannels}
-              />
-            </div>
-
-            {/* Post Type Selection */}
-            <div className="mb-6">
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 ml-1">Publish As</label>
-              <div className="flex gap-2">
-                {availablePostTypes.includes("post") && (
-                  <label className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "post" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}>
-                    <input type="radio" value="post" checked={postType === "post"} onChange={() => setPostType("post")} className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"/>
-                    <span className="text-[12px] font-semibold text-gray-700">Post</span>
-                  </label>
-                )}
-                {availablePostTypes.includes("story") && (
-                  <label className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "story" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}>
-                    <input type="radio" value="story" checked={postType === "story"} onChange={() => setPostType("story")} className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"/>
-                    <span className="text-[12px] font-semibold text-gray-700">Story</span>
-                  </label>
-                )}
-                {availablePostTypes.includes("reel") && (
-                  <label className={`flex items-center gap-1.5 cursor-pointer px-3 py-2 rounded-lg transition-colors border ${postType === "reel" ? "bg-indigo-50 border-indigo-200" : "bg-white border-gray-200 hover:border-gray-300"}`}>
-                    <input type="radio" value="reel" checked={postType === "reel"} onChange={() => setPostType("reel")} className="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300 cursor-pointer"/>
-                    <span className="text-[12px] font-semibold text-gray-700">Reel / Shorts</span>
-                  </label>
-                )}
-              </div>
-            </div>
-
-            {/* Main Caption */}
-            <div className="mb-6">
-              <textarea
-                value={caption}
-                onChange={(e) => setCaption(e.target.value)}
-                placeholder="What would you like to share?"
-                className="composer-textarea min-h-[160px]"
-                maxLength={2200}
-              />
-              <div className="mt-3">
-                <div className="flex items-center justify-between mb-2 ml-1">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                    Quick Ideas
-                  </p>
-                  {caption && (
-                    <div className="flex items-center gap-2">
-                       <button
-                        type="button"
-                        onClick={() => setCaption((prev) => prev ? `${prev} {{MENTION_SELF}}` : "{{MENTION_SELF}}")}
-                        className="text-[10px] text-indigo-500 hover:text-indigo-600 transition-colors uppercase tracking-wider font-bold flex items-center gap-1"
-                        title="Inserts a dynamic handle that resolves to each platform's username"
-                      >
-                        <AtSign size={10} />
-                        Mention Me
-                      </button>
-                      <button
-                        onClick={() => setCaption("")}
-                        className="text-[10px] text-gray-400 hover:text-red-500 transition-colors uppercase tracking-wider font-bold"
-                      >
-                        Clear all
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <div
-                  className="flex gap-2 overflow-x-auto pb-2 no-scrollbar"
-                  style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-                >
-                  {QUICK_SUGGESTIONS.map((suggestion, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() =>
-                        setCaption((prev) =>
-                          prev ? `${prev} ${suggestion}` : suggestion,
-                        )
-                      }
-                      style={{
-                        flexShrink: 0,
-                        padding: "5px 12px",
-                        background: "var(--canvas-lifted)",
-                        border: "1px solid rgba(20,20,19,0.12)",
-                        borderRadius: "var(--r-pill)",
-                        fontSize: 11,
-                        color: "var(--slate)",
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                        fontFamily: "var(--font)",
-                        fontWeight: 500,
-                        transition: "all 0.15s",
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "var(--ink)";
-                        e.currentTarget.style.color = "var(--canvas)";
-                        e.currentTarget.style.borderColor = "var(--ink)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background =
-                          "var(--canvas-lifted)";
-                        e.currentTarget.style.color = "var(--slate)";
-                        e.currentTarget.style.borderColor =
-                          "rgba(20,20,19,0.12)";
-                      }}
-                      className=""
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Hashtag Suggestions & Promotion */}
-              <div className="mt-4">
-                <div className="flex items-center gap-2 mb-2 ml-1">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                    Hashtag Ideas
-                  </p>
-                </div>
-                <div className="flex flex-col gap-3">
-                  {/* Brand Promotion Card */}
-                  <div
-                    style={{
-                      background: "var(--canvas-lifted)",
-                      border: "1px solid rgba(20,20,19,0.08)",
-                      borderLeft: "3px solid var(--arc)",
-                      borderRadius: "var(--r-btn)",
-                      padding: "10px 14px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 10 }}
-                    >
-                      <div
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: "50%",
-                          background: "var(--canvas)",
-                          boxShadow: "var(--shadow-nav)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "var(--arc)",
-                        }}
-                      >
-                        <Sparkles size={14} />
-                      </div>
-                      <div>
-                        <p
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 700,
-                            color: "var(--ink)",
-                            margin: 0,
-                            lineHeight: 1.3,
-                          }}
-                        >
-                          Get Featured!
-                        </p>
-                        <p
-                          style={{
-                            fontSize: 10,
-                            color: "var(--slate)",
-                            margin: 0,
-                          }}
-                        >
-                          Use #getaipilot to boost your reach
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setCaption((prev) =>
-                          prev ? `${prev} #getaipilot` : "#getaipilot",
-                        )
-                      }
-                      className="btn-signal"
-                      style={{
-                        fontSize: 10,
-                        padding: "4px 12px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4,
-                      }}
-                    >
-                      <span>#getaipilot</span>
-                      <Sparkles size={10} />
-                    </button>
-                  </div>
-
-                  {/* Other Hashtags Row */}
-                  <div
-                    className="flex gap-2 overflow-x-auto pb-2 no-scrollbar items-center"
-                    style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-                  >
-                    <input 
-                      type="text" 
-                      placeholder="+ Add custom tag (Enter)..."
-                      className="flex-shrink-0 px-3 py-1 bg-white border border-gray-200 rounded-md text-[11px] font-medium text-gray-700 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 w-36 transition-all"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          const val = e.target.value.trim();
-                          if (val) {
-                            const newTag = val.startsWith('#') ? val : `#${val}`;
-                            setCaption(prev => prev ? `${prev} ${newTag}` : newTag);
-                            e.target.value = '';
-                          }
-                        }
-                      }}
-                    />
-                    <div className="w-px h-4 bg-gray-200 flex-shrink-0"></div>
-                    {SUGGESTED_HASHTAGS.map((tag, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() =>
-                          setCaption((prev) => (prev ? `${prev} ${tag}` : tag))
-                        }
-                        className="flex-shrink-0 px-3 py-1 bg-white border border-gray-200 rounded-md text-[11px] font-medium text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-all"
-                      >
-                        {tag}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-2 px-1">
-                <p className="text-[11px] text-gray-500 font-medium">
-                  {caption.length} / 2200
-                </p>
-              </div>
-            </div>
-
-            {/* Media Upload - Multi-image gallery style */}
-            <div className="mb-6">
-              <div
-                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors mb-4 ${
-                  dragActive
-                    ? "border-gray-400 bg-gray-100"
-                    : "border-gray-300 hover:border-gray-400"
-                }`}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-              >
-                <ImageIcon
-                  className="w-10 h-10 text-gray-400 mx-auto mb-2"
-                  strokeWidth={1.5}
-                />
-                <p className="text-gray-600 text-sm mb-1">
-                  Drag & drop or{" "}
-                  <label className="text-link hover:underline cursor-pointer font-medium">
-                    select multiple files
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      multiple
-                      accept="image/*,video/*"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                  </label>
-                </p>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mt-1">
-                  Up to 10 images or video
-                </p>
-              </div>
-
-              {/* Image Preview Grid with Reordering */}
-              {mediaFiles.length > 0 && (
-                <Reorder.Group
-                  axis="x"
-                  values={mediaFiles}
-                  onReorder={setMediaFiles}
-                  className={`grid ${isMobile ? 'grid-cols-3' : 'grid-cols-5'} gap-3 mt-4`}
-                >
-                  <AnimatePresence>
-                    {mediaFiles.map((m, idx) => {
-                      const isVideo = m.file.type.startsWith("video/");
-                      return (
-                        <Reorder.Item
-                          key={m.id}
-                          value={m}
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          className="relative group aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-50 cursor-grab active:cursor-grabbing"
-                        >
-                          {isVideo ? (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-900 pointer-events-none">
-                              <Upload className="w-6 h-6 text-white/50" />
-                            </div>
-                          ) : (
-                            <img
-                              src={URL.createObjectURL(m.file)}
-                              alt={m.file.name}
-                              className="w-full h-full object-cover pointer-events-none"
-                            />
-                          )}
-
-                          {/* Reorder Handle Overlay */}
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
-                          <div className="absolute top-1 left-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <GripVertical className="w-3 h-3 text-white drop-shadow-md" />
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeFile(idx);
-                            }}
-                            className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-
-                          {idx === 0 && (
-                            <span className="absolute bottom-1 left-1 px-1 rounded bg-blue-600 text-[8px] text-white font-bold uppercase z-10">
-                              Cover
-                            </span>
-                          )}
-                        </Reorder.Item>
-                      );
-                    })}
-                  </AnimatePresence>
-
-                  {mediaFiles.length < 10 && (
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="aspect-square rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center hover:border-gray-300 hover:bg-gray-50 transition-all text-gray-400 group"
-                    >
-                      <Upload className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                    </button>
-                  )}
-                </Reorder.Group>
-              )}
-
-              {/* Post Format Selection */}
-              <div className="mt-8 border-t border-gray-100 pt-6">
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em] mb-1">
-                      Smart Post Size
-                    </p>
-                    <p className="text-xs text-gray-600">
-                      Layouts follow the currently selected preview icon.
-                    </p>
-                  </div>
-                  {selectedChannels.length > 0 && availableSizePresets[0] && (
-                    <span className="text-[10px] font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-1 rounded-full">
-                      {PLATFORM_SHORT_LABELS[activePreviewPlatform] ||
-                        activePreviewPlatform}
-                      : {availableSizePresets[0].ratio}
-                    </span>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {availableSizePresets.map((preset) => {
-                    const ratio = ASPECT_RATIOS.find(
-                      (r) => r.id === preset.ratio,
-                    );
-                    if (!ratio) return null;
-
-                    const matches = preset.matchedPlatforms || preset.platforms || [];
-
-                    return (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => setSelectedSizePreset(preset.id)}
-                        className={`flex flex-col items-center gap-4 p-4 rounded-xl border transition-all duration-300 group ${
-                          selectedSizePreset === preset.id
-                            ? "bg-indigo-50/40 border-indigo-200 shadow-sm ring-1 ring-indigo-200"
-                            : "bg-white border-gray-100 hover:border-gray-200 hover:shadow-sm"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 w-full">
-                          <div
-                            className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-500 ${
-                              selectedSizePreset === preset.id
-                                ? "bg-white shadow-md shadow-indigo-100/50 scale-110"
-                                : "bg-gray-50 text-gray-400 group-hover:bg-white group-hover:shadow-sm"
-                            }`}
-                          >
-                            <div
-                              className={`rounded-[3px] transition-all duration-500 ${ratio.preview} ${
-                                selectedSizePreset === preset.id
-                                  ? "border-indigo-500 bg-indigo-500/10"
-                                  : "border-gray-300 bg-gray-50"
-                              }`}
-                            />
-                          </div>
-
-                          <div className="text-left flex-1 min-w-0">
-                            <p
-                              className={`text-[11px] font-bold tracking-tight mb-0.5 ${selectedSizePreset === preset.id ? "text-indigo-900" : "text-gray-700"}`}
-                            >
-                              {preset.title}
-                            </p>
-                            <p className="text-[10px] text-gray-500 mb-1">
-                              {preset.subtitle}
-                            </p>
-                            <p className="text-[10px] text-gray-400 mb-1">
-                              {preset.ratio}
-                            </p>
-                            <p
-                              className={`text-[10px] font-semibold tabular-nums ${selectedSizePreset === preset.id ? "text-indigo-500/80" : "text-gray-400"}`}
-                            >
-                              {ASPECT_RATIOS.find((r) => r.id === preset.ratio)
-                                ?.desc || "Recommended"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="w-full flex flex-wrap gap-1 justify-start">
-                          {matches.slice(0, 4).map((platform) => (
-                            <span
-                              key={`${preset.id}-${platform}`}
-                              className="text-[9px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium"
-                            >
-                              {PLATFORM_SHORT_LABELS[platform] || platform}
-                            </span>
-                          ))}
-                          {matches.length > 4 && (
-                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
-                              +{matches.length - 4} more
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-
-            {/* Scheduling */}
-            <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between gap-3 mb-6">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 ${isScheduled ? "bg-black text-white shadow-[0_8px_24px_rgba(0,0,0,0.15)]" : "bg-gray-50 text-gray-400 border border-gray-100"}`}
-                  >
-                    <Calendar className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-extrabold text-gray-900 uppercase tracking-[0.12em] leading-tight">
-                      Schedule Post
-                    </p>
-                    <p className="text-[11px] text-gray-500 leading-tight mt-1.5">
-                      Optimize reach by posting at the perfect time
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsScheduled(!isScheduled);
-                    if (!isScheduled) {
-                      setScheduledAt(minScheduleDateTime);
-                    } else {
-                      setScheduledAt("");
-                    }
-                  }}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none ${isScheduled ? "bg-[#f37338]" : "bg-gray-200"}`}
-                  aria-label="Toggle scheduling"
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${isScheduled ? "translate-x-6" : "translate-x-1"}`}
-                  />
-                </button>
-              </div>
-
-              <AnimatePresence>
-                {isScheduled && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0, overflow: "hidden" }}
-                    animate={{
-                      height: "auto",
-                      opacity: 1,
-                      overflow: "visible",
-                    }}
-                    exit={{ height: 0, opacity: 0, overflow: "hidden" }}
-                    transition={{
-                      duration: 0.3,
-                      ease: "circOut",
-                      overflow: { delay: 0.3 },
-                    }}
-                    className="relative"
-                  >
-                    <div className="flex flex-col gap-4 pb-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="relative">
-                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 block ml-1">
-                            Publish Date
-                          </label>
-                          <CustomSelect
-                            value={scheduledDatePart || minScheduleDate}
-                            options={scheduleDateOptions}
-                            onChange={(val) =>
-                              updateScheduledAt(
-                                val,
-                                scheduledTimePart || getMinimumTimeForDate(val),
-                              )
-                            }
-                            icon={Calendar}
-                            isCalendar={true}
-                          />
-                        </div>
-
-                        <div className="relative">
-                          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 block ml-1">
-                            Publish Time
-                          </label>
-                          <CustomSelect
-                            value={
-                              scheduledTimePart || scheduleTimeOptions[0] || ""
-                            }
-                            options={scheduleTimeOptions}
-                            onChange={(val) =>
-                              updateScheduledAt(
-                                scheduledDatePart || minScheduleDate,
-                                val,
-                              )
-                            }
-                            icon={Clock}
-                            isTime={true}
-                            minTime={getMinimumTimeForDate(scheduledDatePart || minScheduleDate)}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 py-1">
-                        {[
-                          { label: "+15m", minutes: 15 },
-                          { label: "+1h", minutes: 60 },
-                          { label: "Tomorrow 9AM", minutes: null },
-                        ].map((quick) => (
-                          <button
-                            key={quick.label}
-                            type="button"
-                            onClick={() => {
-                              if (quick.minutes !== null) {
-                                const date = new Date(
-                                  Date.now() + quick.minutes * 60000,
-                                );
-                                setScheduledAt(toLocalDateTimeValue(date));
-                                return;
-                              }
-                              const tomorrow = new Date();
-                              tomorrow.setDate(tomorrow.getDate() + 1);
-                              tomorrow.setHours(9, 0, 0, 0);
-                              setScheduledAt(toLocalDateTimeValue(tomorrow));
-                            }}
-                            className="px-3 py-1.5 rounded-lg border border-gray-100 bg-gray-50 text-[10px] font-bold text-gray-600 hover:bg-black hover:text-white hover:border-black transition-all"
-                          >
-                            {quick.label}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="flex flex-col gap-2 mt-2">
-                        <div className="flex items-center gap-2.5 px-4 py-3 bg-[#f37338]/5 rounded-xl border border-[#f37338]/10">
-                          <AtSign className="w-4 h-4 text-[#f37338]" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[10px] font-bold text-[#f37338] uppercase tracking-wider mb-0.5">
-                              Local Timezone
-                            </p>
-                            <p className="text-[11px] text-[#f37338] font-semibold opacity-80">
-                              {userTimezone}
-                            </p>
-                          </div>
-                        </div>
-
-                        {scheduledAt && (
-                          <div className="flex items-center gap-2.5 px-4 py-3 bg-black rounded-xl shadow-lg shadow-black/10">
-                            <Sparkles className="w-4 h-4 text-white" />
-                            <p className="text-[11px] text-white font-semibold">
-                              Scheduled for{" "}
-                              {new Date(scheduledAt).toLocaleString(undefined, {
-                                month: "short",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      <p className="text-[10px] text-gray-400 font-medium italic text-center mt-1">
-                        Changes are saved automatically to the cloud
-                      </p>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Platform Customization */}
-            <PlatformCustomization
-              selectedChannels={selectedChannels}
-              platformData={platformData}
-              onPlatformDataChange={setPlatformData}
-              expanded={customizationExpanded}
-              onToggleExpanded={() =>
-                setCustomizationExpanded(!customizationExpanded)
-              }
-              youtubeThumbnail={youtubeThumbnail}
-              onYoutubeThumbnailChange={setYoutubeThumbnail}
-            />
-
-            {/* Error Display */}
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-700 text-sm">{error}</p>
-              </div>
-            )}
-          </div>
-
-          
-        </div>
-
-        {/* Footer */}
-        <div
+        <motion.div
+          initial={{ opacity: 0, scale: 0.94, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.94, y: 20 }}
+          transition={{ type: "spring", stiffness: 300, damping: 28 }}
           style={{
-            borderTop: "1px solid rgba(20, 20, 19, 0.08)",
-            padding: "20px 32px",
-            background: "var(--white)",
+            width: "100%",
+            maxWidth: isMobile ? "100%" : 960,
+            height: isMobile ? "100%" : "90vh",
+            background: "var(--canvas,#fff)",
+            borderRadius: isMobile ? 0 : "var(--r-hero,20px)",
             display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderBottomLeftRadius: "var(--r-hero)",
-            borderBottomRightRadius: "var(--r-hero)",
-            position: "sticky",
-            bottom: 0,
-            zIndex: 10,
+            flexDirection: "column",
+            overflow: "hidden",
+            boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
+            border: isMobile ? "none" : "1px solid rgba(20,20,19,0.08)",
           }}
         >
-          <motion.button
-            whileHover={{ x: -3, color: "var(--ink)", backgroundColor: "rgba(20,20,19,0.05)" }}
-            whileTap={{ scale: 0.96 }}
-            type="button"
-            onClick={handleClose}
+          {/* ── HEADER ── */}
+          <div
             style={{
-              fontSize: 14,
-              fontWeight: 600,
-              color: "var(--slate)",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontFamily: "var(--font)",
+              padding: "16px 22px",
+              borderBottom: "1px solid rgba(20,20,19,0.08)",
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              padding: "10px 16px",
-              borderRadius: "var(--r-pill)",
-              transition: "all 0.2s",
+              justifyContent: "space-between",
+              background: "white",
+              flexShrink: 0,
             }}
           >
-            Cancel
-          </motion.button>
-
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            {isScheduled && scheduledAt && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <h2
                 style={{
-                  fontSize: 12,
-                  color: "var(--arc)",
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: "var(--ink,#141413)",
+                  margin: 0,
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                Create Post
+              </h2>
+              {selectedChannels.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                    padding: "3px 8px",
+                    borderRadius: 20,
+                    background: "rgba(20,20,19,0.05)",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "var(--slate,#8a8a82)",
+                  }}
+                >
+                  <Zap size={9} /> {selectedChannels.length} platform
+                  {selectedChannels.length > 1 ? "s" : ""}
+                </motion.div>
+              )}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.97 }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "5px 12px",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "var(--slate,#8a8a82)",
+                  background: "transparent",
+                  border: "1px solid rgba(20,20,19,0.1)",
+                  borderRadius: "var(--r-btn,10px)",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                <Sparkles size={12} />
+                {!isMobile && "AI Assistant"}
+              </motion.button>
+              <motion.button
+                type="button"
+                onClick={handleClose}
+                whileHover={{ scale: 1.05, background: "rgba(20,20,19,0.06)" }}
+                whileTap={{ scale: 0.95 }}
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: "50%",
+                  border: "1px solid rgba(20,20,19,0.1)",
+                  background: "transparent",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--slate,#8a8a82)",
+                }}
+              >
+                <X size={13} />
+              </motion.button>
+            </div>
+          </div>
+
+          {/* ── MOBILE TABS ── */}
+          {isMobile && (
+            <div
+              style={{
+                display: "flex",
+                background: "var(--canvas-lifted,#fafaf9)",
+                borderBottom: "1px solid rgba(20,20,19,0.08)",
+                flexShrink: 0,
+              }}
+            >
+              {MOBILE_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setMobileActiveTab(tab.id)}
+                  style={{
+                    flex: 1,
+                    padding: "11px 4px",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.04em",
+                    border: "none",
+                    background: "transparent",
+                    color:
+                      mobileActiveTab === tab.id
+                        ? "var(--ink,#141413)"
+                        : "var(--slate,#8a8a82)",
+                    borderBottom: `2.5px solid ${mobileActiveTab === tab.id ? "var(--ink,#141413)" : "transparent"}`,
+                    transition: "all 0.2s",
+                    cursor: "pointer",
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* ── AUTO-FIX TOAST ── */}
+          <AnimatePresence>
+            {autoFixMsg && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                style={{
+                  position: "absolute",
+                  top: 60,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  zIndex: 200,
+                  background: "rgba(5,150,105,0.92)",
+                  color: "white",
+                  padding: "7px 14px",
+                  borderRadius: 20,
+                  fontSize: 11,
                   fontWeight: 700,
                   display: "flex",
                   alignItems: "center",
-                  gap: 8,
-                  background: "rgba(243, 115, 56, 0.06)",
-                  padding: "8px 16px",
-                  borderRadius: "var(--r-pill)",
-                  border: "1px solid rgba(243, 115, 56, 0.15)",
+                  gap: 6,
+                  backdropFilter: "blur(8px)",
+                  boxShadow: "0 8px 20px rgba(5,150,105,0.25)",
                 }}
               >
-                <Clock size={14} strokeWidth={2.5} />
-                <span style={{ letterSpacing: "0.01em" }}>
+                <CheckCircle2 size={12} /> {autoFixMsg}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* ── BODY ── */}
+          <div
+            style={{
+              display: "flex",
+              flex: 1,
+              overflow: "hidden",
+              height: isMobile ? "calc(100vh - 105px)" : "calc(90vh - 115px)",
+            }}
+          >
+            {/* ── PREVIEW PANEL (right column on desktop, tab on mobile) ── */}
+            {(!isMobile || mobileActiveTab === "preview") && (
+              <div
+                style={{
+                  width: isMobile ? "100%" : 300,
+                  flexShrink: 0,
+                  borderLeft: isMobile
+                    ? "none"
+                    : "1px solid rgba(20,20,19,0.08)",
+                  display: "flex",
+                  flexDirection: "column",
+                  overflow: "hidden",
+                  background: "var(--canvas-lifted,#fafaf9)",
+                  order: 1,
+                }}
+              >
+                <div
+                  style={{
+                    padding: "11px 14px",
+                    borderBottom: "1px solid rgba(20,20,19,0.08)",
+                    flexShrink: 0,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 9.5,
+                      fontWeight: 800,
+                      letterSpacing: "0.08em",
+                      color: "var(--slate,#8a8a82)",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Live Preview
+                  </span>
+                </div>
+                <PreviewPanel
+                  user={user}
+                  selectedChannels={selectedChannels}
+                  caption={caption}
+                  mediaFiles={mediaFiles}
+                  selectedRatio={selectedRatio}
+                  youtubeThumbnail={youtubeThumbnail}
+                  activePlatform={activePreviewPlatform}
+                  onActivePlatformChange={setActivePreviewPlatform}
+                  connectedAccounts={connectedAccounts}
+                />
+              </div>
+            )}
+
+            {/* ── COMPOSER (main content) ── */}
+            {(!isMobile ||
+              mobileActiveTab === "compose" ||
+              mobileActiveTab === "insights") && (
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  padding: "24px 28px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 24,
+                  scrollbarWidth: "none",
+                }}
+              >
+                {/* ── Top row ── */}
+                {(!isMobile || mobileActiveTab === "compose") && (
+                  <div style={{ flexShrink: 0 }}>
+                    <Section label="Post to" mb={12}>
+                      <ChannelSelector
+                        selectedChannels={selectedChannels}
+                        onToggle={handleChannelToggle}
+                        connectedAccounts={connectedAccounts}
+                      />
+                    </Section>
+
+                    {/* Caption */}
+                    <div style={{ position: "relative", marginBottom: 16 }}>
+                      <textarea
+                        value={caption}
+                        onChange={(e) => {
+                          setCaption(e.target.value);
+                          setError(null);
+                        }}
+                        placeholder="What's on your mind?"
+                        style={{
+                          width: "100%",
+                          minHeight: 120,
+                          padding: 14,
+                          background: "white",
+                          border: "1px solid rgba(20,20,19,0.1)",
+                          borderRadius: "var(--r-hero,16px)",
+                          fontSize: 14,
+                          fontFamily: "inherit",
+                          resize: "none",
+                          color: "var(--ink,#141413)",
+                          outline: "none",
+                          transition: "border-color 0.2s",
+                        }}
+                        onFocus={(e) =>
+                          (e.target.style.borderColor = "var(--ink)")
+                        }
+                        onBlur={(e) =>
+                          (e.target.style.borderColor = "rgba(20,20,19,0.1)")
+                        }
+                      />
+                      {/* Caption helpers */}
+                      {!isMobile && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: 12,
+                            right: 12,
+                            display: "flex",
+                            gap: 8,
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCaption((p) =>
+                                p ? `${p} {{MENTION_SELF}}` : "{{MENTION_SELF}}",
+                              )
+                            }
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: "#4f46e5",
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 3,
+                              letterSpacing: "0.05em",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            <AtSign size={9} /> Mention
+                          </button>
+                          <button
+                            onClick={() => setCaption("")}
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: "var(--slate,#8a8a82)",
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              letterSpacing: "0.05em",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Quick suggestions */}
+                    <div style={{ marginTop: 10 }}>
+                      <RowLabel>Quick Ideas</RowLabel>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 6,
+                          overflowX: "auto",
+                          paddingBottom: 4,
+                          scrollbarWidth: "none",
+                        }}
+                      >
+                        {QUICK_SUGGESTIONS.map((s, i) => (
+                          <motion.button
+                            key={i}
+                            type="button"
+                            whileHover={{
+                              scale: 1.03,
+                              background: "var(--ink,#141413)",
+                              color: "white",
+                            }}
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() =>
+                              setCaption((p) => (p ? `${p} ${s}` : s))
+                            }
+                            style={{
+                              flexShrink: 0,
+                              padding: "4px 11px",
+                              background: "var(--canvas-lifted,#f5f5f4)",
+                              border: "1px solid rgba(20,20,19,0.1)",
+                              borderRadius: 20,
+                              fontSize: 11,
+                              color: "var(--slate,#8a8a82)",
+                              cursor: "pointer",
+                              whiteSpace: "nowrap",
+                              fontFamily: "inherit",
+                              fontWeight: 500,
+                              transition: "all 0.15s",
+                            }}
+                          >
+                            {s}
+                          </motion.button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Hashtags */}
+                    <div style={{ marginTop: 10 }}>
+                      <RowLabel>Hashtags</RowLabel>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 6,
+                          overflowX: "auto",
+                          alignItems: "center",
+                          scrollbarWidth: "none",
+                        }}
+                      >
+                        <input
+                          type="text"
+                          placeholder="+ Add tag (Enter)"
+                          style={{
+                            fontSize: 11,
+                            padding: "4px 12px",
+                            border: "1px dashed rgba(20,20,19,0.2)",
+                            borderRadius: 20,
+                            background: "transparent",
+                            outline: "none",
+                            width: 120,
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              const val = e.target.value.trim();
+                              if (val) {
+                                const tag = val.startsWith("#")
+                                  ? val
+                                  : `#${val}`;
+                                setCaption((p) => (p ? `${p} ${tag}` : tag));
+                                e.target.value = "";
+                              }
+                            }
+                          }}
+                        />
+                        {SUGGESTED_HASHTAGS.map((h, i) => (
+                          <button
+                            key={i}
+                            onClick={() =>
+                              setCaption((p) => (p ? `${p} ${h}` : h))
+                            }
+                            style={{
+                              flexShrink: 0,
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: "#4f46e5",
+                              background: "rgba(79,70,229,0.06)",
+                              border: "none",
+                              padding: "4px 10px",
+                              borderRadius: 20,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {h}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCaption((p) =>
+                              p ? `${p} #getaipilot` : "#getaipilot",
+                            )
+                          }
+                          className="btn-signal"
+                          style={{
+                            fontSize: 10,
+                            padding: "4px 10px",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                            flexShrink: 0,
+                          }}
+                        >
+                          #getaipilot <Sparkles size={9} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Media ── */}
+                <Section
+                  label={`Media${mediaFiles.length > 0 ? ` (${mediaFiles.length}/10)` : ""}`}
+                  mb={20}
+                >
+                  <MediaUploader
+                    mediaFiles={mediaFiles}
+                    setMediaFiles={setMediaFiles}
+                    onError={setError}
+                    isMobile={isMobile}
+                  />
+                </Section>
+
+                {/* ── Smart Size ── */}
+                <Section
+                  label="Post Size"
+                  hint={
+                    selectedChannels.length > 1
+                      ? "Smart-filtered for your platforms"
+                      : ""
+                  }
+                  mb={20}
+                >
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {smartSizes
+                      .filter(
+                        (s) =>
+                          s.badge !== "none" || selectedChannels.length <= 1,
+                      )
+                      .map((size) => {
+                        const matchingPreset = availablePresets.find(
+                          (p) => p.ratio === size.id,
+                        );
+                        const isSelected =
+                          matchingPreset?.id === selectedSizePreset;
+                        return (
+                          <SizeButton
+                            key={size.id}
+                            size={size}
+                            isSelected={isSelected}
+                            onClick={() =>
+                              matchingPreset &&
+                              setSelectedSizePreset(matchingPreset.id)
+                            }
+                          />
+                        );
+                      })}
+                  </div>
+                </Section>
+
+                {/* ── Schedule ── */}
+                <Section mb={20}>
+                  <div
+                    onClick={() => setIsScheduled(!isScheduled)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      cursor: "pointer",
+                      padding: "10px 13px",
+                      borderRadius: isScheduled ? "11px 11px 0 0" : 11,
+                      background: "var(--canvas-lifted,#f5f5f4)",
+                      border: "1px solid rgba(20,20,19,0.08)",
+                      borderBottom: isScheduled ? "1px solid rgba(20,20,19,0.04)" : "1px solid rgba(20,20,19,0.08)",
+                    }}
+                  >
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    >
+                      <Calendar
+                        size={13}
+                        style={{
+                          color: isScheduled
+                            ? "var(--arc,#f37338)"
+                            : "var(--slate,#8a8a82)",
+                        }}
+                      />
+                      <div>
+                        <p
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color: isScheduled
+                              ? "var(--arc,#f37338)"
+                              : "var(--ink,#141413)",
+                            margin: 0,
+                          }}
+                        >
+                          {isScheduled ? "Scheduled" : "Schedule for later"}
+                        </p>
+                        {isScheduled && scheduledAt && (
+                          <p
+                            style={{
+                              fontSize: 10,
+                              color: "var(--arc,#f37338)",
+                              margin: 0,
+                              opacity: 0.8,
+                            }}
+                          >
+                            {new Date(scheduledAt).toLocaleString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <motion.div
+                      animate={{ rotate: isScheduled ? 180 : 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <ChevronDown
+                        size={13}
+                        style={{ color: "var(--slate,#8a8a82)" }}
+                      />
+                    </motion.div>
+                  </div>
+
+                  <AnimatePresence>
+                    {isScheduled && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0, overflow: "hidden" }}
+                        animate={{
+                          opacity: 1,
+                          height: "auto",
+                          transitionEnd: { overflow: "visible" },
+                        }}
+                        exit={{ opacity: 0, height: 0, overflow: "hidden" }}
+                        transition={{ duration: 0.25 }}
+                      >
+                        <div
+                          style={{
+                            padding: "12px 13px",
+                            background: "var(--canvas-lifted,#f5f5f4)",
+                            border: "1px solid rgba(20,20,19,0.08)",
+                            borderTop: "none",
+                            borderRadius: "0 0 11px 11px",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 10,
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "1fr 1fr",
+                              gap: 8,
+                            }}
+                          >
+                            <CustomSelect
+                              value={datePart || minDate}
+                              options={scheduleDateOptions}
+                              onChange={(v) =>
+                                setScheduledAt(
+                                  `${v}T${timePart || buildTimeOpts(v)[0] || ""}`,
+                                )
+                              }
+                              icon={Calendar}
+                              isCalendar
+                            />
+                            <CustomSelect
+                              value={
+                                timePart ||
+                                buildTimeOpts(datePart || minDate)[0] ||
+                                ""
+                              }
+                              options={scheduleTimeOpts}
+                              onChange={(v) =>
+                                setScheduledAt(`${datePart || minDate}T${v}`)
+                              }
+                              icon={Clock}
+                              isTime
+                              minTime={
+                                datePart === minDate ? minTime : undefined
+                              }
+                              align="right"
+                            />
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: 6,
+                            }}
+                          >
+                            {[
+                              { l: "+15m", m: 15 },
+                              { l: "+1h", m: 60 },
+                              { l: "Tomorrow 9AM", m: null },
+                            ].map((q) => (
+                              <button
+                                key={q.l}
+                                type="button"
+                                onClick={() => {
+                                  if (q.m !== null) {
+                                    const d = new Date(
+                                      Date.now() + q.m * 60000,
+                                    );
+                                    setScheduledAt(toLocalDT(d));
+                                  } else {
+                                    const t = new Date();
+                                    t.setDate(t.getDate() + 1);
+                                    t.setHours(9, 0, 0, 0);
+                                    setScheduledAt(toLocalDT(t));
+                                  }
+                                }}
+                                style={{
+                                  padding: "4px 10px",
+                                  borderRadius: 8,
+                                  border: "1px solid rgba(20,20,19,0.1)",
+                                  background: "var(--canvas,#fff)",
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  color: "var(--slate,#8a8a82)",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                {q.l}
+                              </button>
+                            ))}
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              padding: "7px 10px",
+                              background: "rgba(243,115,56,0.05)",
+                              borderRadius: 8,
+                              border: "1px solid rgba(243,115,56,0.1)",
+                            }}
+                          >
+                            <Clock
+                              size={11}
+                              style={{ color: "var(--arc,#f37338)" }}
+                            />
+                            <span
+                              style={{
+                                fontSize: 10,
+                                color: "var(--arc,#f37338)",
+                                fontWeight: 600,
+                              }}
+                            >
+                              Timezone: {userTimezone}
+                            </span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </Section>
+
+                {/* ── Platform Customization ── */}
+                <PlatformCustomization
+                  selectedChannels={selectedChannels}
+                  platformData={platformData}
+                  onPlatformDataChange={setPlatformData}
+                  expanded={customizationExpanded}
+                  onToggleExpanded={() =>
+                    setCustomizationExpanded(!customizationExpanded)
+                  }
+                  youtubeThumbnail={youtubeThumbnail}
+                  onYoutubeThumbnailChange={setYoutubeThumbnail}
+                />
+
+                {/* ── Error ── */}
+                <AnimatePresence>
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 6 }}
+                      style={{
+                        marginTop: 12,
+                        padding: "10px 13px",
+                        borderRadius: 10,
+                        background: "rgba(239,68,68,0.06)",
+                        border: "1px solid rgba(239,68,68,0.15)",
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: 8,
+                      }}
+                    >
+                      <AlertCircle
+                        size={13}
+                        style={{
+                          color: "#dc2626",
+                          flexShrink: 0,
+                          marginTop: 1,
+                        }}
+                      />
+                      <p
+                        style={{
+                          fontSize: 12,
+                          color: "#dc2626",
+                          fontWeight: 600,
+                          margin: 0,
+                        }}
+                      >
+                        {error}
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+
+            {/* ── INSIGHTS TAB (mobile only) ── */}
+            {isMobile && mobileActiveTab === "insights" && (
+              <div
+                style={{
+                  flex: 1,
+                  overflow: "auto",
+                  padding: 16,
+                  background: "var(--canvas,#fff)",
+                }}
+              >
+                {panelItems.length === 0 ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      height: "100%",
+                      textAlign: "center",
+                      opacity: 0.4,
+                    }}
+                  >
+                    <CheckCircle2
+                      size={32}
+                      style={{ marginBottom: 10, color: "#059669" }}
+                    />
+                    <p style={{ fontWeight: 700, color: "#111", margin: 0 }}>
+                      All clear!
+                    </p>
+                    <p style={{ fontSize: 12, color: "#888", marginTop: 4 }}>
+                      No issues detected with your post.
+                    </p>
+                  </div>
+                ) : (
+                  <IntelligencePanel panelItems={panelItems} />
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ── FOOTER ── */}
+          <div
+            style={{
+              borderTop: "1px solid rgba(20,20,19,0.08)",
+              padding: "14px 22px",
+              background: "var(--canvas-lifted,#fafaf9)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexShrink: 0,
+              borderBottomLeftRadius: isMobile ? 0 : "var(--r-hero,20px)",
+              borderBottomRightRadius: isMobile ? 0 : "var(--r-hero,20px)",
+            }}
+          >
+            <motion.button
+              whileHover={{ x: -2 }}
+              whileTap={{ scale: 0.96 }}
+              type="button"
+              onClick={handleClose}
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: "var(--slate,#8a8a82)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                padding: "7px 13px",
+                borderRadius: 20,
+              }}
+            >
+              Cancel
+            </motion.button>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              {/* Scheduled badge */}
+              {isScheduled && scheduledAt && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{
+                    fontSize: 10,
+                    color: "var(--arc,#f37338)",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 5,
+                    background: "rgba(243,115,56,0.06)",
+                    padding: "5px 12px",
+                    borderRadius: 20,
+                    border: "1px solid rgba(243,115,56,0.15)",
+                  }}
+                >
+                  <Clock size={11} />
                   {new Date(scheduledAt).toLocaleString("en-US", {
                     month: "short",
                     day: "numeric",
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
-                </span>
-              </motion.div>
-            )}
-
-            <motion.button
-              whileHover={{ 
-                scale: loading ? 1 : 1.02, 
-                y: loading ? 0 : -2,
-                boxShadow: isScheduled 
-                  ? "0 10px 25px rgba(243, 115, 56, 0.3)" 
-                  : "0 10px 25px rgba(20, 20, 19, 0.25)"
-              }}
-              whileTap={{ scale: loading ? 1 : 0.98 }}
-              type="button"
-              onClick={handleSubmit}
-              disabled={
-                loading ||
-                !caption.trim() ||
-                mediaFiles.length === 0 ||
-                selectedChannels.length === 0 ||
-                (isScheduled && !scheduledAt)
-              }
-              className={`btn-fly-send ${loading ? "sending" : ""}`}
-              style={{
-                background: isScheduled 
-                  ? "linear-gradient(135deg, var(--arc) 0%, #ff8c5a 100%)" 
-                  : "linear-gradient(135deg, var(--ink) 0%, #3a3a37 100%)",
-                height: 52,
-                borderRadius: "var(--r-btn)",
-                padding: "0 36px",
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                color: "white",
-                border: "none",
-                cursor: loading ? "wait" : "pointer",
-                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                opacity: (loading || !caption.trim() || selectedChannels.length === 0) ? 0.7 : 1,
-              }}
-            >
-              {loading ? (
-                <div className="flex items-center gap-3">
-                  <Loader2 className="w-5 h-5 animate-spin text-white" />
-                  <span style={{ fontWeight: 700, fontSize: 15 }}>Processing...</span>
-                </div>
-              ) : (
-                <>
-                  <div className="svg-wrapper-1" style={{ width: "auto" }}>
-                    <div className="svg-wrapper">
-                      {isScheduled ? (
-                        <Calendar size={20} strokeWidth={2.5} />
-                      ) : (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          width={20}
-                          height={20}
-                          fill="white"
-                        >
-                          <path d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z" />
-                        </svg>
-                      )}
-                    </div>
-                  </div>
-                  <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-0.01em" }}>
-                    {isScheduled ? "Schedule Post" : "Publish Now"}
-                  </span>
-                </>
+                </motion.div>
               )}
-            </motion.button>
+
+              {/* Blocking issue hint */}
+              {hasBlockingError && (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  style={{
+                    fontSize: 10,
+                    color: "#dc2626",
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  <AlertCircle size={11} /> Fix errors above
+                </motion.span>
+              )}
+
+              {/* PUBLISH BUTTON */}
+              <motion.button
+                whileHover={
+                  !publishDisabled
+                    ? {
+                        scale: 1.02,
+                        y: -2,
+                        boxShadow: isScheduled
+                          ? "0 10px 24px rgba(243,115,56,0.3)"
+                          : "0 10px 24px rgba(20,20,19,0.22)",
+                      }
+                    : {}
+                }
+                whileTap={!publishDisabled ? { scale: 0.97 } : {}}
+                type="button"
+                onClick={handleSubmit}
+                disabled={publishDisabled}
+                style={{
+                  background: publishDisabled
+                    ? "rgba(20,20,19,0.18)"
+                    : isScheduled
+                      ? "linear-gradient(135deg,var(--arc,#f37338) 0%,#ff8c5a 100%)"
+                      : "linear-gradient(135deg,var(--ink,#141413) 0%,#3a3a37 100%)",
+                  height: 46,
+                  borderRadius: "var(--r-btn,10px)",
+                  padding: "0 26px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 9,
+                  color: "white",
+                  border: "none",
+                  cursor: publishDisabled ? "not-allowed" : "pointer",
+                  transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)",
+                  fontFamily: "inherit",
+                }}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span style={{ fontWeight: 700, fontSize: 13 }}>
+                      Publishing…
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <div className="svg-wrapper-1">
+                      <div className="svg-wrapper">
+                        {isScheduled ? (
+                          <Calendar size={16} strokeWidth={2.5} />
+                        ) : (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            width={16}
+                            height={16}
+                            fill="white"
+                          >
+                            <path d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z" />
+                          </svg>
+                        )}
+                      </div>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        letterSpacing: "-0.01em",
+                      }}
+                    >
+                      {isScheduled ? "Schedule Post" : "Publish Now"}
+                    </span>
+                  </>
+                )}
+              </motion.button>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 }
+
+/* ── Small layout helpers ── */
+const Section = memo(function Section({ label, hint, mb = 16, children }) {
+  return (
+    <div style={{ marginBottom: mb }}>
+      {label && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            gap: 8,
+            marginBottom: 8,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 9.5,
+              fontWeight: 800,
+              letterSpacing: "0.08em",
+              color: "var(--slate,#8a8a82)",
+              textTransform: "uppercase",
+            }}
+          >
+            {label}
+          </span>
+          {hint && (
+            <span
+              style={{
+                fontSize: 9,
+                color: "var(--slate,#8a8a82)",
+                opacity: 0.45,
+                fontWeight: 500,
+              }}
+            >
+              {hint}
+            </span>
+          )}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+});
+
+const RowLabel = memo(function RowLabel({ children }) {
+  return (
+    <p
+      style={{
+        fontSize: 9,
+        fontWeight: 800,
+        letterSpacing: "0.08em",
+        color: "var(--slate,#8a8a82)",
+        textTransform: "uppercase",
+        margin: "0 0 5px",
+      }}
+    >
+      {children}
+    </p>
+  );
+});
 
 export default ComposerModal;

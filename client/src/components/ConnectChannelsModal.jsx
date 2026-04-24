@@ -39,7 +39,7 @@ export default function ConnectChannelsModal() {
     const skipped = sessionStorage.getItem(SESSION_KEY);
     if (skipped) return;
 
-    const hasAnyConnected = Object.values(connectedAccounts).some(Boolean);
+    const hasAnyConnected = Object.values(connectedAccounts).some((a) => a?.connected);
     if (!hasAnyConnected) {
       const t = setTimeout(() => setVisible(true), 800);
       return () => clearTimeout(t);
@@ -76,7 +76,7 @@ export default function ConnectChannelsModal() {
   };
 
   const unconnectedPlatforms = platforms.filter(
-    (p) => !connectedAccounts[p.id]
+    (p) => !connectedAccounts[p.id]?.connected
   );
 
   if (!visible) return null;
