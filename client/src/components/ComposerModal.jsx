@@ -2127,7 +2127,65 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
 
         {/* Body - Split Layout */}
         <div style={{ display: 'flex', height: isMobile ? 'calc(100vh - 110px)' : 'calc(90vh - 120px)', flex: 1 }}>
-          {/* Left Panel - Composer */}
+          
+          {/* Left Panel - Live Platform Previews */}
+          <div
+            style={{
+              width: 320,
+              flexShrink: 0,
+              borderLeft: "1px solid rgba(20,20,19,0.08)",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              background: "var(--canvas-lifted)",
+            }}
+          >
+            <div
+              style={{
+                padding: "12px 16px",
+                borderBottom: "1px solid rgba(20,20,19,0.08)",
+                background: "var(--canvas-lifted)",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "var(--ink)",
+                  letterSpacing: "-0.01em",
+                  margin: 0,
+                  textTransform: "uppercase",
+                }}
+              >
+                Post Preview
+              </h3>
+            </div>
+
+            {selectedChannels.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
+                  <Eye className="w-6 h-6 text-gray-300" />
+                </div>
+                <p className="text-sm font-medium text-gray-400">
+                  Select a channel to see preview
+                </p>
+              </div>
+            ) : (
+              <PlatformPreviewPanel
+                selectedChannels={selectedChannels}
+                caption={caption}
+                mediaFiles={mediaFiles}
+                mediaType={mediaType}
+                selectedRatio={selectedRatio}
+                youtubeThumbnail={youtubeThumbnail}
+                activePlatform={activePreviewPlatform}
+                onActivePlatformChange={setActivePreviewPlatform}
+                connectedAccounts={connectedAccounts}
+              />
+            )}
+          </div>
+          
+          {/* Right Panel - Composer */}
           <div
             className="flex-1 overflow-y-auto"
             style={{
@@ -2771,126 +2829,146 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
             )}
           </div>
 
-          {/* Right Panel - Live Platform Previews */}
-          <div
-            style={{
-              width: 320,
-              flexShrink: 0,
-              borderLeft: "1px solid rgba(20,20,19,0.08)",
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-              background: "var(--canvas-lifted)",
-            }}
-          >
-            <div
-              style={{
-                padding: "12px 16px",
-                borderBottom: "1px solid rgba(20,20,19,0.08)",
-                background: "var(--canvas-lifted)",
-              }}
-            >
-              <h3
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "var(--ink)",
-                  letterSpacing: "-0.01em",
-                  margin: 0,
-                  textTransform: "uppercase",
-                }}
-              >
-                Post Preview
-              </h3>
-            </div>
-
-            {selectedChannels.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mb-3">
-                  <Eye className="w-6 h-6 text-gray-300" />
-                </div>
-                <p className="text-sm font-medium text-gray-400">
-                  Select a channel to see preview
-                </p>
-              </div>
-            ) : (
-              <PlatformPreviewPanel
-                selectedChannels={selectedChannels}
-                caption={caption}
-                mediaFiles={mediaFiles}
-                mediaType={mediaType}
-                selectedRatio={selectedRatio}
-                youtubeThumbnail={youtubeThumbnail}
-                activePlatform={activePreviewPlatform}
-                onActivePlatformChange={setActivePreviewPlatform}
-                connectedAccounts={connectedAccounts}
-              />
-            )}
-          </div>
+          
         </div>
 
         {/* Footer */}
         <div
           style={{
-            borderTop: "1px solid rgba(20,20,19,0.08)",
-            padding: "12px 24px",
-            background: "var(--canvas-lifted)",
+            borderTop: "1px solid rgba(20, 20, 19, 0.08)",
+            padding: "20px 32px",
+            background: "var(--white)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            borderBottomLeftRadius: "var(--r-hero)",
+            borderBottomRightRadius: "var(--r-hero)",
+            position: "sticky",
+            bottom: 0,
+            zIndex: 10,
           }}
         >
-          <button
+          <motion.button
+            whileHover={{ x: -3, color: "var(--ink)", backgroundColor: "rgba(20,20,19,0.05)" }}
+            whileTap={{ scale: 0.96 }}
             type="button"
             onClick={handleClose}
             style={{
-              fontSize: 13,
-              fontWeight: 500,
+              fontSize: 14,
+              fontWeight: 600,
               color: "var(--slate)",
               background: "none",
               border: "none",
               cursor: "pointer",
               fontFamily: "var(--font)",
-              letterSpacing: "-0.01em",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "10px 16px",
+              borderRadius: "var(--r-pill)",
+              transition: "all 0.2s",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--ink)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--slate)")}
           >
             Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={
-              loading ||
-              !caption.trim() ||
-              mediaFiles.length === 0 ||
-              selectedChannels.length === 0 ||
-              (isScheduled && !scheduledAt)
-            }
-            className={`btn-fly-send ${loading ? "sending" : ""} ${isScheduled ? "bg-indigo-600 hover:bg-indigo-700" : ""}`}
-          >
-            {loading && (
-              <div className="absolute inset-0 flex items-center justify-center z-20">
-                <Loader2 className="w-5 h-5 animate-spin text-white/50" />
-              </div>
+          </motion.button>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            {isScheduled && scheduledAt && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={{
+                  fontSize: 12,
+                  color: "var(--arc)",
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background: "rgba(243, 115, 56, 0.06)",
+                  padding: "8px 16px",
+                  borderRadius: "var(--r-pill)",
+                  border: "1px solid rgba(243, 115, 56, 0.15)",
+                }}
+              >
+                <Clock size={14} strokeWidth={2.5} />
+                <span style={{ letterSpacing: "0.01em" }}>
+                  {new Date(scheduledAt).toLocaleString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </motion.div>
             )}
 
-            <div className="svg-wrapper-1">
-              <div className="svg-wrapper">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  width={24}
-                  height={24}
-                  fill="white"
-                >
-                  <path d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z" />
-                </svg>
-              </div>
-            </div>
-            <span>{isScheduled ? "Schedule" : "Send"}</span>
-          </button>
+            <motion.button
+              whileHover={{ 
+                scale: loading ? 1 : 1.02, 
+                y: loading ? 0 : -2,
+                boxShadow: isScheduled 
+                  ? "0 10px 25px rgba(243, 115, 56, 0.3)" 
+                  : "0 10px 25px rgba(20, 20, 19, 0.25)"
+              }}
+              whileTap={{ scale: loading ? 1 : 0.98 }}
+              type="button"
+              onClick={handleSubmit}
+              disabled={
+                loading ||
+                !caption.trim() ||
+                mediaFiles.length === 0 ||
+                selectedChannels.length === 0 ||
+                (isScheduled && !scheduledAt)
+              }
+              className={`btn-fly-send ${loading ? "sending" : ""}`}
+              style={{
+                background: isScheduled 
+                  ? "linear-gradient(135deg, var(--arc) 0%, #ff8c5a 100%)" 
+                  : "linear-gradient(135deg, var(--ink) 0%, #3a3a37 100%)",
+                height: 52,
+                borderRadius: "var(--r-btn)",
+                padding: "0 36px",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                color: "white",
+                border: "none",
+                cursor: loading ? "wait" : "pointer",
+                transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                opacity: (loading || !caption.trim() || selectedChannels.length === 0) ? 0.7 : 1,
+              }}
+            >
+              {loading ? (
+                <div className="flex items-center gap-3">
+                  <Loader2 className="w-5 h-5 animate-spin text-white" />
+                  <span style={{ fontWeight: 700, fontSize: 15 }}>Processing...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="svg-wrapper-1" style={{ width: "auto" }}>
+                    <div className="svg-wrapper">
+                      {isScheduled ? (
+                        <Calendar size={20} strokeWidth={2.5} />
+                      ) : (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          width={20}
+                          height={20}
+                          fill="white"
+                        >
+                          <path d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-0.01em" }}>
+                    {isScheduled ? "Schedule Post" : "Publish Now"}
+                  </span>
+                </>
+              )}
+            </motion.button>
+          </div>
         </div>
       </div>
     </div>
