@@ -9,7 +9,7 @@ import facebookOAuth from "../services/facebookOAuth.js";
 import blueskyAuth from "../services/blueskyAuth.js";
 import linkedinOAuth from "../services/linkedinOAuth.js";
 import mastodonOAuth from "../services/mastodonOAuth.js";
-
+import tiktokOAuth from "../services/tiktokOAuth.js";
 import threadsOAuth from "../services/threadsOAuth.js";
 import xOAuth from "../services/xOAuth.js";
 import redditOAuth from "../services/redditOAuth.js";
@@ -93,40 +93,6 @@ router.get("/youtube", async (req, res) => {
   } catch (error) {
     console.error("YouTube OAuth init error:", error);
     res.redirect(`${CLIENT_URL}/dashboard?error=youtube_oauth_failed`);
-  }
-});
-
-router.post("/youtube/auto-connect", authenticateUser, async (req, res) => {
-  try {
-    const { providerAccessToken, providerRefreshToken, providerTokenExpiry } =
-      req.body || {};
-
-    if (!providerAccessToken) {
-      return res.status(400).json({
-        success: false,
-        error: "providerAccessToken is required",
-      });
-    }
-
-    const tokenData = await googleOAuth.buildTokenDataFromProviderTokens({
-      accessToken: providerAccessToken,
-      refreshToken: providerRefreshToken || null,
-      expiryDate: providerTokenExpiry || null,
-    });
-
-    await googleOAuth.storeTokens(req.user.userId, tokenData);
-
-    return res.json({
-      success: true,
-      message: "YouTube connected automatically via Google sign-in",
-      username: tokenData.userInfo?.username || null,
-    });
-  } catch (error) {
-    console.error("Auto YouTube connect error:", error);
-    return res.status(500).json({
-      success: false,
-      error: error.message || "Failed to auto-connect YouTube",
-    });
   }
 });
 
@@ -578,7 +544,70 @@ router.get("/mastodon/callback", async (req, res) => {
   }
 });
 
+/* ---------------- TIKTOK ---------------- */
 
+router.get("/tiktok", async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token)
+      return res.redirect(`${CLIENT_URL}/dashboard?error=missing_token`);
+
+    let userId;
+    try {
+      console.log(
+        `\n🔵 [AUTH] TikTok init for token: ${token?.substring(0, 20)}...`,
+      );
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser(token);
+      if (error || !user) throw error || new Error("User not found");
+
+      const dbUser = await createOrUpdateUser(
+        user.email,
+        user.user_metadata?.full_name || user.email?.split("@")[0],
+        user.id,
+        user.user_metadata?.avatar_url,
+      );
+      userId = dbUser.id;
+      console.log(`✅ [AUTH] Token verified and synced for user: ${userId}`);
+    } catch (e) {
+      console.error("❌ [AUTH] Token verification failed:", e.message);
+      return res.redirect(
+        `${CLIENT_URL}/dashboard?error=invalid_token&details=${encodeURIComponent(e.message)}`,
+      );
+    }
+
+    const state = tiktokOAuth.makeState(userId);
+    const authUrl = tiktokOAuth.getAuthorizationUrl(state);
+    return res.redirect(authUrl);
+  } catch (error) {
+    console.error("TikTok init error:", error);
+    res.redirect(`${CLIENT_URL}/dashboard?error=tiktok_oauth_failed`);
+  }
+});
+
+router.get("/tiktok/callback", async (req, res) => {
+  const { code, error, state } = req.query;
+
+  if (error) return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied`);
+  if (!code || !state)
+    return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
+
+  const parsed = decodeState(state);
+  if (!parsed?.userId)
+    return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
+
+  try {
+    const tokenData = await tiktokOAuth.exchangeCodeForToken(code);
+    await tiktokOAuth.storeTokens(parsed.userId, tokenData);
+
+    res.redirect(`${CLIENT_URL}/dashboard?success=tiktok_connected`);
+  } catch (err) {
+    console.error("❌ TikTok callback error:", err.message);
+    res.redirect(`${CLIENT_URL}/dashboard?error=tiktok_connection_failed`);
+  }
+});
 
 /* ---------------- THREADS ---------------- */
 
@@ -993,6 +1022,7 @@ router.delete("/disconnect/:provider", authenticateUser, async (req, res) => {
       "bluesky",
       "linkedin",
       "mastodon",
+      "tiktok",
       "threads",
       "x",
       "reddit",
