@@ -334,6 +334,7 @@ function PlatformPreviewPanel({
   youtubeThumbnail,
   activePlatform,
   onActivePlatformChange,
+  onPlatformRemove,
   connectedAccounts,
 }) {
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
@@ -502,22 +503,40 @@ function PlatformPreviewPanel({
           if (!m) return null;
           const isActive = activeId === id;
           return (
-            <button
+            <div
               key={id}
-              onClick={() => onActivePlatformChange?.(id)}
-              title={m.label}
-              className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                isActive
-                  ? "bg-gray-100 ring-2 ring-indigo-400 ring-offset-1"
-                  : "hover:bg-gray-50"
-              }`}
+              className="relative flex-shrink-0 group/tab"
             >
-              <img
-                src={m.icon}
-                alt={m.label}
-                className="w-5 h-5 object-contain"
-              />
-            </button>
+              <button
+                onClick={() => onActivePlatformChange?.(id)}
+                title={m.label}
+                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                  isActive
+                    ? "bg-gray-100 ring-2 ring-indigo-400 ring-offset-1"
+                    : "hover:bg-gray-50"
+                }`}
+              >
+                <img
+                  src={m.icon}
+                  alt={m.label}
+                  className="w-5 h-5 object-contain"
+                />
+              </button>
+              {/* Remove (deselect) button — appears on hover */}
+              {onPlatformRemove && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPlatformRemove(id);
+                  }}
+                  title={`Remove ${m.label} from this post`}
+                  className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-gray-800 text-white flex items-center justify-center opacity-0 group-hover/tab:opacity-100 transition-all hover:bg-red-500 hover:scale-110 z-10 shadow-md"
+                  style={{ fontSize: 8, lineHeight: 1 }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           );
         })}
       </div>
@@ -2847,6 +2866,7 @@ function ComposerModal({ isOpen, onClose, onPostCreated }) {
                 youtubeThumbnail={youtubeThumbnail}
                 activePlatform={activePreviewPlatform}
                 onActivePlatformChange={setActivePreviewPlatform}
+                onPlatformRemove={handleChannelToggle}
                 connectedAccounts={connectedAccounts}
               />
             )}

@@ -12,6 +12,7 @@ import AuthCallback from './components/AuthCallback';
 import Dashboard from './components/Dashboard';
 import BroadcastForm from './components/BroadcastForm';
 import LandingPage from './pages/LandingPage';
+import PricingPage from './pages/PricingPage';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import History from './pages/History';
@@ -30,6 +31,7 @@ function AppContent() {
     <Routes>
       {/* Public Routes */}
       <Route path="/" element={<LandingPage />} />
+      <Route path="/pricing" element={<PricingPage />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/terms" element={<TermsOfService />} />
       
