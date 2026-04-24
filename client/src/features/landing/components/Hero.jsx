@@ -1,6 +1,7 @@
 import React, { useLayoutEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { gsap } from '../../../lib/gsap';
+import { motion } from 'framer-motion';
+import { Radio, ArrowRight } from 'lucide-react';
 
 const PLATFORMS = [
   { src: '/icons/ig-instagram-icon.svg', label: 'Instagram' },
@@ -13,6 +14,12 @@ const PLATFORMS = [
   { src: '/icons/threads-icon.svg', label: 'Threads' },
   { src: '/icons/bluesky-circle-color-icon.svg', label: 'Bluesky' },
   { src: '/icons/mastodon-round-icon.svg', label: 'Mastodon' },
+];
+
+const STATS = [
+  { value: '11+', label: 'Platforms', sub: 'All major networks' },
+  { value: '1-click', label: 'Broadcast', sub: 'Write once, post everywhere' },
+  { value: '∞', label: 'Scheduling', sub: 'No post limits' },
 ];
 
 export default function Hero() {
@@ -142,40 +149,67 @@ export default function Hero() {
       </svg>
 
       <div className="landing-container" style={{ maxWidth: 1280, margin: '0 auto', position: 'relative', zIndex: 2 }}>
+
         {/* Ghost watermark */}
-        <div
-          ref={watermarkRef}
-          className="watermark"
-          style={{
-            position: 'absolute', top: -30, left: '50%', transform: 'translateX(-50%)',
-            whiteSpace: 'nowrap', fontSize: 'clamp(48px, 10vw, 120px)', opacity: 0.55,
-            userSelect: 'none', pointerEvents: 'none',
-          }}
-        >
+        <div className="watermark" style={{
+          position: 'absolute', top: -20, left: '50%', transform: 'translateX(-50%)',
+          whiteSpace: 'nowrap', fontSize: 'clamp(56px, 11vw, 130px)', opacity: 0.45,
+          userSelect: 'none', pointerEvents: 'none', letterSpacing: '-0.04em',
+        }}>
           Broadcast
         </div>
 
-        {/* Main headline */}
-        <div style={{ textAlign: 'center', maxWidth: 880, margin: '0 auto 40px', position: 'relative' }}>
-          <div ref={eyebrowRef} className="eyebrow" style={{ justifyContent: 'center', marginBottom: 20 }}>
-            Social media, simplified
-          </div>
-          <h1
-            ref={h1Ref}
-            style={{ fontSize: 'clamp(36px, 8vw, 84px)', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.04em', lineHeight: 0.95, margin: '0 0 24px' }}
+        {/* Main content */}
+        <div style={{ textAlign: 'center', maxWidth: 860, margin: '0 auto 48px', position: 'relative' }}>
+
+          {/* Live badge */}
+          <motion.div
+            initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+            style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}
           >
-            One post.<br />
-            <span style={{ color: 'var(--arc)' }}>Every platform.</span>
-          </h1>
-          <p
-            ref={paraRef}
-            style={{ fontSize: 'clamp(15px, 2.5vw, 19px)', fontWeight: 450, color: 'var(--slate)', lineHeight: 1.5, margin: '0 0 32px', maxWidth: 540, marginLeft: 'auto', marginRight: 'auto' }}
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              background: 'var(--canvas-lifted)', border: '1px solid rgba(20,20,19,0.1)',
+              borderRadius: 'var(--r-pill)', padding: '7px 16px',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+            }}>
+              <span style={{
+                width: 7, height: 7, borderRadius: '50%', background: '#22c55e',
+                boxShadow: '0 0 0 3px rgba(34,197,94,0.2)',
+                animation: 'hero-pulse 2s ease-in-out infinite',
+                display: 'inline-block', flexShrink: 0,
+              }} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.01em' }}>
+                2,400+ creators broadcasting live
+              </span>
+            </div>
+          </motion.div>
+
+          {/* Headline */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}>
+            <h1 style={{ fontSize: 'clamp(40px, 8.5vw, 92px)', fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.045em', lineHeight: 0.92, margin: '0 0 24px' }}>
+              One post.<br />
+              <span style={{ color: 'var(--arc)', position: 'relative', display: 'inline-block' }}>
+                Every platform.
+                {/* Underline accent */}
+                <svg style={{ position: 'absolute', bottom: '-6px', left: 0, width: '100%', height: 6, overflow: 'visible' }} viewBox="0 0 300 6" preserveAspectRatio="none">
+                  <path d="M 0 5 Q 75 0 150 4 Q 225 8 300 3" stroke="#F37338" strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.6" />
+                </svg>
+              </span>
+            </h1>
+          </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
+            style={{ fontSize: 'clamp(15px, 2.2vw, 19px)', fontWeight: 450, color: 'var(--slate)', lineHeight: 1.55, margin: '0 0 36px', maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}
           >
-            GAP Social‑pilot broadcasts your content to Instagram, YouTube, LinkedIn + 7 more — simultaneously, with zero friction.
-          </p>
-          <div
-            ref={buttonsRef}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}
+            GAP Social‑pilot broadcasts your content to Instagram, YouTube, LinkedIn + 8 more — simultaneously, with zero friction.
+          </motion.p>
+
+          {/* CTA row */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 32 }}
           >
             <button
               onClick={() => navigate('/login')}
@@ -198,14 +232,14 @@ export default function Hero() {
           ref={logosRef}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 10 }}
         >
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--slate)', textTransform: 'uppercase', letterSpacing: '0.08em', marginRight: 6 }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--slate)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
             Broadcasts to
           </span>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 0,
             background: 'var(--canvas-lifted)', border: '1px solid rgba(20,20,19,0.08)',
-            borderRadius: 'var(--r-pill)', padding: '6px 12px',
-            boxShadow: 'var(--shadow-nav)',
+            borderRadius: 'var(--r-pill)', padding: '7px 14px',
+            boxShadow: '0 2px 16px rgba(0,0,0,0.05)',
           }}>
             {PLATFORMS.map((p, i) => (
               <div
@@ -227,7 +261,7 @@ export default function Hero() {
                 <img src={p.src} alt={p.label} style={{ width: 18, height: 18, objectFit: 'contain' }} />
               </div>
             ))}
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink)', marginLeft: 10, whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--arc)', marginLeft: 10, whiteSpace: 'nowrap' }}>
               + more
             </span>
           </div>
@@ -276,6 +310,13 @@ export default function Hero() {
           ))}
         </div>
       </div>
+
+      <style>{`
+        @keyframes hero-pulse {
+          0%, 100% { box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
+          50% { box-shadow: 0 0 0 6px rgba(34,197,94,0.08); }
+        }
+      `}</style>
     </section>
   );
 }
