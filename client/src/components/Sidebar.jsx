@@ -11,6 +11,7 @@ import {
   Share2,
   ChevronDown,
   X,
+  Flame,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
 import logo from "/logo.png";
@@ -303,7 +304,7 @@ function Sidebar() {
         alert("Coming Soon", "Mastodon integration coming soon!", {
           intent: "warning",
         }),
-      disabled: true,
+
     },
     {
       id: "bluesky",
@@ -415,6 +416,11 @@ function Sidebar() {
               to: "/dashboard/queue",
               label: "Scheduled Queue",
               icon: <CalendarClock size={16} />,
+            },
+            {
+              to: "/dashboard/trends",
+              label: "All Trends",
+              icon: <Flame size={16} />,
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);

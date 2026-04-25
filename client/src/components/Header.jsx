@@ -1,10 +1,12 @@
 import React from "react";
-import { Menu } from "lucide-react";
+import { Menu, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 
-function Header({ onMenuClick, sidebarOpen, isDesktop }) {
+function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   if (!user) return null;
 
@@ -23,7 +25,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop }) {
         position: "fixed",
         top: 0,
         right: 0,
-        left: isDesktop ? 240 : 0,
+        left: isDesktop && !isTrendsPage ? 240 : 0,
         zIndex: 39,
         height: 56,
         background: "rgba(255, 255, 255, 0.8)",
@@ -38,35 +40,67 @@ function Header({ onMenuClick, sidebarOpen, isDesktop }) {
         transition: "left 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
       }}
     >
-      {/* Mobile menu toggle */}
-      {!isDesktop && (
-        <button
-          onClick={onMenuClick}
-          aria-label="Toggle Menu"
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: "var(--r-btn)",
-            border: "1px solid rgba(20,20,19,0.08)",
-            background: "var(--white)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--ink)",
-            transition: "all 0.2s",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-          }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.transform = "translateY(-1px)")
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.transform = "translateY(0)")
-          }
-        >
-          <Menu size={18} />
-        </button>
-      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {/* Back Button on Trends Page */}
+        {isTrendsPage && (
+          <button
+            onClick={() => navigate('/dashboard')}
+            aria-label="Go Back"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: "var(--r-btn)",
+              border: "1px solid rgba(20,20,19,0.08)",
+              background: "var(--white)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--ink)",
+              transition: "all 0.2s",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.transform = "translateY(-1px)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.transform = "translateY(0)")
+            }
+          >
+            <ArrowLeft size={18} />
+          </button>
+        )}
+
+        {/* Mobile menu toggle (hide on trends page since sidebar is hidden) */}
+        {!isDesktop && !isTrendsPage && (
+          <button
+            onClick={onMenuClick}
+            aria-label="Toggle Menu"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: "var(--r-btn)",
+              border: "1px solid rgba(20,20,19,0.08)",
+              background: "var(--white)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--ink)",
+              transition: "all 0.2s",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.transform = "translateY(-1px)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.transform = "translateY(0)")
+            }
+          >
+            <Menu size={18} />
+          </button>
+        )}
+      </div>
 
       {/* Right: user pill */}
       <div style={{ marginLeft: "auto" }}>
