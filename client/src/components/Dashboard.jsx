@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
 import Masonry from "react-masonry-css";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -1272,15 +1272,11 @@ function Dashboard() {
     }
   };
 
-  const formatDate = (dateString) =>
-    new Date(dateString).toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const formatDate = useCallback((dateString) =>
+    new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric',
+      year: 'numeric', hour: '2-digit', minute: '2-digit',
+    }), []);
 
   const toggleExpand = (id) =>
     setExpandedId((prev) => (prev === id ? null : id));
@@ -1301,55 +1297,26 @@ function Dashboard() {
   const displayedItems = filtered.slice(0, displayCount);
   const hasMore = displayCount < filtered.length;
 
-  // ── Infinite scroll: scroll-container-aware ──
   useEffect(() => {
     if (!hasMore || isLoadingMore) return;
-
     const sentinel = loadMoreRef.current;
     if (!sentinel) return;
 
-    // Walk up the DOM to find the actual scrollable container
-    const getScrollParent = (node) => {
-      if (!node || node === document.body) return window;
-      const { overflowY, overflow } = window.getComputedStyle(node);
-      if (
-        overflowY === "auto" ||
-        overflowY === "scroll" ||
-        overflow === "auto" ||
-        overflow === "scroll"
-      )
-        return node;
-      return getScrollParent(node.parentElement);
-    };
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isLoadingMore) {
+          setIsLoadingMore(true);
+          setTimeout(() => {
+            setDisplayCount(prev => Math.min(prev + BATCH_SIZE, filtered.length));
+            setIsLoadingMore(false);
+          }, 300);
+        }
+      },
+      { rootMargin: '400px', threshold: 0 }
+    );
 
-    const scrollParent = getScrollParent(sentinel.parentElement);
-
-    const triggerLoadMore = () => {
-      const sentinelRect = sentinel.getBoundingClientRect();
-      const containerBottom =
-        scrollParent === window
-          ? window.innerHeight
-          : scrollParent.getBoundingClientRect().bottom;
-
-      // Load when sentinel is within 400px of the visible bottom
-      if (sentinelRect.top <= containerBottom + 400) {
-        setIsLoadingMore(true);
-        setTimeout(() => {
-          setDisplayCount((prev) =>
-            Math.min(prev + BATCH_SIZE, filtered.length),
-          );
-          setIsLoadingMore(false);
-        }, 500);
-      }
-    };
-
-    // 1. Immediate check (handles content that fits inside the viewport)
-    triggerLoadMore();
-
-    // 2. Scroll listener on the real scroll container
-    const target = scrollParent === window ? window : scrollParent;
-    target.addEventListener("scroll", triggerLoadMore, { passive: true });
-    return () => target.removeEventListener("scroll", triggerLoadMore);
+    observer.observe(sentinel);
+    return () => observer.disconnect();
   }, [hasMore, isLoadingMore, filtered.length]);
 
   return (

@@ -48,7 +48,8 @@ router.get('/trends/news', async (req, res) => {
   const cacheKey   = `news:${categories}:${limit}:${offset}`;
 
   try {
-    const cached = getCached(cacheKey);
+    const refresh = req.query.refresh === 'true';
+    const cached = refresh ? null : getCached(cacheKey);
     if (cached) return res.json(cached);
 
     let articles = [];
@@ -188,7 +189,8 @@ router.get('/trends/reddit', async (req, res) => {
   const cacheKey = `reddit:${sr}:${limit}:${after}`;
 
   try {
-    const cached = getCached(cacheKey);
+    const refresh = req.query.refresh === 'true';
+    const cached = refresh ? null : getCached(cacheKey);
     if (cached) return res.json(cached);
 
     const r = await axios.get(`https://www.reddit.com/r/${sr}/top.json`, {

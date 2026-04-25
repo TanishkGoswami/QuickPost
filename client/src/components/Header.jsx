@@ -105,6 +105,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
       {/* Right: user pill */}
       <div style={{ marginLeft: "auto" }}>
         <div
+          aria-label={`Account: ${user.name || user.email}`}
           style={{
             display: "flex",
             alignItems: "center",

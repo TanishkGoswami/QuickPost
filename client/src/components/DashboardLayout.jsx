@@ -62,6 +62,28 @@ const DashboardLayout = () => {
         overflow: "hidden",
       }}
     >
+      {/* Skip to content — accessibility */}
+      <a
+        href="#main-content"
+        style={{
+          position: 'absolute',
+          top: -40,
+          left: 16,
+          zIndex: 9999,
+          padding: '8px 16px',
+          background: 'var(--ink)',
+          color: 'var(--canvas)',
+          borderRadius: '0 0 8px 8px',
+          fontSize: 13,
+          fontWeight: 700,
+          textDecoration: 'none',
+          transition: 'top 0.2s',
+        }}
+        onFocus={e => e.currentTarget.style.top = '0'}
+        onBlur={e => e.currentTarget.style.top = '-40px'}
+      >
+        Skip to main content
+      </a>
       {/* Mobile overlay */}
       {!isDesktop && sidebarOpen && (
         <div
@@ -119,6 +141,7 @@ const DashboardLayout = () => {
 
         {/* Page content below header */}
         <main
+          id="main-content"
           className="custom-scrollbar"
           style={{
             flex: 1,

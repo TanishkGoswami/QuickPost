@@ -1,185 +1,154 @@
-import React, { memo, useCallback } from "react";
-import { motion } from "framer-motion";
-import { 
-  ArrowUpCircle, 
-  Share2, 
-  Bookmark, 
-  ChevronRight,
-  ExternalLink,
-  Flame
-} from "lucide-react";
-import { LazyImage } from "./TrendCard";
-
 /**
- * MemeCard — Standalone card for trending memes.
- * Gives memes high priority as requested.
+ * MemeCard.jsx — Standalone Reddit/Meme card
+ * ────────────────────────────────────────────────────────────────
+ * Used by TrendGrid and the new AllTrendsPage's SavedPanel.
+ * Dark "ink" background — contrasts with white NewsCards.
+ *
+ * Replace: client/src/pages/trends/components/MemeCard.jsx
+ * ────────────────────────────────────────────────────────────────
  */
-const MemeCard = memo(function MemeCard({ meme, index, onUseIdea }) {
-  const { image, title, upvotes, subreddit, url } = meme;
 
-  const handleUse = useCallback(() => {
-    onUseIdea({
-      caption: `${title || 'Trending Meme'}\n\n#memes #viral #humor`,
-      hashtags: ['#memes', '#viral', '#humor'],
-      topic: subreddit || 'Trending',
-      images: [meme.isVideo ? meme.videoUrl : image],
-      memes: [],
-    });
-  }, [image, title, subreddit, meme.isVideo, meme.videoUrl, onUseIdea]);
+import React, { memo, useState, useCallback } from "react";
+import { motion } from "framer-motion";
+import {
+  ArrowUpCircle, Share2, Bookmark, BookmarkCheck,
+  ExternalLink, Flame, Play, Sparkles,
+} from "lucide-react";
 
+// Lazy image with shimmer
+const LazyImage = memo(function LazyImage({ src, alt = "", style = {} }) {
+  const [ok, setOk] = useState(false);
+  const [err, setErr] = useState(false);
+  const fb = `https://placehold.co/600x380/1e1d1c/3a3836?text=Trend`;
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        duration: 0.5,
-        delay: Math.min(index * 0.04, 0.4),
-        ease: [0.23, 1, 0.32, 1],
-      }}
-      style={{
-        background: "var(--white)",
-        borderRadius: 24,
-        overflow: "hidden",
-        border: "1px solid rgba(20,20,19,0.05)",
-        boxShadow: "var(--shadow-premium)",
-        display: "flex",
-        flexDirection: "column",
-        marginBottom: 24,
-        position: "relative",
-        transition: "all 0.3s ease",
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "translateY(-4px)";
-        e.currentTarget.style.boxShadow = "var(--shadow-deep)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = "var(--shadow-premium)";
-      }}
-    >
-      {/* ── VISUAL ── */}
-      <div style={{ position: 'relative', overflow: 'hidden', backgroundColor: 'var(--canvas-lifted)' }}>
-        {meme.isVideo ? (
-          <video
-            src={meme.videoUrl}
-            poster={meme.image}
-            autoPlay
-            muted
-            loop
-            playsInline
-            style={{ width: '100%', display: 'block' }}
-          />
-        ) : (
-          <LazyImage
-            src={image}
-            alt={title || "Trending Meme"}
-            style={{ height: 'auto', minHeight: 200, width: "100%" }}
-          />
-        )}
-        <div style={{
-          position: 'absolute',
-          top: 16,
-          left: 16,
-          background: 'rgba(255,255,255,0.9)',
-          backdropFilter: 'blur(10px)',
-          padding: '6px 12px',
-          borderRadius: 10,
-          fontSize: 10,
-          fontWeight: 800,
-          color: 'var(--arc)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          zIndex: 2
-        }}>
-          <Flame size={14} />
-          {meme.isVideo ? 'TRENDING VIDEO' : 'TRENDING MEME'}
-        </div>
-      </div>
-
-      {/* ── DETAILS ── */}
-      <div style={{ padding: "20px 24px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: "var(--slate)", textTransform: "uppercase", letterSpacing: '0.05em' }}>
-              r/{subreddit || 'memes'}
-            </span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--arc)", fontSize: 12, fontWeight: 800 }}>
-            <ArrowUpCircle size={14} />
-            {upvotes || "1.2k"}
-          </div>
-        </div>
-
-        <h3 style={{
-          fontSize: 17,
-          fontWeight: 800,
-          color: "var(--ink)",
-          margin: "0 0 12px",
-          lineHeight: 1.4,
-          letterSpacing: '-0.02em'
-        }}>
-          {title || "Check out this trending meme!"}
-        </h3>
-
-        <div style={{ display: 'flex', gap: 8 }}>
-          {['#humor', '#viral'].map(tag => (
-            <span key={tag} style={{ fontSize: 11, color: 'var(--dust)', fontWeight: 700 }}>{tag}</span>
-          ))}
-        </div>
-      </div>
-
-      {/* ── CTA ── */}
-      <div style={{ 
-        padding: "16px 24px", 
-        background: "var(--canvas-lifted)", 
-        borderTop: "1px solid rgba(20,20,19,0.06)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginTop: 'auto'
-      }}>
-        <div style={{ display: "flex", gap: 16 }}>
-          <button style={{ background: "none", border: "none", color: "var(--slate)", cursor: "pointer", padding: 0 }} title="Save">
-            <Bookmark size={20} />
-          </button>
-          <a 
-            href={url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            style={{ color: "var(--slate)", display: 'flex', alignItems: 'center' }}
-          >
-            <ExternalLink size={20} />
-          </a>
-        </div>
-        
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleUse}
-          style={{
-            background: "var(--arc)",
-            color: "var(--white)",
-            border: "none",
-            borderRadius: 12,
-            padding: "10px 20px",
-            fontSize: 13,
-            fontWeight: 800,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            boxShadow: "0 8px 16px rgba(243,115,56,0.15)"
-          }}
-        >
-          Use Meme
-          <ChevronRight size={16} />
-        </motion.button>
-      </div>
-    </motion.div>
+    <div style={{ position: "relative", overflow: "hidden", background: "rgba(255,255,255,0.04)", ...style }}>
+      {!ok && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.09) 50%,rgba(255,255,255,0.04) 75%)", backgroundSize: "400% 100%", animation: "shimmer 1.5s ease-in-out infinite" }} />}
+      <img src={err ? fb : src} alt={alt} loading="lazy" decoding="async"
+        onLoad={() => setOk(true)} onError={() => { setErr(true); setOk(true); }}
+        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", opacity: ok ? 1 : 0, transform: ok ? "scale(1)" : "scale(1.05)", transition: "opacity 0.4s ease, transform 0.5s ease" }} />
+      <style>{`@keyframes shimmer{0%{background-position:100% 50%}100%{background-position:-100% 50%}}`}</style>
+    </div>
   );
 });
 
+function fmtUp(n) { return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : (n ? String(n) : "1.2k"); }
+
+async function doShare(title, url) {
+  if (navigator.share) { try { await navigator.share({ title, url: url || location.href }); return true; } catch {} }
+  try { await navigator.clipboard.writeText(url || location.href); return "copied"; } catch {}
+  return false;
+}
+
+const MemeCard = memo(function MemeCard({ meme, index, onUseIdea, saved = false, onToggleSave }) {
+  const { image, videoUrl, isVideo, title, upvotes, subreddit, url } = meme;
+  const [shareMsg, setShareMsg] = useState(null);
+
+  const handleShare = useCallback(async () => {
+    const r = await doShare(title, url);
+    setShareMsg(r === "copied" ? "Copied!" : r ? "Shared!" : null);
+    if (r) setTimeout(() => setShareMsg(null), 2200);
+  }, [title, url]);
+
+  const handleUse = useCallback(() => {
+    onUseIdea?.({
+      caption: `${title || "Trending right now 🔥"}\n\n#memes #viral #trending`,
+      hashtags: ["#memes", "#viral", "#trending", `#${subreddit || "memes"}`],
+      topic: subreddit || "Trending",
+      images: isVideo ? [] : (image ? [image] : []),
+      memes: isVideo ? [] : (image ? [image] : []),
+      videoUrls: isVideo && videoUrl ? [videoUrl] : [],
+      source: meme,
+    });
+  }, [meme, title, subreddit, image, isVideo, videoUrl, onUseIdea]);
+
+  const id = url || title || String(index);
+
+  return (
+    <motion.article
+      layout
+      initial={{ opacity: 0, y: 18 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, delay: Math.min(index * 0.035, 0.3), ease: [0.23, 1, 0.32, 1] }}
+      style={{
+        background: "#141413", borderRadius: 20, overflow: "hidden",
+        border: "1px solid rgba(255,255,255,0.055)",
+        boxShadow: "0 2px 14px rgba(20,20,19,0.18)",
+        display: "flex", flexDirection: "column", marginBottom: 20,
+        transition: "box-shadow 0.28s, transform 0.28s",
+      }}
+      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 20px 52px rgba(20,20,19,0.32)"; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 14px rgba(20,20,19,0.18)"; }}
+    >
+      {/* Media */}
+      {(image || (isVideo && videoUrl)) && (
+        <div style={{ position: "relative" }}>
+          {isVideo && videoUrl
+            ? <video src={videoUrl} poster={image} autoPlay muted loop playsInline style={{ width: "100%", display: "block", maxHeight: 320, objectFit: "cover" }} />
+            : <LazyImage src={image} alt={title || "Trending"} style={{ height: "auto", minHeight: 140, maxHeight: 360, width: "100%" }} />
+          }
+          <div style={{ position: "absolute", top: 10, left: 10 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", background: "rgba(20,20,19,0.72)", backdropFilter: "blur(8px)", borderRadius: 99, fontSize: 9, fontWeight: 900, color: "#f37338", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              {isVideo ? <Play size={8} fill="#f37338" /> : <Flame size={8} />}
+              {isVideo ? "VIDEO" : "MEME"}
+            </span>
+          </div>
+          <div style={{ position: "absolute", top: 10, right: 10 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 9px", background: "rgba(20,20,19,0.72)", backdropFilter: "blur(8px)", borderRadius: 99, fontSize: 10, color: "#f37338", fontWeight: 800 }}>
+              <ArrowUpCircle size={11} />{fmtUp(upvotes)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Body */}
+      <div style={{ padding: "16px 18px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+          <span style={{ padding: "2px 9px", background: "rgba(243,115,56,0.18)", border: "1px solid rgba(243,115,56,0.22)", borderRadius: 99, fontSize: 9, fontWeight: 800, color: "#f37338" }}>
+            r/{subreddit || "trending"}
+          </span>
+          {!image && !isVideo && (
+            <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "#f37338", fontWeight: 800 }}>
+              <ArrowUpCircle size={11} />{fmtUp(upvotes)}
+            </span>
+          )}
+        </div>
+
+        <h3 style={{ fontSize: 14, fontWeight: 640, color: "rgba(242,240,237,0.9)", margin: "0 0 14px", lineHeight: 1.4, letterSpacing: "-0.012em", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+          {title || "Check this out 🔥"}
+        </h3>
+
+        {/* Actions */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} onClick={handleUse}
+            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 0", background: "#f37338", border: "none", borderRadius: 10, color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 14px rgba(243,115,56,0.3)" }}>
+            <Sparkles size={12} />Use This
+          </motion.button>
+
+          <button onClick={e => { e.stopPropagation(); onToggleSave?.(id); }}
+            aria-label={saved ? "Remove bookmark" : "Save"}
+            style={{ width: 35, height: 35, display: "flex", alignItems: "center", justifyContent: "center", background: saved ? "rgba(243,115,56,0.2)" : "rgba(255,255,255,0.07)", border: `1px solid ${saved ? "rgba(243,115,56,0.3)" : "rgba(255,255,255,0.1)"}`, borderRadius: 10, color: saved ? "#f37338" : "rgba(242,240,237,0.45)", cursor: "pointer", transition: "all 0.14s" }}>
+            {saved ? <BookmarkCheck size={13} /> : <Bookmark size={13} />}
+          </button>
+
+          <button onClick={e => { e.stopPropagation(); handleShare(); }}
+            aria-label="Share"
+            style={{ width: 35, height: 35, display: "flex", alignItems: "center", justifyContent: "center", background: shareMsg ? "rgba(5,150,105,0.2)" : "rgba(255,255,255,0.07)", border: `1px solid ${shareMsg ? "rgba(5,150,105,0.3)" : "rgba(255,255,255,0.1)"}`, borderRadius: 10, color: shareMsg ? "#059669" : "rgba(242,240,237,0.45)", cursor: "pointer", transition: "all 0.14s" }}>
+            <Share2 size={13} />
+          </button>
+
+          {url && (
+            <a href={url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} aria-label="View on Reddit"
+              style={{ width: 35, height: 35, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, color: "rgba(242,240,237,0.42)", transition: "all 0.14s" }}
+              onMouseEnter={e => { e.currentTarget.style.color = "rgba(242,240,237,0.88)"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = "rgba(242,240,237,0.42)"; }}>
+              <ExternalLink size={11} />
+            </a>
+          )}
+        </div>
+      </div>
+    </motion.article>
+  );
+});
+
+export { LazyImage };
 export default MemeCard;
