@@ -317,7 +317,7 @@ async function fetchPexels(q, limit) {
    GET /api/trends/proxy/media?url=...
    Securely pipes external media (images/videos) to bypass CORS.
    ════════════════════════════════════════════════════ */
-router.get('/proxy/media', async (req, res) => {
+router.get('/trends/proxy/media', async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).send('URL is required');
 

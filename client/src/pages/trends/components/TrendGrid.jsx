@@ -13,18 +13,30 @@ const BREAKPOINTS = {
 };
 
 /**
- * SkeletonCard — shimmer placeholder for loading state.
+ * SkeletonTrendCard — High-fidelity shimmer placeholder.
  */
-const SkeletonCard = memo(function SkeletonCard({ height = 340 }) {
+const SkeletonTrendCard = memo(function SkeletonTrendCard({ height = 400 }) {
   return (
     <div
-      className="masonry-card skeleton-card"
-      style={{ height, marginBottom: 24 }}
+      className="masonry-card"
+      style={{
+        background: "var(--canvas-lifted)",
+        borderRadius: 24,
+        padding: 20,
+        border: "1px solid rgba(20,20,19,0.06)",
+        marginBottom: 20,
+        height,
+        display: "flex",
+        flexDirection: "column",
+      }}
     >
-      <div
-        className="skeleton-shimmer"
-        style={{ height: "100%", borderRadius: 24 }}
-      />
+      <div className="skeleton-premium skeleton-image" style={{ height: 180, borderRadius: 16 }} />
+      <div className="skeleton-premium skeleton-title" style={{ width: "90%", height: 24 }} />
+      <div className="skeleton-premium skeleton-text" style={{ width: "60%", height: 12 }} />
+      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="skeleton-premium skeleton-text" style={{ height: 40, borderRadius: 12 }} />
+        <div className="skeleton-premium skeleton-text" style={{ height: 40, borderRadius: 12 }} />
+      </div>
     </div>
   );
 });
@@ -95,7 +107,10 @@ const TrendGrid = memo(function TrendGrid({
           onLoadMore();
         }
       },
-      { threshold: 0.1 },
+      { 
+        threshold: 0.1,
+        rootMargin: '400px' // Trigger load 400px before bottom
+      },
     );
 
     if (sentinelRef.current) {
@@ -113,7 +128,7 @@ const TrendGrid = memo(function TrendGrid({
         columnClassName="masonry-grid_column"
       >
         {skeletons.map((s) => (
-          <SkeletonCard key={s.id} height={s.h} />
+          <SkeletonTrendCard key={s.id} height={s.h} />
         ))}
       </Masonry>
     );

@@ -9,22 +9,21 @@ import { NICHES, PLATFORMS, CONTENT_TYPES } from '../data/trendsData';
 const FilterChip = memo(function FilterChip({ label, active, onClick }) {
   return (
     <motion.button
-      whileHover={{ scale: 1.02, background: active ? 'var(--ink)' : 'rgba(20,20,19,0.03)' }}
+      whileHover={{ scale: 1.02, background: active ? 'var(--ink)' : 'var(--white)' }}
       whileTap={{ scale: 0.96 }}
       onClick={onClick}
       style={{
         padding: '8px 16px',
-        borderRadius: '12px',
-        border: active ? '1.5px solid var(--ink)' : '1.5px solid rgba(20,20,19,0.06)',
+        borderRadius: '10px',
+        border: active ? '1.5px solid var(--ink)' : '1px solid rgba(20,20,19,0.08)',
         background: active ? 'var(--ink)' : 'var(--white)',
-        color: active ? 'var(--canvas)' : 'var(--slate)',
+        color: active ? 'var(--white)' : 'var(--slate)',
         fontSize: 12, 
         fontWeight: 700,
         cursor: 'pointer', 
         whiteSpace: 'nowrap',
-        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-        fontFamily: 'inherit',
-        boxShadow: active ? '0 8px 20px rgba(20,20,19,0.12)' : 'none',
+        transition: 'all 0.2s',
+        boxShadow: active ? 'var(--shadow-premium)' : 'none',
       }}
     >
       {label}
@@ -36,14 +35,14 @@ const FilterChip = memo(function FilterChip({ label, active, onClick }) {
  * ScrollContainer — wrapper to hide scrollbars and add fade masks.
  */
 const ScrollContainer = ({ children }) => (
-  <div style={{ position: 'relative' }}>
+  <div style={{ position: 'relative', overflow: 'hidden' }}>
     <div 
       style={{ 
         display: 'flex', 
         flexWrap: 'nowrap', 
         gap: 8, 
         overflowX: 'auto', 
-        paddingBottom: '4px',
+        padding: '2px 0 8px',
         msOverflowStyle: 'none',
         scrollbarWidth: 'none',
         WebkitOverflowScrolling: 'touch',
@@ -52,16 +51,6 @@ const ScrollContainer = ({ children }) => (
     >
       {children}
     </div>
-    {/* Fade mask for scroll hint */}
-    <div style={{
-      position: 'absolute',
-      top: 0,
-      right: 0,
-      bottom: 4,
-      width: 40,
-      background: 'linear-gradient(to right, transparent, var(--canvas-lifted))',
-      pointerEvents: 'none'
-    }} />
   </div>
 );
 
@@ -76,24 +65,24 @@ const FiltersBar = memo(function FiltersBar({
 }) {
   return (
     <div style={{
-      background: 'var(--canvas-lifted)',
-      border: '1px solid rgba(20,20,19,0.08)',
-      borderRadius: '24px',
+      background: 'var(--white)',
+      border: '1px solid rgba(20,20,19,0.06)',
+      borderRadius: '20px',
       padding: '24px',
       display: 'flex', 
       flexDirection: 'column', 
       gap: 28,
-      boxShadow: '0 4px 32px rgba(20,20,19,0.03)',
+      boxShadow: 'var(--shadow-card)',
     }}>
 
       {/* Search Section */}
       <div>
-        <p style={{ fontSize: 10, fontWeight: 900, color: 'var(--slate)', textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 12px' }}>
+        <p style={{ fontSize: 11, fontWeight: 800, color: 'var(--slate)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 12px' }}>
           Search Trends
         </p>
         <div style={{ position: 'relative' }}>
           <Search 
-            size={18} 
+            size={16} 
             style={{
               position: 'absolute', 
               left: 14, 
@@ -110,23 +99,24 @@ const FiltersBar = memo(function FiltersBar({
             onChange={e => setSearch(e.target.value)}
             style={{
               width: '100%',
-              padding: '14px 16px 14px 44px',
-              borderRadius: '16px',
-              border: '1.5px solid rgba(20,20,19,0.08)',
-              background: 'var(--white)',
+              padding: '12px 16px 12px 40px',
+              borderRadius: '12px',
+              border: '1px solid rgba(20,20,19,0.1)',
+              background: 'var(--canvas-lifted)',
               color: 'var(--ink)',
               fontSize: 14, 
               fontWeight: 600,
               outline: 'none',
-              fontFamily: 'inherit',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              transition: 'all 0.2s',
             }}
             onFocus={e => { 
               e.target.style.borderColor = 'var(--ink)';
-              e.target.style.boxShadow = '0 12px 30px rgba(20,20,19,0.06)';
+              e.target.style.background = 'var(--white)';
+              e.target.style.boxShadow = 'var(--shadow-card)';
             }}
             onBlur={e => { 
-              e.target.style.borderColor = 'rgba(20,20,19,0.08)';
+              e.target.style.borderColor = 'rgba(20,20,19,0.1)';
+              e.target.style.background = 'var(--canvas-lifted)';
               e.target.style.boxShadow = 'none';
             }}
           />
