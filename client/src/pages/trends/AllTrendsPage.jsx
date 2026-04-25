@@ -623,7 +623,7 @@ export default function AllTrendsPage() {
   // Merge + filter + sort
   const feed = useMemo(() => {
     let fn = niche === "All" ? newsItems : newsItems.filter(n => detectNiche(n.title).id === niche);
-    let fm = memeItems;
+    let fm = niche === "All" ? memeItems : memeItems.filter(m => detectNiche(`${m.title} ${m.subreddit}`).id === niche);
 
     if (sort === "saved") {
       fn = fn.filter(n => savedIds.has(n._sid));
@@ -789,7 +789,11 @@ export default function AllTrendsPage() {
         <Suspense fallback={null}>
           <ComposerModal isOpen={composerOpen} onClose={() => { setComposerOpen(false); setInjected(null); }}
             initialCaption={injected?.caption || ""} initialHashtags={injected?.hashtags || []}
-            initialMediaUrls={[...(injected?.images || []), ...(injected?.memes || [])].slice(0, 5)} />
+            initialMediaUrls={[
+              ...(injected?.images || []),
+              ...(injected?.memes || []),
+              ...(injected?.videoUrls || [])
+            ].slice(0, 5)} />
         </Suspense>
       )}
 

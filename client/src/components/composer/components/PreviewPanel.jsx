@@ -191,16 +191,17 @@ const UserAvatar = ({ user, size = 28, background = "#eee" }) => {
 };
 
 const InstagramPreview = memo(
-  ({ caption, mediaFiles, cssClass, user, platformUsername, selectedRatio }) => {
+  ({ caption, mediaFiles, cssClass, user, platformUsername, selectedRatio, selectedSizePreset }) => {
     const metrics = usePlatformMetrics(caption);
     const username =
       platformUsername ||
       user?.name?.toLowerCase().replace(/\s+/g, "_") ||
       "your_account";
 
-    const isVertical = selectedRatio === "9:16";
+    const isReel = selectedSizePreset === "ig-reel";
+    const isStory = selectedSizePreset === "ig-story";
 
-    if (isVertical) {
+    if (isReel) {
       return (
         <div
           style={{
@@ -208,6 +209,7 @@ const InstagramPreview = memo(
             borderRadius: 12,
             overflow: "hidden",
             position: "relative",
+            aspectRatio: "9/16",
           }}
         >
           <MediaCarousel mediaFiles={mediaFiles} cssClass={cssClass} />
@@ -218,25 +220,66 @@ const InstagramPreview = memo(
               bottom: 0,
               left: 0,
               right: 0,
-              padding: "40px 12px 12px",
+              padding: "60px 12px 16px",
               background: "linear-gradient(transparent, rgba(0,0,0,0.8))",
               pointerEvents: "none",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <UserAvatar user={user} size={24} />
-              <span style={{ color: "white", fontSize: 11, fontWeight: 700 }}>{username}</span>
-              <button style={{ border: "1px solid white", background: "none", color: "white", fontSize: 9, padding: "2px 6px", borderRadius: 4 }}>Follow</button>
+              <UserAvatar user={user} size={28} />
+              <span style={{ color: "white", fontSize: 12, fontWeight: 700 }}>{username}</span>
+              <button style={{ border: "1px solid white", background: "none", color: "white", fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>Follow</button>
             </div>
-            <p style={{ color: "white", fontSize: 11, margin: 0, overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
-              {caption}
+            <p style={{ color: "white", fontSize: 12, margin: 0, lineHeight: 1.4, maxWidth: "85%", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+              {caption || "Amazing reel content... #reel #viral"}
             </p>
           </div>
-          <div style={{ position: "absolute", right: 12, bottom: 80, display: "flex", flexDirection: "column", gap: 16, alignItems: "center" }}>
-            <div style={{ textAlign: "center" }}><Heart size={20} color="white" /><span style={{ color: "white", fontSize: 9 }}>{metrics.likes}</span></div>
-            <div style={{ textAlign: "center" }}><MessageCircle size={20} color="white" /><span style={{ color: "white", fontSize: 9 }}>{metrics.comments}</span></div>
-            <Send size={20} color="white" />
+          <div style={{ position: "absolute", right: 10, bottom: 40, display: "flex", flexDirection: "column", gap: 18, alignItems: "center" }}>
+            <div style={{ textAlign: "center" }}><Heart size={24} color="white" /><span style={{ color: "white", fontSize: 10, marginTop: 2 }}>{metrics.likes}</span></div>
+            <div style={{ textAlign: "center" }}><MessageCircle size={24} color="white" /><span style={{ color: "white", fontSize: 10, marginTop: 2 }}>{metrics.comments}</span></div>
+            <Send size={24} color="white" />
+            <MoreHorizontal size={24} color="white" />
+            <div style={{ width: 24, height: 24, borderRadius: 4, border: "2px solid white", overflow: "hidden" }}>
+              <UserAvatar user={user} size={24} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (isStory) {
+      return (
+        <div
+          style={{
+            background: "#000",
+            borderRadius: 12,
+            overflow: "hidden",
+            position: "relative",
+            aspectRatio: "9/16",
+          }}
+        >
+          <MediaCarousel mediaFiles={mediaFiles} cssClass={cssClass} />
+          {/* Story Progress Bars */}
+          <div style={{ position: "absolute", top: 8, left: 0, right: 0, padding: "0 8px", display: "flex", gap: 4 }}>
+            <div style={{ flex: 1, height: 2, background: "white", borderRadius: 2 }} />
+            <div style={{ flex: 1, height: 2, background: "rgba(255,255,255,0.4)", borderRadius: 2 }} />
+          </div>
+          {/* Story Header */}
+          <div style={{ position: "absolute", top: 20, left: 12, display: "flex", alignItems: "center", gap: 8 }}>
+            <UserAvatar user={user} size={32} />
+            <span style={{ color: "white", fontSize: 12, fontWeight: 700 }}>{username}</span>
+            <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>1h</span>
+          </div>
+          <div style={{ position: "absolute", top: 24, right: 12 }}>
             <MoreHorizontal size={20} color="white" />
+          </div>
+          {/* Story Bottom Reply */}
+          <div style={{ position: "absolute", bottom: 16, left: 12, right: 12, display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ flex: 1, border: "1px solid rgba(255,255,255,0.5)", borderRadius: 20, padding: "8px 16px", color: "white", fontSize: 13 }}>
+              Send message
+            </div>
+            <Heart size={24} color="white" />
+            <Send size={24} color="white" />
           </div>
         </div>
       );
@@ -339,11 +382,12 @@ const YouTubePreview = memo(
     thumbnailFile,
     platformUsername,
     selectedRatio,
+    selectedSizePreset,
   }) => {
     const thumbUrl = useBlobUrl(thumbnailFile);
     const metrics = usePlatformMetrics(caption);
     const username = platformUsername || user?.name || "Your Channel";
-    const isShorts = selectedRatio === "9:16";
+    const isShorts = selectedSizePreset === "yt-shorts";
 
     if (isShorts) {
       return (
@@ -353,6 +397,7 @@ const YouTubePreview = memo(
             borderRadius: 12,
             overflow: "hidden",
             position: "relative",
+            aspectRatio: "9/16",
           }}
         >
           <MediaCarousel mediaFiles={mediaFiles} cssClass={cssClass} />
@@ -363,25 +408,28 @@ const YouTubePreview = memo(
               bottom: 0,
               left: 0,
               right: 0,
-              padding: "60px 12px 16px",
+              padding: "80px 12px 16px",
               background: "linear-gradient(transparent, rgba(0,0,0,0.9))",
               pointerEvents: "none",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <UserAvatar user={user} size={32} background="#f00" />
-              <span style={{ color: "white", fontSize: 13, fontWeight: 700 }}>@{username.replace(/\s+/g, "").toLowerCase()}</span>
-              <button style={{ background: "white", color: "black", fontSize: 11, fontWeight: 700, padding: "4px 10px", borderRadius: 18 }}>Subscribe</button>
+              <UserAvatar user={user} size={36} background="#f00" />
+              <span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>@{username.replace(/\s+/g, "").toLowerCase()}</span>
+              <button style={{ background: "white", color: "black", fontSize: 12, fontWeight: 700, padding: "6px 14px", borderRadius: 20 }}>Subscribe</button>
             </div>
-            <p style={{ color: "white", fontSize: 13, margin: 0, lineHeight: 1.4, maxWidth: "80%" }}>
-              {caption}
+            <p style={{ color: "white", fontSize: 14, margin: 0, lineHeight: 1.4, maxWidth: "80%", fontWeight: 500 }}>
+              {caption || "This is a YouTube Short #shorts"}
             </p>
           </div>
-          <div style={{ position: "absolute", right: 8, bottom: 100, display: "flex", flexDirection: "column", gap: 20, alignItems: "center" }}>
-            <div style={{ textAlign: "center" }}><ThumbsUp size={22} color="white" /><span style={{ color: "white", fontSize: 10, marginTop: 4 }}>{metrics.likes}</span></div>
-            <div style={{ textAlign: "center" }}><ThumbsDown size={22} color="white" /><span style={{ color: "white", fontSize: 10, marginTop: 4 }}>Dislike</span></div>
-            <div style={{ textAlign: "center" }}><MessageSquare size={22} color="white" /><span style={{ color: "white", fontSize: 10, marginTop: 4 }}>{metrics.comments}</span></div>
-            <div style={{ textAlign: "center" }}><Share2 size={22} color="white" /><span style={{ color: "white", fontSize: 10, marginTop: 4 }}>Share</span></div>
+          <div style={{ position: "absolute", right: 10, bottom: 60, display: "flex", flexDirection: "column", gap: 24, alignItems: "center" }}>
+            <div style={{ textAlign: "center" }}><ThumbsUp size={26} color="white" fill="white" /><span style={{ color: "white", fontSize: 11, marginTop: 4, fontWeight: 600 }}>{metrics.likes}</span></div>
+            <div style={{ textAlign: "center" }}><ThumbsDown size={26} color="white" fill="white" /><span style={{ color: "white", fontSize: 11, marginTop: 4, fontWeight: 600 }}>Dislike</span></div>
+            <div style={{ textAlign: "center" }}><MessageSquare size={26} color="white" fill="white" /><span style={{ color: "white", fontSize: 11, marginTop: 4, fontWeight: 600 }}>{metrics.comments}</span></div>
+            <div style={{ textAlign: "center" }}><Share2 size={26} color="white" fill="white" /><span style={{ color: "white", fontSize: 11, marginTop: 4, fontWeight: 600 }}>Share</span></div>
+            <div style={{ width: 32, height: 32, borderRadius: 6, border: "2px solid white", overflow: "hidden" }}>
+               <UserAvatar user={user} size={32} />
+            </div>
           </div>
         </div>
       );
@@ -815,6 +863,7 @@ const PreviewPanel = memo(function PreviewPanel({
   caption,
   mediaFiles,
   selectedRatio,
+  selectedSizePreset,
   youtubeThumbnail,
   activePlatform,
   onActivePlatformChange,
@@ -972,6 +1021,7 @@ const PreviewPanel = memo(function PreviewPanel({
                 thumbnailFile={activeId === "youtube" ? youtubeThumbnail : null}
                 platformUsername={platformUsername}
                 selectedRatio={selectedRatio}
+                selectedSizePreset={selectedSizePreset}
               />
 
               <p
