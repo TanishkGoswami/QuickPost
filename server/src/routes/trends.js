@@ -326,24 +326,31 @@ router.get('/trends/proxy/media', async (req, res) => {
       method: 'get',
       url: url,
       responseType: 'stream',
-      timeout: 10000,
+      timeout: 15000,
       headers: {
-        'User-Agent': 'QuickPost/1.0',
-        'Accept': 'image/*,video/*',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'image/*,video/*,*/*',
+        'Referer': new URL(url).origin,
       }
     });
 
-    // Forward relevant headers
+    // Forward headers
     const contentType = response.headers['content-type'];
     if (contentType) res.setHeader('Content-Type', contentType);
-    
-    // Cache for 1 hour
     res.setHeader('Cache-Control', 'public, max-age=3600');
+
+    // Safe piping with error handling
+    response.data.on('error', (err) => {
+      console.error('[MediaProxy] Stream Error:', err.message);
+      if (!res.headersSent) res.status(500).send('Stream error');
+    });
 
     response.data.pipe(res);
   } catch (err) {
     console.error('[MediaProxy] Failed to fetch:', url, err.message);
-    res.status(500).send('Failed to fetch media');
+    if (!res.headersSent) {
+      res.status(err.response?.status || 500).send(err.message);
+    }
   }
 });
 
