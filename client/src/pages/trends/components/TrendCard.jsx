@@ -1,429 +1,236 @@
+/**
+ * TrendCard.jsx — News / Article trend card
+ * ────────────────────────────────────────────────────────────────
+ * Light white background — visual contrast with MemeCard (dark ink).
+ * Features: LazyImage, niche badge, score pill, ideas drawer,
+ * save / share / use actions, external link.
+ *
+ * Replace: client/src/pages/trends/components/TrendCard.jsx
+ * ────────────────────────────────────────────────────────────────
+ */
+
 import React, { memo, useState, useCallback } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Flame,
-  ChevronRight,
-  Sparkles,
-  Share2,
-  Bookmark,
-  ArrowUpCircle,
-  Hash,
-  Layout,
-  ExternalLink,
+  Flame, Sparkles, Share2, Bookmark, BookmarkCheck,
+  ExternalLink, ChevronDown, Lightbulb,
 } from "lucide-react";
 
-/* ─────────────────────────────────────────────────────────────────
-   LazyImage — Visual core with beautiful fade-in
-   ───────────────────────────────────────────────────────────────── */
-export const LazyImage = memo(function LazyImage({
-  src,
-  alt = "",
-  style = {},
-  onClick,
-  priority = false,
-}) {
-  const [loaded, setLoaded] = useState(false);
-  const [errored, setErrored] = useState(false);
+const C = { ink: "#141413", canvas: "#f2f0ed", white: "#ffffff", slate: "#6b6b68", dust: "#c4bfb8", arc: "#f37338", border: "rgba(20,20,19,0.09)" };
 
-  const fallback = `https://placehold.co/600x400/f3f0ee/d1cdc7?text=${encodeURIComponent(alt || "Visual")}`;
-
+// ─── LAZY IMAGE ───────────────────────────────────────────────────
+export const LazyImage = memo(function LazyImage({ src, alt = "", style = {} }) {
+  const [ok, setOk] = useState(false);
+  const [err, setErr] = useState(false);
+  const fb = `https://placehold.co/600x380/f2f0ed/c4bfb8?text=${encodeURIComponent((alt || "").substring(0, 16) || "Trend")}`;
   return (
-    <div
-      onClick={onClick}
-      style={{
-        position: "relative",
-        overflow: "hidden",
-        background: "rgba(20,20,19,0.03)",
-        cursor: onClick ? "pointer" : "default",
-        ...style,
-      }}
-    >
-      {!loaded && !errored && (
-        <div
-          className="skeleton-shimmer"
-          style={{ position: "absolute", inset: 0 }}
-        />
-      )}
-      <img
-        src={errored ? fallback : src}
-        alt={alt}
-        loading={priority ? "eager" : "lazy"}
-        onLoad={() => setLoaded(true)}
-        onError={() => {
-          setErrored(true);
-          setLoaded(true);
-        }}
-        style={{
-          width: "100%",
-          height: style.height === "auto" ? "auto" : "100%",
-          objectFit: style.objectFit || "cover",
-          display: "block",
-          opacity: loaded ? 1 : 0,
-          transition:
-            "opacity 0.5s ease-out, transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
-          transform: loaded ? "scale(1)" : "scale(1.05)",
-        }}
-      />
+    <div style={{ position: "relative", overflow: "hidden", background: "rgba(20,20,19,0.04)", ...style }}>
+      {!ok && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,rgba(20,20,19,0.04) 25%,rgba(20,20,19,0.09) 50%,rgba(20,20,19,0.04) 75%)", backgroundSize: "400% 100%", animation: "shimmer 1.5s ease-in-out infinite" }} />}
+      <img src={err ? fb : src} alt={alt} loading="lazy" decoding="async"
+        onLoad={() => setOk(true)} onError={() => { setErr(true); setOk(true); }}
+        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", opacity: ok ? 1 : 0, transform: ok ? "scale(1)" : "scale(1.05)", transition: "opacity 0.45s ease, transform 0.5s ease" }} />
+      <style>{`@keyframes shimmer{0%{background-position:100% 50%}100%{background-position:-100% 50%}}`}</style>
     </div>
   );
 });
 
-/* ─────────────────────────────────────────────────────────────────
-   MemeSection
-   ───────────────────────────────────────────────────────────────── */
-const MemeSection = memo(function MemeSection({ memes }) {
-  if (!memes?.length) return null;
-
+// ─── IDEAS DRAWER ────────────────────────────────────────────────
+const IdeasDrawer = memo(function IdeasDrawer({ ideas, hashtags, onUse }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span
-          style={{
-            fontSize: 10,
-            fontWeight: 900,
-            color: "var(--slate)",
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-          }}
-        >
-          Trending Memes
-        </span>
-      </div>
-      <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }} className="custom-scrollbar">
-        {memes.slice(0, 2).map((meme, i) => (
-          <div
-            key={i}
-            style={{
-              flexShrink: 0,
-              width: 140,
-              borderRadius: 12,
-              overflow: "hidden",
-              border: "1.px solid rgba(20,20,19,0.08)",
-              background: "var(--white)",
-              position: "relative",
-            }}
-          >
-            <LazyImage
-              src={meme.image}
-              alt="Meme"
-              style={{ height: 100, width: "100%" }}
-            />
-            <div
-              style={{
-                padding: "6px 8px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                background: "var(--canvas-lifted)",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--arc)", fontSize: 10, fontWeight: 800 }}>
-                <ArrowUpCircle size={10} />
-                {meme.upvotes || "1.2k"}
-              </div>
-              <ExternalLink size={10} style={{ color: "var(--dust)" }} />
+    <div>
+      <button onClick={e => { e.stopPropagation(); setOpen(p => !p); }}
+        style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "8px 0 6px", background: "none", border: "none", cursor: "pointer", color: C.slate, fontSize: 12, fontWeight: 600, fontFamily: "inherit" }}>
+        <Lightbulb size={12} style={{ color: C.arc, flexShrink: 0 }} />
+        {ideas.length} content ideas
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}><ChevronDown size={11} /></motion.span>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.22 }} style={{ overflow: "hidden" }}>
+            <div style={{ paddingBottom: 10, display: "flex", flexDirection: "column", gap: 5 }}>
+              {ideas.slice(0, 3).map((idea, i) => (
+                <motion.button key={i} initial={{ x: -6, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: i * 0.05 }}
+                  whileHover={{ x: 3, background: `${C.arc}09`, borderColor: `${C.arc}28` }}
+                  onClick={e => { e.stopPropagation(); onUse(idea); }}
+                  style={{ display: "flex", alignItems: "flex-start", gap: 9, padding: "9px 11px", background: "rgba(20,20,19,0.027)", border: "1px solid rgba(20,20,19,0.065)", borderRadius: 10, textAlign: "left", cursor: "pointer", fontFamily: "inherit", transition: "all 0.14s" }}>
+                  <span style={{ width: 17, height: 17, borderRadius: 5, background: C.arc, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 900, flexShrink: 0 }}>{i + 1}</span>
+                  <span style={{ fontSize: 12, color: C.ink, lineHeight: 1.45, fontWeight: 450 }}>{idea}</span>
+                </motion.button>
+              ))}
+              {hashtags?.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 3 }}>
+                  {hashtags.slice(0, 5).map(h => (
+                    <span key={h} style={{ padding: "2px 7px", background: "rgba(99,102,241,0.1)", color: "#6366f1", borderRadius: 99, fontSize: 9, fontWeight: 700 }}>
+                      {h.startsWith("#") ? h : `#${h}`}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-});
-
-/* ─────────────────────────────────────────────────────────────────
-   ImageSection
-   ───────────────────────────────────────────────────────────────── */
-const ImageSection = memo(function ImageSection({ images }) {
-  if (!images?.length) return null;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-       <span
-          style={{
-            fontSize: 10,
-            fontWeight: 900,
-            color: "var(--slate)",
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-          }}
-        >
-          Inspiration Gallery
-        </span>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 6,
-        }}
-      >
-        {images.slice(0, 3).map((img, i) => (
-          <motion.div
-            key={i}
-            whileHover={{ scale: 1.05, zIndex: 1 }}
-            style={{
-              height: 60,
-              borderRadius: 8,
-              overflow: "hidden",
-              border: "1px solid rgba(20,20,19,0.08)",
-            }}
-          >
-            <LazyImage src={img.url} alt="Inspo" style={{ height: "100%" }} />
           </motion.div>
-        ))}
-      </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 });
 
-/* ─────────────────────────────────────────────────────────────────
-   ContentIdea — A single, actionable post starter
-   ───────────────────────────────────────────────────────────────── */
-const ContentIdea = memo(function ContentIdea({ idea, index, onUse }) {
-  return (
-    <motion.button
-      whileHover={{
-        x: 4,
-        background: "white",
-        borderColor: "rgba(243,115,56,0.3)",
-      }}
-      whileTap={{ scale: 0.98 }}
-      onClick={() => onUse(idea)}
-      style={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 12,
-        padding: "10px 12px",
-        borderRadius: 14,
-        background: "rgba(255,255,255,0.6)",
-        border: "1.5px solid rgba(20,20,19,0.06)",
-        textAlign: "left",
-        cursor: "pointer",
-        transition: "all 0.2s",
-        width: "100%",
-      }}
-    >
-      <div
-        style={{
-          width: 20,
-          height: 20,
-          borderRadius: 6,
-          background: "var(--arc)",
-          color: "white",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 10,
-          fontWeight: 900,
-          flexShrink: 0,
-          marginTop: 2,
-        }}
-      >
-        {index + 1}
-      </div>
-      <div style={{ flex: 1 }}>
-        <p
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: "var(--ink)",
-            margin: 0,
-            lineHeight: 1.4,
-          }}
-        >
-          {idea}
-        </p>
-      </div>
-    </motion.button>
-  );
-});
+// ─── DETECT NICHE ────────────────────────────────────────────────
+const NICHES = [
+  { id: "AI & Tech", emoji: "🤖", kw: ["ai", "chatgpt", "openai", "tech", "apple", "google", "gpt", "llm", "software"] },
+  { id: "Trading",   emoji: "📈", kw: ["stock", "market", "nifty", "sensex", "trading", "invest", "fund", "equity"] },
+  { id: "Crypto",    emoji: "₿",  kw: ["crypto", "bitcoin", "btc", "ethereum", "web3", "nft", "defi"] },
+  { id: "Sports",    emoji: "🏆", kw: ["ipl", "cricket", "football", "sport", "match", "tournament", "league"] },
+  { id: "Entertainment", emoji: "🎬", kw: ["movie", "film", "netflix", "celebrity", "bollywood", "anime"] },
+  { id: "Business",  emoji: "💼", kw: ["startup", "business", "entrepreneur", "company", "ceo", "funding"] },
+  { id: "Music",     emoji: "🎵", kw: ["music", "song", "album", "artist", "rapper", "singer", "spotify"] },
+  { id: "Politics",  emoji: "🏛️", kw: ["politics", "election", "government", "minister", "parliament"] },
+  { id: "Fitness",   emoji: "💪", kw: ["gym", "fitness", "workout", "diet", "health", "exercise", "yoga"] },
+];
 
-/* ─────────────────────────────────────────────────────────────────
-   TrendCard
-   ───────────────────────────────────────────────────────────────── */
+function detectNiche(text) {
+  const t = (text || "").toLowerCase();
+  for (const n of NICHES) if (n.kw.some(k => t.includes(k))) return n;
+  return { id: "Trending", emoji: "🔥" };
+}
+
+function hashScore(str, lo = 75, hi = 99) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) { h = ((h << 5) + h) ^ str.charCodeAt(i); h = h >>> 0; }
+  return lo + (h % (hi - lo + 1));
+}
+
+function genIdeas(title, nicheId) {
+  const t = (title || "this trend").substring(0, 50);
+  return [
+    `🎯 My honest take on: ${t}`,
+    `🧵 What every ${nicheId} creator must know this week`,
+    `⚡ 60-second explainer: ${t}`,
+  ];
+}
+
+function timeAgo(d) {
+  if (!d) return "just now";
+  const m = Math.floor((Date.now() - new Date(d)) / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+async function doShare(title, url) {
+  if (navigator.share) { try { await navigator.share({ title, url: url || location.href }); return true; } catch {} }
+  try { await navigator.clipboard.writeText(url || location.href); return "copied"; } catch {}
+  return false;
+}
+
+// ─── TREND CARD ───────────────────────────────────────────────────
 const TrendCard = memo(function TrendCard({
-  trend,
-  newsItem,
-  memes = [],
-  images = [],
-  onUseIdea,
-  index,
+  trend, newsItem, index, onUseIdea, saved = false, onToggleSave,
 }) {
-  const { topic, score, ideas = [], hashtags = [], platforms = [] } = trend;
+  const { topic, score: propScore, ideas: propIdeas, hashtags: propTags } = trend;
+  const [shareMsg, setShareMsg] = useState(null);
 
-  const scoreColor =
-    score >= 90 ? "var(--arc)" : score >= 75 ? "#059669" : "#6366f1";
+  const niche = detectNiche(newsItem?.title || topic);
+  const score = propScore || hashScore(`${newsItem?.title || ""}${newsItem?.source || ""}`, 75, 99);
+  const ideas = propIdeas?.length ? propIdeas : genIdeas(newsItem?.title, niche.id);
+  const tags = propTags?.length ? propTags : [`#${niche.id.replace(/\s/g, "")}`, "#trending"].filter(Boolean);
+  const scoreColor = score >= 90 ? C.arc : score >= 82 ? "#059669" : "#6366f1";
+  const id = newsItem?.url || topic || String(index);
 
-  const handleUse = useCallback(
-    (idea) => {
-      const caption = `${idea}\n\n${hashtags.join(" ")}`;
-      // Include news image (or video) and any other available media
-      const allImages = [];
-      if (newsItem?.isVideo && newsItem?.videoUrl) {
-        allImages.push(newsItem.videoUrl);
-      } else if (newsItem?.image) {
-        allImages.push(newsItem.image);
-      }
-      
-      images.forEach(img => allImages.push(img.url));
+  const handleShare = useCallback(async () => {
+    const r = await doShare(newsItem?.title || topic, newsItem?.url);
+    setShareMsg(r === "copied" ? "Copied!" : r ? "Shared!" : null);
+    if (r) setTimeout(() => setShareMsg(null), 2200);
+  }, [newsItem, topic]);
 
-      onUseIdea({
-        caption,
-        hashtags,
-        topic,
-        images: allImages,
-        memes: memes.map((m) => m.image),
-      });
-    },
-    [hashtags, topic, images, memes, onUseIdea, newsItem?.image, newsItem?.videoUrl, newsItem?.isVideo],
-  );
+  const handleUse = useCallback((idea) => {
+    const caption = `${idea}\n\n${tags.join(" ")}`;
+    const images = newsItem?.image ? [newsItem.image] : [];
+    onUseIdea?.({ caption, hashtags: tags, topic: niche.id, images, memes: [], source: newsItem });
+  }, [newsItem, tags, niche.id, onUseIdea]);
 
   return (
-    <motion.div
+    <motion.article
       layout
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{
-        duration: 0.5,
-        delay: Math.min(index * 0.04, 0.4),
-        ease: [0.23, 1, 0.32, 1],
-      }}
+      transition={{ duration: 0.45, delay: Math.min(index * 0.035, 0.3), ease: [0.23, 1, 0.32, 1] }}
       style={{
-        background: "var(--white)",
-        borderRadius: 24,
-        overflow: "hidden",
-        border: "1px solid rgba(20,20,19,0.05)",
-        boxShadow: "var(--shadow-premium)",
-        display: "flex",
-        flexDirection: "column",
-        marginBottom: 24,
-        position: "relative",
-        transition: "all 0.3s ease",
+        background: C.white, borderRadius: 20, overflow: "hidden",
+        border: `1px solid ${C.border}`,
+        boxShadow: "0 1px 8px rgba(20,20,19,0.05), 0 4px 20px rgba(20,20,19,0.04)",
+        display: "flex", flexDirection: "column", marginBottom: 20,
+        transition: "box-shadow 0.28s, transform 0.28s",
       }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = "translateY(-4px)";
-        e.currentTarget.style.boxShadow = "var(--shadow-deep)";
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = "translateY(0)";
-        e.currentTarget.style.boxShadow = "var(--shadow-premium)";
-      }}
+      onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 14px 44px rgba(20,20,19,0.13), 0 4px 14px rgba(20,20,19,0.06)"; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 1px 8px rgba(20,20,19,0.05), 0 4px 20px rgba(20,20,19,0.04)"; }}
     >
-      {/* ── HEADER IMAGE ── */}
+      {/* Hero image */}
       {newsItem?.image && (
         <div style={{ position: "relative" }}>
-          <LazyImage
-            src={newsItem.image}
-            alt={topic}
-            style={{ height: 200, width: "100%" }}
-          />
-          <div style={{
-            position: "absolute",
-            top: 16,
-            left: 16,
-            background: "rgba(255,255,255,0.9)",
-            backdropFilter: "blur(8px)",
-            padding: "6px 12px",
-            borderRadius: 10,
-            fontSize: 11,
-            fontWeight: 800,
-            color: "var(--arc)",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.08)"
-          }}>
-            <Flame size={14} />
-            {topic.toUpperCase()}
+          <LazyImage src={newsItem.image} alt={topic} style={{ height: 180, width: "100%" }} />
+          <div style={{ position: "absolute", top: 9, left: 9 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 9px", borderRadius: 99, background: "rgba(255,255,255,0.92)", backdropFilter: "blur(12px)", fontSize: 9, fontWeight: 900, color: C.ink, letterSpacing: "0.05em", textTransform: "uppercase", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
+              <span style={{ fontSize: 10 }}>{niche.emoji}</span>{niche.id}
+            </span>
+          </div>
+          <div style={{ position: "absolute", top: 9, right: 9 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 99, background: `${scoreColor}16`, border: `1px solid ${scoreColor}32`, fontSize: 9, fontWeight: 900, color: scoreColor, letterSpacing: "0.04em" }}>
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: scoreColor, boxShadow: `0 0 6px ${scoreColor}` }} />
+              {score}% VIRAL
+            </span>
           </div>
         </div>
       )}
 
-      {/* ── CONTENT ── */}
-      <div style={{ padding: "24px 24px 20px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: scoreColor, display: "flex", alignItems: "center", gap: 4 }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: scoreColor }} />
-            {score}% VIRAL POTENTIAL
-          </div>
-        </div>
-
-        <h3 style={{
-          fontSize: 20,
-          fontWeight: 800,
-          color: "var(--ink)",
-          margin: "0 0 10px",
-          lineHeight: 1.25,
-          letterSpacing: "-0.03em"
-        }}>
-          {newsItem?.title || trend.topic}
-        </h3>
-        
-        {newsItem?.source && (
-          <div style={{ fontSize: 11, color: "var(--slate)", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ color: "var(--dust)" }}>via</span>
-            <span style={{ color: "var(--ink)", fontWeight: 700 }}>{newsItem.source}</span>
-          </div>
-        )}
-      </div>
-
-      {/* ── IDEAS ── */}
-      <div style={{ padding: "0 24px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <Sparkles size={14} style={{ color: "var(--arc)" }} />
-          <span style={{ fontSize: 11, fontWeight: 800, color: "var(--ink)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-            Discovery Insights
+      {/* Content */}
+      <div style={{ padding: "14px 16px 15px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+          {!newsItem?.image && (
+            <span style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 9px", borderRadius: 99, background: "rgba(20,20,19,0.07)", fontSize: 9, fontWeight: 900, color: C.ink, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              <span>{niche.emoji}</span>{niche.id}
+            </span>
+          )}
+          <span style={{ marginLeft: "auto", fontSize: 10, color: C.dust, fontWeight: 600, whiteSpace: "nowrap" }}>
+            {newsItem?.source} · {timeAgo(newsItem?.publishedAt)}
           </span>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {ideas.slice(0, 2).map((idea, i) => (
-            <ContentIdea key={i} idea={idea} index={i} onUse={handleUse} />
-          ))}
-        </div>
-      </div>
 
-      {/* ── FOOTER ── */}
-      <div style={{ 
-        padding: "20px 24px", 
-        background: "var(--canvas-lifted)", 
-        borderTop: "1px solid rgba(20,20,19,0.06)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        marginTop: "auto"
-      }}>
-        <div style={{ display: "flex", gap: 16 }}>
-          <button style={{ background: "none", border: "none", color: "var(--slate)", cursor: "pointer", padding: 0 }} title="Bookmark">
-            <Bookmark size={20} />
-          </button>
-          <button style={{ background: "none", border: "none", color: "var(--slate)", cursor: "pointer", padding: 0 }} title="Export">
-            <Share2 size={20} />
-          </button>
+        <h3 style={{ fontSize: 14, fontWeight: 720, color: C.ink, margin: "0 0 3px", lineHeight: 1.35, letterSpacing: "-0.014em", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+          {newsItem?.title || topic}
+        </h3>
+
+        <IdeasDrawer ideas={ideas} hashtags={tags} onUse={handleUse} />
+
+        <div style={{ height: 1, background: "rgba(20,20,19,0.07)", margin: "7px 0" }} />
+
+        {/* Actions */}
+        <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+          {[
+            { icon: <Sparkles size={12} />, label: "Use Idea", onClick: () => handleUse(ideas[0]), color: C.arc },
+            { icon: saved ? <BookmarkCheck size={12} /> : <Bookmark size={12} />, label: saved ? "Saved" : "Save", onClick: () => onToggleSave?.(id), active: saved, color: C.arc },
+            { icon: <Share2 size={12} />, label: shareMsg || "Share", onClick: handleShare, active: !!shareMsg },
+          ].map((b, i) => (
+            <button key={i} onClick={e => { e.stopPropagation(); b.onClick(); }}
+              aria-label={b.label}
+              style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", background: b.active ? `${b.color || C.arc}13` : "rgba(20,20,19,0.04)", border: `1px solid ${b.active ? (b.color || C.arc) + "36" : "rgba(20,20,19,0.08)"}`, borderRadius: 99, color: b.active ? (b.color || C.arc) : C.slate, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", minHeight: 32, transition: "all 0.13s" }}>
+              {b.icon}{b.label}
+            </button>
+          ))}
+
+          {newsItem?.url && (
+            <a href={newsItem.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} aria-label="Read article"
+              style={{ marginLeft: "auto", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(20,20,19,0.04)", border: "1px solid rgba(20,20,19,0.08)", borderRadius: 99, color: C.slate, transition: "all 0.13s" }}
+              onMouseEnter={e => { e.currentTarget.style.color = C.ink; }}
+              onMouseLeave={e => { e.currentTarget.style.color = C.slate; }}>
+              <ExternalLink size={11} />
+            </a>
+          )}
         </div>
-        
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => handleUse(ideas[0])}
-          style={{
-            background: "var(--ink)",
-            color: "var(--white)",
-            border: "none",
-            borderRadius: 12,
-            padding: "10px 20px",
-            fontSize: 13,
-            fontWeight: 800,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            boxShadow: "var(--shadow-premium)"
-          }}
-        >
-          Draft Post
-          <ChevronRight size={16} />
-        </motion.button>
       </div>
-    </motion.div>
+    </motion.article>
   );
 });
 

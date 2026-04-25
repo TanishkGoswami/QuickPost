@@ -125,9 +125,9 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect }) {
               <div className={`w-8 h-8 flex items-center justify-center transition-transform duration-500 ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`}>
                 {p.icon}
               </div>
-              
+
               {isSelected && (
-                <motion.div 
+                <motion.div
                   initial={{ scale: 0, rotate: -45 }}
                   animate={{ scale: 1, rotate: 0 }}
                   className="absolute -top-2 -right-2 w-6 h-6 bg-ink rounded-full flex items-center justify-center border-2 border-white shadow-xl"

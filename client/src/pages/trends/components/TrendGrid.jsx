@@ -1,211 +1,100 @@
-import React, { memo, useMemo, useEffect, useRef } from "react";
+/**
+ * TrendGrid.jsx — Masonry grid wrapper
+ * ────────────────────────────────────────────────────────────────
+ * NOTE: The new AllTrendsPage.jsx is fully self-contained and
+ * renders its own masonry grid. This file is kept for backwards
+ * compatibility if any other page imports TrendGrid directly.
+ *
+ * Replace: client/src/pages/trends/components/TrendGrid.jsx
+ * ────────────────────────────────────────────────────────────────
+ */
+
+import React, { memo, useEffect, useRef } from "react";
 import Masonry from "react-masonry-css";
 import { motion } from "framer-motion";
 import TrendCard from "./TrendCard";
 import MemeCard from "./MemeCard";
 
-const BREAKPOINTS = {
-  default: 3,
-  1280: 3,
-  1024: 2,
-  768: 2,
-  640: 1,
-};
+const BREAKPOINTS = { default: 3, 1280: 3, 1024: 2, 768: 2, 640: 1 };
 
-/**
- * SkeletonTrendCard — High-fidelity shimmer placeholder.
- */
-const SkeletonTrendCard = memo(function SkeletonTrendCard({ height = 400 }) {
+const SkeletonCard = memo(function SkeletonCard({ h = 400 }) {
   return (
-    <div
-      className="masonry-card"
-      style={{
-        background: "var(--canvas-lifted)",
-        borderRadius: 24,
-        padding: 20,
-        border: "1px solid rgba(20,20,19,0.06)",
-        marginBottom: 20,
-        height,
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <div className="skeleton-premium skeleton-image" style={{ height: 180, borderRadius: 16 }} />
-      <div className="skeleton-premium skeleton-title" style={{ width: "90%", height: 24 }} />
-      <div className="skeleton-premium skeleton-text" style={{ width: "60%", height: 12 }} />
-      <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
-        <div className="skeleton-premium skeleton-text" style={{ height: 40, borderRadius: 12 }} />
-        <div className="skeleton-premium skeleton-text" style={{ height: 40, borderRadius: 12 }} />
-      </div>
+    <div style={{
+      background: "#fcfbfa", borderRadius: 20, marginBottom: 20, overflow: "hidden",
+      border: "1px solid rgba(20,20,19,0.07)", height: h,
+    }}>
+      <div style={{
+        height: 180, margin: 12, borderRadius: 14,
+        background: "linear-gradient(90deg,rgba(20,20,19,0.04) 25%,rgba(20,20,19,0.09) 50%,rgba(20,20,19,0.04) 75%)",
+        backgroundSize: "400% 100%", animation: "shimmer 1.5s ease-in-out infinite",
+      }} />
+      {[88, 62, 50].map((w, i) => (
+        <div key={i} style={{
+          height: i === 0 ? 16 : 11, width: `${w}%`, margin: "0 16px 10px",
+          borderRadius: 6, background: "rgba(20,20,19,0.06)",
+          animation: "shimmer 1.5s ease-in-out infinite",
+        }} />
+      ))}
+      <style>{`@keyframes shimmer{0%{background-position:100% 50%}100%{background-position:-100% 50%}}`}</style>
     </div>
   );
 });
 
-/**
- * EmptyState — shown when no trends match filters.
- */
 const EmptyState = () => (
-  <motion.div
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    style={{
-      gridColumn: "1/-1",
-      textAlign: "center",
-      padding: "64px 20px",
-    }}
-  >
-    <div style={{ fontSize: 48, marginBottom: 12 }}>🤷</div>
-    <h3
-      style={{
-        fontSize: 18,
-        fontWeight: 700,
-        color: "var(--ink)",
-        margin: "0 0 6px",
-      }}
-    >
-      No trends found
-    </h3>
-    <p style={{ fontSize: 13, color: "var(--slate)", margin: 0 }}>
-      Try changing your filters or clearing the search.
-    </p>
+  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+    style={{ textAlign: "center", padding: "60px 20px" }}>
+    <div style={{ fontSize: 44, marginBottom: 10 }}>🤷</div>
+    <h3 style={{ fontSize: 17, fontWeight: 700, color: "#141413", margin: "0 0 5px" }}>No trends found</h3>
+    <p style={{ fontSize: 13, color: "#696969", margin: 0 }}>Try changing your filters or clearing the search.</p>
   </motion.div>
 );
 
-/**
- * TrendGrid — masonry layout for TrendCards with Infinite Scroll.
- */
 const TrendGrid = memo(function TrendGrid({
-  trends,
-  apiData,
-  loading,
-  loadingMore,
-  hasMore,
-  onLoadMore,
-  onUseIdea,
+  trends = [], loading = false, loadingMore = false,
+  hasMore = false, error = null, onLoadMore, onUseIdea,
 }) {
   const sentinelRef = useRef(null);
 
-  const skeletons = useMemo(
-    () => [
-      { id: "sk1", h: 480 },
-      { id: "sk2", h: 360 },
-      { id: "sk3", h: 520 },
-      { id: "sk4", h: 440 },
-      { id: "sk5", h: 490 },
-      { id: "sk6", h: 420 },
-    ],
-    [],
-  );
-
-  // ── Infinite Scroll Observer ──
   useEffect(() => {
     if (loading || !hasMore) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !loadingMore) {
-          onLoadMore();
-        }
-      },
-      { 
-        threshold: 0.1,
-        rootMargin: '400px' // Trigger load 400px before bottom
-      },
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting && !loadingMore) onLoadMore?.(); },
+      { rootMargin: "400px", threshold: 0 }
     );
-
-    if (sentinelRef.current) {
-      observer.observe(sentinelRef.current);
-    }
-
-    return () => observer.disconnect();
+    if (sentinelRef.current) obs.observe(sentinelRef.current);
+    return () => obs.disconnect();
   }, [loading, loadingMore, hasMore, onLoadMore]);
 
   if (loading && trends.length === 0) {
     return (
-      <Masonry
-        breakpointCols={BREAKPOINTS}
-        className="masonry-grid"
-        columnClassName="masonry-grid_column"
-      >
-        {skeletons.map((s) => (
-          <SkeletonTrendCard key={s.id} height={s.h} />
-        ))}
+      <Masonry breakpointCols={BREAKPOINTS} className="masonry-grid" columnClassName="masonry-grid_column">
+        {[480, 360, 520, 440, 490, 420].map((h, i) => <SkeletonCard key={i} h={h} />)}
       </Masonry>
     );
   }
 
-  if (!trends.length && !loading) {
-    return <EmptyState />;
-  }
+  if (!loading && trends.length === 0) return <EmptyState />;
 
   return (
     <>
-      <Masonry
-        breakpointCols={BREAKPOINTS}
-        className="masonry-grid"
-        columnClassName="masonry-grid_column"
-      >
-        {trends.map((item, i) => {
-          if (item.discoveryType === 'meme') {
-            return (
-              <MemeCard
-                key={item.id}
-                meme={item}
-                index={i}
-                onUseIdea={onUseIdea}
-              />
-            );
-          }
-
-          return (
-            <TrendCard
-              key={item.id || i}
-              trend={item}
-              newsItem={item.newsItem}
-              images={[]} 
-              index={i}
-              onUseIdea={onUseIdea}
-            />
-          );
-        })}
+      <Masonry breakpointCols={BREAKPOINTS} className="masonry-grid" columnClassName="masonry-grid_column">
+        {trends.map((item, i) =>
+          item.discoveryType === "meme"
+            ? <MemeCard key={item.id || i} meme={item} index={i} onUseIdea={onUseIdea} />
+            : <TrendCard key={item.id || i} trend={item} newsItem={item.newsItem} index={i} onUseIdea={onUseIdea} />
+        )}
       </Masonry>
 
-      {/* Sentinel for Infinite Scroll */}
-      <div
-        ref={sentinelRef}
-        style={{
-          height: 60,
-          margin: "40px 0",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
+      <div ref={sentinelRef} style={{ height: 60, display: "flex", alignItems: "center", justifyContent: "center", margin: "32px 0" }}>
         {loadingMore && (
-          <div
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              border: "3px solid rgba(20,20,19,0.08)",
-              borderTopColor: "var(--arc)",
-              animation: "spin 0.6s linear infinite",
-            }}
-          />
+          <div style={{ width: 28, height: 28, borderRadius: "50%", border: "3px solid rgba(20,20,19,0.07)", borderTopColor: "#f37338", animation: "spin 0.65s linear infinite" }} />
         )}
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
 
       {!hasMore && trends.length > 0 && (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "60px 0",
-            color: "var(--slate)",
-            fontSize: 14,
-            fontWeight: 700,
-          }}
-        >
-          ✨ You've reached the end of the trends!
+        <div style={{ textAlign: "center", padding: "48px 0", color: "#696969", fontSize: 14, fontWeight: 700 }}>
+          ✨ You've seen all the trends!
         </div>
       )}
     </>
