@@ -3,6 +3,7 @@ import { gsap } from '../../../lib/gsap';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Radio, ArrowRight } from 'lucide-react';
+import { gsap } from '../../../lib/gsap';
 
 const PLATFORMS = [
   { src: '/icons/ig-instagram-icon.svg', label: 'Instagram' },

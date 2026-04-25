@@ -715,7 +715,14 @@ const SizeButton = memo(function SizeButton({ size, isSelected, onClick }) {
 /* ─────────────────────────────────────────────────────────────────
    MAIN COMPONENT
    ───────────────────────────────────────────────────────────────── */
-function ComposerModal({ isOpen, onClose, initialData = null }) {
+function ComposerModal({ 
+  isOpen, 
+  onClose, 
+  initialData = null, 
+  initialCaption = '', 
+  initialHashtags = [],
+  initialMediaUrls = [] 
+}) {
   const { user, connectedAccounts } = useAuth();
   const { addJob } = useUploadJobs();
   const { alert, confirm } = useDialog();
@@ -815,6 +822,41 @@ function ComposerModal({ isOpen, onClose, initialData = null }) {
       setSelectedChannels(connected);
     }
   }, [isOpen]);
+
+  /* ── Pre-fill caption from trend injection ── */
+  useEffect(() => {
+    if (isOpen && initialCaption) {
+      setCaption(initialCaption);
+    }
+  }, [isOpen, initialCaption]);
+
+  /* ── Pre-fill media from trend injection ── */
+  useEffect(() => {
+    if (isOpen && initialMediaUrls?.length > 0 && mediaFiles.length === 0) {
+      const loadInitialMedia = async () => {
+        try {
+          const files = await Promise.all(
+            initialMediaUrls.slice(0, 5).map(async (url) => {
+              const res = await fetch(url);
+              const blob = await res.blob();
+              const name = url.split('/').pop()?.split('?')[0] || 'media';
+              const extension = blob.type.split('/')[1] || 'jpg';
+              return new File([blob], `${name}.${extension}`, { type: blob.type });
+            })
+          );
+          
+          const newItems = files.map(file => ({
+            id: `initial_${Math.random().toString(36).substr(2, 9)}`,
+            file
+          }));
+          setMediaFiles(newItems);
+        } catch (err) {
+          console.error("Failed to load initial media:", err);
+        }
+      };
+      loadInitialMedia();
+    }
+  }, [isOpen, initialMediaUrls]);
 
   /* ── Scheduling helpers ── */
   const toLocalDT = (date) => {
@@ -978,7 +1020,7 @@ function ComposerModal({ isOpen, onClose, initialData = null }) {
       }
 
       // 2. Start broadcast via API
-      const res = await apiClient.post("/broadcasts", formData, {
+      const res = await apiClient.post("/api/broadcast", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 

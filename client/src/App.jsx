@@ -18,6 +18,7 @@ import TermsOfService from './pages/TermsOfService';
 import History from './pages/History';
 import Onboarding from './components/Onboarding';
 import ScheduledQueue from './pages/ScheduledQueue';
+import AllTrendsPage from './pages/trends/AllTrendsPage';
 import { useAuth } from './context/AuthContext';
 import UploadManagerPanel from './components/UploadManagerPanel';
 import CookieConsent from './components/CookieConsent';
@@ -51,6 +52,7 @@ function AppContent() {
         <Route path="compose" element={<BroadcastForm />} />
         <Route path="history" element={<History />} />
         <Route path="queue" element={<ScheduledQueue />} />
+        <Route path="trends" element={<AllTrendsPage />} />
       </Route>
 
       {/* Fallback */}
