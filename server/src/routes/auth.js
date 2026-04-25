@@ -123,9 +123,20 @@ router.post("/youtube/auto-connect", authenticateUser, async (req, res) => {
     });
   } catch (error) {
     console.error("Auto YouTube connect error:", error);
+    
+    // Check if it's a token verification error
+    if (error.message?.includes('invalid') || error.message?.includes('Failed to build YouTube token')) {
+       return res.status(401).json({
+         success: false,
+         error: "Your Google session has expired. Please try connecting YouTube manually.",
+         details: error.message
+       });
+    }
+
     return res.status(500).json({
       success: false,
-      error: error.message || "Failed to auto-connect YouTube",
+      error: "Failed to auto-connect YouTube",
+      message: error.message
     });
   }
 });

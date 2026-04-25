@@ -94,17 +94,14 @@ export default function Features() {
           <p style={{ fontSize: 'clamp(15px, 2vw, 17px)', fontWeight: 450, color: 'var(--slate)', maxWidth: 460, margin: '0 auto', lineHeight: 1.55 }}>
             Every feature is designed around one principle — your time is your most valuable asset.
           </p>
-        </motion.div>
+        </div>
 
         {/* Feature grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'clamp(14px, 2.5vw, 20px)' }}>
           {FEATURES.map((f, i) => (
             <div
               key={f.title}
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-50px' }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
+              ref={(el) => (cardsRef.current[i] = el)}
               className="feature-item"
               style={{
                 background: 'var(--canvas-lifted)',

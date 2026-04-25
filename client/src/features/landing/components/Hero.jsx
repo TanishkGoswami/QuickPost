@@ -2,6 +2,7 @@ import React, { useLayoutEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Radio, ArrowRight } from 'lucide-react';
+import { gsap } from '../../../lib/gsap';
 
 const PLATFORMS = [
   { src: '/icons/ig-instagram-icon.svg', label: 'Instagram' },
@@ -224,7 +225,7 @@ export default function Hero() {
             <a href="#how-it-works" className="btn-outline" style={{ fontSize: 16, padding: '14px 28px' }}>
               See how it works
             </a>
-          </div>
+          </motion.div>
         </div>
 
         {/* Platform logos pill strip */}
