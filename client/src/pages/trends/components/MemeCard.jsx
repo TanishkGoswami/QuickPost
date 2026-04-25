@@ -33,25 +33,33 @@ const MemeCard = memo(function MemeCard({ meme, index, onUseIdea }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
-        duration: 0.4,
-        delay: Math.min(index * 0.05, 0.5),
+        duration: 0.5,
+        delay: Math.min(index * 0.04, 0.4),
         ease: [0.23, 1, 0.32, 1],
       }}
       style={{
-        background: "var(--canvas-lifted)",
+        background: "var(--white)",
         borderRadius: 24,
         overflow: "hidden",
-        border: "1px solid rgba(20,20,19,0.08)",
-        boxShadow: "0 4px 24px rgba(20,20,19,0.04)",
+        border: "1px solid rgba(20,20,19,0.05)",
+        boxShadow: "var(--shadow-premium)",
         display: "flex",
         flexDirection: "column",
-        marginBottom: 20,
+        marginBottom: 24,
         position: "relative",
+        transition: "all 0.3s ease",
       }}
-      className="feature-card"
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-4px)";
+        e.currentTarget.style.boxShadow = "var(--shadow-deep)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.boxShadow = "var(--shadow-premium)";
+      }}
     >
       {/* ── VISUAL ── */}
-      <div style={{ position: 'relative', overflow: 'hidden', backgroundColor: 'var(--canvas-muted)' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', backgroundColor: 'var(--canvas-lifted)' }}>
         {meme.isVideo ? (
           <video
             src={meme.videoUrl}
@@ -71,70 +79,71 @@ const MemeCard = memo(function MemeCard({ meme, index, onUseIdea }) {
         )}
         <div style={{
           position: 'absolute',
-          top: 12,
-          left: 12,
+          top: 16,
+          left: 16,
           background: 'rgba(255,255,255,0.9)',
           backdropFilter: 'blur(10px)',
-          padding: '4px 10px',
-          borderRadius: 8,
+          padding: '6px 12px',
+          borderRadius: 10,
           fontSize: 10,
           fontWeight: 800,
           color: 'var(--arc)',
           display: 'flex',
           alignItems: 'center',
-          gap: 4,
+          gap: 6,
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
           zIndex: 2
         }}>
-          <Flame size={12} />
+          <Flame size={14} />
           {meme.isVideo ? 'TRENDING VIDEO' : 'TRENDING MEME'}
         </div>
       </div>
 
       {/* ── DETAILS ── */}
-      <div style={{ padding: "16px 20px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+      <div style={{ padding: "20px 24px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 10, fontWeight: 800, color: "var(--slate)", textTransform: "uppercase" }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "var(--slate)", textTransform: "uppercase", letterSpacing: '0.05em' }}>
               r/{subreddit || 'memes'}
             </span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--arc)", fontSize: 11, fontWeight: 800 }}>
-            <ArrowUpCircle size={12} />
+          <div style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--arc)", fontSize: 12, fontWeight: 800 }}>
+            <ArrowUpCircle size={14} />
             {upvotes || "1.2k"}
           </div>
         </div>
 
         <h3 style={{
-          fontSize: 15,
-          fontWeight: 700,
+          fontSize: 17,
+          fontWeight: 800,
           color: "var(--ink)",
           margin: "0 0 12px",
           lineHeight: 1.4,
+          letterSpacing: '-0.02em'
         }}>
           {title || "Check out this trending meme!"}
         </h3>
 
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
           {['#humor', '#viral'].map(tag => (
-            <span key={tag} style={{ fontSize: 10, color: 'var(--dust)', fontWeight: 700 }}>{tag}</span>
+            <span key={tag} style={{ fontSize: 11, color: 'var(--dust)', fontWeight: 700 }}>{tag}</span>
           ))}
         </div>
       </div>
 
       {/* ── CTA ── */}
       <div style={{ 
-        padding: "16px 20px", 
-        background: "rgba(20,20,19,0.02)", 
+        padding: "16px 24px", 
+        background: "var(--canvas-lifted)", 
         borderTop: "1px solid rgba(20,20,19,0.06)",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         marginTop: 'auto'
       }}>
-        <div style={{ display: "flex", gap: 12 }}>
+        <div style={{ display: "flex", gap: 16 }}>
           <button style={{ background: "none", border: "none", color: "var(--slate)", cursor: "pointer", padding: 0 }} title="Save">
-            <Bookmark size={18} />
+            <Bookmark size={20} />
           </button>
           <a 
             href={url} 
@@ -142,31 +151,31 @@ const MemeCard = memo(function MemeCard({ meme, index, onUseIdea }) {
             rel="noopener noreferrer"
             style={{ color: "var(--slate)", display: 'flex', alignItems: 'center' }}
           >
-            <ExternalLink size={18} />
+            <ExternalLink size={20} />
           </a>
         </div>
         
         <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={handleUse}
           style={{
             background: "var(--arc)",
             color: "var(--white)",
             border: "none",
             borderRadius: 12,
-            padding: "8px 16px",
-            fontSize: 12,
+            padding: "10px 20px",
+            fontSize: 13,
             fontWeight: 800,
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
-            gap: 6,
-            boxShadow: "0 8px 16px rgba(243,115,56,0.2)"
+            gap: 8,
+            boxShadow: "0 8px 16px rgba(243,115,56,0.15)"
           }}
         >
           Use Meme
-          <ChevronRight size={14} />
+          <ChevronRight size={16} />
         </motion.button>
       </div>
     </motion.div>

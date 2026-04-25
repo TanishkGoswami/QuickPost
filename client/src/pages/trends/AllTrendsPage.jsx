@@ -206,50 +206,55 @@ export default function AllTrendsPage() {
       margin: "0 auto",
     }}>
       {/* ── HEADER ── */}
-      <header style={{ marginBottom: 40 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+      <header style={{ marginBottom: 48, maxWidth: 1200 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
            <div style={{ 
              background: "var(--ink)", 
              color: "var(--white)", 
-             width: 32, 
-             height: 32, 
-             borderRadius: 10, 
+             width: 40, 
+             height: 40, 
+             borderRadius: 12, 
              display: "flex", 
              alignItems: "center", 
              justifyContent: "center",
-             boxShadow: "0 8px 16px rgba(20,20,19,0.15)"
+             boxShadow: "var(--shadow-premium)"
            }}>
-             <Flame size={18} style={{ color: "var(--arc)" }} />
+             <Flame size={22} style={{ color: "var(--arc)" }} />
            </div>
-           <h1 style={{ fontSize: 32, fontWeight: 800, color: "var(--ink)", margin: 0, letterSpacing: "-0.03em" }}>
-             All Trends
-           </h1>
+           <div>
+             <h1 style={{ fontSize: 36, fontWeight: 800, color: "var(--ink)", margin: 0, letterSpacing: "-0.04em" }}>
+               Trend Intelligence
+             </h1>
+             <p style={{ fontSize: 16, color: "var(--slate)", margin: 0, fontWeight: 500 }}>
+               Real-time signals and discovery for high-impact content.
+             </p>
+           </div>
         </div>
-        <p style={{ fontSize: 16, color: "var(--slate)", margin: 0, fontWeight: 450 }}>
-          The ultimate content discovery engine. Find what's viral and post in seconds.
-        </p>
 
         {/* Stats Strip */}
-        <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
+        <div style={{ display: "flex", gap: 16, marginTop: 32 }}>
            {[
-             { label: "Trending Now", val: news.length, color: "rgba(243,115,56,0.1)", text: "var(--arc)" },
-             { label: "Memes Found", val: memes.length, color: "rgba(99,102,241,0.1)", text: "#6366f1" },
-             { label: "Visual Inspo", val: images.length, color: "rgba(5,150,105,0.1)", text: "#059669" },
+             { label: "Trending Signals", val: news.length, color: "var(--arc)" },
+             { label: "Community Memes", val: memes.length, color: "#6366f1" },
+             { label: "Creative Assets", val: images.length, color: "#059669" },
            ].map(stat => (
              <div key={stat.label} style={{ 
                background: "var(--white)", 
-               padding: "10px 16px", 
-               borderRadius: 14, 
+               padding: "16px 24px", 
+               borderRadius: 20, 
                display: "flex", 
-               alignItems: "center", 
-               gap: 10,
+               flexDirection: "column",
+               gap: 4,
                border: "1px solid rgba(20,20,19,0.06)",
-               boxShadow: "0 2px 10px rgba(20,20,19,0.02)"
+               boxShadow: "var(--shadow-card)",
+               minWidth: 180,
              }}>
-               <div style={{ width: 6, height: 6, borderRadius: "50%", background: stat.text }} />
-               <div style={{ display: "flex", flexDirection: "column" }}>
-                 <span style={{ fontSize: 10, fontWeight: 800, color: "var(--dust)", textTransform: "uppercase" }}>{stat.label}</span>
-                 <span style={{ fontSize: 14, fontWeight: 800, color: "var(--ink)" }}>{stat.val}+</span>
+               <span style={{ fontSize: 11, fontWeight: 800, color: "var(--slate)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{stat.label}</span>
+               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                 <span style={{ fontSize: 24, fontWeight: 800, color: "var(--ink)" }}>{stat.val}</span>
+                 <div style={{ padding: "2px 8px", background: "rgba(0,0,0,0.04)", borderRadius: 6, fontSize: 10, fontWeight: 800, color: stat.color }}>
+                   LIVE
+                 </div>
                </div>
              </div>
            ))}

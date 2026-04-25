@@ -283,181 +283,144 @@ const TrendCard = memo(function TrendCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
-        duration: 0.4,
-        delay: Math.min(index * 0.05, 0.5),
+        duration: 0.5,
+        delay: Math.min(index * 0.04, 0.4),
         ease: [0.23, 1, 0.32, 1],
       }}
       style={{
-        background: "var(--canvas-lifted)",
+        background: "var(--white)",
         borderRadius: 24,
         overflow: "hidden",
-        border: "1px solid rgba(20,20,19,0.08)",
-        boxShadow: "0 4px 24px rgba(20,20,19,0.04)",
+        border: "1px solid rgba(20,20,19,0.05)",
+        boxShadow: "var(--shadow-premium)",
         display: "flex",
         flexDirection: "column",
-        marginBottom: 20,
+        marginBottom: 24,
         position: "relative",
+        transition: "all 0.3s ease",
       }}
-      className="feature-card"
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "translateY(-4px)";
+        e.currentTarget.style.boxShadow = "var(--shadow-deep)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "translateY(0)";
+        e.currentTarget.style.boxShadow = "var(--shadow-premium)";
+      }}
     >
-      {/* ── HEADER IMAGE (FROM NEWS) ── */}
+      {/* ── HEADER IMAGE ── */}
       {newsItem?.image && (
-        <LazyImage
-          src={newsItem.image}
-          alt={topic}
-          style={{ height: 180, width: "100%" }}
-        />
+        <div style={{ position: "relative" }}>
+          <LazyImage
+            src={newsItem.image}
+            alt={topic}
+            style={{ height: 200, width: "100%" }}
+          />
+          <div style={{
+            position: "absolute",
+            top: 16,
+            left: 16,
+            background: "rgba(255,255,255,0.9)",
+            backdropFilter: "blur(8px)",
+            padding: "6px 12px",
+            borderRadius: 10,
+            fontSize: 11,
+            fontWeight: 800,
+            color: "var(--arc)",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.08)"
+          }}>
+            <Flame size={14} />
+            {topic.toUpperCase()}
+          </div>
+        </div>
       )}
 
-      {/* ── HEADER ── */}
-      <div style={{ padding: "20px 20px 16px" }}>
+      {/* ── CONTENT ── */}
+      <div style={{ padding: "24px 24px 20px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <div style={{
-              background: "rgba(243,115,56,0.1)",
-              color: "var(--arc)",
-              padding: "4px 8px",
-              borderRadius: 8,
-              fontSize: 10,
-              fontWeight: 800,
-              display: "flex",
-              alignItems: "center",
-              gap: 4
-            }}>
-              <Flame size={12} />
-              {topic}
-            </div>
-          </div>
-          <div style={{ fontSize: 11, fontWeight: 800, color: scoreColor }}>
-            {score}% Viral
+          <div style={{ fontSize: 11, fontWeight: 800, color: scoreColor, display: "flex", alignItems: "center", gap: 4 }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: scoreColor }} />
+            {score}% VIRAL POTENTIAL
           </div>
         </div>
 
         <h3 style={{
-          fontSize: 18,
+          fontSize: 20,
           fontWeight: 800,
           color: "var(--ink)",
-          margin: "0 0 8px",
-          lineHeight: 1.2,
-          letterSpacing: "-0.02em"
+          margin: "0 0 10px",
+          lineHeight: 1.25,
+          letterSpacing: "-0.03em"
         }}>
           {newsItem?.title || trend.topic}
         </h3>
         
         {newsItem?.source && (
-          <div style={{ fontSize: 10, color: "var(--slate)", fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
-            <span style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--arc)" }} />
-            {newsItem.source}
+          <div style={{ fontSize: 11, color: "var(--slate)", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ color: "var(--dust)" }}>via</span>
+            <span style={{ color: "var(--ink)", fontWeight: 700 }}>{newsItem.source}</span>
           </div>
         )}
       </div>
 
       {/* ── IDEAS ── */}
-      <div style={{ padding: "0 20px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <Sparkles size={13} style={{ color: "var(--arc)" }} />
-          <span style={{ fontSize: 10, fontWeight: 900, color: "var(--ink)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-            Content Ideas
+      <div style={{ padding: "0 24px 24px", display: "flex", flexDirection: "column", gap: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Sparkles size={14} style={{ color: "var(--arc)" }} />
+          <span style={{ fontSize: 11, fontWeight: 800, color: "var(--ink)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            Discovery Insights
           </span>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {ideas.slice(0, 2).map((idea, i) => (
             <ContentIdea key={i} idea={idea} index={i} onUse={handleUse} />
           ))}
         </div>
       </div>
 
-      {/* ── MEDIA SECTIONS ── */}
-      <div style={{ padding: "0 20px 20px", display: "flex", flexDirection: "column", gap: 20 }}>
-        <ImageSection images={images} />
-      </div>
-
-      {/* ── HASHTAGS & PLATFORMS ── */}
-      <div style={{ padding: "0 20px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
-        {/* Hashtags */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {hashtags.slice(0, 3).map((tag, i) => (
-            <div key={i} style={{
-              fontSize: 10,
-              fontWeight: 700,
-              color: "var(--slate)",
-              background: "rgba(20,20,19,0.04)",
-              padding: "3px 8px",
-              borderRadius: 6,
-              display: "flex",
-              alignItems: "center",
-              gap: 2
-            }}>
-              <Hash size={10} style={{ color: "var(--dust)" }} />
-              {tag.replace('#', '')}
-            </div>
-          ))}
-        </div>
-
-        {/* Platforms */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-           <span style={{ fontSize: 10, fontWeight: 800, color: "var(--dust)", textTransform: "uppercase" }}>Best for:</span>
-           <div style={{ display: "flex", gap: 6 }}>
-             {['Instagram', 'LinkedIn'].map(p => (
-               <div key={p} style={{ 
-                 fontSize: 10, 
-                 fontWeight: 700, 
-                 color: "var(--ink)", 
-                 display: "flex", 
-                 alignItems: "center", 
-                 gap: 4,
-                 background: "var(--white)",
-                 padding: "2px 8px",
-                 borderRadius: 6,
-                 border: "1px solid rgba(20,20,19,0.04)"
-               }}>
-                 <Layout size={10} style={{ color: "var(--arc)" }} />
-                 {p}
-               </div>
-             ))}
-           </div>
-        </div>
-      </div>
-
-      {/* ── CTA ── */}
+      {/* ── FOOTER ── */}
       <div style={{ 
-        padding: "16px 20px", 
-        background: "rgba(20,20,19,0.02)", 
+        padding: "20px 24px", 
+        background: "var(--canvas-lifted)", 
         borderTop: "1px solid rgba(20,20,19,0.06)",
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between"
+        justifyContent: "space-between",
+        marginTop: "auto"
       }}>
-        <div style={{ display: "flex", gap: 12 }}>
-          <button style={{ background: "none", border: "none", color: "var(--slate)", cursor: "pointer", padding: 0 }} title="Save">
-            <Bookmark size={18} />
+        <div style={{ display: "flex", gap: 16 }}>
+          <button style={{ background: "none", border: "none", color: "var(--slate)", cursor: "pointer", padding: 0 }} title="Bookmark">
+            <Bookmark size={20} />
           </button>
-          <button style={{ background: "none", border: "none", color: "var(--slate)", cursor: "pointer", padding: 0 }} title="Share">
-            <Share2 size={18} />
+          <button style={{ background: "none", border: "none", color: "var(--slate)", cursor: "pointer", padding: 0 }} title="Export">
+            <Share2 size={20} />
           </button>
         </div>
         
         <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => handleUse(ideas[0])}
           style={{
             background: "var(--ink)",
             color: "var(--white)",
             border: "none",
             borderRadius: 12,
-            padding: "8px 16px",
-            fontSize: 12,
+            padding: "10px 20px",
+            fontSize: 13,
             fontWeight: 800,
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
-            gap: 6,
-            boxShadow: "0 8px 16px rgba(20,20,19,0.1)"
+            gap: 8,
+            boxShadow: "var(--shadow-premium)"
           }}
         >
-          Use this Idea
-          <ChevronRight size={14} />
+          Draft Post
+          <ChevronRight size={16} />
         </motion.button>
       </div>
     </motion.div>
