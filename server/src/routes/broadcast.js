@@ -258,7 +258,7 @@ async function processBroadcastJob({
           ? "Media ready. Scheduling..."
           : "Cloud upload complete. Publishing...",
         meta: {
-          ...(getJob_internal(jobId)?.meta || {}),
+          ...(getJob(jobId)?.meta || {}),
           previewUrl: finalThumbnailUrl || mediaUrls[0] || null,
         },
       });
