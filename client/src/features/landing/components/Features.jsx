@@ -1,6 +1,7 @@
 import React from 'react';
 import { Share2, Clock, BarChart2, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { FloatingPaths } from "../../../components/ui/BackgroundPaths";
 
 const FEATURES = [
   {
@@ -46,9 +47,9 @@ export default function Features() {
     <section
       id="features"
       className="landing-section"
-      style={{ padding: 'clamp(60px, 10vh, 100px) 24px', background: 'var(--canvas)' }}
+      style={{ padding: 'clamp(60px, 10vh, 100px) 24px', background: 'var(--canvas)', position: 'relative', overflow: 'hidden' }}
     >
-      <div className="landing-container" style={{ maxWidth: '1280px', margin: '0 auto' }}>
+      <div className="landing-container" style={{ maxWidth: '1280px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
         {/* Header */}
         <motion.div 
           initial={{ opacity: 0, y: 24 }}

@@ -11,10 +11,11 @@ import { UploadJobProvider } from './context/UploadJobContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import UploadManagerPanel from './components/UploadManagerPanel';
 import CookieConsent from './components/CookieConsent';
+import ContentProtection from './components/ContentProtection';
 import { useAuth } from './context/AuthContext';
 
 // ── Synchronous imports (auth-critical path) ──
-import Login from './components/Login';
+import AuthPage from './components/AuthPage';
 import AuthCallback from './components/AuthCallback';
 import DashboardLayout from './components/DashboardLayout';
 import { NotFoundPage } from './components/ui/404-page-not-found';
@@ -73,7 +74,7 @@ function AppContent() {
             ? localStorage.getItem('qp_onboarding_done')
               ? <Navigate to="/dashboard" replace />
               : <Navigate to="/onboarding" replace />
-            : <Login />
+            : <AuthPage />
         }
       />
 
@@ -110,6 +111,7 @@ function App() {
               </Suspense>
               <UploadManagerPanel />
               <CookieConsent />
+              <ContentProtection />
             </BrowserRouter>
           </UploadJobProvider>
         </DialogProvider>

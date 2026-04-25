@@ -68,7 +68,6 @@ export default function HowItWorks() {
                 borderRadius: 'var(--r-hero)',
                 padding: '32px 28px 28px',
                 position: 'relative',
-                overflow: 'hidden',
                 cursor: 'default'
               }}
               whileHover={{ y: -5, boxShadow: 'var(--shadow-card)' }}
@@ -84,17 +83,18 @@ export default function HowItWorks() {
                   fontSize: 80, fontWeight: 700, letterSpacing: '-0.05em',
                   color: 'var(--ink)', lineHeight: 1,
                   fontFamily: 'var(--font)', userSelect: 'none', pointerEvents: 'none',
+                  zIndex: 0,
                 }}
               >
                 {step.num}
               </motion.div>
 
               {/* Icon + step pill */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, position: 'relative', zIndex: 1 }}>
                 <div style={{
                   width: 48, height: 48, borderRadius: 14,
                   background: 'var(--ink)', color: 'var(--canvas)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  display: 'flex', alignItems: 'center', justifyContent: "center",
                   flexShrink: 0, boxShadow: '0 4px 14px rgba(20,20,19,0.14)',
                 }}>
                   {step.icon}
@@ -111,40 +111,50 @@ export default function HowItWorks() {
               </div>
 
               {/* Content */}
-              <h3 style={{ fontSize: 20, fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.025em', margin: '0 0 10px', lineHeight: 1.25 }}>
-                {step.title}
-              </h3>
-              <p style={{ fontSize: 14, fontWeight: 450, color: 'var(--slate)', lineHeight: 1.65, margin: '0 0 20px' }}>
-                {step.desc}
-              </p>
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                <h3 style={{ fontSize: 20, fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.025em', margin: '0 0 10px', lineHeight: 1.25 }}>
+                  {step.title}
+                </h3>
+                <p style={{ fontSize: 14, fontWeight: 450, color: 'var(--slate)', lineHeight: 1.65, margin: '0 0 20px' }}>
+                  {step.desc}
+                </p>
 
-              {/* Detail list */}
-              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 7 }}>
-                {step.detail.map(d => (
-                  <li key={d} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{
-                      width: 5, height: 5, borderRadius: '50%',
-                      background: 'var(--arc)', flexShrink: 0,
-                    }} />
-                    <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--slate)' }}>{d}</span>
-                  </li>
-                ))}
-              </ul>
+                {/* Detail list */}
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 7 }}>
+                  {step.detail.map(d => (
+                    <li key={d} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{
+                        width: 5, height: 5, borderRadius: '50%',
+                        background: 'var(--arc)', flexShrink: 0,
+                      }} />
+                      <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--slate)' }}>{d}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
 
-              {/* Connector arrow (between cards) */}
+              {/* Connector arrow (between cards) - hidden on mobile via CSS or media query would be better, but we can use a class or inline check if available. Since it's a landing page, we'll use a responsive style approach. */}
               {i < STEPS.length - 1 && (
-                <div style={{
-                  position: 'absolute', top: 44, right: -13,
-                  width: 26, height: 26, borderRadius: '50%',
-                  background: 'var(--ink)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  zIndex: 3, boxShadow: '0 2px 8px rgba(20,20,19,0.18)',
-                }}>
+                <div 
+                  className="step-connector"
+                  style={{
+                    position: 'absolute', top: 44, right: -13,
+                    width: 26, height: 26, borderRadius: '50%',
+                    background: 'var(--ink)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 10, boxShadow: '0 2px 8px rgba(20,20,19,0.18)',
+                  }}>
                   <ArrowRight size={14} color="white" />
                 </div>
               )}
             </motion.div>
           ))}
         </div>
+
+        <style>{`
+          @media (max-width: 1024px) {
+            .step-connector { display: none !important; }
+          }
+        `}</style>
       </div>
     </section>
   );
