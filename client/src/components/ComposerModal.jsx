@@ -843,24 +843,39 @@ function ComposerModal({
 
   /* ── Pre-fill media from trend injection ── */
   useEffect(() => {
-    if (isOpen && initialMediaUrls?.length > 0 && mediaFiles.length === 0) {
+    if (isOpen && initialMediaUrls?.length > 0) {
       const loadInitialMedia = async () => {
         try {
-          const files = await Promise.all(
+          const results = await Promise.all(
             initialMediaUrls.slice(0, 5).map(async (url) => {
-              const res = await fetch(url);
-              const blob = await res.blob();
-              const name = url.split('/').pop()?.split('?')[0] || 'media';
-              const extension = blob.type.split('/')[1] || 'jpg';
-              return new File([blob], `${name}.${extension}`, { type: blob.type });
+              try {
+                // Use our own secure backend proxy
+                const proxiedUrl = `/api/trends/proxy/media?url=${encodeURIComponent(url)}`;
+                const res = await fetch(proxiedUrl);
+                if (!res.ok) throw new Error("Internal proxy error");
+                
+                const blob = await res.blob();
+                const name = url.split('/').pop()?.split('?')[0] || 'media';
+                // Detect extension from mime type
+                let extension = blob.type.split('/')[1] || 'jpg';
+                if (extension === 'jpeg') extension = 'jpg';
+                
+                return new File([blob], `${name}.${extension}`, { type: blob.type });
+              } catch (err) {
+                console.error("Failed to load media via internal proxy:", url, err);
+                return null;
+              }
             })
           );
           
+          const files = results.filter(Boolean);
           const newItems = files.map(file => ({
             id: `initial_${Math.random().toString(36).substr(2, 9)}`,
             file
           }));
-          setMediaFiles(newItems);
+          if (newItems.length > 0) {
+            setMediaFiles(newItems);
+          }
         } catch (err) {
           console.error("Failed to load initial media:", err);
         }
@@ -1017,6 +1032,7 @@ function ComposerModal({
       formData.append("platforms", JSON.stringify(selectedChannels));
       formData.append("postType", postType);
       formData.append("platformData", JSON.stringify(platformData));
+      formData.append("userTimezone", userTimezone);
 
       if (isScheduled) {
         formData.append("scheduledAt", new Date(scheduledAt).toISOString());
@@ -1036,17 +1052,14 @@ function ComposerModal({
       });
 
       // 3. Add to background manager
-      addJob({
-        id: res.data.broadcastId,
-        meta: {
-          caption,
-          channels: selectedChannels,
-          fileCount: mediaFiles.length,
-          mediaType: mediaFiles[0]?.file.type.startsWith("video/")
-            ? "video"
-            : "image",
-          previewUrl: URL.createObjectURL(mediaFiles[0].file),
-        },
+      addJob(res.data.jobId, {
+        caption,
+        channels: selectedChannels,
+        fileCount: mediaFiles.length,
+        mediaType: mediaFiles[0]?.file.type.startsWith("video/")
+          ? "video"
+          : "image",
+        previewUrl: URL.createObjectURL(mediaFiles[0].file),
       });
 
       // 4. Reset & Close

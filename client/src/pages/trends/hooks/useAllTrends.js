@@ -111,34 +111,33 @@ export function useAllTrends(query = '', {
     const imgTopic = query.trim() || 'trending news';
 
     try {
-      const [newsData, redditData] = await Promise.allSettled([
+      const [newsData, redditData, imagesData] = await Promise.allSettled([
         fetchNews(newsLimit, newsOffset.current, newsCategories),
-        fetchRedditPosts(Math.ceil(memeLimit / 4), redditAfters.current), // Increased variety
+        fetchRedditPosts(Math.ceil(memeLimit / 4), redditAfters.current),
+        fetchImages(imgTopic, imageLimit, imagePage.current),
       ]);
 
       if (!mountedRef.current) return;
 
       const newTrends = newsData.status === 'fulfilled' ? newsData.value : [];
       const newReddit = redditData.status === 'fulfilled' ? redditData.value.posts : [];
+      const newImages = imagesData.status === 'fulfilled' ? imagesData.value : [];
 
       if (redditData.status === 'fulfilled') {
         redditAfters.current = redditData.value.afters;
       }
-
-      // Increment news offset, but wrap around or vary it if we get nothing
-      if (newTrends.length > 0) {
-        newsOffset.current += newsLimit;
-      } else {
-        // If news is exhausted, shift offset slightly to try to find gaps or just stop incrementing
-        newsOffset.current = (newsOffset.current + 10) % 100; 
+      if (imagesData.status === 'fulfilled') {
+        imagePage.current += 1;
       }
 
       if (isInitial) {
         setTrends(newTrends);
         setMemes(newReddit);
+        setImages(newImages);
       } else {
         setTrends(prev => [...prev, ...newTrends]);
         setMemes(prev => [...prev, ...newReddit]);
+        setImages(prev => [...prev, ...newImages]);
       }
 
       // Infinite logic: only stop if we literally get NOTHING from both
