@@ -1029,17 +1029,20 @@ function ComposerModal({
       // 1. Prep data
       const formData = new FormData();
       formData.append("caption", caption);
-      formData.append("platforms", JSON.stringify(selectedChannels));
+      formData.append("selectedChannels", JSON.stringify(selectedChannels));
       formData.append("postType", postType);
       formData.append("platformData", JSON.stringify(platformData));
       formData.append("userTimezone", userTimezone);
+      formData.append("isScheduled", isScheduled ? "true" : "false");
 
       if (isScheduled) {
         formData.append("scheduledAt", new Date(scheduledAt).toISOString());
       }
 
       mediaFiles.forEach((m) => {
-        formData.append("media", m.file);
+        if (m.file) {
+          formData.append("media", m.file);
+        }
       });
 
       if (youtubeThumbnail) {
@@ -1052,14 +1055,15 @@ function ComposerModal({
       });
 
       // 3. Add to background manager
+      const firstMedia = mediaFiles[0];
+      const detectedMediaType = firstMedia?.file?.type?.startsWith("video/") ? "video" : "image";
+
       addJob(res.data.jobId, {
         caption,
         channels: selectedChannels,
         fileCount: mediaFiles.length,
-        mediaType: mediaFiles[0]?.file.type.startsWith("video/")
-          ? "video"
-          : "image",
-        previewUrl: URL.createObjectURL(mediaFiles[0].file),
+        mediaType: detectedMediaType,
+        previewUrl: firstMedia?.preview || (firstMedia?.file ? URL.createObjectURL(firstMedia.file) : null)
       });
 
       // 4. Reset & Close
