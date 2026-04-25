@@ -102,6 +102,15 @@ const ClockView = memo(function ClockView({ value, onChange }) {
   const [isDragging, setIsDragging] = useState(false);
   const faceRef = useRef(null);
 
+  // Sync internal state when prop changes (e.g. from quick suggestions)
+  useEffect(() => {
+    const h = parseInt(value.split(":")[0]) || 0;
+    const m = parseInt(value.split(":")[1]) || 0;
+    setHour(h % 12 || 12);
+    setMinute(m);
+    setMeridiem(h >= 12 ? "PM" : "AM");
+  }, [value]);
+
   const hours = [
     { v: 12, x: 0, y: -80 }, { v: 1, x: 40, y: -69 }, { v: 2, x: 69, y: -40 },
     { v: 3, x: 80, y: 0 }, { v: 4, x: 69, y: 40 }, { v: 5, x: 40, y: 69 },
@@ -264,7 +273,7 @@ const ClockView = memo(function ClockView({ value, onChange }) {
           setIsDragging(true);
           if (e.touches[0]) calculateValueFromCoords(e.touches[0].clientX, e.touches[0].clientY);
         }}
-        style={{ position: "relative", width: 200, height: 200, background: "rgba(20,20,19,0.03)", borderRadius: "50%", display: "flex", alignItems: "center", justifyCenter: "center", marginBottom: 20, cursor: "pointer" }}
+        style={{ position: "relative", width: 200, height: 200, background: "rgba(20,20,19,0.03)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20, cursor: "pointer" }}
       >
         <div style={{ position: "absolute", left: "50%", top: "50%", width: 6, height: 6, margin: -3, background: "var(--arc)", borderRadius: "50%", zIndex: 10 }} />
         
@@ -287,7 +296,7 @@ const ClockView = memo(function ClockView({ value, onChange }) {
           <div style={{ position: "absolute", top: 0, left: "50%", width: 6, height: 6, margin: "-3px", background: "var(--arc)", borderRadius: "50%" }} />
         </motion.div>
 
-        <AnimatePresence mode="wait">
+        <AnimatePresence>
           <motion.div
             key={mode}
             initial={{ opacity: 0, scale: 0.95 }}
@@ -561,6 +570,8 @@ const CustomSelect = memo(function CustomSelect({
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
             style={{
               position: "absolute",
               top: "100%",
