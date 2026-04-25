@@ -101,7 +101,7 @@ export default function Features() {
           {FEATURES.map((f, i) => (
             <div
               key={f.title}
-              ref={(el) => (cardsRef.current[i] = el)}
+              ref={el => cardsRef.current[i] = el}
               className="feature-item"
               style={{
                 background: 'var(--canvas-lifted)',

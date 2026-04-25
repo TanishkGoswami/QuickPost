@@ -91,6 +91,277 @@ const SUGGESTED_HASHTAGS = [
    CALENDAR / CLOCK PICKERS
    (Self-contained — kept here since they are small and modal-specific)
    ───────────────────────────────────────────────────────────────── */
+const ClockView = memo(function ClockView({ value, onChange }) {
+  const [mode, setMode] = useState("hours"); // 'hours' or 'minutes'
+  const initialH = parseInt(value.split(":")[0]) || 0;
+  const initialM = parseInt(value.split(":")[1]) || 0;
+  
+  const [hour, setHour] = useState(initialH % 12 || 12);
+  const [minute, setMinute] = useState(initialM);
+  const [meridiem, setMeridiem] = useState(initialH >= 12 ? "PM" : "AM");
+  const [isDragging, setIsDragging] = useState(false);
+  const faceRef = useRef(null);
+
+  const hours = [
+    { v: 12, x: 0, y: -80 }, { v: 1, x: 40, y: -69 }, { v: 2, x: 69, y: -40 },
+    { v: 3, x: 80, y: 0 }, { v: 4, x: 69, y: 40 }, { v: 5, x: 40, y: 69 },
+    { v: 6, x: 0, y: 80 }, { v: 7, x: -40, y: 69 }, { v: 8, x: -69, y: 40 },
+    { v: 9, x: -80, y: 0 }, { v: 10, x: -69, y: -40 }, { v: 11, x: -40, y: -69 }
+  ];
+
+  const minutes = [
+    { v: 0, x: 0, y: -80 }, { v: 5, x: 40, y: -69 }, { v: 10, x: 69, y: -40 },
+    { v: 15, x: 80, y: 0 }, { v: 20, x: 69, y: 40 }, { v: 25, x: 40, y: 69 },
+    { v: 30, x: 0, y: 80 }, { v: 35, x: -40, y: 69 }, { v: 40, x: -69, y: 40 },
+    { v: 45, x: -80, y: 0 }, { v: 50, x: -69, y: -40 }, { v: 55, x: -40, y: -69 }
+  ];
+
+  const to24h = (h, m, ampm) => {
+    let hh = h;
+    if (ampm === "PM" && hh < 12) hh += 12;
+    if (ampm === "AM" && hh === 12) hh = 0;
+    return `${String(hh).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  };
+
+  const handleSelectHour = (h) => {
+    setHour(h);
+    onChange(to24h(h, minute, meridiem));
+    setMode("minutes");
+  };
+
+  const handleSelectMinute = (m) => {
+    setMinute(m);
+    onChange(to24h(hour, m, meridiem));
+  };
+
+  const calculateValueFromCoords = (clientX, clientY) => {
+    if (!faceRef.current) return;
+    const rect = faceRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const dx = clientX - centerX;
+    const dy = clientY - centerY;
+    
+    let angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+    if (angle < 0) angle += 360;
+
+    if (mode === "hours") {
+      let h = Math.round(angle / 30) % 12 || 12;
+      if (h !== hour) {
+        setHour(h);
+        onChange(to24h(h, minute, meridiem));
+      }
+    } else {
+      let m = Math.round(angle / 6) % 60;
+      if (m !== minute) {
+        setMinute(m);
+        onChange(to24h(hour, m, meridiem));
+      }
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (isDragging) {
+      calculateValueFromCoords(e.clientX, e.clientY);
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (isDragging && e.touches[0]) {
+      calculateValueFromCoords(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  useEffect(() => {
+    const handleStop = () => {
+      if (isDragging) {
+        setIsDragging(false);
+        if (mode === "hours") setMode("minutes");
+      }
+    };
+
+    if (isDragging) {
+      window.addEventListener("mousemove", handleMouseMove);
+      window.addEventListener("mouseup", handleStop);
+      window.addEventListener("touchmove", handleTouchMove);
+      window.addEventListener("touchend", handleStop);
+    }
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleStop);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleStop);
+    };
+  }, [isDragging, mode, hour, minute, meridiem]);
+
+  const handleMeridiemChange = (m) => {
+    setMeridiem(m);
+    onChange(to24h(hour, minute, m));
+  };
+
+  const currentList = mode === "hours" ? hours : minutes;
+  const currentVal = mode === "hours" ? hour : minute;
+
+  // Calculate hand angle
+  const getAngle = () => {
+    if (mode === "hours") {
+      const h = hour % 12;
+      return (h * 30);
+    } else {
+      return (minute * 6);
+    }
+  };
+
+  return (
+    <div style={{ width: 260, padding: "20px 10px", display: "flex", flexDirection: "column", alignItems: "center", userSelect: "none" }}>
+      {/* Header / Mode Switcher */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 20, background: "rgba(20,20,19,0.04)", padding: 4, borderRadius: 10 }}>
+        <button
+          onClick={() => setMode("hours")}
+          style={{
+            padding: "6px 16px",
+            borderRadius: 8,
+            fontSize: 18,
+            fontWeight: 800,
+            border: "none",
+            background: mode === "hours" ? "white" : "transparent",
+            color: mode === "hours" ? "var(--arc)" : "var(--slate)",
+            boxShadow: mode === "hours" ? "0 2px 8px rgba(0,0,0,0.05)" : "none",
+            cursor: "pointer",
+            transition: "0.2s"
+          }}
+        >
+          {String(hour).padStart(2, "0")}
+        </button>
+        <span style={{ fontSize: 18, fontWeight: 800, color: "var(--slate)", alignSelf: "center" }}>:</span>
+        <button
+          onClick={() => setMode("minutes")}
+          style={{
+            padding: "6px 16px",
+            borderRadius: 8,
+            fontSize: 18,
+            fontWeight: 800,
+            border: "none",
+            background: mode === "minutes" ? "white" : "transparent",
+            color: mode === "minutes" ? "var(--arc)" : "var(--slate)",
+            boxShadow: mode === "minutes" ? "0 2px 8px rgba(0,0,0,0.05)" : "none",
+            cursor: "pointer",
+            transition: "0.2s"
+          }}
+        >
+          {String(minute).padStart(2, "0")}
+        </button>
+      </div>
+
+      {/* Clock Face */}
+      <div 
+        ref={faceRef}
+        onMouseDown={(e) => {
+          setIsDragging(true);
+          calculateValueFromCoords(e.clientX, e.clientY);
+        }}
+        onTouchStart={(e) => {
+          setIsDragging(true);
+          if (e.touches[0]) calculateValueFromCoords(e.touches[0].clientX, e.touches[0].clientY);
+        }}
+        style={{ position: "relative", width: 200, height: 200, background: "rgba(20,20,19,0.03)", borderRadius: "50%", display: "flex", alignItems: "center", justifyCenter: "center", marginBottom: 20, cursor: "pointer" }}
+      >
+        <div style={{ position: "absolute", left: "50%", top: "50%", width: 6, height: 6, margin: -3, background: "var(--arc)", borderRadius: "50%", zIndex: 10 }} />
+        
+        <motion.div
+          animate={{ rotate: getAngle() }}
+          transition={isDragging ? { type: "just" } : { type: "spring", stiffness: 300, damping: 30 }}
+          style={{
+            position: "absolute",
+            left: "50%",
+            bottom: "50%",
+            width: 2,
+            height: 80,
+            background: "var(--arc)",
+            transformOrigin: "bottom center",
+            zIndex: 5,
+            pointerEvents: "none"
+          }}
+        >
+          <div style={{ position: "absolute", top: 0, left: "50%", width: 30, height: 30, margin: "-15px", background: "var(--arc)", borderRadius: "50%", opacity: 0.2 }} />
+          <div style={{ position: "absolute", top: 0, left: "50%", width: 6, height: 6, margin: "-3px", background: "var(--arc)", borderRadius: "50%" }} />
+        </motion.div>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={mode}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
+          >
+            {currentList.map((item) => {
+              const isSelected = item.v === currentVal;
+              return (
+                <div
+                  key={item.v}
+                  style={{
+                    position: "absolute",
+                    left: `calc(50% + ${item.x}px)`,
+                    top: `calc(50% + ${item.y}px)`,
+                    width: 32,
+                    height: 32,
+                    margin: -16,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "50%",
+                    background: isSelected ? "var(--arc)" : "transparent",
+                    color: isSelected ? "white" : "var(--ink)",
+                    fontSize: 11,
+                    fontWeight: isSelected ? 800 : 500,
+                    zIndex: 10,
+                    transition: "0.2s"
+                  }}
+                >
+                  {item.v}
+                </div>
+              );
+            })}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+      
+      {/* AM/PM Switcher */}
+      <div style={{ display: "flex", gap: 4, background: "rgba(20,20,19,0.04)", padding: 3, borderRadius: 8 }}>
+        {["AM", "PM"].map((m) => (
+          <button
+            key={m}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleMeridiemChange(m);
+            }}
+            style={{
+              padding: "4px 12px",
+              borderRadius: 6,
+              fontSize: 11,
+              fontWeight: 800,
+              border: "none",
+              background: meridiem === m ? "white" : "transparent",
+              color: meridiem === m ? "var(--arc)" : "var(--slate)",
+              boxShadow: meridiem === m ? "0 2px 6px rgba(0,0,0,0.05)" : "none",
+              cursor: "pointer",
+              transition: "0.2s"
+            }}
+          >
+            {m}
+          </button>
+        ))}
+      </div>
+
+      <p style={{ marginTop: 12, fontSize: 10, color: "var(--slate)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+        {isDragging ? "Dragging..." : `Select ${mode}`}
+      </p>
+    </div>
+  );
+});
+
 const CalendarView = memo(function CalendarView({ value, onChange }) {
   const today = new Date();
   const [viewDate, setViewDate] = useState(
@@ -287,13 +558,13 @@ const CustomSelect = memo(function CustomSelect({
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: 5 }}
+            initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 5 }}
+            exit={{ opacity: 0, y: -5 }}
             style={{
               position: "absolute",
-              bottom: "100%",
-              marginBottom: 8,
+              top: "100%",
+              marginTop: 8,
               [align]: 0,
               zIndex: 1000,
               background: "white",
@@ -309,6 +580,14 @@ const CustomSelect = memo(function CustomSelect({
                 onChange={(v) => {
                   onChange(v);
                   setOpen(false);
+                }}
+              />
+            ) : isTime ? (
+              <ClockView
+                value={value}
+                onChange={(v) => {
+                  onChange(v);
+                  // Don't close immediately on hour select, wait for minutes
                 }}
               />
             ) : (
@@ -642,6 +921,11 @@ function ComposerModal({
     setSelectedChannels((prev) =>
       prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
     );
+    setError(null);
+  }, []);
+
+  const handleBulkSelect = useCallback((ids) => {
+    setSelectedChannels(ids);
     setError(null);
   }, []);
 
@@ -1057,7 +1341,8 @@ function ComposerModal({
                     <Section label="Post to" mb={12}>
                       <ChannelSelector
                         selectedChannels={selectedChannels}
-                        onToggle={handleChannelToggle}
+                        onChannelToggle={handleChannelToggle}
+                        onBulkSelect={handleBulkSelect}
                         connectedAccounts={connectedAccounts}
                       />
                     </Section>

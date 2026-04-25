@@ -304,7 +304,7 @@ function Sidebar() {
         alert("Coming Soon", "Mastodon integration coming soon!", {
           intent: "warning",
         }),
-      disabled: true,
+
     },
     {
       id: "bluesky",

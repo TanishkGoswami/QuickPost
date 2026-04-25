@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Zap, Sparkles, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
 const PLANS = [
   {
     name: 'Free',

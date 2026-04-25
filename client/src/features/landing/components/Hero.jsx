@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useRef } from 'react';
+import { gsap } from '../../../lib/gsap';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Radio, ArrowRight } from 'lucide-react';
