@@ -1,7 +1,6 @@
-import React, { useRef, useLayoutEffect } from 'react';
-import { gsap } from '../../../lib/gsap';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { Link2, PenLine, SendHorizonal } from 'lucide-react';
+import { Link2, PenLine, SendHorizonal, ArrowRight } from 'lucide-react';
 
 const STEPS = [
   {
@@ -28,78 +27,8 @@ const STEPS = [
 ];
 
 export default function HowItWorks() {
-  const sectionRef = useRef(null);
-  const headerRef = useRef(null);
-  const stepsRef = useRef([]);
-  const numsRef = useRef([]);
-  const lineRef = useRef(null);
-
-  useLayoutEffect(() => {
-    const ctx = gsap.context(() => {
-      // Header entrance
-      gsap.from(headerRef.current, {
-        opacity: 0,
-        y: 24,
-        duration: 0.6,
-        ease: 'power3.out',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 80%',
-          toggleActions: 'play none none none',
-        },
-      });
-
-      // Step cards stagger
-      gsap.from(stepsRef.current.filter(Boolean), {
-        opacity: 0,
-        x: -20,
-        stagger: 0.15,
-        duration: 0.6,
-        ease: 'back.out(1.2)',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 70%',
-          toggleActions: 'play none none none',
-        },
-      });
-
-      // Watermark step numbers
-      gsap.from(numsRef.current.filter(Boolean), {
-        scale: 0.7,
-        opacity: 0,
-        stagger: 0.2,
-        duration: 0.5,
-        ease: 'power2.out',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 70%',
-          toggleActions: 'play none none none',
-        },
-      });
-
-      // Connector line draw-on-scroll
-      if (lineRef.current) {
-        const len = lineRef.current.getTotalLength?.() ?? 600;
-        gsap.set(lineRef.current, { strokeDasharray: len, strokeDashoffset: len });
-        gsap.to(lineRef.current, {
-          strokeDashoffset: 0,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: 'top 60%',
-            end: 'bottom 60%',
-            scrub: 1,
-          },
-        });
-      }
-    }, sectionRef);
-
-    return () => ctx.revert();
-  }, []);
-
   return (
     <section
-      ref={sectionRef}
       id="how-it-works"
       className="landing-section"
       style={{ padding: 'clamp(60px, 10vh, 100px) 24px', background: 'var(--canvas-lifted)' }}
@@ -111,7 +40,7 @@ export default function HowItWorks() {
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
           style={{ textAlign: 'center', marginBottom: 'clamp(44px, 6vw, 64px)' }}
         >
           <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: 16 }}>Process</div>
@@ -132,7 +61,7 @@ export default function HowItWorks() {
               initial={{ opacity: 0, y: 28 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-50px' }}
-              transition={{ duration: 0.5, delay: i * 0.13 }}
+              transition={{ duration: 0.5, delay: i * 0.13, ease: 'easeOut' }}
               style={{
                 background: 'var(--canvas)',
                 border: '1px solid rgba(20,20,19,0.08)',
@@ -140,20 +69,25 @@ export default function HowItWorks() {
                 padding: '32px 28px 28px',
                 position: 'relative',
                 overflow: 'hidden',
-                transition: 'transform 0.25s, box-shadow 0.25s',
+                cursor: 'default'
               }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
+              whileHover={{ y: -5, boxShadow: 'var(--shadow-card)' }}
             >
               {/* Step number watermark */}
-              <div style={{
-                position: 'absolute', top: 12, right: 20,
-                fontSize: 80, fontWeight: 700, letterSpacing: '-0.05em',
-                color: 'rgba(20,20,19,0.045)', lineHeight: 1,
-                fontFamily: 'var(--font)', userSelect: 'none', pointerEvents: 'none',
-              }}>
+              <motion.div 
+                initial={{ scale: 0.7, opacity: 0 }}
+                whileInView={{ scale: 1, opacity: 0.045 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.2 + 0.3 }}
+                style={{
+                  position: 'absolute', top: 12, right: 20,
+                  fontSize: 80, fontWeight: 700, letterSpacing: '-0.05em',
+                  color: 'var(--ink)', lineHeight: 1,
+                  fontFamily: 'var(--font)', userSelect: 'none', pointerEvents: 'none',
+                }}
+              >
                 {step.num}
-              </div>
+              </motion.div>
 
               {/* Icon + step pill */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
@@ -205,9 +139,7 @@ export default function HowItWorks() {
                   background: 'var(--ink)', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   zIndex: 3, boxShadow: '0 2px 8px rgba(20,20,19,0.18)',
                 }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
+                  <ArrowRight size={14} color="white" />
                 </div>
               )}
             </motion.div>

@@ -235,6 +235,7 @@ function CookieRow({ label, desc, checked, onChange, disabled }) {
       <button
         role="switch"
         aria-checked={checked}
+        aria-label={`Toggle ${label} cookies`}
         disabled={disabled}
         onClick={() => !disabled && onChange && onChange(!checked)}
         style={{

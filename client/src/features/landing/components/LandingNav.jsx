@@ -1,14 +1,13 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { gsap, ScrollTrigger } from '../../../lib/gsap';
+import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
 import logo from '/logo.png';
 
 export default function LandingNav() {
   const navigate = useNavigate();
-  const navRef = useRef(null);
-  const innerRef = useRef(null);
+  const { scrollY } = useScroll();
+  const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -18,30 +17,13 @@ export default function LandingNav() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  // GSAP scroll-driven nav elevation — zero React re-renders on scroll
-  useLayoutEffect(() => {
-    ScrollTrigger.create({
-      start: 'top -20px',
-      onEnter: () => {
-        gsap.to(navRef.current, {
-          backgroundColor: 'rgba(255,255,255,0.88)',
-          boxShadow: '0 10px 30px -10px rgba(0,0,0,0.08)',
-          duration: 0.35,
-          ease: 'power2.out',
-        });
-        gsap.to(innerRef.current, { paddingTop: 10, paddingBottom: 10, duration: 0.35, ease: 'power2.out' });
-      },
-      onLeaveBack: () => {
-        gsap.to(navRef.current, {
-          backgroundColor: 'transparent',
-          boxShadow: 'none',
-          duration: 0.25,
-        });
-        gsap.to(innerRef.current, { paddingTop: 20, paddingBottom: 20, duration: 0.25 });
-      },
-    });
-    return () => ScrollTrigger.getAll().forEach(t => t.kill());
-  }, []);
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    if (latest > 20) {
+      setScrolled(true);
+    } else {
+      setScrolled(false);
+    }
+  });
 
   const navLinks = [
     { label: 'Features', href: '#features' },
@@ -51,21 +33,29 @@ export default function LandingNav() {
 
   return (
     <>
-      <nav
-        ref={navRef}
+      <motion.nav
         className="landing-nav"
+        animate={{
+          backgroundColor: scrolled ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0)',
+          boxShadow: scrolled ? '0 10px 30px -10px rgba(0,0,0,0.08)' : '0 0 0 rgba(0,0,0,0)',
+          borderBottomColor: scrolled ? 'rgba(20,20,19,0.07)' : 'rgba(20,20,19,0)',
+        }}
+        transition={{ duration: 0.35 }}
         style={{
           position: 'sticky',
           top: 0,
           zIndex: 100,
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
-          background: 'transparent',
-          borderBottom: '1px solid rgba(20,20,19,0.07)',
+          borderBottom: '1px solid transparent',
         }}
       >
-        <div
-          ref={innerRef}
+        <motion.div
+          animate={{
+            paddingTop: scrolled ? 10 : 20,
+            paddingBottom: scrolled ? 10 : 20,
+          }}
+          transition={{ duration: 0.35 }}
           className="landing-container"
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -134,8 +124,8 @@ export default function LandingNav() {
               </button>
             )}
           </div>
-        </div>
-      </nav>
+        </motion.div>
+      </motion.nav>
 
       {/* Mobile Drawer */}
       <AnimatePresence>
@@ -146,7 +136,7 @@ export default function LandingNav() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ type: 'spring', stiffness: 400, damping: 40 }}
             style={{
-              position: 'fixed', top: 64, left: 0, right: 0, bottom: 0,
+              position: 'fixed', top: scrolled ? 64 : 84, left: 0, right: 0, bottom: 0,
               background: 'var(--canvas)', zIndex: 99,
               padding: '24px', display: 'flex', flexDirection: 'column', gap: 32,
             }}

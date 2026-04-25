@@ -1,157 +1,292 @@
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+/**
+ * UploadJobContext.jsx — Fixed version
+ * ─────────────────────────────────────────────────────────────────
+ * Fixes:
+ * 1. dismissJob properly cleans up polling AND completion callbacks
+ * 2. retryJob resets state before polling
+ * 3. No orphaned intervals — cleanup on unmount is exhaustive
+ * 4. Visibility handler uses functional setState to avoid stale closure
+ * 5. addJob returns the jobId for external use
+ *
+ * Replace: client/src/context/UploadJobContext.jsx
+ */
+
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  useMemo,
+} from 'react';
 import apiClient from '../utils/apiClient';
 
 /**
  * @typedef {Object} UploadJob
- * @property {string} id
+ * @property {string}   id
  * @property {'pending'|'processing'|'completed'|'failed'} status
- * @property {number} progress   0–100
- * @property {string} step       Human-readable step label
+ * @property {number}   progress   — 0–100
+ * @property {string}   step       — Human-readable step label
  * @property {string|null} error
- * @property {Object} meta       caption, channels, mediaType, fileCount, previewUrl
- * @property {number} createdAt
- * @property {number} updatedAt
+ * @property {Object}  meta       — caption, channels, mediaType, fileCount, previewUrl
+ * @property {number}  createdAt
+ * @property {number}  updatedAt
  */
 
 const UploadJobContext = createContext(null);
 
 const POLL_INTERVAL_MS = 1500;
+const MAX_POLL_ERRORS  = 5; // stop polling after 5 consecutive network errors
 
 export function UploadJobProvider({ children }) {
-  /** @type {[UploadJob[], Function]} */
   const [jobs, setJobs] = useState([]);
-  // Set of jobIds we are currently polling
-  const activePollers = useRef(new Map()); // jobId → intervalId
-  // Callback registry: jobId → fn called on completion
-  const completionCallbacks = useRef(new Map());
 
-  // ── Polling logic ──────────────────────────────────────────────────────
+  /**
+   * Maps jobId → { intervalId, errorCount }
+   * Using a plain ref (not state) to avoid re-render cycles.
+   */
+  const pollersRef = useRef(new Map());
+  const callbacksRef = useRef(new Map()); // jobId → onComplete fn
+
+  /* ─────────────────────────────────────────────────────────────
+     POLLING CORE
+  ───────────────────────────────────────────────────────────── */
 
   const stopPolling = useCallback((jobId) => {
-    const intervalId = activePollers.current.get(jobId);
-    if (intervalId) {
-      clearInterval(intervalId);
-      activePollers.current.delete(jobId);
+    const poller = pollersRef.current.get(jobId);
+    if (poller) {
+      clearInterval(poller.intervalId);
+      pollersRef.current.delete(jobId);
     }
   }, []);
 
-  const fetchJobStatus = useCallback(async (jobId) => {
-    try {
-      const { data } = await apiClient.get(`/api/jobs/${jobId}`);
-      if (!data.success) return;
+  const fetchJobStatus = useCallback(
+    async (jobId) => {
+      try {
+        const { data } = await apiClient.get(`/api/jobs/${jobId}`);
+        if (!data?.success || !data?.job) return;
 
-      const serverJob = data.job;
+        const serverJob = data.job;
 
-      setJobs(prev =>
-        prev.map(j => j.id === jobId ? { ...j, ...serverJob } : j)
-      );
+        setJobs((prev) =>
+          prev.map((j) =>
+            j.id === jobId
+              ? { ...j, ...serverJob, updatedAt: Date.now() }
+              : j
+          )
+        );
 
-      // Stop polling if terminal
-      if (serverJob.status === 'completed' || serverJob.status === 'failed') {
-        stopPolling(jobId);
+        // Terminal state — stop polling and fire callback
+        if (
+          serverJob.status === 'completed' ||
+          serverJob.status === 'failed'
+        ) {
+          stopPolling(jobId);
 
-        // Fire completion callback (e.g. dashboard refresh)
-        const cb = completionCallbacks.current.get(jobId);
-        if (cb) {
-          cb(serverJob);
-          completionCallbacks.current.delete(jobId);
+          const cb = callbacksRef.current.get(jobId);
+          if (cb) {
+            try { cb(serverJob); } catch (_) {}
+            callbacksRef.current.delete(jobId);
+          }
+        } else {
+          // Reset error count on success
+          const poller = pollersRef.current.get(jobId);
+          if (poller) poller.errorCount = 0;
+        }
+      } catch (err) {
+        if (err.name === 'CanceledError' || err.code === 'ERR_CANCELED') return;
+
+        const poller = pollersRef.current.get(jobId);
+        if (!poller) return;
+
+        poller.errorCount = (poller.errorCount || 0) + 1;
+        if (poller.errorCount >= MAX_POLL_ERRORS) {
+          console.warn(`[UploadJobContext] Stopping poll for ${jobId} after ${MAX_POLL_ERRORS} errors`);
+          stopPolling(jobId);
+          setJobs((prev) =>
+            prev.map((j) =>
+              j.id === jobId && j.status !== 'completed'
+                ? { ...j, status: 'failed', error: 'Lost connection. Please check status manually.', updatedAt: Date.now() }
+                : j
+            )
+          );
         }
       }
-    } catch (err) {
-      // Silently ignore network errors during polling; just keep trying
-      console.warn(`[UploadJobContext] Poll error for job ${jobId}:`, err.message);
-    }
-  }, [stopPolling]);
+    },
+    [stopPolling]
+  );
 
-  const startPolling = useCallback((jobId) => {
-    if (activePollers.current.has(jobId)) return; // already polling
-    fetchJobStatus(jobId); // immediate first fetch
-    const id = setInterval(() => fetchJobStatus(jobId), POLL_INTERVAL_MS);
-    activePollers.current.set(jobId, id);
-  }, [fetchJobStatus]);
+  const startPolling = useCallback(
+    (jobId) => {
+      if (pollersRef.current.has(jobId)) return; // already polling
 
-  // Cleanup on unmount
+      // Immediate first fetch
+      fetchJobStatus(jobId);
+
+      const intervalId = setInterval(() => fetchJobStatus(jobId), POLL_INTERVAL_MS);
+      pollersRef.current.set(jobId, { intervalId, errorCount: 0 });
+    },
+    [fetchJobStatus]
+  );
+
+  /* ─────────────────────────────────────────────────────────────
+     CLEANUP ON UNMOUNT
+  ───────────────────────────────────────────────────────────── */
+
   useEffect(() => {
     return () => {
-      for (const id of activePollers.current.values()) clearInterval(id);
+      for (const { intervalId } of pollersRef.current.values()) {
+        clearInterval(intervalId);
+      }
+      pollersRef.current.clear();
+      callbacksRef.current.clear();
     };
   }, []);
 
-  // Resume polling for active jobs when tab becomes visible again
+  /* ─────────────────────────────────────────────────────────────
+     VISIBILITY HANDLER — resume polling when tab becomes visible
+  ───────────────────────────────────────────────────────────── */
+
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        // Re-fetch all jobs that were still active before tab was hidden
-        setJobs(currentJobs => {
-          currentJobs.forEach(job => {
-            if (job.status === 'pending' || job.status === 'processing') {
-              fetchJobStatus(job.id);
-            }
-          });
-          return currentJobs;
-        });
-      }
+      if (document.visibilityState !== 'visible') return;
+
+      // Use functional setState to get current jobs without stale closure
+      setJobs((currentJobs) => {
+        for (const job of currentJobs) {
+          if (job.status === 'pending' || job.status === 'processing') {
+            // Kick off a single status check (don't restart interval if already running)
+            fetchJobStatus(job.id);
+          }
+        }
+        return currentJobs; // return same reference — no re-render
+      });
     };
+
     document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
+    return () =>
+      document.removeEventListener('visibilitychange', handleVisibility);
   }, [fetchJobStatus]);
 
-  // ── Public API ─────────────────────────────────────────────────────────
+  /* ─────────────────────────────────────────────────────────────
+     PUBLIC API
+  ───────────────────────────────────────────────────────────── */
 
   /**
    * Register a new upload job returned by the server.
-   * @param {string} jobId
-   * @param {Object} meta  caption, channels, mediaType, fileCount
-   * @param {Function} [onComplete]  Optional callback when job completes/fails
+   * @param {string}   jobId
+   * @param {Object}   meta      — caption, channels, mediaType, fileCount, previewUrl
+   * @param {Function} [onComplete]
+   * @returns {string} jobId
    */
-  const addJob = useCallback((jobId, meta = {}, onComplete = null) => {
-    const newJob = {
-      id: jobId,
-      status: 'pending',
-      progress: 0,
-      step: 'Queued',
-      error: null,
-      meta,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
+  const addJob = useCallback(
+    (jobId, meta = {}, onComplete = null) => {
+      const newJob = {
+        id: jobId,
+        status: 'pending',
+        progress: 0,
+        step: 'Queued',
+        error: null,
+        meta,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
 
-    setJobs(prev => [newJob, ...prev]);
+      setJobs((prev) => [newJob, ...prev]);
 
-    if (onComplete) {
-      completionCallbacks.current.set(jobId, onComplete);
-    }
+      if (onComplete) {
+        callbacksRef.current.set(jobId, onComplete);
+      }
 
-    startPolling(jobId);
-  }, [startPolling]);
+      startPolling(jobId);
+      return jobId;
+    },
+    [startPolling]
+  );
 
   /**
-   * Retry a failed job by re-starting polling.
-   * (The backend job state won't reset, but for network issues polling may resume.)
-   * Full retry requires re-submitting the form — this just polls again.
+   * Retry a failed job — resets state and restarts polling.
    */
-  const retryJob = useCallback((jobId) => {
-    setJobs(prev =>
-      prev.map(j => j.id === jobId ? { ...j, status: 'processing', progress: 0, step: 'Retrying…' } : j)
-    );
-    startPolling(jobId);
-  }, [startPolling]);
+  const retryJob = useCallback(
+    (jobId) => {
+      stopPolling(jobId); // clean up any stale poller first
 
-  /** Remove completed/failed jobs from the panel */
+      setJobs((prev) =>
+        prev.map((j) =>
+          j.id === jobId
+            ? {
+                ...j,
+                status: 'processing',
+                progress: 0,
+                step: 'Retrying…',
+                error: null,
+                updatedAt: Date.now(),
+              }
+            : j
+        )
+      );
+
+      startPolling(jobId);
+    },
+    [startPolling, stopPolling]
+  );
+
+  /**
+   * Remove completed/failed jobs from the panel.
+   */
   const clearCompleted = useCallback(() => {
-    setJobs(prev => prev.filter(j => j.status !== 'completed' && j.status !== 'failed'));
-  }, []);
-
-  /** Remove a single job from the panel */
-  const dismissJob = useCallback((jobId) => {
-    stopPolling(jobId);
-    setJobs(prev => prev.filter(j => j.id !== jobId));
+    setJobs((prev) =>
+      prev.filter((j) => {
+        const isDone =
+          j.status === 'completed' || j.status === 'failed';
+        if (isDone) {
+          stopPolling(j.id);
+          callbacksRef.current.delete(j.id);
+        }
+        return !isDone;
+      })
+    );
   }, [stopPolling]);
 
-  const activeCount = jobs.filter(j => j.status === 'pending' || j.status === 'processing').length;
+  /**
+   * Remove a single job — stops polling and cleans up callbacks.
+   */
+  const dismissJob = useCallback(
+    (jobId) => {
+      stopPolling(jobId);
+      callbacksRef.current.delete(jobId);
+      setJobs((prev) => prev.filter((j) => j.id !== jobId));
+    },
+    [stopPolling]
+  );
+
+  /* ─────────────────────────────────────────────────────────────
+     DERIVED VALUES
+  ───────────────────────────────────────────────────────────── */
+
+  const activeCount = useMemo(
+    () =>
+      jobs.filter(
+        (j) => j.status === 'pending' || j.status === 'processing'
+      ).length,
+    [jobs]
+  );
+
+  const contextValue = useMemo(
+    () => ({
+      jobs,
+      addJob,
+      retryJob,
+      clearCompleted,
+      dismissJob,
+      activeCount,
+    }),
+    [jobs, addJob, retryJob, clearCompleted, dismissJob, activeCount]
+  );
 
   return (
-    <UploadJobContext.Provider value={{ jobs, addJob, retryJob, clearCompleted, dismissJob, activeCount }}>
+    <UploadJobContext.Provider value={contextValue}>
       {children}
     </UploadJobContext.Provider>
   );
@@ -159,11 +294,12 @@ export function UploadJobProvider({ children }) {
 
 /**
  * Hook to consume the upload job context.
- * @returns {{ jobs: UploadJob[], addJob: Function, retryJob: Function, clearCompleted: Function, dismissJob: Function, activeCount: number }}
  */
 export function useUploadJobs() {
   const ctx = useContext(UploadJobContext);
-  if (!ctx) throw new Error('useUploadJobs must be used inside <UploadJobProvider>');
+  if (!ctx) {
+    throw new Error('useUploadJobs must be used inside <UploadJobProvider>');
+  }
   return ctx;
 }
 

@@ -1213,6 +1213,7 @@ function ComposerModal({
               <motion.button
                 type="button"
                 onClick={handleClose}
+                aria-label="Close modal"
                 whileHover={{ scale: 1.05, background: "rgba(20,20,19,0.06)" }}
                 whileTap={{ scale: 0.95 }}
                 style={{

@@ -96,6 +96,7 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect }) {
             <button
               type="button"
               onClick={() => { setConnectedOpen(o => !o); setMoreOpen(false); }}
+              aria-expanded={connectedOpen}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 transition-all shadow-sm"
             >
               {/* Show stacked icons (max 3) — hidden when dropdown is open */}
@@ -195,6 +196,7 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect }) {
             <button
               type="button"
               onClick={() => { setMoreOpen(o => !o); setConnectedOpen(false); }}
+              aria-expanded={moreOpen}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-xs font-medium text-gray-500 transition-all shadow-sm"
             >
               <Plus className="w-3 h-3" />

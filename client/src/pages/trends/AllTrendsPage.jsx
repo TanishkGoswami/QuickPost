@@ -1,64 +1,309 @@
+/**
+ * AllTrendsPage.jsx v2 — Advanced Trend Intelligence
+ * ─────────────────────────────────────────────────────────────────
+ * Fixes in this version:
+ * 1. processedTrends uses deterministic hash scoring (not Math.random)
+ * 2. Debounced search input
+ * 3. Proper niche detection for meme items
+ * 4. AbortController-safe via useAllTrends v2
+ * 5. Toast uses accessible role="status"
+ *
+ * Replace: client/src/pages/trends/AllTrendsPage.jsx
+ */
+
 import React, {
   useState,
   useMemo,
   useCallback,
   useEffect,
+  useRef,
   Suspense,
   lazy,
 } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, RefreshCw, Sparkles, LayoutGrid, Search as SearchIcon } from "lucide-react";
+import {
+  Flame,
+  RefreshCw,
+  Sparkles,
+  LayoutGrid,
+  TrendingUp,
+  Hash,
+  Cpu,
+  Activity,
+} from "lucide-react";
 import FiltersBar from "./components/FiltersBar";
 import TrendGrid from "./components/TrendGrid";
 import { useAllTrends } from "./hooks/useAllTrends";
 
-// Lazy-load the ComposerModal so the page doesn't bloat initial bundle
+// Lazy-load ComposerModal to avoid loading it on initial paint
 const ComposerModal = lazy(() => import("../../components/ComposerModal"));
 
 /* ─────────────────────────────────────────────────────────────────
-   "Idea Injected" toast notification
-   ───────────────────────────────────────────────────────────────── */
-function InjectedToast({ visible }) {
-  return (
-    <AnimatePresence>
-      {visible && (
-        <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.95 }}
-          transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-          style={{
-            position: "fixed",
-            bottom: 28,
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "var(--ink)",
-            color: "white",
-            borderRadius: "var(--r-pill)",
-            padding: "12px 24px",
-            fontSize: 13,
-            fontWeight: 700,
-            zIndex: 200,
-            boxShadow: "0 12px 48px rgba(20,20,19,0.3)",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            whiteSpace: "nowrap",
-          }}
-        >
-          <Sparkles size={14} style={{ color: "var(--arc)" }} />
-          Idea loaded into Composer!
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
+   DETERMINISTIC SCORE — replaces Math.random() in useMemo
+───────────────────────────────────────────────────────────────── */
+
+function deterministicScore(str, min = 70, max = 99) {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
+    hash = hash >>> 0; // force unsigned 32-bit
+  }
+  return min + (hash % (max - min + 1));
 }
 
 /* ─────────────────────────────────────────────────────────────────
+   NICHE DETECTION
+───────────────────────────────────────────────────────────────── */
+
+const NICHE_RULES = [
+  {
+    niche: "Crypto",
+    keywords: ["crypto", "bitcoin", "btc", "ethereum", "web3", "nft", "defi"],
+  },
+  {
+    niche: "AI & Tech",
+    keywords: [
+      "ai",
+      "chatgpt",
+      "openai",
+      "tech",
+      "apple",
+      "google",
+      "meta",
+      "gpt",
+      "llm",
+    ],
+  },
+  {
+    niche: "Trading",
+    keywords: [
+      "stock",
+      "market",
+      "nifty",
+      "sensex",
+      "trading",
+      "invest",
+      "fund",
+      "equity",
+    ],
+  },
+  {
+    niche: "Fitness",
+    keywords: [
+      "gym",
+      "fitness",
+      "workout",
+      "diet",
+      "health",
+      "exercise",
+      "nutrition",
+    ],
+  },
+  {
+    niche: "Sports",
+    keywords: [
+      "ipl",
+      "cricket",
+      "football",
+      "sport",
+      "match",
+      "tournament",
+      "league",
+    ],
+  },
+  {
+    niche: "Business",
+    keywords: [
+      "startup",
+      "business",
+      "entrepreneur",
+      "company",
+      "ceo",
+      "funding",
+    ],
+  },
+  {
+    niche: "Entertainment",
+    keywords: [
+      "movie",
+      "film",
+      "series",
+      "netflix",
+      "celebrity",
+      "music",
+      "bollywood",
+    ],
+  },
+];
+
+function detectNiche(text) {
+  const lower = (text || "").toLowerCase();
+  for (const rule of NICHE_RULES) {
+    if (rule.keywords.some((k) => lower.includes(k))) return rule.niche;
+  }
+  return "General";
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   IDEA GENERATOR — stable based on title
+───────────────────────────────────────────────────────────────── */
+
+function generateIdeas(title, niche) {
+  return [
+    `Share your take on: ${title?.substring(0, 55) || "this trend"}`,
+    `What this means for ${niche} creators in 2026`,
+    `Quick explainer: ${title?.substring(0, 45) || niche} — explained in 60 seconds`,
+  ];
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   STATS STRIP
+───────────────────────────────────────────────────────────────── */
+
+const StatsStrip = ({ trendCount, memeCount, loading }) => {
+  const stats = [
+    {
+      label: "Trending Signals",
+      val: trendCount,
+      icon: TrendingUp,
+      color: "var(--arc)",
+    },
+    { label: "Community Posts", val: memeCount, icon: Hash, color: "#6366f1" },
+    {
+      label: "Discovery Engine",
+      val: "LIVE",
+      icon: Cpu,
+      color: "var(--success)",
+    },
+  ];
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: 12,
+        marginTop: 24,
+        flexWrap: "wrap",
+      }}
+    >
+      {stats.map(({ label, val, icon: Icon, color }) => (
+        <div
+          key={label}
+          style={{
+            background: "var(--white)",
+            padding: "14px 20px",
+            borderRadius: 16,
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            border: "1px solid rgba(20,20,19,0.06)",
+            boxShadow: "var(--shadow-card)",
+            minWidth: 160,
+            flex: "1 1 160px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            <Icon size={12} style={{ color }} />
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                color: "var(--slate)",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              {label}
+            </span>
+          </div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <span
+              style={{
+                fontSize: loading ? 18 : 24,
+                fontWeight: 800,
+                color: "var(--ink)",
+                letterSpacing: "-0.03em",
+                transition: "font-size 0.2s",
+              }}
+            >
+              {loading ? "..." : val}
+            </span>
+            <div
+              style={{
+                padding: "2px 6px",
+                background: `${color}14`,
+                borderRadius: 6,
+                fontSize: 9,
+                fontWeight: 800,
+                color,
+                display: "flex",
+                alignItems: "center",
+                gap: 3,
+              }}
+            >
+              <Activity size={8} />
+              {typeof val === "string" ? val : "NOW"}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────────────
+   INJECTED TOAST
+───────────────────────────────────────────────────────────────── */
+
+const InjectedToast = ({ visible }) => (
+  <AnimatePresence>
+    {visible && (
+      <motion.div
+        role="status"
+        aria-live="polite"
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 20, scale: 0.95 }}
+        transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+        style={{
+          position: "fixed",
+          bottom: 32,
+          left: "50%",
+          transform: "translateX(-50%)",
+          background: "var(--ink)",
+          color: "white",
+          borderRadius: "var(--r-pill)",
+          padding: "12px 24px",
+          fontSize: 13,
+          fontWeight: 700,
+          zIndex: "var(--z-toast, 600)",
+          boxShadow: "0 12px 40px rgba(20,20,19,0.3)",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          whiteSpace: "nowrap",
+          letterSpacing: "-0.01em",
+        }}
+      >
+        <Sparkles size={14} style={{ color: "var(--arc)" }} />
+        Idea loaded into Composer!
+      </motion.div>
+    )}
+  </AnimatePresence>
+);
+
+/* ─────────────────────────────────────────────────────────────────
    MAIN PAGE
-   ───────────────────────────────────────────────────────────────── */
+───────────────────────────────────────────────────────────────── */
+
 export default function AllTrendsPage() {
-  /* ── Filter state ── */
+  /* ── Filter & search state ── */
   const [activeNiche, setActiveNiche] = useState("All");
   const [activePlatform, setActivePlatform] = useState("All");
   const [activeType, setActiveType] = useState("All");
@@ -67,12 +312,13 @@ export default function AllTrendsPage() {
 
   /* ── UI state ── */
   const [toastVisible, setToastVisible] = useState(false);
+  const toastTimerRef = useRef(null);
 
-  /* ── Composer inject state ── */
+  /* ── Composer state ── */
   const [composerOpen, setComposerOpen] = useState(false);
   const [injectedData, setInjectedData] = useState(null);
 
-  /* ── API Data Hook ── */
+  /* ── API Data ── */
   const {
     trends: news,
     memes,
@@ -86,190 +332,178 @@ export default function AllTrendsPage() {
   } = useAllTrends(search, {
     newsLimit: 24,
     memeLimit: 24,
-    imageLimit: 24,
-    newsCategories: 'technology,business,entertainment,sports,finance,science,world,health',
+    newsCategories:
+      "technology,business,entertainment,sports,finance,science,world,health",
   });
 
-  /* ── Derived Trends Logic ── */
+  /* ── Process trends — DETERMINISTIC scoring (no Math.random in useMemo) ── */
   const processedTrends = useMemo(() => {
-    // We map news articles to "Trends"
-    let result = news.map((n, i) => {
-      // Basic niche detection logic
-      const title = (n.title || "").toLowerCase();
-      let niche = "General";
-      if (title.includes("crypto") || title.includes("bitcoin")) niche = "Crypto";
-      else if (title.includes("ai") || title.includes("tech") || title.includes("chatgpt")) niche = "AI & Tech";
-      else if (title.includes("stock") || title.includes("market") || title.includes("trading")) niche = "Trading";
-      else if (title.includes("fit") || title.includes("gym") || title.includes("workout")) niche = "Fitness";
+    // Map news articles to trend items
+    const trendItems = news.map((n, i) => {
+      const titleKey = `${n.title || ""}${n.source || ""}`;
+      const score = deterministicScore(titleKey, 75, 99);
+      const niche = detectNiche(n.title);
 
       return {
-        id: `trend-${i}-${n.title?.substring(0, 5)}`,
+        id: `trend-${n.url || titleKey.substring(0, 20) || i}`,
+        discoveryType: "trend",
         topic: niche,
-        score: 80 + Math.floor(Math.random() * 19), // Derived score 80-99
-        ideas: [
-          `Share your perspective on: ${n.title}`,
-          `What this means for the ${niche} industry`,
-          `3 things you didn't know about this ${niche} trend`,
-        ],
+        score,
+        ideas: generateIdeas(n.title, niche),
         hashtags: [
           `#${niche.replace(/\s/g, "")}`,
           "#trending",
-          "#viralnews",
-          `#${(n.source || "news").toLowerCase().replace(/\s/g, "")}`,
-        ],
+          `#${(n.source || "news").toLowerCase().replace(/[^a-z0-9]/g, "")}`,
+        ].filter((h, idx, arr) => arr.indexOf(h) === idx), // dedupe
         newsItem: n,
       };
     });
 
-    // 2. Map Memes as first-class citizens, but detect "News" subreddits
+    // Map meme/reddit items
     const memeItems = memes.map((m, i) => {
-      // If it's a news-heavy subreddit, treat it as a "Trend" (News) item
-      const isNewsSub = ['news', 'worldnews', 'technology', 'StockMarket', 'IndiaInvestments', 'Cricket', 'business'].includes(m.subreddit?.toLowerCase());
-      
-      if (isNewsSub) {
-        return {
-          id: `reddit-news-${m.id || i}`,
-          topic: m.subreddit,
-          discoveryType: 'trend',
-          score: 90 + Math.floor(Math.random() * 9), // High priority
-          ideas: [
-            `Discuss this update from r/${m.subreddit}: ${m.title}`,
-            `Share your take on this ${m.subreddit} discussion`,
-          ],
-          hashtags: [`#${m.subreddit}`, '#redditnews', '#trending'],
-          newsItem: {
-            title: m.title,
-            source: `r/${m.subreddit}`,
-            url: m.link,
-            image: m.image,
-            videoUrl: m.videoUrl,
-            isVideo: m.isVideo,
-          }
-        };
-      }
+      const titleKey = `${m.title || ""}${m.subreddit || ""}`;
+      const score = deterministicScore(titleKey, 65, 92);
+      const niche = detectNiche(m.title) || m.subreddit || "General";
 
       return {
         ...m,
-        discoveryType: 'meme',
-        id: `meme-${m.id || i}`,
-        score: 80 + Math.floor(Math.random() * 15),
+        id: m.id ? `meme-${m.id}` : `meme-${i}-${titleKey.substring(0, 8)}`,
+        discoveryType: "meme",
+        topic: niche,
+        score,
       };
     });
 
-    // 3. Interleave them 1:1 for a balanced discovery experience
+    // ── Apply niche filter ──
+    let filteredTrends =
+      activeNiche === "All"
+        ? trendItems
+        : trendItems.filter((t) => t.topic === activeNiche);
+
+    let filteredMemes = memeItems; // memes show regardless of niche filter
+
+    // ── Interleave 1 trend : 1 meme for balanced discovery ──
     const combined = [];
-    const maxLen = Math.max(result.length, memeItems.length);
-    
+    const maxLen = Math.max(filteredTrends.length, filteredMemes.length);
     for (let i = 0; i < maxLen; i++) {
-      if (i < result.length) {
-        combined.push({ ...result[i], discoveryType: 'trend' });
-      }
-      if (i < memeItems.length) {
-        combined.push(memeItems[i]);
-      }
+      if (i < filteredTrends.length) combined.push(filteredTrends[i]);
+      if (i < filteredMemes.length) combined.push(filteredMemes[i]);
     }
 
-    // Apply Niche filter (Memes are usually General but we can categorize them if needed)
-    let filtered = combined;
-    if (activeNiche !== "All") {
-      filtered = combined.filter(t => 
-        t.discoveryType === 'trend' ? t.topic === activeNiche : true
-      );
-    }
-
-    // Apply sorting
+    // ── Sort ──
     if (sortOrder === "score") {
-      filtered.sort((a, b) => b.score - a.score);
+      combined.sort((a, b) => b.score - a.score);
     }
+    // 'latest' keeps insertion order (API already returns newest first)
 
-    return filtered;
+    return combined;
   }, [news, memes, activeNiche, sortOrder]);
 
-  /* ── Handlers ── */
+  /* ── Handle "Use Idea" ── */
   const handleUseIdea = useCallback((data) => {
     setInjectedData(data);
     setComposerOpen(true);
+
+    // Show toast
+    clearTimeout(toastTimerRef.current);
     setToastVisible(true);
-    setTimeout(() => setToastVisible(false), 3000);
+    toastTimerRef.current = setTimeout(() => setToastVisible(false), 3000);
   }, []);
 
+  // Cleanup toast timer on unmount
+  useEffect(() => {
+    return () => clearTimeout(toastTimerRef.current);
+  }, []);
+
+  /* ── Refresh handler ── */
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
 
   return (
-    <div style={{ 
-      minHeight: "100vh", 
-      background: "var(--canvas)", 
-      padding: "24px 32px",
-      maxWidth: 1600,
-      margin: "0 auto",
-    }}>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "var(--canvas)",
+        padding: "24px 32px",
+        maxWidth: 1600,
+        margin: "0 auto",
+      }}
+    >
       {/* ── HEADER ── */}
-      <header style={{ marginBottom: 48, maxWidth: 1200 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
-           <div style={{ 
-             background: "var(--ink)", 
-             color: "var(--white)", 
-             width: 40, 
-             height: 40, 
-             borderRadius: 12, 
-             display: "flex", 
-             alignItems: "center", 
-             justifyContent: "center",
-             boxShadow: "var(--shadow-premium)"
-           }}>
-             <Flame size={22} style={{ color: "var(--arc)" }} />
-           </div>
-           <div>
-             <h1 style={{ fontSize: 36, fontWeight: 800, color: "var(--ink)", margin: 0, letterSpacing: "-0.04em" }}>
-               Trend Intelligence
-             </h1>
-             <p style={{ fontSize: 16, color: "var(--slate)", margin: 0, fontWeight: 500 }}>
-               Real-time signals and discovery for high-impact content.
-             </p>
-           </div>
+      <header style={{ marginBottom: 40, maxWidth: 1200 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            marginBottom: 4,
+          }}
+        >
+          <div
+            style={{
+              background: "var(--ink)",
+              color: "var(--white)",
+              width: 44,
+              height: 44,
+              borderRadius: 14,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: "var(--shadow-premium)",
+              flexShrink: 0,
+            }}
+          >
+            <Flame
+              size={22}
+              style={{ color: "var(--arc)" }}
+              aria-hidden="true"
+            />
+          </div>
+          <div>
+            <h1
+              style={{
+                fontSize: "clamp(28px, 4vw, 36px)",
+                fontWeight: 800,
+                color: "var(--ink)",
+                margin: 0,
+                letterSpacing: "-0.04em",
+                lineHeight: 1.05,
+              }}
+            >
+              Trend Intelligence
+            </h1>
+            <p
+              style={{
+                fontSize: 14,
+                color: "var(--slate)",
+                margin: "4px 0 0",
+                fontWeight: 500,
+              }}
+            >
+              Real-time signals and discovery for high-impact content
+            </p>
+          </div>
         </div>
 
-        {/* Stats Strip */}
-        <div style={{ display: "flex", gap: 16, marginTop: 32 }}>
-           {[
-             { label: "Trending Signals", val: news.length, color: "var(--arc)" },
-             { label: "Community Memes", val: memes.length, color: "#6366f1" },
-             { label: "Creative Assets", val: images.length, color: "#059669" },
-           ].map(stat => (
-             <div key={stat.label} style={{ 
-               background: "var(--white)", 
-               padding: "16px 24px", 
-               borderRadius: 20, 
-               display: "flex", 
-               flexDirection: "column",
-               gap: 4,
-               border: "1px solid rgba(20,20,19,0.06)",
-               boxShadow: "var(--shadow-card)",
-               minWidth: 180,
-             }}>
-               <span style={{ fontSize: 11, fontWeight: 800, color: "var(--slate)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{stat.label}</span>
-               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                 <span style={{ fontSize: 24, fontWeight: 800, color: "var(--ink)" }}>{stat.val}</span>
-                 <div style={{ padding: "2px 8px", background: "rgba(0,0,0,0.04)", borderRadius: 6, fontSize: 10, fontWeight: 800, color: stat.color }}>
-                   LIVE
-                 </div>
-               </div>
-             </div>
-           ))}
-        </div>
+        <StatsStrip
+          trendCount={news.length}
+          memeCount={memes.length}
+          loading={loading}
+        />
       </header>
 
-      {/* ── MAIN CONTENT ── */}
-      <div style={{ 
-        display: "grid", 
-        gridTemplateColumns: "300px 1fr", 
-        gap: 32,
-        alignItems: "flex-start",
-      }} className="trends-layout">
-        
-        {/* Left Sidebar: Filters */}
+      {/* ── MAIN LAYOUT ── */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "280px 1fr",
+          gap: 28,
+          alignItems: "flex-start",
+        }}
+        className="trends-layout"
+      >
+        {/* ── Left Sidebar ── */}
         <aside style={{ position: "sticky", top: 24 }}>
           <FiltersBar
             activeNiche={activeNiche}
@@ -281,117 +515,176 @@ export default function AllTrendsPage() {
             search={search}
             setSearch={setSearch}
           />
-          
-          <motion.div 
-            whileHover={{ y: -4 }}
-            style={{ 
-              marginTop: 32, 
-              padding: '24px 20px', 
-              background: "linear-gradient(135deg, rgba(243,115,56,0.06), rgba(243,115,56,0.02))", 
-              borderRadius: 24, 
-              border: "1px solid rgba(243,115,56,0.12)",
-              boxShadow: "0 12px 30px rgba(243,115,56,0.04)"
+
+          {/* Pro tip card */}
+          <motion.div
+            whileHover={{ y: -3 }}
+            transition={{ duration: 0.2 }}
+            style={{
+              marginTop: 24,
+              padding: "20px",
+              background:
+                "linear-gradient(135deg, var(--color-arc-050), transparent)",
+              borderRadius: 20,
+              border: "1px solid var(--color-arc-100)",
+              boxShadow: "0 8px 24px rgba(243,115,56,0.06)",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-               <div style={{
-                 width: 28,
-                 height: 28,
-                 borderRadius: 8,
-                 background: "var(--arc)",
-                 color: "white",
-                 display: "flex",
-                 alignItems: "center",
-                 justifyContent: "center"
-               }}>
-                 <Sparkles size={14} />
-               </div>
-               <span style={{ fontSize: 13, fontWeight: 800, color: "var(--ink)" }}>Pro Tip</span>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginBottom: 10,
+              }}
+            >
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  background: "var(--arc)",
+                  color: "white",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Sparkles size={14} aria-hidden="true" />
+              </div>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 800,
+                  color: "var(--ink)",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                Pro Tip
+              </span>
             </div>
-            <p style={{ fontSize: 12, color: "var(--slate)", margin: 0, lineHeight: 1.6, fontWeight: 500 }}>
-              Use memes to increase engagement by <span style={{ color: "var(--arc)", fontWeight: 800 }}>up to 40%</span>. Our engine suggests relevant humor for every trend.
+            <p
+              style={{
+                fontSize: 12,
+                color: "var(--slate)",
+                margin: 0,
+                lineHeight: 1.6,
+                fontWeight: 500,
+              }}
+            >
+              Meme-based posts generate{" "}
+              <span style={{ color: "var(--arc)", fontWeight: 800 }}>
+                up to 40% more engagement
+              </span>{" "}
+              than plain image posts. Use the "Use Meme" button to instantly
+              load it into your composer.
             </p>
           </motion.div>
         </aside>
 
-        {/* Right Section: Grid & Controls */}
+        {/* ── Right: Grid + Controls ── */}
         <main>
-          {/* Top Controls */}
-          <div style={{ 
-            display: "flex", 
-            justifyContent: "space-between", 
-            alignItems: "center", 
-            marginBottom: 24,
-            background: "var(--white)",
-            padding: "12px 20px",
-            borderRadius: 16,
-            border: "1px solid rgba(20,20,19,0.06)",
-            boxShadow: "0 2px 12px rgba(20,20,19,0.02)"
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <LayoutGrid size={16} style={{ color: "var(--dust)" }} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
-                {processedTrends.length} Discoveries
+          {/* Top controls bar */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 20,
+              background: "var(--white)",
+              padding: "10px 16px",
+              borderRadius: 14,
+              border: "1px solid rgba(20,20,19,0.06)",
+              boxShadow: "var(--shadow-sm)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <LayoutGrid
+                size={15}
+                style={{ color: "var(--dust)" }}
+                aria-hidden="true"
+              />
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "var(--ink)",
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                {processedTrends.length}{" "}
+                <span style={{ color: "var(--slate)", fontWeight: 500 }}>
+                  discoveries
+                </span>
               </span>
             </div>
 
-            <div style={{ display: "flex", gap: 12 }}>
-               <select 
-                 value={sortOrder}
-                 onChange={e => setSortOrder(e.target.value)}
-                 style={{
-                   padding: "8px 12px",
-                   borderRadius: 10,
-                   border: "1.5px solid rgba(20,20,19,0.08)",
-                   background: "var(--canvas)",
-                   fontSize: 12,
-                   fontWeight: 700,
-                   outline: "none",
-                   cursor: "pointer",
-                 }}
-               >
-                 <option value="score">🔥 Top Score</option>
-                 <option value="latest">🕐 Latest First</option>
-               </select>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <label htmlFor="sort-select" className="sr-only">
+                Sort trends by
+              </label>
+              <select
+                id="sort-select"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                style={{
+                  padding: "7px 10px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(20,20,19,0.08)",
+                  background: "var(--canvas)",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "var(--ink)",
+                  outline: "none",
+                  cursor: "pointer",
+                  fontFamily: "var(--font-body)",
+                }}
+              >
+                <option value="score">🔥 Top Score</option>
+                <option value="latest">🕐 Latest First</option>
+              </select>
 
-               <motion.button
-                 whileHover={{ rotate: 180 }}
-                 transition={{ duration: 0.5 }}
-                 onClick={handleRefresh}
-                 style={{
-                   width: 36,
-                   height: 36,
-                   borderRadius: 10,
-                   border: "1.5px solid rgba(20,20,19,0.08)",
-                   background: "var(--white)",
-                   display: "flex",
-                   alignItems: "center",
-                   justifyContent: "center",
-                   cursor: "pointer",
-                   color: "var(--slate)"
-                 }}
-               >
-                 <RefreshCw size={16} />
-               </motion.button>
+              <button
+                onClick={handleRefresh}
+                disabled={loading}
+                aria-label="Refresh trends"
+                className="btn-icon"
+                style={{ width: 36, height: 36, minWidth: 36 }}
+              >
+                <RefreshCw
+                  size={15}
+                  style={{
+                    animation: loading ? "spin 0.8s linear infinite" : "none",
+                  }}
+                  aria-hidden="true"
+                />
+              </button>
             </div>
           </div>
 
-          {/* Grid */}
+          {/* Trend Grid */}
           <TrendGrid
             trends={processedTrends}
-            apiData={{ news, memes, images }}
             loading={loading}
             loadingMore={loadingMore}
             hasMore={hasMore}
+            error={error}
             onLoadMore={loadMore}
             onUseIdea={handleUseIdea}
           />
         </main>
       </div>
 
-      {/* ── MODALS & TOASTS ── */}
+      {/* ── TOAST NOTIFICATION ── */}
       <InjectedToast visible={toastVisible} />
 
+      {/* ── COMPOSER MODAL (lazy) ── */}
       {composerOpen && (
         <Suspense fallback={null}>
           <ComposerModal
@@ -402,7 +695,10 @@ export default function AllTrendsPage() {
             }}
             initialCaption={injectedData?.caption || ""}
             initialHashtags={injectedData?.hashtags || []}
-            initialMediaUrls={[...(injectedData?.images || []), ...(injectedData?.memes || [])].slice(0, 5)}
+            initialMediaUrls={[
+              ...(injectedData?.images || []),
+              ...(injectedData?.memes || []),
+            ].slice(0, 5)}
           />
         </Suspense>
       )}
@@ -416,7 +712,12 @@ export default function AllTrendsPage() {
           aside {
             position: relative !important;
             top: 0 !important;
-            margin-bottom: 24px;
+            margin-bottom: 16px;
+          }
+        }
+        @media (max-width: 768px) {
+          div[style*="padding: '24px 32px'"] {
+            padding: 16px !important;
           }
         }
       `}</style>

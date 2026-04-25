@@ -1,5 +1,9 @@
-﻿/* [ignoring loop detection] */
+@import './styles/design-tokens.css';
+
+
+/* [ignoring loop detection] */
 :root {
+  /* Colors */
   --canvas: #f3f0ee;
   --canvas-lifted: #fcfbfa;
   --white: #ffffff;
@@ -7,13 +11,22 @@
   --slate: #696969;
   --dust: #d1cdc7;
   --arc: #f37338;
-  --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
-  --shadow-premium: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.05);
-  --shadow-deep: rgba(0, 0, 0, 0.15) 0px 30px 60px -12px, rgba(0, 0, 0, 0.2) 0px 18px 36px -18px;
-  --font: "Sofia Sans", Arial, sans-serif;
-  --r-btn: 12px;
-  --r-hero: 18px;
-  --r-pill: 999px;
+  --signal-orange: #cf4500;
+  
+  /* Shadows */
+  --shadow-barely: rgba(0, 0, 0, 0.04) 0px 4px 24px 0px;
+  --shadow-atmospheric: rgba(0, 0, 0, 0.08) 0px 24px 48px 0px;
+  --shadow-deep: rgba(0, 0, 0, 0.15) 0px 30px 60px -12px;
+  
+  /* Radii */
+  --r-btn: 20px;
+  --r-card: 40px;
+  --r-pill: 1000px;
+  --r-sm: 6px;
+  
+  /* Typography */
+  --font: "Sofia Sans", "Inter", Arial, sans-serif;
+  --tracking-tight: -0.02em;
 }
 @tailwind base;
 @tailwind components;
