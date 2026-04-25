@@ -93,21 +93,16 @@ function StatusBadge({ status }) {
 }
 
 // ─── Format helpers ──────────────────────────────────────────────────────────
-function formatScheduledTime(utcString, tz) {
+function formatScheduledTime(utcString) {
   if (!utcString) return "—";
   const d = new Date(utcString);
-  try {
-    return d.toLocaleString(undefined, {
-      timeZone: tz || undefined,
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return d.toLocaleString();
-  }
+  return d.toLocaleString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function timeUntil(utcString) {
@@ -159,7 +154,7 @@ function QueueCard({ post, onCancel, onRetry, onRefresh }) {
   const channels = Array.isArray(post.selected_channels)
     ? post.selected_channels
     : [];
-  const tz = post.user_timezone || "UTC";
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone; // Always show in local time for the user
   const until = timeUntil(post.scheduled_for);
 
   const handleSaveEdit = async () => {
@@ -236,7 +231,7 @@ function QueueCard({ post, onCancel, onRetry, onRefresh }) {
           <div className="flex items-center gap-2 flex-wrap mb-2">
             <div className="flex items-center gap-1 text-[11px] font-medium text-gray-500">
               <Clock className="w-3 h-3" />
-              {formatScheduledTime(post.scheduled_for, tz)}
+              {formatScheduledTime(post.scheduled_for)}
               {until && (
                 <span
                   className={`ml-1 font-bold ${

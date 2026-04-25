@@ -313,4 +313,38 @@ async function fetchPexels(q, limit) {
   }
 }
 
+/* ════════════════════════════════════════════════════
+   GET /api/trends/proxy/media?url=...
+   Securely pipes external media (images/videos) to bypass CORS.
+   ════════════════════════════════════════════════════ */
+router.get('/proxy/media', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).send('URL is required');
+
+  try {
+    const response = await axios({
+      method: 'get',
+      url: url,
+      responseType: 'stream',
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'QuickPost/1.0',
+        'Accept': 'image/*,video/*',
+      }
+    });
+
+    // Forward relevant headers
+    const contentType = response.headers['content-type'];
+    if (contentType) res.setHeader('Content-Type', contentType);
+    
+    // Cache for 1 hour
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+
+    response.data.pipe(res);
+  } catch (err) {
+    console.error('[MediaProxy] Failed to fetch:', url, err.message);
+    res.status(500).send('Failed to fetch media');
+  }
+});
+
 export default router;
