@@ -788,9 +788,9 @@ const PreviewPanel = memo(function PreviewPanel({
                     border: "none",
                     cursor: "pointer",
                     background: isActive
-                      ? "var(--ink, #141413)"
+                      ? "rgba(20,20,19,0.15)"
                       : "transparent",
-                    color: isActive ? "white" : "var(--slate, #8a8a82)",
+                    color: isActive ? "var(--ink)" : "var(--slate, #8a8a82)",
                     transition: "all 0.15s",
                     boxShadow: isActive ? "0 4px 12px rgba(0,0,0,0.12)" : "none",
                   }}

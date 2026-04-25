@@ -126,7 +126,7 @@ const InstagramOverlay = ({ format, caption, children, isFull, platformUsername,
     const isReel = format.id === 'ig_reel';
     return (
       <div className="absolute inset-0 flex flex-col pointer-events-none text-white">
-        <div className="absolute inset-0 z-[-1] bg-black">{children}</div>
+        <div className="absolute inset-0 z-[-1] bg-black/40 border-2 border-black">{children}</div>
 
         {/* Story/Reel Top Bar */}
         <div className="p-3 flex gap-1 mt-2">
@@ -847,7 +847,7 @@ export default function PostPreviewModal({ post, onClose }) {
                         const displayUrl = post.thumbnail_url || post.media_url;
 
                         if (displayUrl) {
-                          // If it's a video and we have a media_url but it's the video itself, 
+                          // If it's a video and we have a media_url but it's the video itself,
                           // the img tag might fail unless it's the thumbnail_url.
                           // Cloudinary thumbnail_url is always an image.
                           return (
@@ -855,7 +855,7 @@ export default function PostPreviewModal({ post, onClose }) {
                               src={displayUrl}
                               alt="Post Preview"
                               className="w-full h-full object-cover"
-                              onError={e => { 
+                              onError={e => {
                                 if (!isImage && post.media_url && e.target.src !== post.media_url) {
                                   e.target.src = post.media_url;
                                 } else {
