@@ -105,98 +105,13 @@ class GoogleOAuthService {
   }
 
   /**
-   * Build token payload from an already-issued Google provider token
-   * (e.g. Supabase OAuth session provider_token/provider_refresh_token).
-   * @param {Object} params
-   * @param {string} params.accessToken
-   * @param {string|null} params.refreshToken
-   * @param {number|string|Date|null} params.expiryDate
-   * @returns {Promise<Object>} Token payload compatible with storeTokens()
-   */
-  async buildTokenDataFromProviderTokens({
-    accessToken,
-    refreshToken = null,
-    expiryDate = null,
-  }) {
-    try {
-      this.oauth2Client.setCredentials({
-        access_token: accessToken,
-        refresh_token: refreshToken || undefined,
-      });
-
-      const oauth2 = google.oauth2({ version: "v2", auth: this.oauth2Client });
-      const { data: userInfo } = await oauth2.userinfo.get();
-
-      const youtube = google.youtube({
-        version: "v3",
-        auth: this.oauth2Client,
-      });
-      let channelTitle = userInfo.name;
-      try {
-        const channelRes = await youtube.channels.list({
-          part: "snippet",
-          mine: true,
-        });
-        if (channelRes.data.items && channelRes.data.items.length > 0) {
-          channelTitle = channelRes.data.items[0].snippet.title;
-        }
-      } catch (err) {
-        console.warn(
-          "⚠️ [GOOGLE_OAUTH] Failed to fetch YT channel info from provider token:",
-          err.message,
-        );
-      }
-
-      const normalizedExpiry = expiryDate
-        ? new Date(expiryDate)
-        : new Date(Date.now() + 50 * 60 * 1000);
-
-      return {
-        accessToken,
-        refreshToken,
-        expiryDate: Number.isNaN(normalizedExpiry.getTime())
-          ? Date.now() + 50 * 60 * 1000
-          : normalizedExpiry.getTime(),
-        userInfo: {
-          email: userInfo.email,
-          name: userInfo.name,
-          picture: userInfo.picture,
-          googleId: userInfo.id,
-          username: channelTitle,
-        },
-      };
-    } catch (error) {
-      console.error("Error building token data from provider token:", error);
-      throw new Error(
-        "Failed to build YouTube token data from provider session",
-      );
-    }
-  }
-
-  /**
    * Store or update Google/YouTube tokens in Supabase
    * @param {string} userId - User's UUID
    * @param {Object} tokenData - Token information
    */
   async storeTokens(userId, tokenData) {
     try {
-      const expiryDate = tokenData?.expiryDate
-        ? new Date(tokenData.expiryDate)
-        : new Date(Date.now() + 50 * 60 * 1000);
-      const finalExpiryDate = Number.isNaN(expiryDate.getTime())
-        ? new Date(Date.now() + 50 * 60 * 1000)
-        : expiryDate;
-
-      let refreshToken = tokenData.refreshToken;
-      if (!refreshToken) {
-        const { data: existing } = await supabase
-          .from("social_tokens")
-          .select("refresh_token")
-          .eq("user_id", userId)
-          .eq("provider", "youtube")
-          .maybeSingle();
-        refreshToken = existing?.refresh_token || null;
-      }
+      const expiryDate = new Date(tokenData.expiryDate);
 
       const { data, error } = await supabase
         .from("social_tokens")
@@ -205,8 +120,8 @@ class GoogleOAuthService {
             user_id: userId,
             provider: "youtube",
             access_token: tokenData.accessToken,
-            refresh_token: refreshToken,
-            token_expiry: finalExpiryDate.toISOString(),
+            refresh_token: tokenData.refreshToken,
+            token_expiry: expiryDate.toISOString(),
             username: tokenData.userInfo?.username,
             updated_at: new Date().toISOString(),
           },

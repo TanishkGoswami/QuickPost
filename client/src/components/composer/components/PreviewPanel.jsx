@@ -771,38 +771,42 @@ const PreviewPanel = memo(function PreviewPanel({
             if (!meta) return null;
             const isActive = activeId === pid;
             return (
-              <motion.button
-                key={pid}
-                onClick={() => onActivePlatformChange(pid)}
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.96 }}
-                style={{
-                  flexShrink: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 5,
-                  padding: "4px 10px",
-                  borderRadius: 20,
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  fontFamily: "inherit",
-                  background: isActive
-                    ? "var(--ink, #141413)"
-                    : "var(--canvas-lifted, #f5f5f4)",
-                  color: isActive ? "white" : "var(--slate, #8a8a82)",
-                  transition: "all 0.15s",
-                }}
-              >
-                <img
-                  src={meta.icon}
-                  style={{ width: 11, height: 11, objectFit: "contain" }}
-                  alt=""
-                  onError={(e) => (e.target.style.display = "none")}
-                />
-                {meta.label}
-              </motion.button>
+                <motion.button
+                  key={pid}
+                  onClick={() => onActivePlatformChange(pid)}
+                  title={meta.label}
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.94 }}
+                  style={{
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 32,
+                    height: 32,
+                    borderRadius: "50%",
+                    border: "none",
+                    cursor: "pointer",
+                    background: isActive
+                      ? "var(--ink, #141413)"
+                      : "transparent",
+                    color: isActive ? "white" : "var(--slate, #8a8a82)",
+                    transition: "all 0.15s",
+                    boxShadow: isActive ? "0 4px 12px rgba(0,0,0,0.12)" : "none",
+                  }}
+                >
+                  <img
+                    src={meta.icon}
+                    style={{
+                      width: 18,
+                      height: 18,
+                      objectFit: "contain",
+                      transition: "all 0.2s"
+                    }}
+                    alt={meta.label}
+                    onError={(e) => (e.target.style.display = "none")}
+                  />
+                </motion.button>
             );
           })}
         </div>
