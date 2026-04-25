@@ -1,8 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
-import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
-import logo from '/logo.png';
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Menu, X } from "lucide-react";
+import {
+  motion,
+  AnimatePresence,
+  useScroll,
+  useMotionValueEvent,
+} from "framer-motion";
+import logo from "/logo.png";
+import InteractiveButton from "../../../components/ui/InteractiveButton.jsx";
 
 export default function LandingNav() {
   const navigate = useNavigate();
@@ -13,73 +19,135 @@ export default function LandingNav() {
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
-    if (latest > 20) {
-      setScrolled(true);
-    } else {
-      setScrolled(false);
-    }
+    setScrolled(latest > 20);
   });
 
   const navLinks = [
-    { label: 'Features', href: '#features' },
-    { label: 'How It Works', href: '#how-it-works' },
-    { label: 'Pricing', href: '#pricing' },
+    { label: "Features", href: "#features" },
+    { label: "How It Works", href: "#how-it-works" },
+    { label: "Pricing", href: "#pricing" },
   ];
 
   return (
     <>
       <motion.nav
-        className="landing-nav"
-        animate={{
-          backgroundColor: scrolled ? 'rgba(255,255,255,0.88)' : 'rgba(255,255,255,0)',
-          boxShadow: scrolled ? '0 10px 30px -10px rgba(0,0,0,0.08)' : '0 0 0 rgba(0,0,0,0)',
-          borderBottomColor: scrolled ? 'rgba(20,20,19,0.07)' : 'rgba(20,20,19,0)',
-        }}
-        transition={{ duration: 0.35 }}
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
         style={{
-          position: 'sticky',
+          position: "fixed",
           top: 0,
-          zIndex: 100,
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          borderBottom: '1px solid transparent',
+          left: 0,
+          right: 0,
+          zIndex: 1000,
+          padding: "0 20px",
+          pointerEvents: "none",
         }}
       >
         <motion.div
           animate={{
-            paddingTop: scrolled ? 10 : 20,
-            paddingBottom: scrolled ? 10 : 20,
+            backgroundColor: scrolled ? "rgba(255, 255, 255, 0.8)" : "rgba(255, 255, 255, 0.4)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            boxShadow: scrolled ? "0 4px 24px -1px rgba(0, 0, 0, 0.05), 0 0 1px 0 rgba(0, 0, 0, 0.1)" : "0 0 0 rgba(0,0,0,0)",
+            marginTop: scrolled ? 12 : 16,
+            borderRadius: scrolled ? "24px" : "20px",
+            border: scrolled ? "1px solid rgba(255, 255, 255, 0.5)" : "none",
           }}
-          transition={{ duration: 0.35 }}
-          className="landing-container"
+          transition={{ duration: 0.4, ease: "easeInOut" }}
           style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: '20px 24px', maxWidth: 1280, margin: '0 auto',
+            maxWidth: 1100,
+            margin: "0 auto",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "8px 12px 8px 20px",
+            pointerEvents: "auto", // Re-enable clicks for the actual nav bar
           }}
         >
-          {/* Brand */}
-          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-            <img src={logo} alt="GAP Social-pilot" style={{ height: 32, width: 32, objectFit: 'contain' }} />
-            <span style={{ fontSize: isMobile ? 15 : 17, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.03em' }}>
+          {/* Logo Section */}
+          <Link
+            to="/"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              textDecoration: "none",
+              transition: "opacity 0.2s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+            onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+          >
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <img
+                src={logo}
+                alt="Logo"
+                style={{ height: 32, width: 32, objectFit: "contain", position: "relative", zIndex: 2 }}
+              />
+              <div 
+                style={{ 
+                  position: "absolute", 
+                  inset: -4, 
+                  background: "var(--arc)", 
+                  borderRadius: "50%", 
+                  filter: "blur(8px)", 
+                  opacity: 0.2 
+                }} 
+              />
+            </div>
+            <span
+              style={{
+                fontSize: 16,
+                fontWeight: 700,
+                color: "var(--ink)",
+                letterSpacing: "-0.03em",
+                whiteSpace: "nowrap",
+              }}
+            >
               GAP Social‑pilot
             </span>
           </Link>
 
-          {/* Desktop Links */}
+          {/* Desktop Navigation */}
           {!isMobile && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
-              {navLinks.map(link => (
+            <div 
+              style={{ 
+                display: "flex", 
+                alignItems: "center", 
+                background: "rgba(20,20,19,0.03)",
+                padding: "4px",
+                borderRadius: "14px",
+                gap: 4
+              }}
+            >
+              {navLinks.map((link) => (
                 <a
                   key={link.label}
                   href={link.href}
-                  style={{ fontSize: 14, fontWeight: 500, color: 'var(--slate)', textDecoration: 'none', transition: 'color 0.15s', letterSpacing: '-0.01em' }}
-                  onMouseEnter={e => e.currentTarget.style.color = 'var(--ink)'}
-                  onMouseLeave={e => e.currentTarget.style.color = 'var(--slate)'}
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "var(--slate)",
+                    textDecoration: "none",
+                    padding: "8px 16px",
+                    borderRadius: "10px",
+                    transition: "all 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = "var(--ink)";
+                    e.currentTarget.style.background = "rgba(255,255,255,0.8)";
+                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = "var(--slate)";
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
                 >
                   {link.label}
                 </a>
@@ -87,37 +155,49 @@ export default function LandingNav() {
             </div>
           )}
 
-          {/* CTA & Mobile Toggle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Actions */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {!isMobile && (
-              <div style={{ display: 'flex', gap: 8 }}>
+              <>
                 <Link
                   to="/login"
-                  style={{ fontSize: 14, fontWeight: 500, color: 'var(--ink)', textDecoration: 'none', padding: '8px 16px', borderRadius: 'var(--r-btn)', transition: 'background 0.15s' }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(20,20,19,0.05)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: "var(--ink)",
+                    textDecoration: "none",
+                    padding: "10px 20px",
+                    borderRadius: "12px",
+                    transition: "all 0.2s",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(20,20,19,0.04)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   Sign in
                 </Link>
-                <button
-                  onClick={() => navigate('/login')}
-                  className="btn-ink"
-                  style={{ fontSize: 14, padding: '8px 20px' }}
+                <InteractiveButton
+                  onClick={() => navigate("/login")}
+                  style={{ fontSize: 13, height: 40 }}
                 >
                   Get started
-                </button>
-              </div>
+                </InteractiveButton>
+              </>
             )}
 
             {isMobile && (
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 style={{
-                  width: 40, height: 40, borderRadius: 'var(--r-btn)',
-                  border: '1px solid rgba(20,20,19,0.08)',
-                  background: 'transparent',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: 'var(--ink)', cursor: 'pointer',
+                  width: 40,
+                  height: 40,
+                  borderRadius: "12px",
+                  background: "rgba(20,20,19,0.04)",
+                  border: "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--ink)",
+                  cursor: "pointer",
                 }}
               >
                 {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -131,42 +211,75 @@ export default function LandingNav() {
       <AnimatePresence>
         {mobileMenuOpen && isMobile && (
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 40 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
             style={{
-              position: 'fixed', top: scrolled ? 64 : 84, left: 0, right: 0, bottom: 0,
-              background: 'var(--canvas)', zIndex: 99,
-              padding: '24px', display: 'flex', flexDirection: 'column', gap: 32,
+              position: "fixed",
+              top: scrolled ? 80 : 100,
+              left: 20,
+              right: 20,
+              background: "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              zIndex: 999,
+              borderRadius: "24px",
+              padding: "24px",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.1), 0 0 1px rgba(0,0,0,0.1)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 24,
             }}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {navLinks.map(link => (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {navLinks.map((link) => (
                 <a
                   key={link.label}
                   href={link.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  style={{ fontSize: 24, fontWeight: 600, color: 'var(--ink)', textDecoration: 'none', letterSpacing: '-0.03em' }}
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 600,
+                    color: "var(--ink)",
+                    textDecoration: "none",
+                    padding: "12px 16px",
+                    borderRadius: "12px",
+                    background: "rgba(20,20,19,0.02)",
+                  }}
                 >
                   {link.label}
                 </a>
               ))}
             </div>
-            <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <button
-                onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
-                style={{ width: '100%', padding: '16px', borderRadius: 'var(--r-btn)', border: '1px solid rgba(20,20,19,0.1)', background: 'transparent', fontSize: 16, fontWeight: 600, color: 'var(--ink)', cursor: 'pointer' }}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  navigate("/login");
+                }}
+                style={{
+                  width: "100%",
+                  padding: "16px",
+                  borderRadius: "16px",
+                  background: "rgba(20,20,19,0.04)",
+                  border: "none",
+                  fontSize: 16,
+                  fontWeight: 600,
+                  color: "var(--ink)",
+                }}
               >
                 Sign in
               </button>
-              <button
-                onClick={() => { setMobileMenuOpen(false); navigate('/login'); }}
-                className="btn-ink"
-                style={{ width: '100%', padding: '16px', borderRadius: 'var(--r-btn)', fontSize: 16, fontWeight: 600 }}
+              <InteractiveButton
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  navigate("/login");
+                }}
+                style={{ width: "100%", fontSize: 16 }}
               >
                 Get started — Free
-              </button>
+              </InteractiveButton>
             </div>
           </motion.div>
         )}
