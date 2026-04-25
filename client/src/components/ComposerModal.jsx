@@ -853,7 +853,18 @@ function ComposerModal({
   const [error, setError] = useState(null);
   const [activePreviewPlatform, setActivePreviewPlatform] =
     useState("instagram");
-  const [selectedSizePreset, setSelectedSizePreset] = useState("li_sq");
+  const [platformPresets, setPlatformPresets] = useState({
+    instagram: "ig-post-square",
+    facebook: "fb-image",
+    x: "x-image",
+    linkedin: "li-square",
+    youtube: "yt-video",
+    threads: "threads-post",
+    pinterest: "pin-standard",
+    bluesky: "bsky-image",
+    mastodon: "masto-image",
+    reddit: "reddit-image",
+  });
   const [customizationExpanded, setCustomizationExpanded] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [mobileActiveTab, setMobileActiveTab] = useState("compose");
@@ -883,8 +894,12 @@ function ComposerModal({
   const { smartSizes, availablePresets, selectedRatio } = useSmartSizes({
     selectedChannels,
     activePlatform: activePreviewPlatform,
-    selectedSizePreset,
-    setSelectedSizePreset,
+    selectedSizePreset: platformPresets[activePreviewPlatform],
+    setSelectedSizePreset: (val) =>
+      setPlatformPresets((prev) => ({
+        ...prev,
+        [activePreviewPlatform]: val,
+      })),
     onAutoFixed: (msg) => {
       setAutoFixMsg(msg);
       setTimeout(() => setAutoFixMsg(null), 3500);
@@ -1136,6 +1151,7 @@ function ComposerModal({
       formData.append("selectedChannels", JSON.stringify(selectedChannels));
       formData.append("postType", postType);
       formData.append("platformData", JSON.stringify(platformData));
+      formData.append("platformPresets", JSON.stringify(platformPresets));
       formData.append("userTimezone", userTimezone);
       formData.append("isScheduled", isScheduled ? "true" : "false");
 
@@ -1706,50 +1722,120 @@ function ComposerModal({
 
                 {/* ── Smart Size ── */}
                 <Section
-                  label="Post Size"
-                  hint={
-                    selectedChannels.length > 1
-                      ? "Smart-filtered for your platforms"
-                      : ""
-                  }
+                  label="Content Format"
+                  hint={`Format for ${PLATFORM_META[activePreviewPlatform]?.label || "active platform"}`}
                   mb={20}
                 >
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {smartSizes
-                      .filter(
-                        (s) =>
-                          s.badge !== "none" || selectedChannels.length <= 1,
-                      )
-                      .map((size) => {
-                        const matchingPreset = availablePresets.find(
-                          (p) => p.ratio === size.id,
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 10,
+                      flexWrap: "nowrap",
+                      overflowX: "auto",
+                      paddingBottom: 10,
+                      scrollbarWidth: "none",
+                      msOverflowStyle: "none",
+                    }}
+                  >
+                    {(PLATFORM_LAYOUT_PRESETS[activePreviewPlatform] || []).map(
+                      (preset) => {
+                        const sizeInfo = smartSizes.find(
+                          (s) => s.id === preset.ratio,
                         );
                         const isSelected =
-                          matchingPreset?.id === selectedSizePreset;
+                          platformPresets[activePreviewPlatform] === preset.id;
                         return (
-                          <SizeButton
-                            key={size.id}
-                            size={size}
-                            isSelected={isSelected}
-                            onClick={() => {
-                              if (matchingPreset) {
-                                setSelectedSizePreset(matchingPreset.id);
-                              } else {
-                                // Logic: Find first platform that supports this ratio and switch to it
-                                const supportingPlatform = selectedChannels.find(p => 
-                                  (PLATFORM_SUPPORTED_RATIOS[p] || []).includes(size.id)
-                                );
-                                if (supportingPlatform) {
-                                  setActivePreviewPlatform(supportingPlatform);
-                                  const platformPresets = PLATFORM_LAYOUT_PRESETS[supportingPlatform] || [];
-                                  const preset = platformPresets.find(p => p.ratio === size.id);
-                                  if (preset) setSelectedSizePreset(preset.id);
-                                }
-                              }
+                          <motion.button
+                            key={preset.id}
+                            whileHover={{ scale: 1.02, y: -2 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() =>
+                              setPlatformPresets((prev) => ({
+                                ...prev,
+                                [activePreviewPlatform]: preset.id,
+                              }))
+                            }
+                            style={{
+                              flexShrink: 0,
+                              minWidth: 130,
+                              padding: "12px 14px",
+                              background: isSelected
+                                ? "rgba(20,20,19,0.03)"
+                                : "var(--white)",
+                              border: isSelected
+                                ? "2px solid var(--arc)"
+                                : "1px solid rgba(20,20,19,0.08)",
+                              borderRadius: "14px",
+                              cursor: "pointer",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 4,
+                              textAlign: "left",
+                              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                              boxShadow: isSelected
+                                ? "0 4px 12px rgba(243,115,56,0.12)"
+                                : "0 2px 4px rgba(0,0,0,0.02)",
                             }}
-                          />
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                width: "100%",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 800,
+                                  color: isSelected
+                                    ? "var(--arc)"
+                                    : "var(--ink)",
+                                }}
+                              >
+                                {preset.title}
+                              </span>
+                              {sizeInfo?.badge && (
+                                <div
+                                  style={{
+                                    fontSize: 8,
+                                    fontWeight: 900,
+                                    background:
+                                      sizeInfo.badge === "best"
+                                        ? "var(--arc)"
+                                        : "transparent",
+                                    color:
+                                      sizeInfo.badge === "best"
+                                        ? "white"
+                                        : "var(--arc)",
+                                    border:
+                                      sizeInfo.badge === "best"
+                                        ? "none"
+                                        : "1px solid var(--arc)",
+                                    padding: "1px 5px",
+                                    borderRadius: 4,
+                                    textTransform: "uppercase",
+                                  }}
+                                >
+                                  {sizeInfo.badge}
+                                </div>
+                              )}
+                            </div>
+                            <span
+                              style={{
+                                fontSize: 9,
+                                color: "var(--slate)",
+                                fontWeight: 500,
+                                opacity: 0.7,
+                              }}
+                            >
+                              {preset.subtitle} ({preset.ratio})
+                            </span>
+                          </motion.button>
                         );
-                      })}
+                      },
+                    )}
                   </div>
                 </Section>
 
