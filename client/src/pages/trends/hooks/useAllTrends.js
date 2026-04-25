@@ -28,7 +28,9 @@ const SUBREDDITS = [
   'Daytrading', 'Trading', 'TradingView', 'Forexstrategy', 'metatrader',
   'ipl', 'worldnews', 'sports', 'interesting', 'memes', 
   'dankmemes', 'interestingasfuck', 'nextfuckinglevel', 
-  'BollyBlindsNGossip', 'funny', 'technology'
+  'BollyBlindsNGossip', 'funny', 'technology',
+  'Influencersinthewild', 'StockMarket', 'indiameme', 'Cricket', 
+  'news', 'IndiaInvestments', 'jobs'
 ];
 
 /** Fetch posts from multiple subreddits (via backend proxy) */

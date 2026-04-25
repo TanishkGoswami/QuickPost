@@ -88,12 +88,15 @@ router.get('/trends/news', async (req, res) => {
 async function fetchGNews(categories, limit, offset) {
   try {
     // GNews uses 'category' (singular) and limited set: general, world, nation, business, technology, entertainment, sports, science, health
+    // GNews categories: general, world, nation, business, technology, entertainment, sports, science, health
     const catArray = categories.split(',');
-    const primaryCat = catArray[0] || 'general';
+    // Map our categories to GNews supported ones
+    const validGNewsCats = ['general', 'world', 'nation', 'business', 'technology', 'entertainment', 'sports', 'science', 'health'];
+    const primaryCat = catArray.find(c => validGNewsCats.includes(c.toLowerCase())) || 'general';
     
     const r = await axios.get('https://gnews.io/api/v4/top-headlines', {
       params: {
-        category: primaryCat === 'business' || primaryCat === 'technology' ? primaryCat : 'general',
+        category: primaryCat,
         lang: 'en',
         max: limit,
         apikey: GNEWS_KEY
