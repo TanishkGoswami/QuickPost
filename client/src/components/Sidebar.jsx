@@ -300,11 +300,7 @@ function Sidebar() {
           alt=""
         />
       ),
-      onConnect: () =>
-        alert("Coming Soon", "Mastodon integration coming soon!", {
-          intent: "warning",
-        }),
-
+      onConnect: () => setShowMastodonModal(true),
     },
     {
       id: "bluesky",
@@ -736,8 +732,8 @@ function Sidebar() {
                   onClick={platform.onConnect}
                   title={`Connect ${platform.name}`}
                   style={{
-                    width: 42,
-                    height: 42,
+                    width: 44,
+                    height: 44,
                     borderRadius: "var(--r-btn)",
                     background: "var(--canvas-lifted)",
                     border: "1px dashed rgba(20,20,19,0.2)",

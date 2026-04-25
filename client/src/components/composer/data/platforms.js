@@ -147,18 +147,18 @@ export const PLATFORM_SUPPORTED_RATIOS = {
 export const PLATFORM_POST_TYPES = {
   instagram: ["post", "story", "reel"],
   facebook:  ["post", "story", "reel"],
-  youtube:   ["post", "reel"],
-  x:         ["post"],
-  linkedin:  ["post"],
+  youtube:   ["video", "shorts", "community"],
+  x:         ["tweet", "thread"],
+  linkedin:  ["post", "document"],
   threads:   ["post"],
-  pinterest: ["post"],
+  pinterest: ["pin", "idea_pin"],
   bluesky:   ["post"],
-  mastodon:  ["post"],
+  mastodon:  ["toot"],
   reddit:    ["post"],
 };
 
 /** Layout presets per platform */
-export const PLATFORM_LAYOUT_PRESETS = {
+export const PLATFORM_LAYOUT_PRESETS = { // Test
   instagram: [
     { id: "ig-post-square", ratio: "1:1",   title: "Post Square",  subtitle: "1080×1080" },
     { id: "ig-portrait",    ratio: "4:5",   title: "Portrait",     subtitle: "1080×1350" },
@@ -169,15 +169,15 @@ export const PLATFORM_LAYOUT_PRESETS = {
   youtube: [
     { id: "yt-video",     ratio: "16:9", title: "Video",     subtitle: "1920×1080" },
     { id: "yt-shorts",    ratio: "9:16", title: "Shorts",    subtitle: "1080×1920" },
-    { id: "yt-thumbnail", ratio: "16:9", title: "Thumbnail", subtitle: "1280×720"  },
+    { id: "yt-community", ratio: "1:1",  title: "Community", subtitle: "1080×1080" },
   ],
   linkedin: [
-    { id: "li-image",    ratio: "1.91:1", title: "Image",    subtitle: "1200×627"  },
+    { id: "li-image",    ratio: "1.91:1", title: "Feed Image", subtitle: "1200×627"  },
     { id: "li-square",   ratio: "1:1",    title: "Square",   subtitle: "1080×1080" },
-    { id: "li-carousel", ratio: "1:1",    title: "Carousel", subtitle: "1080×1080" },
+    { id: "li-document", ratio: "1:1.41", title: "Document/PDF", subtitle: "Standard" },
   ],
   x: [
-    { id: "x-image",  ratio: "16:9", title: "Image",  subtitle: "1200×675"  },
+    { id: "x-image",  ratio: "16:9", title: "Wide Tweet",  subtitle: "1200×675"  },
     { id: "x-square", ratio: "1:1",  title: "Square", subtitle: "1080×1080" },
   ],
   facebook: [
@@ -186,7 +186,8 @@ export const PLATFORM_LAYOUT_PRESETS = {
     { id: "fb-story", ratio: "9:16", title: "Story", subtitle: "1080×1920" },
   ],
   pinterest: [
-    { id: "pin-standard", ratio: "2:3", title: "Pin", subtitle: "1000×1500" },
+    { id: "pin-standard", ratio: "2:3", title: "Standard Pin", subtitle: "1000×1500" },
+    { id: "pin-idea",     ratio: "9:16", title: "Idea Pin",     subtitle: "1080×1920" },
     { id: "pin-square",   ratio: "1:1", title: "Square Pin", subtitle: "1000×1000" },
   ],
   threads: [
@@ -213,6 +214,7 @@ export const ASPECT_RATIOS = [
   { id: "4:5",    label: "Portrait",   desc: "4:5 Format",        cssClass: "aspect-[4/5]"    },
   { id: "9:16",   label: "Vertical",   desc: "Reel / Story",      cssClass: "aspect-[9/16]"   },
   { id: "1.91:1", label: "Landscape",  desc: "LinkedIn / FB",     cssClass: "aspect-[1.91/1]" },
+  { id: "1:1.41", label: "Document",   desc: "LinkedIn PDF",      cssClass: "aspect-[1/1.41]" },
   { id: "2:3",    label: "Pin",        desc: "Pinterest",         cssClass: "aspect-[2/3]"    },
   { id: "16:9",   label: "Widescreen", desc: "YouTube / Wide",    cssClass: "aspect-video"    },
 ];

@@ -207,7 +207,7 @@ const MediaUploader = memo(function MediaUploader({
 
   /* Add validated files */
   const addFiles = useCallback(
-    (rawFiles) => {
+    async (rawFiles) => {
       const valid = Array.from(rawFiles).filter(
         (f) => f.type.startsWith("image/") || f.type.startsWith("video/"),
       );
@@ -215,10 +215,39 @@ const MediaUploader = memo(function MediaUploader({
         onError?.("Only image and video files are supported.");
         return;
       }
-      const newItems = valid.map((file) => ({
-        id: `${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-        file,
-      }));
+
+      const getDimensions = (file) => {
+        return new Promise((resolve) => {
+          if (file.type.startsWith("image/")) {
+            const img = new Image();
+            img.onload = () => {
+              const d = { width: img.width, height: img.height, ratio: img.width / img.height };
+              URL.revokeObjectURL(img.src);
+              resolve(d);
+            };
+            img.src = URL.createObjectURL(file);
+          } else if (file.type.startsWith("video/")) {
+            const video = document.createElement("video");
+            video.onloadedmetadata = () => {
+              const d = { width: video.videoWidth, height: video.videoHeight, ratio: video.videoWidth / video.videoHeight };
+              URL.revokeObjectURL(video.src);
+              resolve(d);
+            };
+            video.src = URL.createObjectURL(file);
+          } else {
+            resolve(null);
+          }
+        });
+      };
+
+      const newItems = await Promise.all(
+        valid.map(async (file) => ({
+          id: `${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+          file,
+          dimensions: await getDimensions(file),
+        }))
+      );
+
       setMediaFiles((prev) => [...prev, ...newItems].slice(0, MAX_FILES));
 
       // Brief success pulse

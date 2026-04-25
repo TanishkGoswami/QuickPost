@@ -1,19 +1,3 @@
-/**
- * ComposerModal.jsx — v3.0 (Modular Architecture)
- * ─────────────────────────────────────────────────────────────────
- * ORCHESTRATOR ONLY — no business logic inline.
- *
- * Architecture:
- *   /data/platforms.js              — constants
- *   /engines/PostIntelligenceEngine — analysis logic
- *   /engines/SmartSizeEngine        — size compatibility logic
- *   /hooks/usePostIntelligence      — memoized engine wrapper
- *   /hooks/useSmartSizes            — memoized size wrapper
- *   /components/IntelligencePanel   — "What will happen?" UI
- *   /components/MediaUploader       — drag/drop + reorder
- *   /components/PreviewPanel        — live platform previews
- */
-
 import React, {
   useState,
   useRef,
@@ -22,6 +6,7 @@ import React, {
   useCallback,
   memo,
 } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -53,6 +38,7 @@ import {
   PLATFORM_META,
   PLATFORM_POST_TYPES,
   PLATFORM_LAYOUT_PRESETS,
+  PLATFORM_SUPPORTED_RATIOS,
   getPresetsForPlatform,
 } from "./composer/data/platforms.js";
 import { usePostIntelligence } from "./composer/hooks/usePostIntelligence.js";
@@ -61,9 +47,6 @@ import IntelligencePanel from "./composer/components/IntelligencePanel.jsx";
 import MediaUploader from "./composer/components/MediaUploader.jsx";
 import PreviewPanel from "./composer/components/PreviewPanel.jsx";
 
-/* ─────────────────────────────────────────────────────────────────
-   CONSTANTS
-   ───────────────────────────────────────────────────────────────── */
 const QUICK_SUGGESTIONS = [
   "Hell yeh !! 🔥",
   "Excited to share this! ✨",
@@ -87,22 +70,17 @@ const SUGGESTED_HASHTAGS = [
   "#branding",
 ];
 
-/* ─────────────────────────────────────────────────────────────────
-   CALENDAR / CLOCK PICKERS
-   (Self-contained — kept here since they are small and modal-specific)
-   ───────────────────────────────────────────────────────────────── */
-const ClockView = memo(function ClockView({ value, onChange }) {
+const ClockView = memo(function ClockView({ value, onChange, minTime }) {
   const [mode, setMode] = useState("hours"); // 'hours' or 'minutes'
   const initialH = parseInt(value.split(":")[0]) || 0;
   const initialM = parseInt(value.split(":")[1]) || 0;
-  
+
   const [hour, setHour] = useState(initialH % 12 || 12);
   const [minute, setMinute] = useState(initialM);
   const [meridiem, setMeridiem] = useState(initialH >= 12 ? "PM" : "AM");
   const [isDragging, setIsDragging] = useState(false);
   const faceRef = useRef(null);
 
-  // Sync internal state when prop changes (e.g. from quick suggestions)
   useEffect(() => {
     const h = parseInt(value.split(":")[0]) || 0;
     const m = parseInt(value.split(":")[1]) || 0;
@@ -111,23 +89,41 @@ const ClockView = memo(function ClockView({ value, onChange }) {
     setMeridiem(h >= 12 ? "PM" : "AM");
   }, [value]);
 
+  const [minH, minM] = useMemo(() => 
+    minTime ? minTime.split(":").map(Number) : [null, null], 
+  [minTime]);
+
+  const isPastH = useCallback((h12, mer) => {
+    if (minH === null) return false;
+    const h24 = (mer === "PM" ? (h12 % 12) + 12 : h12 % 12);
+    return h24 < minH;
+  }, [minH]);
+
+  const isPastM = useCallback((h12, m, mer) => {
+    if (minH === null) return false;
+    const h24 = (mer === "PM" ? (h12 % 12) + 12 : h12 % 12);
+    if (h24 < minH) return true;
+    if (h24 === minH && m < minM) return true;
+    return false;
+  }, [minH, minM]);
+
   const hours = [
-    { v: 12, x: 0, y: -80 }, { v: 1, x: 40, y: -69 }, { v: 2, x: 69, y: -40 },
-    { v: 3, x: 80, y: 0 }, { v: 4, x: 69, y: 40 }, { v: 5, x: 40, y: 69 },
-    { v: 6, x: 0, y: 80 }, { v: 7, x: -40, y: 69 }, { v: 8, x: -69, y: 40 },
-    { v: 9, x: -80, y: 0 }, { v: 10, x: -69, y: -40 }, { v: 11, x: -40, y: -69 }
+    { v: 12, x: 0, y: -84 }, { v: 1, x: 42, y: -73 }, { v: 2, x: 73, y: -42 },
+    { v: 3, x: 84, y: 0 }, { v: 4, x: 73, y: 42 }, { v: 5, x: 42, y: 73 },
+    { v: 6, x: 0, y: 84 }, { v: 7, x: -42, y: 73 }, { v: 8, x: -73, y: 42 },
+    { v: 9, x: -84, y: 0 }, { v: 10, x: -73, y: -42 }, { v: 11, x: -42, y: -73 }
   ];
 
   const minutes = [
-    { v: 0, x: 0, y: -80 }, { v: 5, x: 40, y: -69 }, { v: 10, x: 69, y: -40 },
-    { v: 15, x: 80, y: 0 }, { v: 20, x: 69, y: 40 }, { v: 25, x: 40, y: 69 },
-    { v: 30, x: 0, y: 80 }, { v: 35, x: -40, y: 69 }, { v: 40, x: -69, y: 40 },
-    { v: 45, x: -80, y: 0 }, { v: 50, x: -69, y: -40 }, { v: 55, x: -40, y: -69 }
+    { v: 0, x: 0, y: -84 }, { v: 5, x: 42, y: -73 }, { v: 10, x: 73, y: -42 },
+    { v: 15, x: 84, y: 0 }, { v: 20, x: 73, y: 42 }, { v: 25, x: 42, y: 73 },
+    { v: 30, x: 0, y: 84 }, { v: 35, x: -42, y: 73 }, { v: 40, x: -73, y: 42 },
+    { v: 45, x: -84, y: 0 }, { v: 50, x: -73, y: -42 }, { v: 55, x: -42, y: -73 }
   ];
 
   const to24h = (h, m, ampm) => {
-    let hh = h;
-    if (ampm === "PM" && hh < 12) hh += 12;
+    let hh = h % 12;
+    if (ampm === "PM") hh += 12;
     if (ampm === "AM" && hh === 12) hh = 0;
     return `${String(hh).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   };
@@ -143,6 +139,8 @@ const ClockView = memo(function ClockView({ value, onChange }) {
     onChange(to24h(hour, m, meridiem));
   };
 
+  const isCurrentSelectionPast = isPastM(hour, minute, meridiem);
+
   const calculateValueFromCoords = (clientX, clientY) => {
     if (!faceRef.current) return;
     const rect = faceRef.current.getBoundingClientRect();
@@ -150,7 +148,7 @@ const ClockView = memo(function ClockView({ value, onChange }) {
     const centerY = rect.top + rect.height / 2;
     const dx = clientX - centerX;
     const dy = clientY - centerY;
-    
+
     let angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
     if (angle < 0) angle += 360;
 
@@ -170,9 +168,7 @@ const ClockView = memo(function ClockView({ value, onChange }) {
   };
 
   const handleMouseMove = (e) => {
-    if (isDragging) {
-      calculateValueFromCoords(e.clientX, e.clientY);
-    }
+    if (isDragging) calculateValueFromCoords(e.clientX, e.clientY);
   };
 
   const handleTouchMove = (e) => {
@@ -188,7 +184,6 @@ const ClockView = memo(function ClockView({ value, onChange }) {
         if (mode === "hours") setMode("minutes");
       }
     };
-
     if (isDragging) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleStop);
@@ -211,7 +206,6 @@ const ClockView = memo(function ClockView({ value, onChange }) {
   const currentList = mode === "hours" ? hours : minutes;
   const currentVal = mode === "hours" ? hour : minute;
 
-  // Calculate hand angle
   const getAngle = () => {
     if (mode === "hours") {
       const h = hour % 12;
@@ -222,48 +216,129 @@ const ClockView = memo(function ClockView({ value, onChange }) {
   };
 
   return (
-    <div style={{ width: 260, padding: "20px 10px", display: "flex", flexDirection: "column", alignItems: "center", userSelect: "none" }}>
-      {/* Header / Mode Switcher */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 20, background: "rgba(20,20,19,0.04)", padding: 4, borderRadius: 10 }}>
-        <button
-          onClick={() => setMode("hours")}
-          style={{
-            padding: "6px 16px",
-            borderRadius: 8,
-            fontSize: 18,
-            fontWeight: 800,
-            border: "none",
-            background: mode === "hours" ? "white" : "transparent",
-            color: mode === "hours" ? "var(--arc)" : "var(--slate)",
-            boxShadow: mode === "hours" ? "0 2px 8px rgba(0,0,0,0.05)" : "none",
-            cursor: "pointer",
-            transition: "0.2s"
-          }}
-        >
-          {String(hour).padStart(2, "0")}
-        </button>
-        <span style={{ fontSize: 18, fontWeight: 800, color: "var(--slate)", alignSelf: "center" }}>:</span>
-        <button
-          onClick={() => setMode("minutes")}
-          style={{
-            padding: "6px 16px",
-            borderRadius: 8,
-            fontSize: 18,
-            fontWeight: 800,
-            border: "none",
-            background: mode === "minutes" ? "white" : "transparent",
-            color: mode === "minutes" ? "var(--arc)" : "var(--slate)",
-            boxShadow: mode === "minutes" ? "0 2px 8px rgba(0,0,0,0.05)" : "none",
-            cursor: "pointer",
-            transition: "0.2s"
-          }}
-        >
-          {String(minute).padStart(2, "0")}
-        </button>
+    <div style={{ 
+      width: 270, 
+      padding: "20px 14px", 
+      display: "flex", 
+      flexDirection: "column", 
+      alignItems: "center", 
+      userSelect: "none",
+      background: "var(--white)",
+    }}>
+      {/* Header with Time Display & AM/PM */}
+      <div style={{ 
+        display: "flex", 
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 12, 
+        marginBottom: 20,
+        width: "100%"
+      }}>
+        <div style={{ 
+          display: "flex", 
+          alignItems: "center",
+          gap: 6, 
+          padding: "5px",
+          background: "rgba(20,20,19,0.04)",
+          borderRadius: "12px",
+        }}>
+          <button
+            onClick={() => setMode("hours")}
+            style={{
+              width: 54,
+              height: 44,
+              borderRadius: "8px",
+              fontSize: 20,
+              fontWeight: 800,
+              border: "none",
+              background: mode === "hours" ? "var(--white)" : "transparent",
+              color: isCurrentSelectionPast 
+                ? "#ef4444" 
+                : mode === "hours" ? "var(--arc)" : "var(--slate)",
+              boxShadow: mode === "hours" ? "0 4px 10px rgba(0,0,0,0.06)" : "none",
+              cursor: "pointer",
+              transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+              fontFamily: "var(--font)",
+            }}
+          >
+            {String(hour).padStart(2, "0")}
+          </button>
+          <span style={{ fontSize: 20, fontWeight: 800, color: "var(--slate)", opacity: 0.3 }}>:</span>
+          <button
+            onClick={() => setMode("minutes")}
+            style={{
+              width: 54,
+              height: 44,
+              borderRadius: "8px",
+              fontSize: 20,
+              fontWeight: 800,
+              border: "none",
+              background: mode === "minutes" ? "var(--white)" : "transparent",
+              color: isCurrentSelectionPast 
+                ? "#ef4444" 
+                : mode === "minutes" ? "var(--arc)" : "var(--slate)",
+              boxShadow: mode === "minutes" ? "0 4px 10px rgba(0,0,0,0.06)" : "none",
+              cursor: "pointer",
+              transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+              fontFamily: "var(--font)",
+            }}
+          >
+            {String(minute).padStart(2, "0")}
+          </button>
+        </div>
+
+        <div style={{ 
+          display: "flex", 
+          flexDirection: "column",
+          gap: 4, 
+          background: "rgba(20,20,19,0.04)", 
+          padding: "4px", 
+          borderRadius: "10px",
+        }}>
+          {["AM", "PM"].map((m) => (
+            <button
+              key={m}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMeridiemChange(m);
+              }}
+              style={{
+                padding: "4px 8px",
+                borderRadius: "6px",
+                fontSize: 10,
+                fontWeight: 800,
+                border: "none",
+                background: meridiem === m ? "var(--white)" : "transparent",
+                color: meridiem === m ? "var(--arc)" : "var(--slate)",
+                boxShadow: meridiem === m ? "0 2px 5px rgba(0,0,0,0.05)" : "none",
+                cursor: "pointer",
+                transition: "all 0.2s",
+                fontFamily: "var(--font)",
+                textTransform: "uppercase",
+              }}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {isCurrentSelectionPast && (
+        <p style={{ 
+          fontSize: 10, 
+          color: "#ef4444", 
+          fontWeight: 700, 
+          marginTop: -10, 
+          marginBottom: 10,
+          textTransform: "uppercase",
+          letterSpacing: "0.05em"
+        }}>
+          Past time selected
+        </p>
+      )}
+
       {/* Clock Face */}
-      <div 
+      <div
         ref={faceRef}
         onMouseDown={(e) => {
           setIsDragging(true);
@@ -273,10 +348,22 @@ const ClockView = memo(function ClockView({ value, onChange }) {
           setIsDragging(true);
           if (e.touches[0]) calculateValueFromCoords(e.touches[0].clientX, e.touches[0].clientY);
         }}
-        style={{ position: "relative", width: 200, height: 200, background: "rgba(20,20,19,0.03)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20, cursor: "pointer" }}
+        style={{ 
+          position: "relative", 
+          width: 190, 
+          height: 190, 
+          background: "var(--canvas)", 
+          borderRadius: "50%", 
+          display: "flex", 
+          alignItems: "center", 
+          justifyContent: "center", 
+          marginBottom: 16, 
+          cursor: "crosshair",
+          boxShadow: "inset 0 2px 10px rgba(0,0,0,0.05)",
+        }}
       >
-        <div style={{ position: "absolute", left: "50%", top: "50%", width: 6, height: 6, margin: -3, background: "var(--arc)", borderRadius: "50%", zIndex: 10 }} />
-        
+        <div style={{ position: "absolute", left: "50%", top: "50%", width: 6, height: 6, margin: -3, background: isCurrentSelectionPast ? "#ef4444" : "var(--arc)", borderRadius: "50%", zIndex: 10 }} />
+
         <motion.div
           animate={{ rotate: getAngle() }}
           transition={isDragging ? { type: "just" } : { type: "spring", stiffness: 300, damping: 30 }}
@@ -285,48 +372,58 @@ const ClockView = memo(function ClockView({ value, onChange }) {
             left: "50%",
             bottom: "50%",
             width: 2,
-            height: 80,
-            background: "var(--arc)",
+            height: 72,
+            background: isCurrentSelectionPast ? "#ef4444" : "var(--arc)",
             transformOrigin: "bottom center",
             zIndex: 5,
-            pointerEvents: "none"
+            pointerEvents: "none",
+            borderRadius: "4px",
           }}
         >
-          <div style={{ position: "absolute", top: 0, left: "50%", width: 30, height: 30, margin: "-15px", background: "var(--arc)", borderRadius: "50%", opacity: 0.2 }} />
-          <div style={{ position: "absolute", top: 0, left: "50%", width: 6, height: 6, margin: "-3px", background: "var(--arc)", borderRadius: "50%" }} />
+          <div style={{ position: "absolute", top: 0, left: "50%", width: 28, height: 28, margin: "-14px", background: isCurrentSelectionPast ? "#ef4444" : "var(--arc)", borderRadius: "50%", opacity: 0.15 }} />
+          <div style={{ position: "absolute", top: 0, left: "50%", width: 8, height: 8, margin: "-4px", background: isCurrentSelectionPast ? "#ef4444" : "var(--arc)", borderRadius: "50%", border: "2px solid var(--white)" }} />
         </motion.div>
 
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           <motion.div
             key={mode}
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
+            exit={{ opacity: 0, scale: 1.1 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
             style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
           >
             {currentList.map((item) => {
               const isSelected = item.v === currentVal;
+              const disabled = mode === "hours" ? isPastH(item.v, meridiem) : isPastM(hour, item.v, meridiem);
+              
+              // Scale coordinates for smaller face
+              const scale = 190 / 210;
+              const sx = item.x * scale;
+              const sy = item.y * scale;
+
               return (
                 <div
                   key={item.v}
                   style={{
                     position: "absolute",
-                    left: `calc(50% + ${item.x}px)`,
-                    top: `calc(50% + ${item.y}px)`,
-                    width: 32,
-                    height: 32,
-                    margin: -16,
+                    left: `calc(50% + ${sx}px)`,
+                    top: `calc(50% + ${sy}px)`,
+                    width: 30,
+                    height: 30,
+                    margin: -15,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     borderRadius: "50%",
-                    background: isSelected ? "var(--arc)" : "transparent",
-                    color: isSelected ? "white" : "var(--ink)",
-                    fontSize: 11,
-                    fontWeight: isSelected ? 800 : 500,
+                    background: isSelected ? (isCurrentSelectionPast ? "#ef4444" : "var(--arc)") : "transparent",
+                    color: isSelected ? "var(--white)" : "var(--ink)",
+                    fontSize: 12,
+                    fontWeight: isSelected ? 800 : 600,
                     zIndex: 10,
-                    transition: "0.2s"
+                    transition: "all 0.2s",
+                    fontFamily: "var(--font)",
+                    opacity: disabled ? 0.2 : 1,
                   }}
                 >
                   {item.v}
@@ -336,37 +433,33 @@ const ClockView = memo(function ClockView({ value, onChange }) {
           </motion.div>
         </AnimatePresence>
       </div>
-      
-      {/* AM/PM Switcher */}
-      <div style={{ display: "flex", gap: 4, background: "rgba(20,20,19,0.04)", padding: 3, borderRadius: 8 }}>
-        {["AM", "PM"].map((m) => (
-          <button
-            key={m}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleMeridiemChange(m);
-            }}
-            style={{
-              padding: "4px 12px",
-              borderRadius: 6,
-              fontSize: 11,
-              fontWeight: 800,
-              border: "none",
-              background: meridiem === m ? "white" : "transparent",
-              color: meridiem === m ? "var(--arc)" : "var(--slate)",
-              boxShadow: meridiem === m ? "0 2px 6px rgba(0,0,0,0.05)" : "none",
-              cursor: "pointer",
-              transition: "0.2s"
-            }}
-          >
-            {m}
-          </button>
-        ))}
-      </div>
 
-      <p style={{ marginTop: 12, fontSize: 10, color: "var(--slate)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-        {isDragging ? "Dragging..." : `Select ${mode}`}
+      <p style={{ fontSize: 9, color: isCurrentSelectionPast ? "#ef4444" : "var(--slate)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.6, marginBottom: 12 }}>
+        {isDragging ? "Adjusting..." : isCurrentSelectionPast ? "Invalid Time" : `Pick ${mode}`}
       </p>
+
+      <button
+        disabled={isCurrentSelectionPast}
+        onClick={(e) => {
+          if (isCurrentSelectionPast) return;
+          e.stopPropagation();
+          onChange(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+          window.dispatchEvent(new MouseEvent('mousedown')); 
+        }}
+        style={{
+          width: "100%",
+          padding: "10px",
+          borderRadius: "12px",
+          background: isCurrentSelectionPast ? "rgba(20,20,19,0.04)" : "var(--ink)",
+          color: isCurrentSelectionPast ? "rgba(20,20,19,0.2)" : "white",
+          fontSize: 12,
+          fontWeight: 700,
+          border: "none",
+          cursor: isCurrentSelectionPast ? "not-allowed" : "pointer"
+        }}
+      >
+        {isCurrentSelectionPast ? "Invalid Time" : "Set Time"}
+      </button>
     </div>
   );
 });
@@ -386,52 +479,66 @@ const CalendarView = memo(function CalendarView({ value, onChange }) {
   for (let i = 1; i <= daysInMonth; i++) days.push(i);
 
   const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
   ];
 
   return (
-    <div style={{ width: 220, padding: 4 }}>
+    <div style={{ 
+      width: 260, 
+      padding: "16px",
+      background: "var(--white)",
+      fontFamily: "var(--font)",
+    }}>
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: 10,
+          marginBottom: 16,
+          padding: "0 4px",
         }}
       >
         <button
           onClick={() => setViewDate(new Date(year, month - 1, 1))}
           style={{
-            border: "none",
-            background: "none",
+            border: "1px solid rgba(20,20,19,0.06)",
+            background: "var(--canvas-lifted)",
+            borderRadius: "8px",
+            width: 28,
+            height: 28,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             cursor: "pointer",
-            color: "var(--slate)",
+            color: "var(--ink)",
+            transition: "all 0.2s",
           }}
+          onMouseEnter={(e) => e.target.style.borderColor = "rgba(20,20,19,0.15)"}
+          onMouseLeave={(e) => e.target.style.borderColor = "rgba(20,20,19,0.06)"}
         >
           <ChevronDown size={14} style={{ transform: "rotate(90deg)" }} />
         </button>
-        <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink)" }}>
+        <span style={{ fontSize: 13, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.01em" }}>
           {monthNames[month]} {year}
         </span>
         <button
           onClick={() => setViewDate(new Date(year, month + 1, 1))}
           style={{
-            border: "none",
-            background: "none",
+            border: "1px solid rgba(20,20,19,0.06)",
+            background: "var(--canvas-lifted)",
+            borderRadius: "8px",
+            width: 28,
+            height: 28,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             cursor: "pointer",
-            color: "var(--slate)",
+            color: "var(--ink)",
+            transition: "all 0.2s",
           }}
+          onMouseEnter={(e) => e.target.style.borderColor = "rgba(20,20,19,0.15)"}
+          onMouseLeave={(e) => e.target.style.borderColor = "rgba(20,20,19,0.06)"}
         >
           <ChevronDown size={14} style={{ transform: "rotate(-90deg)" }} />
         </button>
@@ -440,56 +547,65 @@ const CalendarView = memo(function CalendarView({ value, onChange }) {
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(7, 1fr)",
-          gap: 2,
+          gap: "4px",
+          marginBottom: 12,
         }}
       >
-        {["S", "M", "T", "W", "T", "F", "S"].map((d) => (
-          <span
+        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
+          <div
             key={d}
             style={{
-              fontSize: 9,
-              fontWeight: 800,
               textAlign: "center",
+              fontSize: 10,
+              fontWeight: 900,
               color: "var(--slate)",
-              opacity: 0.5,
+              paddingBottom: 4,
+              opacity: 0.4,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
             }}
           >
             {d}
-          </span>
+          </div>
         ))}
         {days.map((d, i) => {
-          if (!d) return <div key={`empty-${i}`} />;
-          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+          if (d === null) return <div key={`empty-${i}`} />;
+          const dateStr = `${year}-${(month + 1).toString().padStart(2, "0")}-${d.toString().padStart(2, "0")}`;
           const isSelected = value === dateStr;
-          const isToday =
-            d === today.getDate() &&
-            month === today.getMonth() &&
-            year === today.getFullYear();
-          const isPast = new Date(year, month, d) < today && !isToday;
+          const isToday = today.toISOString().split("T")[0] === dateStr;
+          const isPast = new Date(year, month, d) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
           return (
             <button
               key={i}
               onClick={() => !isPast && onChange(dateStr)}
               style={{
+                padding: "8px 0",
                 border: "none",
-                background: isSelected
-                  ? "var(--arc,#f37338)"
-                  : isToday
-                    ? "rgba(243,115,56,0.1)"
-                    : "none",
-                borderRadius: 6,
-                fontSize: 10,
-                fontWeight: isSelected || isToday ? 700 : 500,
+                borderRadius: "8px",
+                fontSize: 11,
+                fontWeight: isSelected || isToday ? 800 : 500,
                 color: isSelected
-                  ? "white"
+                  ? "var(--white)"
                   : isPast
-                    ? "#ccc"
+                    ? "rgba(20,20,19,0.15)"
                     : isToday
                       ? "var(--arc)"
                       : "var(--ink)",
-                padding: "4px 0",
+                height: 32,
                 cursor: isPast ? "default" : "pointer",
+                transition: "all 0.2s",
+                fontFamily: "var(--font)",
+              }}
+              onMouseEnter={(e) => {
+                if (!isPast && !isSelected) {
+                  e.target.style.background = "rgba(20,20,19,0.04)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isSelected) {
+                  e.target.style.background = isToday ? "rgba(243,115,56,0.08)" : "transparent";
+                }
               }}
             >
               {d}
@@ -523,6 +639,24 @@ const CustomSelect = memo(function CustomSelect({
     return () => window.removeEventListener("mousedown", fn);
   }, []);
 
+  const [position, setPosition] = useState({ top: 0, left: 0, right: 0, upward: false });
+
+  useEffect(() => {
+    if (open && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const dropdownHeight = isCalendar ? 360 : isTime ? 400 : 240;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const shouldOpenUp = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
+
+      setPosition({
+        top: shouldOpenUp ? rect.top - 8 : rect.bottom + 8,
+        left: align === "left" ? rect.left : "auto",
+        right: align === "right" ? window.innerWidth - rect.right : "auto",
+        upward: shouldOpenUp
+      });
+    }
+  }, [open, isCalendar, isTime, align]);
+
   const label = isCalendar
     ? new Date(value + "T00:00:00").toLocaleDateString(undefined, {
         month: "short",
@@ -536,53 +670,71 @@ const CustomSelect = memo(function CustomSelect({
         type="button"
         onClick={() => setOpen(!open)}
         style={{
-          width: "100%",
-          padding: "7px 10px",
-          background: "white",
-          border: "1px solid rgba(20,20,19,0.1)",
-          borderRadius: 8,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          gap: 12,
+          padding: "10px 14px",
+          background: open ? "rgba(20,20,19,0.02)" : "var(--white)",
+          border: `1.5px solid ${open ? "var(--arc)" : "rgba(20,20,19,0.08)"}`,
+          borderRadius: "14px",
           cursor: "pointer",
-          fontFamily: "inherit",
+          width: "100%",
+          minWidth: isTime ? 130 : 160,
+          transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+          boxShadow: open ? "0 4px 12px rgba(243,115,56,0.08)" : "0 2px 4px rgba(0,0,0,0.02)",
+        }}
+        onMouseEnter={(e) => {
+          if (!open) {
+            e.target.style.borderColor = "rgba(20,20,19,0.15)";
+            e.target.style.boxShadow = "0 4px 8px rgba(0,0,0,0.04)";
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!open) {
+            e.target.style.borderColor = "rgba(20,20,19,0.08)";
+            e.target.style.boxShadow = "0 2px 4px rgba(0,0,0,0.02)";
+          }
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          {Icon && <Icon size={12} style={{ color: "var(--slate)" }} />}
-          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {Icon && <Icon size={14} style={{ color: open ? "var(--arc)" : "var(--slate)", transition: "color 0.2s" }} />}
+          <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
             {label}
           </span>
         </div>
         <ChevronDown
-          size={11}
+          size={14}
           style={{
             color: "var(--slate)",
+            opacity: 0.5,
             transform: open ? "rotate(180deg)" : "none",
-            transition: "0.2s",
+            transition: "0.3s cubic-bezier(0.4, 0, 0.2, 1)",
           }}
         />
       </button>
 
-      <AnimatePresence>
-        {open && (
+      {open &&
+        createPortal(
           <motion.div
-            initial={{ opacity: 0, y: -5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -5 }}
+            initial={{ opacity: 0, scale: 0.95, y: position.upward ? 4 : -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: position.upward ? 4 : -4 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
             onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
             style={{
-              position: "absolute",
-              top: "100%",
-              marginTop: 8,
-              [align]: 0,
-              zIndex: 1000,
-              background: "white",
-              borderRadius: 12,
-              border: "1px solid rgba(20,20,19,0.08)",
-              boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+              position: "fixed",
+              top: position.top,
+              left: position.left,
+              right: position.right,
+              zIndex: 9999,
+              background: "var(--white)",
+              borderRadius: "20px",
+              border: "1px solid rgba(20,20,19,0.1)",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(20,20,19,0.02)",
               overflow: "hidden",
+              transformOrigin: position.upward ? "bottom" : "top",
+              transform: position.upward ? "translateY(-100%)" : "none",
             }}
           >
             {isCalendar ? (
@@ -596,19 +748,21 @@ const CustomSelect = memo(function CustomSelect({
             ) : isTime ? (
               <ClockView
                 value={value}
+                minTime={minTime}
                 onChange={(v) => {
                   onChange(v);
-                  // Don't close immediately on hour select, wait for minutes
                 }}
               />
             ) : (
               <div
                 style={{
-                  maxHeight: 200,
+                  maxHeight: 240,
                   overflowY: "auto",
-                  width: 120,
-                  padding: 4,
+                  width: 140,
+                  padding: "8px",
+                  fontFamily: "var(--font)",
                 }}
+                className="custom-scrollbar"
               >
                 {options.map((opt) => {
                   const val = typeof opt === "string" ? opt : opt.value;
@@ -625,19 +779,27 @@ const CustomSelect = memo(function CustomSelect({
                       }}
                       style={{
                         width: "100%",
-                        padding: "6px 10px",
+                        padding: "8px 12px",
                         textAlign: "left",
-                        background: value === val ? "rgba(243,115,56,0.08)" : "none",
+                        background: value === val ? "rgba(243,115,56,0.08)" : "transparent",
                         border: "none",
-                        borderRadius: 6,
-                        fontSize: 11,
-                        fontWeight: value === val ? 700 : 500,
+                        borderRadius: "8px",
+                        fontSize: 12,
+                        fontWeight: value === val ? 800 : 500,
                         color: disabled
-                          ? "#ccc"
+                          ? "rgba(20,20,19,0.2)"
                           : value === val
                             ? "var(--arc)"
                             : "var(--ink)",
                         cursor: disabled ? "default" : "pointer",
+                        transition: "all 0.15s",
+                        marginBottom: "2px",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!disabled && value !== val) e.target.style.background = "rgba(20,20,19,0.04)";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (value !== val) e.target.style.background = "transparent";
                       }}
                     >
                       {lbl}
@@ -646,93 +808,166 @@ const CustomSelect = memo(function CustomSelect({
                 })}
               </div>
             )}
-          </motion.div>
+          </motion.div>,
+          document.body
         )}
-      </AnimatePresence>
     </div>
   );
 });
 
-/* ─────────────────────────────────────────────────────────────────
-   SIZE BUTTONS
-   ───────────────────────────────────────────────────────────────── */
+const SmartWarnings = memo(function SmartWarnings({ selectedChannels, platformData, mediaFiles }) {
+  const warnings = [];
+
+  const mainMedia = mediaFiles[0];
+  if (!mainMedia || !mainMedia.dimensions) return null;
+
+  const { ratio } = mainMedia.dimensions;
+  const isHorizontal = ratio > 1.2;
+  const isVertical = ratio < 0.8;
+
+  if (selectedChannels.includes("youtube") && platformData.youtube?.type === "short" && isHorizontal) {
+    warnings.push({
+      id: "yt-short-ratio",
+      text: "YouTube Shorts must be vertical. Your video is landscape and will be uploaded as a normal video.",
+    });
+  }
+
+  if (selectedChannels.includes("instagram") && platformData.instagram?.type === "reel" && isHorizontal) {
+    warnings.push({
+      id: "ig-reel-ratio",
+      text: "Instagram Reels are vertical. This landscape video will have black bars.",
+    });
+  }
+
+  if (warnings.length === 0) return null;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {warnings.map(w => (
+        <motion.div
+          key={w.id}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 12,
+            background: "rgba(243,115,56,0.06)",
+            border: "1px solid rgba(243,115,56,0.15)",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <Zap size={14} style={{ color: "var(--arc)", flexShrink: 0 }} />
+          <p style={{ fontSize: 11, fontWeight: 700, color: "var(--ink)", margin: 0, lineHeight: 1.4 }}>{w.text}</p>
+        </motion.div>
+      ))}
+    </div>
+  );
+});
+
 const SizeButton = memo(function SizeButton({ size, isSelected, onClick }) {
-  const Icon = size.ratio === "1:1" ? Square : RectangleVertical;
+  const isSquare = size.id === "1:1";
+  const isVertical = size.id === "9:16" || size.id === "4:5" || size.id === "2:3";
+  const isLandscape = size.id === "16:9" || size.id === "1.91:1";
+
+  // Visual aspect ratio preview
+  const getRatioStyles = () => {
+    if (isSquare) return { width: 14, height: 14 };
+    if (size.id === "4:5") return { width: 12, height: 15 };
+    if (size.id === "9:16") return { width: 9, height: 16 };
+    if (size.id === "16:9") return { width: 18, height: 10 };
+    if (size.id === "1.91:1") return { width: 19, height: 10 };
+    if (size.id === "2:3") return { width: 10, height: 15 };
+    return { width: 14, height: 14 };
+  };
+
+  const ratioStyle = getRatioStyles();
+
   return (
     <motion.button
-      whileHover={{ scale: 1.02 }}
+      whileHover={{ y: -2, scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       style={{
-        padding: "8px 12px",
-        borderRadius: 10,
+        padding: "12px",
+        borderRadius: "14px",
         border: "1.5px solid",
-        borderColor: isSelected ? "var(--ink)" : "rgba(20,20,19,0.08)",
-        background: isSelected ? "var(--ink)" : "white",
-        color: isSelected ? "white" : "var(--slate)",
+        borderColor: isSelected ? "var(--ink)" : "rgba(20,20,19,0.06)",
+        background: isSelected ? "var(--ink)" : "var(--white)",
+        color: isSelected ? "var(--white)" : "var(--ink)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 4,
+        justifyContent: "center",
+        gap: 8,
+        minWidth: 84,
         flex: 1,
-        minWidth: 70,
         cursor: "pointer",
-        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        boxShadow: isSelected ? "0 8px 20px rgba(20,20,19,0.15)" : "0 2px 4px rgba(0,0,0,0.02)",
       }}
     >
-      <Icon
-        size={14}
-        style={{ opacity: isSelected ? 1 : 0.6 }}
-        strokeWidth={isSelected ? 2.5 : 2}
-      />
+      <div style={{ 
+        ...ratioStyle, 
+        border: `2px solid ${isSelected ? "var(--white)" : "var(--slate)"}`, 
+        borderRadius: "3px",
+        opacity: isSelected ? 1 : 0.4,
+        transition: "all 0.2s",
+      }} />
+      
       <div style={{ textAlign: "center" }}>
-        <p
-          style={{
-            fontSize: 10,
-            fontWeight: 800,
-            margin: 0,
-            letterSpacing: "0.02em",
-          }}
-        >
-          {size.ratio}
-        </p>
-        <p style={{ fontSize: 8, margin: 0, opacity: 0.6, fontWeight: 600 }}>
+        <p style={{
+          fontSize: 11,
+          fontWeight: 800,
+          margin: 0,
+          letterSpacing: "-0.01em",
+        }}>
           {size.label}
         </p>
+        <p style={{ 
+          fontSize: 8, 
+          margin: 0, 
+          opacity: isSelected ? 0.7 : 0.4, 
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+        }}>
+          {size.id}
+        </p>
       </div>
-      {size.badge !== "none" && !isSelected && (
-        <span
+
+      {size.badge && size.badge !== "none" && !isSelected && (
+        <div
           style={{
+            position: "absolute",
+            top: -6,
+            right: -6,
             fontSize: 7,
-            fontWeight: 800,
-            background:
-              size.badge === "safe"
-                ? "rgba(5,150,105,0.1)"
-                : "rgba(243,115,56,0.1)",
-            color: size.badge === "safe" ? "#059669" : "#f37338",
-            padding: "1px 4px",
-            borderRadius: 4,
-            marginTop: 2,
+            fontWeight: 900,
+            background: size.badge === "best" ? "var(--arc)" : "var(--white)",
+            color: size.badge === "best" ? "var(--white)" : "var(--arc)",
+            padding: "2px 6px",
+            borderRadius: "6px",
             textTransform: "uppercase",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+            border: size.badge === "best" ? "none" : "1px solid var(--arc)",
           }}
         >
           {size.badge}
-        </span>
+        </div>
       )}
     </motion.button>
   );
 });
 
-/* ─────────────────────────────────────────────────────────────────
-   MAIN COMPONENT
-   ───────────────────────────────────────────────────────────────── */
-function ComposerModal({ 
-  isOpen, 
-  onClose, 
-  initialData = null, 
-  initialCaption = '', 
+function ComposerModal({
+  isOpen,
+  onClose,
+  initialData = null,
+  initialCaption = '',
   initialHashtags = [],
-  initialMediaUrls = [] 
+  initialMediaUrls = []
 }) {
   const { user, connectedAccounts } = useAuth();
   const { addJob } = useUploadJobs();
@@ -752,6 +987,7 @@ function ComposerModal({
     facebook: { type: "post" },
     pinterest: { boardId: "", title: "", link: "" },
     reddit: { subreddit: "", title: "", flairId: "" },
+    mastodon: { type: "post" },
   });
   const [youtubeThumbnail, setYoutubeThumbnail] = useState(null);
 
@@ -759,12 +995,22 @@ function ComposerModal({
   const [error, setError] = useState(null);
   const [activePreviewPlatform, setActivePreviewPlatform] =
     useState("instagram");
-  const [selectedSizePreset, setSelectedSizePreset] = useState("li_sq"); // default
+  const [platformPresets, setPlatformPresets] = useState({
+    instagram: "ig-post-square",
+    facebook: "fb-image",
+    x: "x-image",
+    linkedin: "li-square",
+    youtube: "yt-video",
+    threads: "threads-post",
+    pinterest: "pin-standard",
+    bluesky: "bsky-image",
+    mastodon: "masto-image",
+    reddit: "reddit-image",
+  });
   const [customizationExpanded, setCustomizationExpanded] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-  const [mobileActiveTab, setMobileActiveTab] = useState("compose"); // compose, preview, insights
+  const [mobileActiveTab, setMobileActiveTab] = useState("compose");
   const [autoFixMsg, setAutoFixMsg] = useState(null);
-
   const isMobile = windowWidth < 768;
 
   useEffect(() => {
@@ -790,8 +1036,12 @@ function ComposerModal({
   const { smartSizes, availablePresets, selectedRatio } = useSmartSizes({
     selectedChannels,
     activePlatform: activePreviewPlatform,
-    selectedSizePreset,
-    setSelectedSizePreset,
+    selectedSizePreset: platformPresets[activePreviewPlatform],
+    setSelectedSizePreset: (val) =>
+      setPlatformPresets((prev) => ({
+        ...prev,
+        [activePreviewPlatform]: val,
+      })),
     onAutoFixed: (msg) => {
       setAutoFixMsg(msg);
       setTimeout(() => setAutoFixMsg(null), 3500);
@@ -843,24 +1093,50 @@ function ComposerModal({
 
   /* ── Pre-fill media from trend injection ── */
   useEffect(() => {
-    if (isOpen && initialMediaUrls?.length > 0 && mediaFiles.length === 0) {
+    if (isOpen && initialMediaUrls?.length > 0) {
       const loadInitialMedia = async () => {
         try {
-          const files = await Promise.all(
+          const results = await Promise.all(
             initialMediaUrls.slice(0, 5).map(async (url) => {
-              const res = await fetch(url);
-              const blob = await res.blob();
-              const name = url.split('/').pop()?.split('?')[0] || 'media';
-              const extension = blob.type.split('/')[1] || 'jpg';
-              return new File([blob], `${name}.${extension}`, { type: blob.type });
+              try {
+                // Use our own secure backend proxy
+                const proxiedUrl = `/api/trends/proxy/media?url=${encodeURIComponent(url)}`;
+                const res = await fetch(proxiedUrl);
+                if (!res.ok) throw new Error("Internal proxy error");
+
+                const blob = await res.blob();
+                const name = url.split('/').pop()?.split('?')[0] || 'media';
+
+                // Smart mime type detection
+                let mimeType = blob.type;
+                if (!mimeType || mimeType === 'application/octet-stream') {
+                  if (url.toLowerCase().includes('.mp4') || url.toLowerCase().includes('.m4v')) mimeType = 'video/mp4';
+                  else if (url.toLowerCase().includes('.mov')) mimeType = 'video/quicktime';
+                  else if (url.toLowerCase().includes('.webm')) mimeType = 'video/webm';
+                  else if (url.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif)/)) mimeType = 'image/' + url.split('.').pop().split('?')[0];
+                }
+
+                // Detect extension
+                let extension = mimeType.split('/')[1] || 'jpg';
+                if (extension === 'jpeg') extension = 'jpg';
+                if (extension.includes('quicktime')) extension = 'mov';
+
+                return new File([blob], `${name}.${extension}`, { type: mimeType });
+              } catch (err) {
+                console.error("Failed to load media via internal proxy:", url, err);
+                return null;
+              }
             })
           );
-          
+
+          const files = results.filter(Boolean);
           const newItems = files.map(file => ({
             id: `initial_${Math.random().toString(36).substr(2, 9)}`,
             file
           }));
-          setMediaFiles(newItems);
+          if (newItems.length > 0) {
+            setMediaFiles(newItems);
+          }
         } catch (err) {
           console.error("Failed to load initial media:", err);
         }
@@ -1014,16 +1290,21 @@ function ComposerModal({
       // 1. Prep data
       const formData = new FormData();
       formData.append("caption", caption);
-      formData.append("platforms", JSON.stringify(selectedChannels));
+      formData.append("selectedChannels", JSON.stringify(selectedChannels));
       formData.append("postType", postType);
       formData.append("platformData", JSON.stringify(platformData));
+      formData.append("platformPresets", JSON.stringify(platformPresets));
+      formData.append("userTimezone", userTimezone);
+      formData.append("isScheduled", isScheduled ? "true" : "false");
 
       if (isScheduled) {
         formData.append("scheduledAt", new Date(scheduledAt).toISOString());
       }
 
       mediaFiles.forEach((m) => {
-        formData.append("media", m.file);
+        if (m.file) {
+          formData.append("media", m.file);
+        }
       });
 
       if (youtubeThumbnail) {
@@ -1036,17 +1317,15 @@ function ComposerModal({
       });
 
       // 3. Add to background manager
-      addJob({
-        id: res.data.broadcastId,
-        meta: {
-          caption,
-          channels: selectedChannels,
-          fileCount: mediaFiles.length,
-          mediaType: mediaFiles[0]?.file.type.startsWith("video/")
-            ? "video"
-            : "image",
-          previewUrl: URL.createObjectURL(mediaFiles[0].file),
-        },
+      const firstMedia = mediaFiles[0];
+      const detectedMediaType = firstMedia?.file?.type?.startsWith("video/") ? "video" : "image";
+
+      addJob(res.data.jobId, {
+        caption,
+        channels: selectedChannels,
+        fileCount: mediaFiles.length,
+        mediaType: detectedMediaType,
+        previewUrl: firstMedia?.preview || (firstMedia?.file ? URL.createObjectURL(firstMedia.file) : null)
       });
 
       // 4. Reset & Close
@@ -1185,6 +1464,7 @@ function ComposerModal({
               <motion.button
                 type="button"
                 onClick={handleClose}
+                aria-label="Close modal"
                 whileHover={{ scale: 1.05, background: "rgba(20,20,19,0.06)" }}
                 whileTap={{ scale: 0.95 }}
                 style={{
@@ -1323,6 +1603,7 @@ function ComposerModal({
                   caption={caption}
                   mediaFiles={mediaFiles}
                   selectedRatio={selectedRatio}
+                  selectedSizePreset={platformPresets[activePreviewPlatform]}
                   youtubeThumbnail={youtubeThumbnail}
                   activePlatform={activePreviewPlatform}
                   onActivePlatformChange={setActivePreviewPlatform}
@@ -1584,38 +1865,120 @@ function ComposerModal({
 
                 {/* ── Smart Size ── */}
                 <Section
-                  label="Post Size"
-                  hint={
-                    selectedChannels.length > 1
-                      ? "Smart-filtered for your platforms"
-                      : ""
-                  }
+                  label="Content Format"
+                  hint={`Format for ${PLATFORM_META[activePreviewPlatform]?.label || "active platform"}`}
                   mb={20}
                 >
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                    {smartSizes
-                      .filter(
-                        (s) =>
-                          s.badge !== "none" || selectedChannels.length <= 1,
-                      )
-                      .map((size) => {
-                        const matchingPreset = availablePresets.find(
-                          (p) => p.ratio === size.id,
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 10,
+                      flexWrap: "nowrap",
+                      overflowX: "auto",
+                      paddingBottom: 10,
+                      scrollbarWidth: "none",
+                      msOverflowStyle: "none",
+                    }}
+                  >
+                    {(PLATFORM_LAYOUT_PRESETS[activePreviewPlatform] || []).map(
+                      (preset) => {
+                        const sizeInfo = smartSizes.find(
+                          (s) => s.id === preset.ratio,
                         );
                         const isSelected =
-                          matchingPreset?.id === selectedSizePreset;
+                          platformPresets[activePreviewPlatform] === preset.id;
                         return (
-                          <SizeButton
-                            key={size.id}
-                            size={size}
-                            isSelected={isSelected}
+                          <motion.button
+                            key={preset.id}
+                            whileHover={{ scale: 1.02, y: -2 }}
+                            whileTap={{ scale: 0.98 }}
                             onClick={() =>
-                              matchingPreset &&
-                              setSelectedSizePreset(matchingPreset.id)
+                              setPlatformPresets((prev) => ({
+                                ...prev,
+                                [activePreviewPlatform]: preset.id,
+                              }))
                             }
-                          />
+                            style={{
+                              flexShrink: 0,
+                              minWidth: 130,
+                              padding: "12px 14px",
+                              background: isSelected
+                                ? "rgba(20,20,19,0.03)"
+                                : "var(--white)",
+                              border: isSelected
+                                ? "2px solid var(--arc)"
+                                : "1px solid rgba(20,20,19,0.08)",
+                              borderRadius: "14px",
+                              cursor: "pointer",
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 4,
+                              textAlign: "left",
+                              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                              boxShadow: isSelected
+                                ? "0 4px 12px rgba(243,115,56,0.12)"
+                                : "0 2px 4px rgba(0,0,0,0.02)",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                width: "100%",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 800,
+                                  color: isSelected
+                                    ? "var(--arc)"
+                                    : "var(--ink)",
+                                }}
+                              >
+                                {preset.title}
+                              </span>
+                              {sizeInfo?.badge && (
+                                <div
+                                  style={{
+                                    fontSize: 8,
+                                    fontWeight: 900,
+                                    background:
+                                      sizeInfo.badge === "best"
+                                        ? "var(--arc)"
+                                        : "transparent",
+                                    color:
+                                      sizeInfo.badge === "best"
+                                        ? "white"
+                                        : "var(--arc)",
+                                    border:
+                                      sizeInfo.badge === "best"
+                                        ? "none"
+                                        : "1px solid var(--arc)",
+                                    padding: "1px 5px",
+                                    borderRadius: 4,
+                                    textTransform: "uppercase",
+                                  }}
+                                >
+                                  {sizeInfo.badge}
+                                </div>
+                              )}
+                            </div>
+                            <span
+                              style={{
+                                fontSize: 9,
+                                color: "var(--slate)",
+                                fontWeight: 500,
+                                opacity: 0.7,
+                              }}
+                            >
+                              {preset.subtitle} ({preset.ratio})
+                            </span>
+                          </motion.button>
                         );
-                      })}
+                      },
+                    )}
                   </div>
                 </Section>
 
@@ -1628,11 +1991,12 @@ function ComposerModal({
                       alignItems: "center",
                       justifyContent: "space-between",
                       cursor: "pointer",
-                      padding: "10px 13px",
-                      borderRadius: isScheduled ? "11px 11px 0 0" : 11,
-                      background: "var(--canvas-lifted,#f5f5f4)",
+                      padding: "16px 20px",
+                      borderRadius: isScheduled ? "var(--r-hero) var(--r-hero) 0 0" : "var(--r-hero)",
+                      background: "var(--white)",
                       border: "1px solid rgba(20,20,19,0.08)",
-                      borderBottom: isScheduled ? "1px solid rgba(20,20,19,0.04)" : "1px solid rgba(20,20,19,0.08)",
+                      borderBottom: isScheduled ? "1px solid rgba(20,20,19,0.03)" : "1px solid rgba(20,20,19,0.08)",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
                     }}
                   >
                     <div
@@ -1778,14 +2142,23 @@ function ComposerModal({
                                   }
                                 }}
                                 style={{
-                                  padding: "4px 10px",
-                                  borderRadius: 8,
-                                  border: "1px solid rgba(20,20,19,0.1)",
-                                  background: "var(--canvas,#fff)",
-                                  fontSize: 10,
+                                  padding: "6px 14px",
+                                  borderRadius: "100px",
+                                  border: "1px solid rgba(20,20,19,0.08)",
+                                  background: "var(--white)",
+                                  fontSize: 11,
                                   fontWeight: 700,
-                                  color: "var(--slate,#8a8a82)",
+                                  color: "var(--slate)",
                                   cursor: "pointer",
+                                  transition: "all 0.2s",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.target.style.borderColor = "var(--arc)";
+                                  e.target.style.color = "var(--arc)";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.target.style.borderColor = "rgba(20,20,19,0.08)";
+                                  e.target.style.color = "var(--slate)";
                                 }}
                               >
                                 {q.l}
@@ -1834,6 +2207,13 @@ function ComposerModal({
                   }
                   youtubeThumbnail={youtubeThumbnail}
                   onYoutubeThumbnailChange={setYoutubeThumbnail}
+                />
+
+                {/* ── Smart Warnings ── */}
+                <SmartWarnings
+                  selectedChannels={selectedChannels}
+                  platformData={platformData}
+                  mediaFiles={mediaFiles}
                 />
 
                 {/* ── Error ── */}

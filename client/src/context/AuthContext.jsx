@@ -25,18 +25,24 @@ export function AuthProvider({ children }) {
     threads: { connected: false },
     x: { connected: false },
     reddit: { connected: false },
+    googleBusiness: { connected: false },
   });
   const [loading, setLoading] = useState(true);
 
   const fetchConnectedAccounts = useCallback(async () => {
     try {
+      console.log("🔄 Fetching connected accounts...");
       const response = await apiClient.get("/api/auth/accounts");
       if (response.data.success) {
         const accounts = response.data.accounts;
+        console.log("✅ Accounts fetched successfully:", Object.keys(accounts).filter(k => accounts[k].connected));
+        console.log("📊 Full accounts data:", accounts);
         setConnectedAccounts(accounts);
+      } else {
+        console.error("❌ Failed to fetch accounts:", response.data.error);
       }
     } catch (error) {
-      console.error("Error fetching connected accounts:", error);
+      console.error("💥 Error fetching connected accounts:", error.message || error);
     }
   }, []);
 
@@ -87,6 +93,7 @@ export function AuthProvider({ children }) {
           threads: { connected: false },
           x: { connected: false },
           reddit: { connected: false },
+          googleBusiness: { connected: false },
         });
       }
       setLoading(false);

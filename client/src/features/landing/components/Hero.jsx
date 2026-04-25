@@ -1,15 +1,12 @@
-import React, { useLayoutEffect, useRef } from 'react';
-import { gsap } from '../../../lib/gsap';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Radio, ArrowRight } from 'lucide-react';
+import { motion, useScroll, useTransform, useSpring, animate } from 'framer-motion';
 
 const PLATFORMS = [
   { src: '/icons/ig-instagram-icon.svg', label: 'Instagram' },
   { src: '/icons/youtube-color-icon.svg', label: 'YouTube' },
   { src: '/icons/x-social-media-round-icon.svg', label: 'X' },
   { src: '/icons/linkedin-icon.svg', label: 'LinkedIn' },
-
   { src: '/icons/facebook-round-color-icon.svg', label: 'Facebook' },
   { src: '/icons/pinterest-round-color-icon.svg', label: 'Pinterest' },
   { src: '/icons/threads-icon.svg', label: 'Threads' },
@@ -17,117 +14,32 @@ const PLATFORMS = [
   { src: '/icons/mastodon-round-icon.svg', label: 'Mastodon' },
 ];
 
-const STATS = [
-  { value: '11+', label: 'Platforms', sub: 'All major networks' },
-  { value: '1-click', label: 'Broadcast', sub: 'Write once, post everywhere' },
-  { value: '∞', label: 'Scheduling', sub: 'No post limits' },
-];
-
 export default function Hero() {
   const navigate = useNavigate();
   const sectionRef = useRef(null);
-  const watermarkRef = useRef(null);
-  const eyebrowRef = useRef(null);
-  const h1Ref = useRef(null);
-  const paraRef = useRef(null);
-  const buttonsRef = useRef(null);
-  const logosRef = useRef(null);
-  const statsRef = useRef(null);
-  const counterRef = useRef(null);
+  const [platformCount, setPlatformCount] = useState(0);
 
-  useLayoutEffect(() => {
-    const ctx = gsap.context(() => {
-      // Arc draw-on-scroll via stroke-dashoffset
-      const arc1 = document.getElementById('arc-primary');
-      const arc2 = document.getElementById('arc-secondary');
-      if (arc1) {
-        const len1 = arc1.getTotalLength();
-        gsap.set(arc1, { strokeDasharray: len1, strokeDashoffset: len1 });
-        gsap.to(arc1, {
-          strokeDashoffset: 0,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: 'top 85%',
-            end: 'center 30%',
-            scrub: 1.5,
-          },
-        });
-      }
-      if (arc2) {
-        const len2 = arc2.getTotalLength();
-        gsap.set(arc2, { strokeDasharray: len2, strokeDashoffset: len2 });
-        gsap.to(arc2, {
-          strokeDashoffset: 0,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: 'top 75%',
-            end: 'center 30%',
-            scrub: 1.5,
-          },
-        });
-      }
+  // Scroll-based animations
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end start"]
+  });
 
-      // Watermark parallax
-      gsap.to(watermarkRef.current, {
-        y: -50,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top top',
-          end: 'bottom top',
-          scrub: 2,
-        },
-      });
+  const watermarkY = useTransform(scrollYProgress, [0, 1], [0, -50]);
+  const arcProgress = useSpring(useTransform(scrollYProgress, [0, 0.5], [0, 1]), {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
 
-      // Headline entrance — staggered timeline (fires on mount)
-      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-      tl.from(eyebrowRef.current, { opacity: 0, y: 12, duration: 0.4 })
-        .from(h1Ref.current, { opacity: 0, y: 30, duration: 0.7 }, '-=0.2')
-        .from(paraRef.current, { opacity: 0, y: 16, duration: 0.5 }, '-=0.4')
-        .from(buttonsRef.current, { opacity: 0, y: 12, duration: 0.4 }, '-=0.3');
-
-      // Platform logos stagger
-      const logoEls = logosRef.current?.querySelectorAll('[data-logo]');
-      if (logoEls?.length) {
-        gsap.from(Array.from(logoEls), {
-          opacity: 0,
-          scale: 0.85,
-          stagger: 0.04,
-          duration: 0.35,
-          ease: 'back.out(1.4)',
-          delay: 0.55,
-        });
-      }
-
-      // Stats row entrance
-      const statCards = statsRef.current?.children;
-      if (statCards?.length) {
-        gsap.from(Array.from(statCards), {
-          opacity: 0,
-          y: 24,
-          stagger: 0.12,
-          duration: 0.6,
-          ease: 'power3.out',
-          delay: 0.65,
-        });
-      }
-
-      // Count-up "11+"
-      const obj = { val: 0 };
-      gsap.to(obj, {
-        val: 10,
-        duration: 1.8,
-        ease: 'power2.out',
-        delay: 0.8,
-        onUpdate() {
-          if (counterRef.current) counterRef.current.textContent = Math.round(obj.val) + '+';
-        },
-      });
-    }, sectionRef);
-
-    return () => ctx.revert();
+  useEffect(() => {
+    const controls = animate(0, 11, {
+      duration: 2,
+      delay: 0.8,
+      ease: "easeOut",
+      onUpdate: (value) => setPlatformCount(Math.floor(value))
+    });
+    return () => controls.stop();
   }, []);
 
   return (
@@ -143,8 +55,16 @@ export default function Hero() {
         viewBox="0 0 1400 700"
         preserveAspectRatio="none"
       >
-        <path id="arc-primary" className="orbital-arc" d="M -80 520 Q 360 120 820 480 Q 1060 680 1500 280" stroke="#F37338" strokeWidth="1.5" fill="none" opacity="0.45" />
-        <path id="arc-secondary" className="orbital-arc" d="M 60 650 Q 380 280 940 560" stroke="#F37338" strokeWidth="1" fill="none" opacity="0.25" />
+        <motion.path 
+          style={{ pathLength: arcProgress }}
+          d="M -80 520 Q 360 120 820 480 Q 1060 680 1500 280" 
+          stroke="#F37338" strokeWidth="1.5" fill="none" opacity="0.45" 
+        />
+        <motion.path 
+          style={{ pathLength: arcProgress }}
+          d="M 60 650 Q 380 280 940 560" 
+          stroke="#F37338" strokeWidth="1" fill="none" opacity="0.25" 
+        />
         <circle cx="820" cy="480" r="5" fill="#F37338" opacity="0.6" />
         <circle cx="360" cy="120" r="3" fill="#F37338" opacity="0.4" />
       </svg>
@@ -152,20 +72,26 @@ export default function Hero() {
       <div className="landing-container" style={{ maxWidth: 1280, margin: '0 auto', position: 'relative', zIndex: 2 }}>
 
         {/* Ghost watermark */}
-        <div className="watermark" style={{
-          position: 'absolute', top: -20, left: '50%', transform: 'translateX(-50%)',
-          whiteSpace: 'nowrap', fontSize: 'clamp(56px, 11vw, 130px)', opacity: 0.45,
-          userSelect: 'none', pointerEvents: 'none', letterSpacing: '-0.04em',
-        }}>
+        <motion.div 
+          className="watermark" 
+          style={{
+            position: 'absolute', top: -20, left: '50%', transform: 'translateX(-50%)',
+            whiteSpace: 'nowrap', fontSize: 'clamp(56px, 11vw, 130px)', opacity: 0.45,
+            userSelect: 'none', pointerEvents: 'none', letterSpacing: '-0.04em',
+            y: watermarkY
+          }}
+        >
           Broadcast
-        </div>
+        </motion.div>
 
         {/* Main content */}
         <div style={{ textAlign: 'center', maxWidth: 860, margin: '0 auto 48px', position: 'relative' }}>
 
           {/* Live badge */}
           <motion.div
-            initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
             style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}
           >
             <div style={{
@@ -187,7 +113,11 @@ export default function Hero() {
           </motion.div>
 
           {/* Headline */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.6, delay: 0.1 }}
+          >
             <h1 style={{ fontSize: 'clamp(40px, 8.5vw, 92px)', fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.045em', lineHeight: 0.92, margin: '0 0 24px' }}>
               One post.<br />
               <span style={{ color: 'var(--arc)', position: 'relative', display: 'inline-block' }}>
@@ -201,7 +131,9 @@ export default function Hero() {
           </motion.div>
 
           <motion.p
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
+            initial={{ opacity: 0, y: 16 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.6, delay: 0.2 }}
             style={{ fontSize: 'clamp(15px, 2.2vw, 19px)', fontWeight: 450, color: 'var(--slate)', lineHeight: 1.55, margin: '0 0 36px', maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}
           >
             GAP Social‑pilot broadcasts your content to Instagram, YouTube, LinkedIn + 8 more — simultaneously, with zero friction.
@@ -209,7 +141,9 @@ export default function Hero() {
 
           {/* CTA row */}
           <motion.div
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}
+            initial={{ opacity: 0, y: 16 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.6, delay: 0.3 }}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 32 }}
           >
             <button
@@ -229,10 +163,7 @@ export default function Hero() {
         </div>
 
         {/* Platform logos pill strip */}
-        <div
-          ref={logosRef}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 10 }}
-        >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 10 }}>
           <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--slate)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
             Broadcasts to
           </span>
@@ -243,9 +174,11 @@ export default function Hero() {
             boxShadow: '0 2px 16px rgba(0,0,0,0.05)',
           }}>
             {PLATFORMS.map((p, i) => (
-              <div
+              <motion.div
                 key={p.label}
-                data-logo=""
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.35, delay: 0.55 + i * 0.04, ease: 'backOut' }}
                 title={p.label}
                 style={{
                   width: 28, height: 28, borderRadius: '50%',
@@ -254,13 +187,12 @@ export default function Hero() {
                   marginLeft: i === 0 ? 0 : -8,
                   zIndex: PLATFORMS.length - i,
                   position: 'relative',
-                  transition: 'transform 0.2s',
+                  cursor: 'pointer'
                 }}
-                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-3px) scale(1.1)'}
-                onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+                whileHover={{ y: -3, scale: 1.1 }}
               >
                 <img src={p.src} alt={p.label} style={{ width: 18, height: 18, objectFit: 'contain' }} />
-              </div>
+              </motion.div>
             ))}
             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--arc)', marginLeft: 10, whiteSpace: 'nowrap' }}>
               + more
@@ -270,7 +202,6 @@ export default function Hero() {
 
         {/* Stats row */}
         <div
-          ref={statsRef}
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
@@ -280,12 +211,15 @@ export default function Hero() {
           }}
         >
           {[
-            { value: '10+', label: 'Platforms', isCounter: true },
+            { value: platformCount + '+', label: 'Platforms' },
             { value: '1-click', label: 'Broadcast' },
             { value: '∞', label: 'Scheduling' },
-          ].map(({ value, label, isCounter }) => (
-            <div
+          ].map(({ value, label }, i) => (
+            <motion.div
               key={label}
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.65 + i * 0.12, ease: 'easeOut' }}
               style={{
                 background: 'var(--canvas-lifted)',
                 border: '1px solid rgba(20,20,19,0.08)',
@@ -293,21 +227,17 @@ export default function Hero() {
                 padding: '24px 20px',
                 textAlign: 'center',
                 boxShadow: 'var(--shadow-nav)',
-                transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                cursor: 'default'
               }}
-              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+              whileHover={{ y: -2 }}
             >
-              <div
-                ref={isCounter ? counterRef : null}
-                style={{ fontSize: 'clamp(28px, 4vw, 36px)', fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.04em', lineHeight: 1 }}
-              >
+              <div style={{ fontSize: 'clamp(28px, 4vw, 36px)', fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.04em', lineHeight: 1 }}>
                 {value}
               </div>
               <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--slate)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 4 }}>
                 {label}
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
