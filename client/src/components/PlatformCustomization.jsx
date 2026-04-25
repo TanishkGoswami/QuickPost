@@ -259,6 +259,8 @@ function PlatformCustomization({
                 </div>
               </div>
             </div>
+          )}
+
           {/* Reddit Customization */}
           {selectedChannels.includes("reddit") && (
             <div className="platform-card">
@@ -356,10 +358,12 @@ function PlatformCustomization({
                   />
                   <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">Reel</span>
                 </label>
-              </div>
             </div>
-          )}
-    </div>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
   );
 }
 

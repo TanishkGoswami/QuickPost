@@ -2,7 +2,6 @@ import React, { useRef, useLayoutEffect } from 'react';
 import { gsap } from '../../../lib/gsap';
 import { motion } from 'framer-motion';
 import { Link2, PenLine, SendHorizonal } from 'lucide-react';
-import { gsap } from '../../../lib/gsap';
 
 const STEPS = [
   {
