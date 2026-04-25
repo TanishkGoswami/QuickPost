@@ -6,6 +6,7 @@ import React, {
   useCallback,
   memo,
 } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -69,7 +70,7 @@ const SUGGESTED_HASHTAGS = [
   "#branding",
 ];
 
-const ClockView = memo(function ClockView({ value, onChange }) {
+const ClockView = memo(function ClockView({ value, onChange, minTime }) {
   const [mode, setMode] = useState("hours"); // 'hours' or 'minutes'
   const initialH = parseInt(value.split(":")[0]) || 0;
   const initialM = parseInt(value.split(":")[1]) || 0;
@@ -88,6 +89,24 @@ const ClockView = memo(function ClockView({ value, onChange }) {
     setMeridiem(h >= 12 ? "PM" : "AM");
   }, [value]);
 
+  const [minH, minM] = useMemo(() => 
+    minTime ? minTime.split(":").map(Number) : [null, null], 
+  [minTime]);
+
+  const isPastH = useCallback((h12, mer) => {
+    if (minH === null) return false;
+    const h24 = (mer === "PM" ? (h12 % 12) + 12 : h12 % 12);
+    return h24 < minH;
+  }, [minH]);
+
+  const isPastM = useCallback((h12, m, mer) => {
+    if (minH === null) return false;
+    const h24 = (mer === "PM" ? (h12 % 12) + 12 : h12 % 12);
+    if (h24 < minH) return true;
+    if (h24 === minH && m < minM) return true;
+    return false;
+  }, [minH, minM]);
+
   const hours = [
     { v: 12, x: 0, y: -84 }, { v: 1, x: 42, y: -73 }, { v: 2, x: 73, y: -42 },
     { v: 3, x: 84, y: 0 }, { v: 4, x: 73, y: 42 }, { v: 5, x: 42, y: 73 },
@@ -103,8 +122,8 @@ const ClockView = memo(function ClockView({ value, onChange }) {
   ];
 
   const to24h = (h, m, ampm) => {
-    let hh = h;
-    if (ampm === "PM" && hh < 12) hh += 12;
+    let hh = h % 12;
+    if (ampm === "PM") hh += 12;
     if (ampm === "AM" && hh === 12) hh = 0;
     return `${String(hh).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   };
@@ -119,6 +138,8 @@ const ClockView = memo(function ClockView({ value, onChange }) {
     setMinute(m);
     onChange(to24h(hour, m, meridiem));
   };
+
+  const isCurrentSelectionPast = isPastM(hour, minute, meridiem);
 
   const calculateValueFromCoords = (clientX, clientY) => {
     if (!faceRef.current) return;
@@ -196,64 +217,125 @@ const ClockView = memo(function ClockView({ value, onChange }) {
 
   return (
     <div style={{ 
-      width: 280, 
-      padding: "24px 16px", 
+      width: 270, 
+      padding: "20px 14px", 
       display: "flex", 
       flexDirection: "column", 
       alignItems: "center", 
       userSelect: "none",
       background: "var(--white)",
     }}>
-      {/* Time Display */}
+      {/* Header with Time Display & AM/PM */}
       <div style={{ 
         display: "flex", 
         alignItems: "center",
+        justifyContent: "center",
         gap: 12, 
-        marginBottom: 28,
-        padding: "6px",
-        background: "rgba(20,20,19,0.04)",
-        borderRadius: "14px",
+        marginBottom: 20,
+        width: "100%"
       }}>
-        <button
-          onClick={() => setMode("hours")}
-          style={{
-            width: 64,
-            height: 52,
-            borderRadius: "10px",
-            fontSize: 24,
-            fontWeight: 800,
-            border: "none",
-            background: mode === "hours" ? "var(--white)" : "transparent",
-            color: mode === "hours" ? "var(--arc)" : "var(--slate)",
-            boxShadow: mode === "hours" ? "0 4px 12px rgba(0,0,0,0.08)" : "none",
-            cursor: "pointer",
-            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-            fontFamily: "var(--font)",
-          }}
-        >
-          {String(hour).padStart(2, "0")}
-        </button>
-        <span style={{ fontSize: 24, fontWeight: 800, color: "var(--slate)", opacity: 0.3 }}>:</span>
-        <button
-          onClick={() => setMode("minutes")}
-          style={{
-            width: 64,
-            height: 52,
-            borderRadius: "10px",
-            fontSize: 24,
-            fontWeight: 800,
-            border: "none",
-            background: mode === "minutes" ? "var(--white)" : "transparent",
-            color: mode === "minutes" ? "var(--arc)" : "var(--slate)",
-            boxShadow: mode === "minutes" ? "0 4px 12px rgba(0,0,0,0.08)" : "none",
-            cursor: "pointer",
-            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-            fontFamily: "var(--font)",
-          }}
-        >
-          {String(minute).padStart(2, "0")}
-        </button>
+        <div style={{ 
+          display: "flex", 
+          alignItems: "center",
+          gap: 6, 
+          padding: "5px",
+          background: "rgba(20,20,19,0.04)",
+          borderRadius: "12px",
+        }}>
+          <button
+            onClick={() => setMode("hours")}
+            style={{
+              width: 54,
+              height: 44,
+              borderRadius: "8px",
+              fontSize: 20,
+              fontWeight: 800,
+              border: "none",
+              background: mode === "hours" ? "var(--white)" : "transparent",
+              color: isCurrentSelectionPast 
+                ? "#ef4444" 
+                : mode === "hours" ? "var(--arc)" : "var(--slate)",
+              boxShadow: mode === "hours" ? "0 4px 10px rgba(0,0,0,0.06)" : "none",
+              cursor: "pointer",
+              transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+              fontFamily: "var(--font)",
+            }}
+          >
+            {String(hour).padStart(2, "0")}
+          </button>
+          <span style={{ fontSize: 20, fontWeight: 800, color: "var(--slate)", opacity: 0.3 }}>:</span>
+          <button
+            onClick={() => setMode("minutes")}
+            style={{
+              width: 54,
+              height: 44,
+              borderRadius: "8px",
+              fontSize: 20,
+              fontWeight: 800,
+              border: "none",
+              background: mode === "minutes" ? "var(--white)" : "transparent",
+              color: isCurrentSelectionPast 
+                ? "#ef4444" 
+                : mode === "minutes" ? "var(--arc)" : "var(--slate)",
+              boxShadow: mode === "minutes" ? "0 4px 10px rgba(0,0,0,0.06)" : "none",
+              cursor: "pointer",
+              transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+              fontFamily: "var(--font)",
+            }}
+          >
+            {String(minute).padStart(2, "0")}
+          </button>
+        </div>
+
+        <div style={{ 
+          display: "flex", 
+          flexDirection: "column",
+          gap: 4, 
+          background: "rgba(20,20,19,0.04)", 
+          padding: "4px", 
+          borderRadius: "10px",
+        }}>
+          {["AM", "PM"].map((m) => (
+            <button
+              key={m}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMeridiemChange(m);
+              }}
+              style={{
+                padding: "4px 8px",
+                borderRadius: "6px",
+                fontSize: 10,
+                fontWeight: 800,
+                border: "none",
+                background: meridiem === m ? "var(--white)" : "transparent",
+                color: meridiem === m ? "var(--arc)" : "var(--slate)",
+                boxShadow: meridiem === m ? "0 2px 5px rgba(0,0,0,0.05)" : "none",
+                cursor: "pointer",
+                transition: "all 0.2s",
+                fontFamily: "var(--font)",
+                textTransform: "uppercase",
+              }}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {isCurrentSelectionPast && (
+        <p style={{ 
+          fontSize: 10, 
+          color: "#ef4444", 
+          fontWeight: 700, 
+          marginTop: -10, 
+          marginBottom: 10,
+          textTransform: "uppercase",
+          letterSpacing: "0.05em"
+        }}>
+          Past time selected
+        </p>
+      )}
 
       {/* Clock Face */}
       <div
@@ -268,19 +350,19 @@ const ClockView = memo(function ClockView({ value, onChange }) {
         }}
         style={{ 
           position: "relative", 
-          width: 210, 
-          height: 210, 
+          width: 190, 
+          height: 190, 
           background: "var(--canvas)", 
           borderRadius: "50%", 
           display: "flex", 
           alignItems: "center", 
           justifyContent: "center", 
-          marginBottom: 28, 
+          marginBottom: 16, 
           cursor: "crosshair",
           boxShadow: "inset 0 2px 10px rgba(0,0,0,0.05)",
         }}
       >
-        <div style={{ position: "absolute", left: "50%", top: "50%", width: 8, height: 8, margin: -4, background: "var(--arc)", borderRadius: "50%", zIndex: 10, boxShadow: "0 0 10px rgba(243,115,56,0.4)" }} />
+        <div style={{ position: "absolute", left: "50%", top: "50%", width: 6, height: 6, margin: -3, background: isCurrentSelectionPast ? "#ef4444" : "var(--arc)", borderRadius: "50%", zIndex: 10 }} />
 
         <motion.div
           animate={{ rotate: getAngle() }}
@@ -289,17 +371,17 @@ const ClockView = memo(function ClockView({ value, onChange }) {
             position: "absolute",
             left: "50%",
             bottom: "50%",
-            width: 3,
-            height: 84,
-            background: "var(--arc)",
+            width: 2,
+            height: 72,
+            background: isCurrentSelectionPast ? "#ef4444" : "var(--arc)",
             transformOrigin: "bottom center",
             zIndex: 5,
             pointerEvents: "none",
             borderRadius: "4px",
           }}
         >
-          <div style={{ position: "absolute", top: 0, left: "50%", width: 36, height: 36, margin: "-18px", background: "var(--arc)", borderRadius: "50%", opacity: 0.15 }} />
-          <div style={{ position: "absolute", top: 0, left: "50%", width: 10, height: 10, margin: "-5px", background: "var(--arc)", borderRadius: "50%", border: "2.5px solid var(--white)" }} />
+          <div style={{ position: "absolute", top: 0, left: "50%", width: 28, height: 28, margin: "-14px", background: isCurrentSelectionPast ? "#ef4444" : "var(--arc)", borderRadius: "50%", opacity: 0.15 }} />
+          <div style={{ position: "absolute", top: 0, left: "50%", width: 8, height: 8, margin: "-4px", background: isCurrentSelectionPast ? "#ef4444" : "var(--arc)", borderRadius: "50%", border: "2px solid var(--white)" }} />
         </motion.div>
 
         <AnimatePresence mode="wait">
@@ -313,27 +395,35 @@ const ClockView = memo(function ClockView({ value, onChange }) {
           >
             {currentList.map((item) => {
               const isSelected = item.v === currentVal;
+              const disabled = mode === "hours" ? isPastH(item.v, meridiem) : isPastM(hour, item.v, meridiem);
+              
+              // Scale coordinates for smaller face
+              const scale = 190 / 210;
+              const sx = item.x * scale;
+              const sy = item.y * scale;
+
               return (
                 <div
                   key={item.v}
                   style={{
                     position: "absolute",
-                    left: `calc(50% + ${item.x}px)`,
-                    top: `calc(50% + ${item.y}px)`,
-                    width: 34,
-                    height: 34,
-                    margin: -17,
+                    left: `calc(50% + ${sx}px)`,
+                    top: `calc(50% + ${sy}px)`,
+                    width: 30,
+                    height: 30,
+                    margin: -15,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     borderRadius: "50%",
-                    background: isSelected ? "var(--arc)" : "transparent",
+                    background: isSelected ? (isCurrentSelectionPast ? "#ef4444" : "var(--arc)") : "transparent",
                     color: isSelected ? "var(--white)" : "var(--ink)",
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: isSelected ? 800 : 600,
                     zIndex: 10,
                     transition: "all 0.2s",
                     fontFamily: "var(--font)",
+                    opacity: disabled ? 0.2 : 1,
                   }}
                 >
                   {item.v}
@@ -344,47 +434,32 @@ const ClockView = memo(function ClockView({ value, onChange }) {
         </AnimatePresence>
       </div>
 
-      {/* AM/PM Switcher */}
-      <div style={{ 
-        display: "flex", 
-        gap: 6, 
-        background: "rgba(20,20,19,0.04)", 
-        padding: "4px", 
-        borderRadius: "12px",
-        width: "100%",
-      }}>
-        {["AM", "PM"].map((m) => (
-          <button
-            key={m}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleMeridiemChange(m);
-            }}
-            style={{
-              flex: 1,
-              padding: "8px 0",
-              borderRadius: "10px",
-              fontSize: 12,
-              fontWeight: 800,
-              border: "none",
-              background: meridiem === m ? "var(--white)" : "transparent",
-              color: meridiem === m ? "var(--arc)" : "var(--slate)",
-              boxShadow: meridiem === m ? "0 4px 10px rgba(0,0,0,0.06)" : "none",
-              cursor: "pointer",
-              transition: "all 0.25s",
-              fontFamily: "var(--font)",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-            }}
-          >
-            {m}
-          </button>
-        ))}
-      </div>
-
-      <p style={{ marginTop: 20, fontSize: 10, color: "var(--slate)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.6 }}>
-        {isDragging ? "Adjusting..." : `Pick ${mode}`}
+      <p style={{ fontSize: 9, color: isCurrentSelectionPast ? "#ef4444" : "var(--slate)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.6, marginBottom: 12 }}>
+        {isDragging ? "Adjusting..." : isCurrentSelectionPast ? "Invalid Time" : `Pick ${mode}`}
       </p>
+
+      <button
+        disabled={isCurrentSelectionPast}
+        onClick={(e) => {
+          if (isCurrentSelectionPast) return;
+          e.stopPropagation();
+          onChange(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+          window.dispatchEvent(new MouseEvent('mousedown')); 
+        }}
+        style={{
+          width: "100%",
+          padding: "10px",
+          borderRadius: "12px",
+          background: isCurrentSelectionPast ? "rgba(20,20,19,0.04)" : "var(--ink)",
+          color: isCurrentSelectionPast ? "rgba(20,20,19,0.2)" : "white",
+          fontSize: 12,
+          fontWeight: 700,
+          border: "none",
+          cursor: isCurrentSelectionPast ? "not-allowed" : "pointer"
+        }}
+      >
+        {isCurrentSelectionPast ? "Invalid Time" : "Set Time"}
+      </button>
     </div>
   );
 });
@@ -473,45 +548,40 @@ const CalendarView = memo(function CalendarView({ value, onChange }) {
           display: "grid",
           gridTemplateColumns: "repeat(7, 1fr)",
           gap: "4px",
+          marginBottom: 12,
         }}
       >
-        {["SU", "MO", "TU", "WE", "TH", "FR", "SA"].map((d) => (
-          <span
+        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
+          <div
             key={d}
             style={{
-              fontSize: 9,
-              fontWeight: 800,
               textAlign: "center",
+              fontSize: 10,
+              fontWeight: 900,
               color: "var(--slate)",
+              paddingBottom: 4,
               opacity: 0.4,
-              padding: "4px 0",
+              textTransform: "uppercase",
               letterSpacing: "0.05em",
             }}
           >
             {d}
-          </span>
+          </div>
         ))}
         {days.map((d, i) => {
-          if (!d) return <div key={`empty-${i}`} />;
-          const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+          if (d === null) return <div key={`empty-${i}`} />;
+          const dateStr = `${year}-${(month + 1).toString().padStart(2, "0")}-${d.toString().padStart(2, "0")}`;
           const isSelected = value === dateStr;
-          const isToday =
-            d === today.getDate() &&
-            month === today.getMonth() &&
-            year === today.getFullYear();
-          const isPast = new Date(year, month, d) < today && !isToday;
+          const isToday = today.toISOString().split("T")[0] === dateStr;
+          const isPast = new Date(year, month, d) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
           return (
             <button
               key={i}
               onClick={() => !isPast && onChange(dateStr)}
               style={{
+                padding: "8px 0",
                 border: "none",
-                background: isSelected
-                  ? "var(--arc)"
-                  : isToday
-                    ? "rgba(243,115,56,0.08)"
-                    : "transparent",
                 borderRadius: "8px",
                 fontSize: 11,
                 fontWeight: isSelected || isToday ? 800 : 500,
@@ -569,6 +639,24 @@ const CustomSelect = memo(function CustomSelect({
     return () => window.removeEventListener("mousedown", fn);
   }, []);
 
+  const [position, setPosition] = useState({ top: 0, left: 0, right: 0, upward: false });
+
+  useEffect(() => {
+    if (open && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const dropdownHeight = isCalendar ? 360 : isTime ? 400 : 240;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const shouldOpenUp = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
+
+      setPosition({
+        top: shouldOpenUp ? rect.top - 8 : rect.bottom + 8,
+        left: align === "left" ? rect.left : "auto",
+        right: align === "right" ? window.innerWidth - rect.right : "auto",
+        upward: shouldOpenUp
+      });
+    }
+  }, [open, isCalendar, isTime, align]);
+
   const label = isCalendar
     ? new Date(value + "T00:00:00").toLocaleDateString(undefined, {
         month: "short",
@@ -582,22 +670,25 @@ const CustomSelect = memo(function CustomSelect({
         type="button"
         onClick={() => setOpen(!open)}
         style={{
-          width: "100%",
-          padding: "10px 14px",
-          background: "var(--white)",
-          border: "1px solid rgba(20,20,19,0.08)",
-          borderRadius: "12px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          gap: 12,
+          padding: "10px 14px",
+          background: open ? "rgba(20,20,19,0.02)" : "var(--white)",
+          border: `1.5px solid ${open ? "var(--arc)" : "rgba(20,20,19,0.08)"}`,
+          borderRadius: "14px",
           cursor: "pointer",
-          fontFamily: "var(--font)",
-          transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
+          width: "100%",
+          minWidth: isTime ? 130 : 160,
+          transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+          boxShadow: open ? "0 4px 12px rgba(243,115,56,0.08)" : "0 2px 4px rgba(0,0,0,0.02)",
         }}
         onMouseEnter={(e) => {
-          e.target.style.borderColor = "rgba(20,20,19,0.15)";
-          e.target.style.boxShadow = "0 4px 8px rgba(0,0,0,0.04)";
+          if (!open) {
+            e.target.style.borderColor = "rgba(20,20,19,0.15)";
+            e.target.style.boxShadow = "0 4px 8px rgba(0,0,0,0.04)";
+          }
         }}
         onMouseLeave={(e) => {
           if (!open) {
@@ -623,27 +714,27 @@ const CustomSelect = memo(function CustomSelect({
         />
       </button>
 
-      <AnimatePresence>
-        {open && (
+      {open &&
+        createPortal(
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 4 }}
+            initial={{ opacity: 0, scale: 0.95, y: position.upward ? 4 : -4 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 4 }}
+            exit={{ opacity: 0, scale: 0.95, y: position.upward ? 4 : -4 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
             onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
             style={{
-              position: "absolute",
-              bottom: "100%", // Open UPWARDS to match screenshot context if needed, or stick to top if room
-              marginBottom: 12,
-              [align]: 0,
-              zIndex: 1000,
+              position: "fixed",
+              top: position.top,
+              left: position.left,
+              right: position.right,
+              zIndex: 9999,
               background: "var(--white)",
-              borderRadius: "16px",
-              border: "1px solid rgba(20,20,19,0.08)",
-              boxShadow: "0 20px 40px rgba(0,0,0,0.12), 0 0 0 1px rgba(20,20,19,0.02)",
+              borderRadius: "20px",
+              border: "1px solid rgba(20,20,19,0.1)",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(20,20,19,0.02)",
               overflow: "hidden",
-              transformOrigin: align === "left" ? "bottom left" : "bottom right",
+              transformOrigin: position.upward ? "bottom" : "top",
+              transform: position.upward ? "translateY(-100%)" : "none",
             }}
           >
             {isCalendar ? (
@@ -657,9 +748,9 @@ const CustomSelect = memo(function CustomSelect({
             ) : isTime ? (
               <ClockView
                 value={value}
+                minTime={minTime}
                 onChange={(v) => {
                   onChange(v);
-                  // Don't close immediately on hour select, wait for minutes
                 }}
               />
             ) : (
@@ -717,9 +808,60 @@ const CustomSelect = memo(function CustomSelect({
                 })}
               </div>
             )}
-          </motion.div>
+          </motion.div>,
+          document.body
         )}
-      </AnimatePresence>
+    </div>
+  );
+});
+
+const SmartWarnings = memo(function SmartWarnings({ selectedChannels, platformData, mediaFiles }) {
+  const warnings = [];
+
+  const mainMedia = mediaFiles[0];
+  if (!mainMedia || !mainMedia.dimensions) return null;
+
+  const { ratio } = mainMedia.dimensions;
+  const isHorizontal = ratio > 1.2;
+  const isVertical = ratio < 0.8;
+
+  if (selectedChannels.includes("youtube") && platformData.youtube?.type === "short" && isHorizontal) {
+    warnings.push({
+      id: "yt-short-ratio",
+      text: "YouTube Shorts must be vertical. Your video is landscape and will be uploaded as a normal video.",
+    });
+  }
+
+  if (selectedChannels.includes("instagram") && platformData.instagram?.type === "reel" && isHorizontal) {
+    warnings.push({
+      id: "ig-reel-ratio",
+      text: "Instagram Reels are vertical. This landscape video will have black bars.",
+    });
+  }
+
+  if (warnings.length === 0) return null;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {warnings.map(w => (
+        <motion.div
+          key={w.id}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 12,
+            background: "rgba(243,115,56,0.06)",
+            border: "1px solid rgba(243,115,56,0.15)",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+          }}
+        >
+          <Zap size={14} style={{ color: "var(--arc)", flexShrink: 0 }} />
+          <p style={{ fontSize: 11, fontWeight: 700, color: "var(--ink)", margin: 0, lineHeight: 1.4 }}>{w.text}</p>
+        </motion.div>
+      ))}
     </div>
   );
 });
@@ -1461,6 +1603,7 @@ function ComposerModal({
                   caption={caption}
                   mediaFiles={mediaFiles}
                   selectedRatio={selectedRatio}
+                  selectedSizePreset={platformPresets[activePreviewPlatform]}
                   youtubeThumbnail={youtubeThumbnail}
                   activePlatform={activePreviewPlatform}
                   onActivePlatformChange={setActivePreviewPlatform}
@@ -2064,6 +2207,13 @@ function ComposerModal({
                   }
                   youtubeThumbnail={youtubeThumbnail}
                   onYoutubeThumbnailChange={setYoutubeThumbnail}
+                />
+
+                {/* ── Smart Warnings ── */}
+                <SmartWarnings
+                  selectedChannels={selectedChannels}
+                  platformData={platformData}
+                  mediaFiles={mediaFiles}
                 />
 
                 {/* ── Error ── */}
