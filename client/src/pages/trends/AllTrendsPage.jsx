@@ -142,6 +142,8 @@ export default function AllTrendsPage() {
             source: `r/${m.subreddit}`,
             url: m.link,
             image: m.image,
+            videoUrl: m.videoUrl,
+            isVideo: m.isVideo,
           }
         };
       }

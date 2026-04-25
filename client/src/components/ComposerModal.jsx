@@ -856,11 +856,22 @@ function ComposerModal({
                 
                 const blob = await res.blob();
                 const name = url.split('/').pop()?.split('?')[0] || 'media';
-                // Detect extension from mime type
-                let extension = blob.type.split('/')[1] || 'jpg';
-                if (extension === 'jpeg') extension = 'jpg';
                 
-                return new File([blob], `${name}.${extension}`, { type: blob.type });
+                // Smart mime type detection
+                let mimeType = blob.type;
+                if (!mimeType || mimeType === 'application/octet-stream') {
+                  if (url.toLowerCase().includes('.mp4') || url.toLowerCase().includes('.m4v')) mimeType = 'video/mp4';
+                  else if (url.toLowerCase().includes('.mov')) mimeType = 'video/quicktime';
+                  else if (url.toLowerCase().includes('.webm')) mimeType = 'video/webm';
+                  else if (url.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif)/)) mimeType = 'image/' + url.split('.').pop().split('?')[0];
+                }
+
+                // Detect extension
+                let extension = mimeType.split('/')[1] || 'jpg';
+                if (extension === 'jpeg') extension = 'jpg';
+                if (extension.includes('quicktime')) extension = 'mov';
+                
+                return new File([blob], `${name}.${extension}`, { type: mimeType });
               } catch (err) {
                 console.error("Failed to load media via internal proxy:", url, err);
                 return null;

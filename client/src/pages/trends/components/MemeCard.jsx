@@ -22,10 +22,10 @@ const MemeCard = memo(function MemeCard({ meme, index, onUseIdea }) {
       caption: `${title || 'Trending Meme'}\n\n#memes #viral #humor`,
       hashtags: ['#memes', '#viral', '#humor'],
       topic: subreddit || 'Trending',
-      images: [image],
+      images: [meme.isVideo ? meme.videoUrl : image],
       memes: [],
     });
-  }, [image, title, subreddit, onUseIdea]);
+  }, [image, title, subreddit, meme.isVideo, meme.videoUrl, onUseIdea]);
 
   return (
     <motion.div

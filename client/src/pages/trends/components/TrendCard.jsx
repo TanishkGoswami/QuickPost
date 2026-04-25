@@ -256,9 +256,14 @@ const TrendCard = memo(function TrendCard({
   const handleUse = useCallback(
     (idea) => {
       const caption = `${idea}\n\n${hashtags.join(" ")}`;
-      // Include news image and any other available media
+      // Include news image (or video) and any other available media
       const allImages = [];
-      if (newsItem?.image) allImages.push(newsItem.image);
+      if (newsItem?.isVideo && newsItem?.videoUrl) {
+        allImages.push(newsItem.videoUrl);
+      } else if (newsItem?.image) {
+        allImages.push(newsItem.image);
+      }
+      
       images.forEach(img => allImages.push(img.url));
 
       onUseIdea({
@@ -269,7 +274,7 @@ const TrendCard = memo(function TrendCard({
         memes: memes.map((m) => m.image),
       });
     },
-    [hashtags, topic, images, memes, onUseIdea, newsItem?.image],
+    [hashtags, topic, images, memes, onUseIdea, newsItem?.image, newsItem?.videoUrl, newsItem?.isVideo],
   );
 
   return (
