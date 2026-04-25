@@ -96,40 +96,6 @@ router.get("/youtube", async (req, res) => {
   }
 });
 
-router.post("/youtube/auto-connect", authenticateUser, async (req, res) => {
-  try {
-    const { providerAccessToken, providerRefreshToken, providerTokenExpiry } =
-      req.body || {};
-
-    if (!providerAccessToken) {
-      return res.status(400).json({
-        success: false,
-        error: "providerAccessToken is required",
-      });
-    }
-
-    const tokenData = await googleOAuth.buildTokenDataFromProviderTokens({
-      accessToken: providerAccessToken,
-      refreshToken: providerRefreshToken || null,
-      expiryDate: providerTokenExpiry || null,
-    });
-
-    await googleOAuth.storeTokens(req.user.userId, tokenData);
-
-    return res.json({
-      success: true,
-      message: "YouTube connected automatically via Google sign-in",
-      username: tokenData.userInfo?.username || null,
-    });
-  } catch (error) {
-    console.error("Auto YouTube connect error:", error);
-    return res.status(500).json({
-      success: false,
-      error: error.message || "Failed to auto-connect YouTube",
-    });
-  }
-});
-
 router.get("/google/callback", async (req, res) => {
   const { code, error, state } = req.query;
 
@@ -993,6 +959,7 @@ router.delete("/disconnect/:provider", authenticateUser, async (req, res) => {
       "bluesky",
       "linkedin",
       "mastodon",
+      "tiktok",
       "threads",
       "x",
       "reddit",

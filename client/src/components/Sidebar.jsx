@@ -11,6 +11,7 @@ import {
   Share2,
   ChevronDown,
   X,
+  Flame,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
 import logo from "/logo.png";
@@ -192,7 +193,7 @@ function Sidebar() {
     {
       id: "facebook",
       name: "Facebook",
-      connected: connectedAccounts.facebook,
+      connected: connectedAccounts.facebook?.connected,
       icon: (
         <img
           src="/icons/facebook-round-color-icon.svg"
@@ -205,7 +206,7 @@ function Sidebar() {
     {
       id: "instagram",
       name: "Instagram",
-      connected: connectedAccounts.instagram,
+      connected: connectedAccounts.instagram?.connected,
       icon: (
         <img
           src="/icons/ig-instagram-icon.svg"
@@ -218,7 +219,7 @@ function Sidebar() {
     {
       id: "x",
       name: "X",
-      connected: connectedAccounts.x,
+      connected: connectedAccounts.x?.connected,
       icon: (
         <img
           src="/icons/x-social-media-round-icon.svg"
@@ -235,7 +236,7 @@ function Sidebar() {
     {
       id: "linkedin",
       name: "LinkedIn",
-      connected: connectedAccounts.linkedin,
+      connected: connectedAccounts.linkedin?.connected,
       icon: (
         <img
           src="/icons/linkedin-icon.svg"
@@ -248,7 +249,7 @@ function Sidebar() {
     {
       id: "youtube",
       name: "YouTube",
-      connected: connectedAccounts.youtube,
+      connected: connectedAccounts.youtube?.connected,
       icon: (
         <img
           src="/icons/youtube-color-icon.svg"
@@ -261,7 +262,7 @@ function Sidebar() {
     {
       id: "pinterest",
       name: "Pinterest",
-      connected: connectedAccounts.pinterest,
+      connected: connectedAccounts.pinterest?.connected,
       icon: (
         <img
           src="/icons/pinterest-round-color-icon.svg"
@@ -278,7 +279,7 @@ function Sidebar() {
     {
       id: "threads",
       name: "Threads",
-      connected: connectedAccounts.threads,
+      connected: connectedAccounts.threads?.connected,
       icon: (
         <img
           src="/icons/threads-icon.svg"
@@ -291,7 +292,7 @@ function Sidebar() {
     {
       id: "mastodon",
       name: "Mastodon",
-      connected: connectedAccounts.mastodon,
+      connected: connectedAccounts.mastodon?.connected,
       icon: (
         <img
           src="/icons/mastodon-round-icon.svg"
@@ -303,12 +304,12 @@ function Sidebar() {
         alert("Coming Soon", "Mastodon integration coming soon!", {
           intent: "warning",
         }),
-      disabled: true,
+
     },
     {
       id: "bluesky",
       name: "Bluesky",
-      connected: connectedAccounts.bluesky,
+      connected: connectedAccounts.bluesky?.connected,
       icon: (
         <img
           src="/icons/bluesky-circle-color-icon.svg"
@@ -321,7 +322,7 @@ function Sidebar() {
     {
       id: "google-business",
       name: "Google Business",
-      connected: connectedAccounts.googleBusiness,
+      connected: connectedAccounts.googleBusiness?.connected,
       icon: (
         <img
           src="/icons/google-icon.svg"
@@ -339,7 +340,7 @@ function Sidebar() {
     {
       id: "reddit",
       name: "Reddit",
-      connected: connectedAccounts.reddit,
+      connected: connectedAccounts.reddit?.connected,
       icon: (
         <img
           src="/icons/reddit-icon.svg"
@@ -415,6 +416,11 @@ function Sidebar() {
               to: "/dashboard/queue",
               label: "Scheduled Queue",
               icon: <CalendarClock size={16} />,
+            },
+            {
+              to: "/dashboard/trends",
+              label: "All Trends",
+              icon: <Flame size={16} />,
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);
@@ -685,7 +691,7 @@ function Sidebar() {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {platform.name}
+                            {connectedAccounts[platform.id]?.username || platform.name}
                           </div>
                           <div
                             style={{
