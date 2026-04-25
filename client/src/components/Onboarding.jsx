@@ -20,7 +20,7 @@ const PLATFORMS = [
   { id: 'pinterest', label: 'Pinterest',       icon: '/icons/pinterest-round-color-icon.svg', comingSoon: true },
   { id: 'threads',   label: 'Threads',         icon: '/icons/threads-icon.svg' },
   { id: 'bluesky',   label: 'Bluesky',         icon: '/icons/bluesky-circle-color-icon.svg' },
-  { id: 'mastodon',  label: 'Mastodon',        icon: '/icons/mastodon-round-icon.svg', comingSoon: true },
+  { id: 'mastodon',  label: 'Mastodon',        icon: '/icons/mastodon-round-icon.svg' },
   { id: 'google',    label: 'Google Business', icon: '/icons/google-icon.svg', comingSoon: true },
   { id: 'reddit',    label: 'Reddit',          icon: '/icons/reddit-icon.svg', comingSoon: true },
 ];

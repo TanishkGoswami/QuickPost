@@ -300,11 +300,7 @@ function Sidebar() {
           alt=""
         />
       ),
-      onConnect: () =>
-        alert("Coming Soon", "Mastodon integration coming soon!", {
-          intent: "warning",
-        }),
-
+      onConnect: () => setShowMastodonModal(true),
     },
     {
       id: "bluesky",

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Check, Plus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const PLATFORMS = [
@@ -40,7 +41,6 @@ const PLATFORMS = [
   {
     id: 'mastodon', name: 'Mastodon', borderColor: 'border-purple-600',
     icon: <img src="/icons/mastodon-round-icon.svg" className="w-5 h-5 object-contain" alt="Mastodon" />,
-    comingSoon: true,
   },
 
   {
@@ -87,152 +87,72 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect }) {
   const isAllSelected = selectedConnectedCount === connectedPlatforms.length;
 
   return (
-    <div className="mb-2">
-      <div className="flex items-center gap-2 flex-wrap">
-
-        {/* ── Connected Platforms Dropdown ── */}
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between mb-1 px-1">
+        <div className="eyebrow lowercase text-[10px] tracking-[0.12em] opacity-70">
+          Publish channels
+        </div>
         {connectedPlatforms.length > 0 && (
-          <div className="relative" ref={connectedRef}>
-            <button
-              type="button"
-              onClick={() => { setConnectedOpen(o => !o); setMoreOpen(false); }}
-              aria-expanded={connectedOpen}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-gray-50 text-sm font-medium text-gray-700 transition-all shadow-sm"
-            >
-              {/* Show stacked icons (max 3) — hidden when dropdown is open */}
-              <div className={`flex -space-x-1.5 ${connectedOpen ? 'hidden' : 'flex'}`}>
-                {connectedPlatforms.slice(0, 3).map(p => (
-                  <div key={p.id} className="w-5 h-5 rounded-full bg-white border border-gray-200 flex items-center justify-center overflow-hidden shadow-sm">
-                    {p.icon}
-                  </div>
-                ))}
-                {connectedPlatforms.length > 3 && (
-                  <div className="w-5 h-5 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-[9px] font-bold text-gray-500">
-                    +{connectedPlatforms.length - 3}
-                  </div>
-                )}
-              </div>
-              <span>Connected</span>
-              {selectedConnectedCount > 0 && (
-                <span className="bg-indigo-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                  {selectedConnectedCount}
-                </span>
-              )}
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${connectedOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {connectedOpen && (
-              <div className="absolute top-full left-0 mt-1.5 w-60 bg-white rounded-xl border border-gray-200 shadow-lg z-50 overflow-hidden">
-                <div className="px-3 py-2 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Connected Accounts</p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onBulkSelect(connectedIds)}
-                      className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 uppercase tracking-tighter"
-                    >
-                      All
-                    </button>
-                    <span className="text-gray-300">|</span>
-                    <button
-                      type="button"
-                      onClick={() => onBulkSelect([])}
-                      className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase tracking-tighter"
-                    >
-                      None
-                    </button>
-                  </div>
-                </div>
-                <div className="max-h-64 overflow-y-auto">
-                  {connectedPlatforms.map(p => {
-                    const isSelected = selectedChannels.includes(p.id);
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => onChannelToggle(p.id)}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 transition-colors ${isSelected ? 'bg-indigo-50/30' : ''}`}
-                      >
-                        <div className="w-7 h-7 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center flex-shrink-0 overflow-hidden">
-                          {p.icon}
-                        </div>
-                        <span className={`text-sm flex-1 text-left font-medium ${isSelected ? 'text-indigo-700' : 'text-gray-700'}`}>
-                          {p.name}
-                        </span>
-                        {isSelected && <Check className="w-4 h-4 text-indigo-500" strokeWidth={3} />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-
-        {/* ── Divider if both exist ── */}
-        {connectedPlatforms.length > 0 && unconnectedPlatforms.length > 0 && (
-          <div className="h-6 w-px bg-gray-200" />
-        )}
-
-        {/* ── Unconnected: first 3 as icon buttons ── */}
-        {visibleUnconnected.map(p => (
           <button
-            key={p.id}
             type="button"
-            title={`Connect ${p.name}`}
-            className="w-8 h-8 rounded-full bg-white border border-gray-200 hover:border-gray-400 flex items-center justify-center opacity-40 hover:opacity-70 transition-all shadow-sm relative group"
+            onClick={() => onBulkSelect(isAllSelected ? [] : connectedIds)}
+            className={`text-[9px] font-black uppercase tracking-[0.15em] py-1 px-3 rounded-full transition-all duration-300 ${
+              isAllSelected
+                ? "bg-ink text-white shadow-md scale-105"
+                : "bg-white text-ink border border-gray-200 hover:border-ink"
+            }`}
           >
-            {p.icon}
-            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-              {p.name}
-            </div>
+            {isAllSelected ? "Deselect All" : "Select All"}
           </button>
-        ))}
-
-        {/* ── More dropdown for remaining unconnected ── */}
-        {hiddenUnconnected.length > 0 && (
-          <div className="relative" ref={moreRef}>
-            <button
-              type="button"
-              onClick={() => { setMoreOpen(o => !o); setConnectedOpen(false); }}
-              aria-expanded={moreOpen}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full border border-gray-200 bg-white hover:bg-gray-50 text-xs font-medium text-gray-500 transition-all shadow-sm"
-            >
-              <Plus className="w-3 h-3" />
-              {hiddenUnconnected.length} more
-            </button>
-
-            {moreOpen && (
-              <div className="absolute top-full left-0 mt-1.5 w-48 bg-white rounded-xl border border-gray-200 shadow-lg z-50 overflow-hidden">
-                <div className="px-3 py-2 border-b border-gray-100">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">More Platforms</p>
-                </div>
-                {hiddenUnconnected.map(p => (
-                  <div key={p.id} className="flex items-center gap-3 px-3 py-2.5 opacity-50">
-                    <div className="w-7 h-7 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center flex-shrink-0">
-                      {p.icon}
-                    </div>
-                    <span className="text-sm text-gray-500 font-medium flex-1">{p.name}</span>
-                    <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">Connect</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Empty state ── */}
-        {connectedPlatforms.length === 0 && (
-          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full">
-            No accounts connected yet
-          </p>
         )}
       </div>
 
-      {/* Selected count */}
+      <div className="flex items-center gap-3.5 flex-wrap">
+        {connectedPlatforms.map((p) => {
+          const isSelected = selectedChannels.includes(p.id);
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onChannelToggle(p.id)}
+              title={p.name}
+              className={`group relative w-[52px] h-[52px] rounded-2xl flex items-center justify-center transition-all duration-500 ${
+                isSelected
+                  ? "bg-white shadow-[0_12px_32px_rgba(20,20,19,0.12)] border-[2.5px] border-ink scale-110 z-10"
+                  : "bg-white border border-gray-100 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 hover:scale-105 hover:shadow-lg"
+              }`}
+            >
+              <div className={`w-8 h-8 flex items-center justify-center transition-transform duration-500 ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`}>
+                {p.icon}
+              </div>
+
+              {isSelected && (
+                <motion.div
+                  initial={{ scale: 0, rotate: -45 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  className="absolute -top-2 -right-2 w-6 h-6 bg-ink rounded-full flex items-center justify-center border-2 border-white shadow-xl"
+                >
+                  <Check size={12} color="white" strokeWidth={4} />
+                </motion.div>
+              )}
+
+              <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-ink text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest z-20">
+                {p.name}
+              </div>
+            </button>
+          );
+        })}
+
+        {connectedPlatforms.length === 0 && (
+          <div className="w-full p-6 rounded-2xl border-2 border-dashed border-gray-100 flex flex-col items-center gap-2 bg-gray-50/30">
+             <p className="text-sm font-medium text-gray-400">No accounts connected yet</p>
+             <button className="text-[10px] font-bold text-arc uppercase tracking-widest hover:underline">Connect accounts in sidebar →</button>
+          </div>
+        )}
+      </div>
+
       {selectedChannels.length > 0 && (
-        <p className="text-xs text-gray-400 mt-2">
+        <p className="text-[10px] font-bold text-slate mt-2 px-1 uppercase tracking-wider opacity-50">
           Posting to {selectedChannels.length} channel{selectedChannels.length > 1 ? 's' : ''}
         </p>
       )}
