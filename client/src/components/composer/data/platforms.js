@@ -113,6 +113,19 @@ export const PLATFORM_META = {
     requiresSubreddit: true, // Reddit subreddit required
     charLimit: 40000,
     imgAspect: "aspect-video",
+    suggestedSubreddits: [
+      "Influencersinthewild",
+      "StockMarket",
+      "indiameme",
+      "Cricket",
+      "news",
+      "technology",
+      "IndiaInvestments",
+      "jobs",
+      "memes",
+      "dankmemes",
+      "funny"
+    ]
   },
 };
 
