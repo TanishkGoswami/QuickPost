@@ -1,5 +1,6 @@
 import React from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Hash } from "lucide-react";
+import { PLATFORM_META } from "./composer/data/platforms.js";
 
 function PlatformCustomization({
   selectedChannels,
@@ -259,9 +260,110 @@ function PlatformCustomization({
               </div>
             </div>
           )}
-        </div>
-      )}
-    </div>
+
+          {/* Reddit Customization */}
+          {selectedChannels.includes("reddit") && (
+            <div className="platform-card">
+              <div className="flex items-center gap-2 mb-3">
+                <img src="/icons/reddit-icon.svg" className="w-5 h-5" alt="Reddit" />
+                <h4 className="font-semibold text-gray-900">Reddit</h4>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Reddit Title <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={platformData.reddit?.title || ""}
+                    onChange={(e) =>
+                      handleChange("reddit", "title", e.target.value)
+                    }
+                    placeholder="Enter an eye-catching title..."
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm placeholder:text-gray-400 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Subreddit <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                      <Hash size={14} />
+                    </div>
+                    <input
+                      type="text"
+                      value={platformData.reddit?.subreddit || ""}
+                      onChange={(e) =>
+                        handleChange("reddit", "subreddit", e.target.value)
+                      }
+                      placeholder="e.g. technology"
+                      className="w-full pl-8 pr-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm placeholder:text-gray-400 transition-all"
+                    />
+                  </div>
+                  
+                  {/* Suggested Subreddits */}
+                  <div className="mt-2.5">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Suggested Subreddits</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {PLATFORM_META.reddit.suggestedSubreddits.map(sr => (
+                        <button
+                          key={sr}
+                          type="button"
+                          onClick={() => handleChange("reddit", "subreddit", sr)}
+                          className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                            platformData.reddit?.subreddit === sr
+                              ? "bg-orange-500 text-white shadow-sm"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          r/{sr}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Facebook Customization */}
+          {selectedChannels.includes("facebook") && (
+            <div className="platform-card">
+              <div className="flex items-center gap-2 mb-3">
+                <img src="/icons/facebook-round-color-icon.svg" className="w-5 h-5" alt="Facebook" />
+                <h4 className="font-semibold text-gray-900">Facebook</h4>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="radio"
+                    name="fb-type"
+                    checked={platformData.facebook?.type === "post"}
+                    onChange={() => handleChange("facebook", "type", "post")}
+                    className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">Feed Post</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="radio"
+                    name="fb-type"
+                    checked={platformData.facebook?.type === "reel"}
+                    onChange={() => handleChange("facebook", "type", "reel")}
+                    className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">Reel</span>
+                </label>
+            </div>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
   );
 }
 

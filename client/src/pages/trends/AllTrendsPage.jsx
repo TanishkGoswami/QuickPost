@@ -87,7 +87,7 @@ export default function AllTrendsPage() {
     newsLimit: 24,
     memeLimit: 24,
     imageLimit: 24,
-    newsCategories: 'technology,business,entertainment,sports,finance,science',
+    newsCategories: 'technology,business,entertainment,sports,finance,science,world,health',
   });
 
   /* ── Derived Trends Logic ── */
@@ -121,15 +121,40 @@ export default function AllTrendsPage() {
       };
     });
 
-    // 2. Map Memes as first-class citizens
-    const memeItems = memes.map((m, i) => ({
-      ...m,
-      discoveryType: 'meme',
-      id: `meme-${m.id || i}`,
-      score: 85 + Math.floor(Math.random() * 15), // High priority scores
-    }));
+    // 2. Map Memes as first-class citizens, but detect "News" subreddits
+    const memeItems = memes.map((m, i) => {
+      // If it's a news-heavy subreddit, treat it as a "Trend" (News) item
+      const isNewsSub = ['news', 'worldnews', 'technology', 'StockMarket', 'IndiaInvestments', 'Cricket', 'business'].includes(m.subreddit?.toLowerCase());
+      
+      if (isNewsSub) {
+        return {
+          id: `reddit-news-${m.id || i}`,
+          topic: m.subreddit,
+          discoveryType: 'trend',
+          score: 90 + Math.floor(Math.random() * 9), // High priority
+          ideas: [
+            `Discuss this update from r/${m.subreddit}: ${m.title}`,
+            `Share your take on this ${m.subreddit} discussion`,
+          ],
+          hashtags: [`#${m.subreddit}`, '#redditnews', '#trending'],
+          newsItem: {
+            title: m.title,
+            source: `r/${m.subreddit}`,
+            url: m.link,
+            image: m.image,
+          }
+        };
+      }
 
-    // 3. Interleave them for a dynamic discovery experience
+      return {
+        ...m,
+        discoveryType: 'meme',
+        id: `meme-${m.id || i}`,
+        score: 80 + Math.floor(Math.random() * 15),
+      };
+    });
+
+    // 3. Interleave them 1:1 for a balanced discovery experience
     const combined = [];
     const maxLen = Math.max(result.length, memeItems.length);
     
@@ -137,8 +162,7 @@ export default function AllTrendsPage() {
       if (i < result.length) {
         combined.push({ ...result[i], discoveryType: 'trend' });
       }
-      // Insert a meme every 2 news articles or if we run out of news
-      if (i < memeItems.length && (i % 2 === 0 || i >= result.length)) {
+      if (i < memeItems.length) {
         combined.push(memeItems[i]);
       }
     }
