@@ -9,14 +9,14 @@ const PLANS = [
   {
     name: 'Free',
     price: { monthly: 0, annual: 0 },
-    description: 'Perfect for individuals just getting started with cross-posting.',
+    description: 'Try all features with a 3-day free trial. Perfect for testing.',
     icon: <Zap size={20} />,
     features: [
+      '3-day full access trial',
       '3 connected social accounts',
       '10 posts per month',
       'Basic scheduling',
       '7-day post history',
-      'Community support',
     ],
     cta: 'Get started free',
     ctaAction: 'login',
@@ -24,7 +24,7 @@ const PLANS = [
   },
   {
     name: 'Pro',
-    price: { monthly: 12, annual: 10 },
+    price: { monthly: 999, annual: 799 },
     description: 'For creators who broadcast seriously across every platform.',
     icon: <Sparkles size={20} />,
     features: [
@@ -35,14 +35,14 @@ const PLANS = [
       '90-day post history',
       'Priority email support',
     ],
-    cta: 'Start Pro — free trial',
+    cta: 'Start Pro — 3-day trial',
     ctaAction: 'login',
     highlighted: true,
     badge: 'Most popular',
   },
   {
-    name: 'Business',
-    price: { monthly: 29, annual: 24 },
+    name: 'Enterprise',
+    price: { monthly: 1999, annual: 1599 },
     description: 'For teams and agencies managing multiple brands at scale.',
     icon: <Building2 size={20} />,
     features: [
@@ -54,7 +54,7 @@ const PLANS = [
       'Dedicated account support',
       'Full post history',
     ],
-    cta: 'Contact sales',
+    cta: 'Start Enterprise',
     ctaAction: 'login',
     highlighted: false,
   },
@@ -71,7 +71,7 @@ const FAQS = [
   },
   {
     q: 'Is there a free trial for paid plans?',
-    a: 'Pro and Business plans include a 14-day free trial. No credit card required to start.',
+    a: 'Yes, we offer a 3-day full access trial for Pro and Enterprise plans. No credit card required to start.',
   },
   {
     q: 'Which platforms are supported?',
@@ -79,7 +79,7 @@ const FAQS = [
   },
   {
     q: 'Do you offer refunds?',
-    a: 'If you are not satisfied within the first 14 days of a paid plan, contact us for a full refund — no questions asked.',
+    a: 'If you are not satisfied within your first 3 days of a paid plan, contact us for a full refund — no questions asked.',
   },
 ];
 
@@ -258,7 +258,7 @@ export default function PricingPage() {
               <div style={{ marginBottom: 24 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
                   <span style={{ fontSize: 'clamp(40px, 5vw, 52px)', fontWeight: 600, color: plan.highlighted ? 'var(--canvas)' : 'var(--ink)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                    ${plan.price[billing]}
+                    ₹{plan.price[billing]}
                   </span>
                   <span style={{ fontSize: 14, fontWeight: 450, color: plan.highlighted ? 'rgba(243,240,238,0.5)' : 'var(--slate)', marginBottom: 6 }}>
                     {plan.price[billing] === 0 ? 'forever' : `/ mo`}
@@ -266,7 +266,7 @@ export default function PricingPage() {
                 </div>
                 {billing === 'annual' && plan.price.monthly > 0 && (
                   <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--arc)', marginTop: 4 }}>
-                    Billed ${plan.price.annual * 12}/year · Save ${(plan.price.monthly - plan.price.annual) * 12}
+                    Billed ₹{plan.price.annual * 12}/year · Save ₹{(plan.price.monthly - plan.price.annual) * 12}
                   </div>
                 )}
               </div>

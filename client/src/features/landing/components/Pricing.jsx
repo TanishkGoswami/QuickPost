@@ -6,21 +6,21 @@ const PLANS = [
   {
     name: 'Free',
     price: { monthly: 0, annual: 0 },
-    description: 'Perfect for individuals just getting started.',
+    description: 'Try all features with a 3-day free trial. Perfect for testing.',
     icon: <Zap size={20} />,
     features: [
+      '3-day full access trial',
       '3 connected social accounts',
       '10 posts per month',
       'Basic scheduling',
       '7-day post history',
-      'Community support',
     ],
     cta: 'Get started free',
     highlighted: false,
   },
   {
     name: 'Pro',
-    price: { monthly: 12, annual: 10 },
+    price: { monthly: 999, annual: 799 },
     description: 'For creators who broadcast seriously.',
     icon: <Sparkles size={20} />,
     features: [
@@ -31,13 +31,13 @@ const PLANS = [
       '90-day post history',
       'Priority email support',
     ],
-    cta: 'Start Pro — free trial',
+    cta: 'Start Pro — 3-day trial',
     highlighted: true,
     badge: 'Most popular',
   },
   {
-    name: 'Business',
-    price: { monthly: 29, annual: 24 },
+    name: 'Enterprise',
+    price: { monthly: 1999, annual: 1599 },
     description: 'For teams and agencies at scale.',
     icon: <Building2 size={20} />,
     features: [
@@ -48,7 +48,7 @@ const PLANS = [
       'Custom integrations',
       'Dedicated account support',
     ],
-    cta: 'Contact sales',
+    cta: 'Start Enterprise',
     highlighted: false,
   },
 ];
@@ -187,7 +187,7 @@ export default function Pricing() {
                     color: plan.highlighted ? 'var(--canvas)' : 'var(--ink)',
                     letterSpacing: '-0.04em',
                   }}>
-                    ${plan.price[billing]}
+                    ₹{plan.price[billing]}
                   </span>
                   <span style={{ fontSize: 13, fontWeight: 450, color: plan.highlighted ? 'rgba(243,240,238,0.45)' : 'var(--slate)', marginBottom: 5 }}>
                     {plan.price[billing] === 0 ? 'forever' : '/ mo'}
@@ -195,7 +195,7 @@ export default function Pricing() {
                 </div>
                 {billing === 'annual' && plan.price.monthly > 0 && (
                   <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--arc)', marginTop: 4 }}>
-                    Billed ${plan.price.annual * 12}/yr · Save ${(plan.price.monthly - plan.price.annual) * 12}
+                    Billed ₹{plan.price.annual * 12}/yr · Save ₹{(plan.price.monthly - plan.price.annual) * 12}
                   </div>
                 )}
               </div>
@@ -258,7 +258,7 @@ export default function Pricing() {
           transition={{ duration: 0.5, delay: 0.3 }}
           style={{ textAlign: 'center', fontSize: 13, fontWeight: 450, color: 'var(--slate)', marginTop: 32 }}
         >
-          All plans include a 14-day free trial on paid tiers. No credit card required to start.
+          All plans include a 3-day free trial on paid tiers. No credit card required to start.
         </motion.p>
       </div>
     </section>
