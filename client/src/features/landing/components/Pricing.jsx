@@ -58,7 +58,7 @@ export default function Pricing() {
   const [billing, setBilling] = useState('monthly');
 
   return (
-    <section id="pricing" className="landing-section" style={{ padding: 'clamp(60px, 10vh, 100px) 24px', background: 'var(--canvas)' }}>
+    <section id="pricing" className="landing-section" style={{ padding: '80px 24px', background: 'var(--canvas)' }}>
       <div className="landing-container" style={{ maxWidth: 1280, margin: '0 auto' }}>
 
         {/* Header */}

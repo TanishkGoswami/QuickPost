@@ -22,7 +22,6 @@ export default function CTASection() {
           {/* Background Paths */}
           <div className="absolute inset-0 z-0 opacity-80">
             <FloatingPaths position={1} />
-            <FloatingPaths position={-1} />
           </div>
 
           <div className="max-w-xl text-center md:text-left relative z-10">
