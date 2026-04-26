@@ -10,7 +10,7 @@ export default function SmoothScroll({ children }) {
     // Initialize Lenis
     const lenis = new Lenis({
       duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // https://www.desmos.com/calculator/brs54l4xou
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       direction: 'vertical',
       gestureDirection: 'vertical',
       smoothHorizontal: false,
@@ -18,6 +18,7 @@ export default function SmoothScroll({ children }) {
       smoothTouch: false,
       touchMultiplier: 2,
       infinite: false,
+      autoResize: true,
     });
 
     // Synchronize Lenis with GSAP ScrollTrigger

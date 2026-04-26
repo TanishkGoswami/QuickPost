@@ -30,6 +30,7 @@ export default function LandingPage() {
           minHeight: "100vh",
           background: "var(--canvas)",
           fontFamily: "var(--font)",
+          position: "relative",
         }}
       >
         <LandingNav />
@@ -47,7 +48,6 @@ export default function LandingPage() {
             pointerEvents: 'none' 
           }}>
             <FloatingPaths position={1} />
-            <FloatingPaths position={-1} />
           </div>
           
           <div style={{ position: 'relative', zIndex: 1 }}>
