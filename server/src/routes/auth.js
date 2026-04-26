@@ -963,6 +963,7 @@ router.delete("/disconnect/:provider", authenticateUser, async (req, res) => {
       "threads",
       "x",
       "reddit",
+      "googleBusiness",
     ];
     if (!validProviders.includes(provider)) {
       return res

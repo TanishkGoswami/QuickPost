@@ -286,7 +286,8 @@ export async function getConnectedAccounts(userId) {
     for (const p of providers) result[p] = { connected: false };
 
     for (const row of data || []) {
-      result[row.provider] = {
+      const providerKey = row.provider === 'google-business' ? 'googleBusiness' : row.provider;
+      result[providerKey] = {
         connected: true,
         updated_at: row.updated_at,
         token_expiry: row.token_expiry,
