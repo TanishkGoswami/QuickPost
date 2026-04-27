@@ -124,61 +124,92 @@ const PLATFORM_CONFIG = {
 const InstagramOverlay = ({ format, caption, children, isFull, platformUsername, metrics, user }) => {
   if (isFull) {
     const isReel = format.id === 'ig_reel';
+    const isStory = format.id === 'ig_story';
+
+    if (isStory) {
+      return (
+        <div className="absolute inset-0 flex flex-col pointer-events-none text-white">
+          <div className="absolute inset-0 z-[-1] bg-black border-2 border-black">{children}</div>
+
+          {/* Story Progress Bar */}
+          <div className="px-2 pt-3 flex gap-1.5 z-10">
+            <div className="h-0.5 flex-1 bg-white/30 rounded-full overflow-hidden">
+              <div className="h-full bg-white w-1/3" />
+            </div>
+          </div>
+
+          {/* Story Header */}
+          <div className="px-3 flex items-center justify-between mt-3 z-10">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full border-2 border-white/20 p-0.5 overflow-hidden">
+                {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full rounded-full object-cover" /> : <div className="w-full h-full bg-indigo-500 rounded-full flex items-center justify-center text-[10px]">{user?.name?.[0] || '?'}</div>}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-bold shadow-sm">{platformUsername || 'Your Story'}</span>
+                <span className="text-[9px] opacity-70 shadow-sm">{metrics.timestamp || '2h ago'}</span>
+              </div>
+            </div>
+            <MoreHorizontal className="w-4 h-4 shadow-sm" />
+          </div>
+
+          {/* Story Bottom Bar */}
+          <div className="mt-auto p-4 pb-6 flex items-center gap-4 bg-gradient-to-t from-black/50 to-transparent z-10">
+            <div className="flex-1 h-10 rounded-full border border-white/40 px-4 flex items-center text-[12px] bg-black/10 backdrop-blur-md">
+              Send message
+            </div>
+            <Heart className="w-6 h-6" />
+            <Send className="w-6 h-6" />
+          </div>
+        </div>
+      );
+    }
+
+    if (isReel) {
+      return (
+        <div className="absolute inset-0 flex flex-col pointer-events-none text-white">
+          <div className="absolute inset-0 z-[-1] bg-black border-2 border-black">{children}</div>
+
+          {/* Reels Sidebar */}
+          <div className="absolute right-3 bottom-24 flex flex-col gap-6 items-center z-10">
+            <div className="flex flex-col items-center gap-1">
+              <Heart className="w-7 h-7 drop-shadow-lg" />
+              <span className="text-[11px] font-bold drop-shadow-md">{metrics.likes?.toLocaleString() || '1.4k'}</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <MessageCircle className="w-7 h-7 drop-shadow-lg" />
+              <span className="text-[11px] font-bold drop-shadow-md">{metrics.comments?.toLocaleString() || '42'}</span>
+            </div>
+            <Send className="w-6 h-6 drop-shadow-lg" />
+            <MoreVertical className="w-5 h-5 drop-shadow-lg" />
+            <div className="w-7 h-7 rounded-lg border-2 border-white/80 overflow-hidden mt-1">
+              {user?.profile_picture && <img src={user.profile_picture} className="w-full h-full object-cover" />}
+            </div>
+          </div>
+
+          {/* Reels Bottom Info */}
+          <div className="mt-auto p-4 pb-8 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-10">
+            <div className="flex items-center gap-2.5 mb-2.5">
+              <div className="w-9 h-9 rounded-full border-2 border-white/20 p-0.5 overflow-hidden">
+                {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full rounded-full object-cover" /> : <div className="w-full h-full bg-indigo-500 rounded-full flex items-center justify-center text-[10px]">{user?.name?.[0] || '?'}</div>}
+              </div>
+              <span className="text-[13px] font-bold drop-shadow-md">{platformUsername || 'username'}</span>
+              <button className="px-2.5 py-1 rounded-lg border border-white/40 text-[10px] font-bold backdrop-blur-sm">Follow</button>
+            </div>
+            <p className="text-[12px] line-clamp-2 mb-3 drop-shadow-md">{caption}</p>
+            <div className="flex items-center gap-2">
+              <div className="bg-white/20 backdrop-blur-md p-1.5 rounded-full">
+                <Music2 className="w-3 h-3" />
+              </div>
+              <span className="text-[11px] drop-shadow-md">Original Audio • {platformUsername || 'creator'}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="absolute inset-0 flex flex-col pointer-events-none text-white">
-        <div className="absolute inset-0 z-[-1] bg-black">{children}</div>
-
-        {/* Story/Reel Top Bar */}
-        <div className="p-3 flex gap-1 mt-2">
-          <div className="h-0.5 flex-1 bg-white/40 rounded-full overflow-hidden">
-            <div className="h-full bg-white w-1/3" />
-          </div>
-        </div>
-        <div className="px-3 flex items-center justify-between mt-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gray-300 border border-white/20 overflow-hidden">
-               {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-indigo-500 flex items-center justify-center text-[10px]">{user?.name?.[0] || '?'}</div>}
-            </div>
-            <span className="text-[10px] font-bold">{platformUsername || 'Your Story'}</span>
-            <span className="text-[10px] opacity-60">{metrics.timestamp}</span>
-          </div>
-          <MoreHorizontal className="w-4 h-4" />
-        </div>
-
-        {/* Reels Sidebar */}
-        {isReel && (
-          <div className="absolute right-2 bottom-20 flex flex-col gap-4 items-center">
-            <div className="flex flex-col items-center gap-0.5">
-              <Heart className="w-5 h-5 fill-white" />
-              <span className="text-[9px]">{metrics.likes.toLocaleString()}</span>
-            </div>
-            <div className="flex flex-col items-center gap-0.5">
-              <MessageCircle className="w-5 h-5 fill-white" />
-              <span className="text-[9px]">{metrics.comments.toLocaleString()}</span>
-            </div>
-            <Send className="w-5 h-5" />
-            <MoreVertical className="w-4 h-4" />
-          </div>
-        )}
-
-        {/* Story/Reel Bottom Bar */}
-        <div className="mt-auto p-3 flex items-center gap-3 bg-gradient-to-t from-black/40 to-transparent">
-          <div className="flex-1">
-            {isReel && (
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-6 h-6 rounded-full bg-gray-300 border border-white/20 overflow-hidden">
-                   {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-indigo-500 flex items-center justify-center text-[8px]">{user?.name?.[0] || '?'}</div>}
-                </div>
-                <span className="text-[9px] font-bold">{platformUsername || 'username'}</span>
-              </div>
-            )}
-            <div className="h-8 rounded-full border border-white/40 px-3 flex items-center text-[10px] backdrop-blur-sm">
-              {isReel ? 'Add comment...' : 'Send message'}
-            </div>
-          </div>
-          <Heart className="w-5 h-5" />
-          <Send className="w-5 h-5" />
-        </div>
+        <div className="absolute inset-0 z-[-1] bg-black border-2 border-black">{children}</div>
       </div>
     );
   }
@@ -222,47 +253,53 @@ const InstagramOverlay = ({ format, caption, children, isFull, platformUsername,
 const YouTubeOverlay = ({ format, caption, children, isFull, platformUsername, metrics, user }) => {
   if (isFull) {
     return (
-      <div className="absolute inset-0 flex flex-col pointer-events-none text-white p-3 justify-end bg-gradient-to-t from-black/60 to-transparent">
-        <div className="absolute inset-0 z-[-1] bg-black">{children}</div>
-        <div className="flex justify-between items-end gap-2">
-          <div className="flex-1 pr-2">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-full bg-gray-400 overflow-hidden">
-                {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-red-600 flex items-center justify-center text-[10px]">{user?.name?.[0] || '?'}</div>}
-              </div>
-              <span className="text-[10px] font-bold">@{platformUsername || user?.name || 'channelname'}</span>
-              <button className="bg-white text-black px-2.5 py-1 rounded-full text-[9px] font-bold">Subscribe</button>
+      <div className="absolute inset-0 flex flex-col pointer-events-none text-white">
+        <div className="absolute inset-0 z-[-1] bg-black border-2 border-black">{children}</div>
+
+        {/* Shorts Sidebar */}
+        <div className="absolute right-3 bottom-24 flex flex-col gap-6 items-center z-10">
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-11 h-11 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
+              <ThumbsUp className="w-5 h-5 fill-white" />
             </div>
-            <p className="text-[11px] font-medium mb-2">{caption}</p>
+            <span className="text-[11px] font-bold">{metrics.likes?.toLocaleString() || 'Like'}</span>
           </div>
-          <div className="flex flex-col gap-4 items-center mb-1">
-            <div className="flex flex-col items-center gap-0.5">
-              <div className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
-                <ThumbsUp className="w-4 h-4" />
-              </div>
-              <span className="text-[9px]">{metrics.likes.toLocaleString()}</span>
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-11 h-11 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
+              <ThumbsDown className="w-5 h-5" />
             </div>
-            <div className="flex flex-col items-center gap-0.5">
-              <div className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
-                <ThumbsDown className="w-4 h-4" />
-              </div>
-              <span className="text-[9px]">Dislike</span>
+            <span className="text-[11px] font-bold">Dislike</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-11 h-11 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
+              <MessageSquare className="w-5 h-5 fill-white" />
             </div>
-            <div className="flex flex-col items-center gap-0.5">
-              <div className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
-                <MessageSquare className="w-4 h-4" />
-              </div>
-              <span className="text-[9px]">{metrics.comments.toLocaleString()}</span>
+            <span className="text-[11px] font-bold">{metrics.comments?.toLocaleString() || '42'}</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-11 h-11 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
+              <Share2 className="w-5 h-5 fill-white" />
             </div>
-            <div className="flex flex-col items-center gap-0.5">
-              <div className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
-                <Share2 className="w-4 h-4" />
-              </div>
-              <span className="text-[9px]">Share</span>
+            <span className="text-[11px] font-bold">Share</span>
+          </div>
+          <div className="w-10 h-10 rounded border-2 border-white/20 mt-1 overflow-hidden">
+            {user?.profile_picture && <img src={user.profile_picture} className="w-full h-full object-cover" />}
+          </div>
+        </div>
+
+        {/* Shorts Bottom Info */}
+        <div className="mt-auto p-4 pb-8 bg-gradient-to-t from-black/60 to-transparent z-10">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 rounded-full bg-red-600 border-2 border-white/10 overflow-hidden">
+              {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[10px] font-bold">{user?.name?.[0] || '?'}</div>}
             </div>
-            <div className="w-8 h-8 rounded bg-gray-500 border border-white/20 mt-1 overflow-hidden">
-               {user?.profile_picture && <img src={user.profile_picture} className="w-full h-full object-cover" />}
-            </div>
+            <span className="text-[13px] font-bold">@{platformUsername || user?.name || 'channel'}</span>
+            <button className="bg-red-600 text-white px-3.5 py-1.5 rounded-full text-[11px] font-bold">Subscribe</button>
+          </div>
+          <p className="text-[13px] font-medium line-clamp-2 mb-3">{caption}</p>
+          <div className="flex items-center gap-2">
+            <Music2 className="w-3.5 h-3.5" />
+            <span className="text-[11px]">Original Audio • {platformUsername || 'creator'}</span>
           </div>
         </div>
       </div>
@@ -361,30 +398,36 @@ const FacebookOverlay = ({ format, caption, children, isFull, platformUsername, 
   if (isFull) {
     return (
       <div className="absolute inset-0 flex flex-col pointer-events-none text-white">
-        <div className="absolute inset-0 z-[-1] bg-black">{children}</div>
-        <div className="p-3 flex gap-1 mt-2">
+        <div className="absolute inset-0 z-[-1] bg-black border-2 border-black">{children}</div>
+
+        {/* Story Progress Bar */}
+        <div className="px-2 pt-3 flex gap-1 z-10">
           <div className="h-0.5 flex-1 bg-white/40 rounded-full overflow-hidden">
             <div className="h-full bg-white w-1/3" />
           </div>
         </div>
-        <div className="px-3 flex items-center justify-between mt-2">
+
+        {/* Story Header */}
+        <div className="px-3 flex items-center justify-between mt-3 z-10">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-gray-300 border border-white/20 overflow-hidden">
-               {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-[#1877F2] flex items-center justify-center text-white text-[10px]">{user?.name?.[0] || '?'}</div>}
+               {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-[#1877F2] flex items-center justify-center text-white text-[10px] font-bold">{user?.name?.[0] || '?'}</div>}
             </div>
-            <span className="text-[10px] font-bold">{platformUsername || user?.name || 'Your Story'}</span>
+            <span className="text-[10px] font-bold shadow-sm">{platformUsername || user?.name || 'Your Story'}</span>
           </div>
           <div className="flex gap-4">
-             <MoreHorizontal className="w-4 h-4" />
-             <X className="w-4 h-4" />
+             <MoreHorizontal className="w-4 h-4 shadow-sm" />
+             <X className="w-4 h-4 shadow-sm" />
           </div>
         </div>
-        <div className="mt-auto p-4 flex items-center gap-3 bg-gradient-to-t from-black/40 to-transparent">
-          <div className="flex-1 h-9 rounded-full bg-white/20 backdrop-blur-md px-4 flex items-center text-[11px] border border-white/20">
+
+        {/* Story Bottom Bar */}
+        <div className="mt-auto p-4 pb-8 flex items-center gap-4 bg-gradient-to-t from-black/50 to-transparent z-10">
+          <div className="flex-1 h-10 rounded-full bg-white/10 backdrop-blur-md px-4 flex items-center text-[11px] border border-white/20">
             Reply...
           </div>
-          <Heart className="w-5 h-5" />
-          <ThumbsUp className="w-5 h-5" />
+          <Heart className="w-6 h-6" />
+          <ThumbsUp className="w-6 h-6" />
         </div>
       </div>
     );
@@ -847,7 +890,7 @@ export default function PostPreviewModal({ post, onClose }) {
                         const displayUrl = post.thumbnail_url || post.media_url;
 
                         if (displayUrl) {
-                          // If it's a video and we have a media_url but it's the video itself, 
+                          // If it's a video and we have a media_url but it's the video itself,
                           // the img tag might fail unless it's the thumbnail_url.
                           // Cloudinary thumbnail_url is always an image.
                           return (
@@ -855,7 +898,7 @@ export default function PostPreviewModal({ post, onClose }) {
                               src={displayUrl}
                               alt="Post Preview"
                               className="w-full h-full object-cover"
-                              onError={e => { 
+                              onError={e => {
                                 if (!isImage && post.media_url && e.target.src !== post.media_url) {
                                   e.target.src = post.media_url;
                                 } else {

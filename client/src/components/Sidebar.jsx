@@ -20,6 +20,7 @@ import BlueskyConnectModal from "./BlueskyConnectModal";
 import PinterestConnectModal from "./PinterestConnectModal";
 import LinkedInConnectModal from "./LinkedInConnectModal";
 import MastodonConnectModal from "./MastodonConnectModal";
+import apiClient from "../utils/apiClient";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
@@ -161,15 +162,8 @@ function Sidebar() {
     if (!confirmed) return;
     setDisconnectingPlatform(platform);
     try {
-      const token = localStorage.getItem("quickpost_token");
-      const response = await fetch(`/api/auth/disconnect/${platform}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-      const data = await response.json();
+      const response = await apiClient.delete(`/api/auth/disconnect/${platform}`);
+      const data = response.data;
       if (data.success) {
         await refreshAccounts();
         alert("Success", `Successfully disconnected from ${platform}`, {
@@ -300,11 +294,7 @@ function Sidebar() {
           alt=""
         />
       ),
-      onConnect: () =>
-        alert("Coming Soon", "Mastodon integration coming soon!", {
-          intent: "warning",
-        }),
-
+      onConnect: () => setShowMastodonModal(true),
     },
     {
       id: "bluesky",
@@ -320,7 +310,7 @@ function Sidebar() {
       onConnect: () => setShowBlueskyModal(true),
     },
     {
-      id: "google-business",
+      id: "googleBusiness",
       name: "Google Business",
       connected: connectedAccounts.googleBusiness?.connected,
       icon: (
@@ -736,8 +726,8 @@ function Sidebar() {
                   onClick={platform.onConnect}
                   title={`Connect ${platform.name}`}
                   style={{
-                    width: 42,
-                    height: 42,
+                    width: 44,
+                    height: 44,
                     borderRadius: "var(--r-btn)",
                     background: "var(--canvas-lifted)",
                     border: "1px dashed rgba(20,20,19,0.2)",

@@ -1,6 +1,7 @@
-import React, { useLayoutEffect, useRef } from 'react';
+import React from 'react';
 import { Share2, Clock, BarChart2, Zap } from 'lucide-react';
-import { gsap } from '../../../lib/gsap';
+import { motion } from 'framer-motion';
+import { FloatingPaths } from "../../../components/ui/BackgroundPaths";
 
 const FEATURES = [
   {
@@ -42,51 +43,21 @@ const FEATURES = [
 ];
 
 export default function Features() {
-  const sectionRef = useRef(null);
-  const headerRef = useRef(null);
-  const cardsRef = useRef([]);
-
-  useLayoutEffect(() => {
-    const ctx = gsap.context(() => {
-      gsap.from(headerRef.current, {
-        opacity: 0,
-        y: 24,
-        duration: 0.6,
-        ease: 'power3.out',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 80%',
-          toggleActions: 'play none none none',
-        },
-      });
-
-      gsap.from(cardsRef.current.filter(Boolean), {
-        opacity: 0,
-        y: 40,
-        stagger: { amount: 0.45 },
-        duration: 0.65,
-        ease: 'power3.out',
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top 72%',
-          toggleActions: 'play none none none',
-        },
-      });
-    }, sectionRef);
-
-    return () => ctx.revert();
-  }, []);
-
   return (
     <section
-      ref={sectionRef}
       id="features"
       className="landing-section"
-      style={{ padding: 'clamp(60px, 10vh, 100px) 24px', background: 'var(--canvas)' }}
+      style={{ padding: '80px 24px', background: 'var(--canvas)', position: 'relative', overflow: 'hidden' }}
     >
-      <div className="landing-container" style={{ maxWidth: '1280px', margin: '0 auto' }}>
+      <div className="landing-container" style={{ maxWidth: '1280px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
         {/* Header */}
-        <div ref={headerRef} style={{ textAlign: 'center', marginBottom: 'clamp(40px, 6vw, 56px)' }}>
+        <motion.div 
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+          style={{ textAlign: 'center', marginBottom: 'clamp(40px, 6vw, 56px)' }}
+        >
           <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: '16px' }}>Features</div>
           <h2 style={{ fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.02em', margin: '0 0 14px', lineHeight: 1.1 }}>
             Built for serious creators
@@ -94,14 +65,17 @@ export default function Features() {
           <p style={{ fontSize: 'clamp(15px, 2vw, 17px)', fontWeight: 450, color: 'var(--slate)', maxWidth: 460, margin: '0 auto', lineHeight: 1.55 }}>
             Every feature is designed around one principle — your time is your most valuable asset.
           </p>
-        </div>
+        </motion.div>
 
         {/* Feature grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'clamp(14px, 2.5vw, 20px)' }}>
           {FEATURES.map((f, i) => (
-            <div
+            <motion.div
               key={f.title}
-              ref={el => cardsRef.current[i] = el}
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-10% 0px" }}
+              transition={{ duration: 0.65, delay: i * 0.1, ease: 'easeOut' }}
               className="feature-item"
               style={{
                 background: 'var(--canvas-lifted)',
@@ -150,7 +124,7 @@ export default function Features() {
               <p style={{ fontSize: 14, fontWeight: 450, color: 'var(--slate)', lineHeight: 1.65, margin: 0, position: 'relative' }}>
                 {f.desc}
               </p>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>

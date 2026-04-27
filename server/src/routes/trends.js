@@ -48,7 +48,8 @@ router.get('/trends/news', async (req, res) => {
   const cacheKey   = `news:${categories}:${limit}:${offset}`;
 
   try {
-    const cached = getCached(cacheKey);
+    const refresh = req.query.refresh === 'true';
+    const cached = refresh ? null : getCached(cacheKey);
     if (cached) return res.json(cached);
 
     let articles = [];
@@ -188,7 +189,8 @@ router.get('/trends/reddit', async (req, res) => {
   const cacheKey = `reddit:${sr}:${limit}:${after}`;
 
   try {
-    const cached = getCached(cacheKey);
+    const refresh = req.query.refresh === 'true';
+    const cached = refresh ? null : getCached(cacheKey);
     if (cached) return res.json(cached);
 
     const r = await axios.get(`https://www.reddit.com/r/${sr}/top.json`, {
@@ -312,5 +314,46 @@ async function fetchPexels(q, limit) {
     return [];
   }
 }
+
+/* ════════════════════════════════════════════════════
+   GET /api/trends/proxy/media?url=...
+   Securely pipes external media (images/videos) to bypass CORS.
+   ════════════════════════════════════════════════════ */
+router.get('/trends/proxy/media', async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).send('URL is required');
+
+  try {
+    const response = await axios({
+      method: 'get',
+      url: url,
+      responseType: 'stream',
+      timeout: 15000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'image/*,video/*,*/*',
+        'Referer': new URL(url).origin,
+      }
+    });
+
+    // Forward headers
+    const contentType = response.headers['content-type'];
+    if (contentType) res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+
+    // Safe piping with error handling
+    response.data.on('error', (err) => {
+      console.error('[MediaProxy] Stream Error:', err.message);
+      if (!res.headersSent) res.status(500).send('Stream error');
+    });
+
+    response.data.pipe(res);
+  } catch (err) {
+    console.error('[MediaProxy] Failed to fetch:', url, err.message);
+    if (!res.headersSent) {
+      res.status(err.response?.status || 500).send(err.message);
+    }
+  }
+});
 
 export default router;

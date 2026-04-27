@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Star } from 'lucide-react';
+import MacOSDock from '../../../components/ui/MacOSDock';
 
 const TESTIMONIALS = [
   {
@@ -30,23 +31,25 @@ const TESTIMONIALS = [
 ];
 
 const METRICS = [
-  { value: '2,400+', label: 'Active creators' },
+  { value: '200+', label: 'Active creators' },
   { value: '11+', label: 'Platforms supported' },
   { value: '99.9%', label: 'Scheduler uptime' },
   { value: '< 2 min', label: 'Setup time' },
 ];
 
-const PLATFORMS = [
-  '/icons/ig-instagram-icon.svg',
-  '/icons/youtube-color-icon.svg',
-  '/icons/x-social-media-round-icon.svg',
-  '/icons/linkedin-icon.svg',
-
-  '/icons/facebook-round-color-icon.svg',
-  '/icons/pinterest-round-color-icon.svg',
-  '/icons/threads-icon.svg',
-  '/icons/bluesky-circle-color-icon.svg',
-  '/icons/mastodon-round-icon.svg',
+const DOCK_APPS = [
+  { id: 'ig', name: 'Instagram', icon: '/icons/ig-instagram-icon.svg' },
+  { id: 'yt', name: 'YouTube', icon: '/icons/youtube-color-icon.svg' },
+  { id: 'x', name: 'X', icon: '/icons/x-social-media-round-icon.svg' },
+  { id: 'li', name: 'LinkedIn', icon: '/icons/linkedin-icon.svg' },
+  { id: 'fb', name: 'Facebook', icon: '/icons/facebook-round-color-icon.svg' },
+  { id: 'snap', name: 'Snapchat', icon: '/icons/snapchat-square-color-icon.svg' },
+  { id: 'google', name: 'Google', icon: '/icons/google-icon.svg' },
+  { id: 'reddit', name: 'Reddit', icon: '/icons/reddit-icon.svg' },
+  { id: 'pin', name: 'Pinterest', icon: '/icons/pinterest-round-color-icon.svg' },
+  { id: 'th', name: 'Threads', icon: '/icons/threads-icon.svg' },
+  { id: 'bs', name: 'Bluesky', icon: '/icons/bluesky-circle-color-icon.svg' },
+  { id: 'mas', name: 'Mastodon', icon: '/icons/mastodon-round-icon.svg' },
 ];
 
 function StarRow() {
@@ -62,7 +65,7 @@ function StarRow() {
 export default function SocialProof() {
   return (
     <section className="landing-section" style={{ padding: 'clamp(64px, 10vh, 104px) 24px', background: 'var(--canvas)' }}>
-      <div className="landing-container" style={{ maxWidth: 1280, margin: '0 auto' }}>
+      <div className="landing-container" style={{ maxWidth: 1400, margin: '0 auto' }}>
 
         {/* Metrics banner */}
         <motion.div
@@ -165,32 +168,24 @@ export default function SocialProof() {
           ))}
         </div>
 
-        {/* Platform logos */}
+        {/* Platform Dock */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 32 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          style={{ textAlign: 'center' }}
+          transition={{ duration: 0.7, ease: [0.23, 1, 0.32, 1] }}
+          style={{ textAlign: 'center', marginTop: 40 }}
         >
-          <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: 24 }}>Broadcasts to</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-            {PLATFORMS.map((src, i) => (
-              <motion.div
-                key={src}
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.3, delay: i * 0.04 }}
-                className="platform-logo"
-                style={{ width: 58, height: 58, transition: 'transform 0.2s, box-shadow 0.2s' }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-5px) scale(1.08)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
-              >
-                <img src={src} alt="" style={{ width: 32, height: 32, objectFit: 'contain' }} />
-              </motion.div>
-            ))}
+          <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: 32 }}>Broadcasts to</div>
+          
+          <div style={{ padding: '20px 0', overflow: 'visible' }}>
+            <MacOSDock 
+              apps={DOCK_APPS} 
+              openApps={['ig', 'yt', 'li', 'x']}
+              onAppClick={(id) => console.log('Dock click:', id)}
+            />
           </div>
+
         </motion.div>
       </div>
     </section>

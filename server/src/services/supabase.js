@@ -281,12 +281,13 @@ export async function getConnectedAccounts(userId) {
        // but we shouldn't throw a generic error that hides everything else if we can help it.
     }
 
-    const providers = ['youtube', 'instagram', 'facebook', 'pinterest', 'bluesky', 'linkedin', 'mastodon', 'threads', 'x', 'reddit'];
+    const providers = ['youtube', 'instagram', 'facebook', 'pinterest', 'bluesky', 'linkedin', 'mastodon', 'threads', 'x', 'reddit', 'googleBusiness'];
     const result = {};
     for (const p of providers) result[p] = { connected: false };
 
     for (const row of data || []) {
-      result[row.provider] = {
+      const providerKey = row.provider === 'google-business' ? 'googleBusiness' : row.provider;
+      result[providerKey] = {
         connected: true,
         updated_at: row.updated_at,
         token_expiry: row.token_expiry,
