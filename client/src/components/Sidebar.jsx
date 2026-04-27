@@ -12,6 +12,8 @@ import {
   ChevronDown,
   X,
   Flame,
+  Sparkles,
+  Lock,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
 import logo from "/logo.png";
@@ -414,37 +416,10 @@ function Sidebar() {
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);
-            return (
-              <Link
-                key={to}
-                to={to}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "9px 12px",
-                  borderRadius: "var(--r-btn)",
-                  marginBottom: 2,
-                  background: active ? "var(--ink)" : "transparent",
-                  color: active ? "var(--canvas)" : "var(--slate)",
-                  fontWeight: 600,
-                  fontSize: 14,
-                  textDecoration: "none",
-                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                }}
-                onMouseEnter={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.background = "rgba(20,20,19,0.05)";
-                    e.currentTarget.style.color = "var(--ink)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "var(--slate)";
-                  }
-                }}
-              >
+            const isLocked = user?.plan === 'Free' || !user?.plan;
+
+            const content = (
+              <>
                 <span
                   style={{
                     width: 28,
@@ -461,7 +436,55 @@ function Sidebar() {
                 >
                   {icon}
                 </span>
-                {label}
+                <span style={{ flex: 1 }}>{label}</span>
+                {isLocked && <Lock size={14} style={{ opacity: 0.5 }} />}
+              </>
+            );
+
+            const style = {
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "9px 12px",
+              borderRadius: "var(--r-btn)",
+              marginBottom: 2,
+              background: active ? "var(--ink)" : "transparent",
+              color: active ? "var(--canvas)" : (isLocked ? "var(--dust)" : "var(--slate)"),
+              fontWeight: 600,
+              fontSize: 14,
+              textDecoration: "none",
+              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+              opacity: isLocked ? 0.6 : 1,
+              cursor: isLocked ? "not-allowed" : "pointer"
+            };
+
+            if (isLocked) {
+              return (
+                <div key={to} style={style} onClick={() => alert("Please upgrade your plan to access this feature.")}>
+                  {content}
+                </div>
+              );
+            }
+
+            return (
+              <Link
+                key={to}
+                to={to}
+                style={style}
+                onMouseEnter={(e) => {
+                  if (!active) {
+                    e.currentTarget.style.background = "rgba(20,20,19,0.05)";
+                    e.currentTarget.style.color = "var(--ink)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!active) {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "var(--slate)";
+                  }
+                }}
+              >
+                {content}
               </Link>
             );
           })}
@@ -476,7 +499,13 @@ function Sidebar() {
 
             return (
               <button
-                onClick={() => setConnectedOpen(!connectedOpen)}
+                onClick={() => {
+                  if (user?.plan === 'Free' || !user?.plan) {
+                    alert("Please upgrade to Pro to manage your social channels.");
+                    return;
+                  }
+                  setConnectedOpen(!connectedOpen);
+                }}
                 style={{
                   width: "100%",
                   display: "flex",
@@ -813,12 +842,38 @@ function Sidebar() {
                   fontSize: 12,
                   fontWeight: 600,
                   color: "var(--ink)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
                 }}
               >
-                {user.name || "My Account"}
+                <span
+                  style={{
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  {user.name || "My Account"}
+                </span>
+                {user.plan && (
+                  <span
+                    style={{
+                      fontSize: 8,
+                      fontWeight: 800,
+                      padding: "2px 5px",
+                      borderRadius: 4,
+                      background: user.plan === "Free" ? "var(--dust)" : "var(--arc)",
+                      color: user.plan === "Free" ? "var(--slate)" : "white",
+                      textTransform: "uppercase",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {user.plan}
+                  </span>
+                )}
               </div>
               <div
                 style={{
@@ -834,6 +889,59 @@ function Sidebar() {
             </div>
           </div>
         )}
+
+        {/* ── Upgrade Button ── */}
+        {(user?.plan === 'Free' || !user?.plan) && (
+          <button
+            onClick={() => navigate('/dashboard/billing')}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              borderRadius: 'var(--r-btn)',
+              border: 'none',
+              background: 'linear-gradient(135deg, var(--arc) 0%, #ff8c42 100%)',
+              color: 'var(--white)',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+              marginBottom: 8,
+              boxShadow: '0 4px 12px rgba(243,115,56,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6
+            }}
+          >
+            <Sparkles size={14} />
+            Upgrade to Pro
+          </button>
+        )}
+        {user?.plan === 'Pro' && (
+          <button
+            onClick={() => navigate('/dashboard/billing')}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              borderRadius: 'var(--r-btn)',
+              border: 'none',
+              background: 'linear-gradient(135deg, #5b47e0 0%, #8a77f5 100%)',
+              color: 'var(--white)',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+              marginBottom: 8,
+              boxShadow: '0 4px 12px rgba(91,71,224,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6
+            }}
+          >
+            <Sparkles size={14} />
+            Upgrade to Enterprise
+          </button>
+        )}
+
         <div style={{ display: "flex", gap: 4 }}>
           <button
             onClick={() => setShowSettings(true)}
