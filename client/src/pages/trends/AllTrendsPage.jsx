@@ -124,16 +124,16 @@ function useSaved() {
 }
 
 // ─── LAZY IMAGE ─────────────────────────────────────────────────
-const Img = memo(function Img({ src, alt = "", h, style = {} }) {
+const Img = memo(function Img({ src, alt = "", h, style = {}, fit = "cover" }) {
   const [ok, setOk] = useState(false);
   const [err, setErr] = useState(false);
   const fb = `https://placehold.co/600x380/e8e4df/c4bfb8?text=${encodeURIComponent((alt || "").substring(0, 18) || "Trend")}`;
   return (
-    <div style={{ position: "relative", overflow: "hidden", background: C.muted, height: h, ...style }}>
-      {!ok && <div style={{ position: "absolute", inset: 0, animation: "shimmer 1.5s ease-in-out infinite", background: "linear-gradient(90deg,rgba(20,20,19,0.04) 25%,rgba(20,20,19,0.1) 50%,rgba(20,20,19,0.04) 75%)", backgroundSize: "400% 100%" }} />}
+    <div style={{ position: "relative", overflow: "hidden", background: C.muted, height: h || "auto", ...style }}>
+      {!ok && <div style={{ position: "absolute", inset: 0, animation: "shimmer 1.5s ease-in-out infinite", background: "linear-gradient(90deg,rgba(20,20,19,0.04) 25%,rgba(20,20,19,0.1) 50%,rgba(20,20,19,0.04) 75%)", backgroundSize: "400% 100%", height: h === "auto" ? 200 : "100%" }} />}
       <img src={err ? fb : src} alt={alt} loading="lazy" decoding="async"
         onLoad={() => setOk(true)} onError={() => { setErr(true); setOk(true); }}
-        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", opacity: ok ? 1 : 0, transform: ok ? "scale(1)" : "scale(1.06)", transition: "opacity 0.45s ease, transform 0.5s ease" }} />
+        style={{ width: "100%", height: "auto", display: "block", opacity: ok ? 1 : 0, transform: ok ? "scale(1)" : "scale(1.06)", transition: "opacity 0.45s ease, transform 0.5s ease" }} />
     </div>
   );
 });
@@ -240,7 +240,7 @@ const NewsCard = memo(function NewsCard({ item, idx, onUse, saved, onSave }) {
       {/* Hero image */}
       {item.image && (
         <div style={{ position: "relative" }}>
-          <Img src={item.image} alt={item.title} h={170} />
+          <Img src={item.image} alt={item.title} h="auto" />
           <div style={{ position: "absolute", top: 9, left: 9 }}><NicheBadge niche={niche} /></div>
           <div style={{ position: "absolute", top: 9, right: 9 }}><Score n={score} /></div>
         </div>
@@ -320,8 +320,8 @@ const MemeCard = memo(function MemeCard({ item, idx, onUse, saved, onSave }) {
       {(image || (isVideo && videoUrl)) && (
         <div style={{ position: "relative" }}>
           {isVideo && videoUrl
-            ? <video src={videoUrl} poster={image} autoPlay muted loop playsInline style={{ width: "100%", display: "block", maxHeight: 300, objectFit: "cover" }} />
-            : <Img src={image} alt={title || "Trending"} h="auto" style={{ minHeight: 140, maxHeight: 340 }} />
+            ? <video src={videoUrl} poster={image} autoPlay muted loop playsInline style={{ width: "100%", display: "block", height: "auto", background: C.muted }} />
+            : <Img src={image} alt={title || "Trending"} h="auto" style={{ minHeight: 140 }} />
           }
           {/* Badges */}
           <div style={{ position: "absolute", top: 9, left: 9, display: "flex", gap: 5 }}>
