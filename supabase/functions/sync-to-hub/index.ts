@@ -1,7 +1,5 @@
 // sync-to-hub/index.ts
 // Supabase Edge Function to sync all table data to the Hub project (getaipilot)
-// Deploy: supabase functions deploy sync-to-hub
-// Trigger: POST https://<your-project>.supabase.co/functions/v1/sync-to-hub
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -30,18 +28,15 @@ interface SyncResult {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Table definitions (order matters — parent tables first for FK constraints)
+// Table definitions
 // ──────────────────────────────────────────────────────────────────────────────
 
 const TABLES_TO_SYNC = [
-  "users",         // 1. Parent table (no FK deps)
-  "social_tokens", // 2. References users
-  "broadcasts",    // 3. References users
+  "users",         // 1. Parent table
+  "payments",      // 2. Subscription/Plan data
+  "social_tokens", // 3. References users
+  "broadcasts",    // 4. References users
 ];
-
-// ──────────────────────────────────────────────────────────────────────────────
-// Chunk helper — upserts in batches to avoid request size limits
-// ──────────────────────────────────────────────────────────────────────────────
 
 const CHUNK_SIZE = 500;
 
@@ -58,30 +53,33 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
 // ──────────────────────────────────────────────────────────────────────────────
 
 async function syncTable(
-  sourceClient: ReturnType<typeof createClient>,
-  hubClient: ReturnType<typeof createClient>,
+  sourceClient: any,
+  hubClient: any,
   tableName: string
 ): Promise<SyncTableResult> {
-  console.log(`[sync-to-hub] Syncing table: ${tableName}`);
+  console.log(`[sync-to-hub] 🔄 Processing table: ${tableName}`);
 
   // ── Fetch all rows from source ──────────────────────────────────────────────
-  let { data: rows, error: fetchError } = await sourceClient
+  // Note: For very large tables, we'd use pagination here.
+  const { data: rows, error: fetchError } = await sourceClient
     .from(tableName)
     .select("*");
 
   if (fetchError) {
-    console.error(`[sync-to-hub] ERROR fetching ${tableName}:`, fetchError.message);
+    console.error(`[sync-to-hub] ❌ Fetch Error (${tableName}):`, fetchError.message);
     return {
       table: tableName,
       rowsFetched: 0,
       rowsUpserted: 0,
       status: "error",
-      error: `Fetch error: ${fetchError.message}`,
+      error: `Fetch failed: ${fetchError.message}`,
     };
   }
 
-  if (!rows || rows.length === 0) {
-    console.log(`[sync-to-hub] Table ${tableName} is empty — skipping.`);
+  const rowCount = rows?.length || 0;
+  console.log(`[sync-to-hub] 📥 Fetched ${rowCount} rows from source '${tableName}'`);
+
+  if (rowCount === 0) {
     return {
       table: tableName,
       rowsFetched: 0,
@@ -90,82 +88,63 @@ async function syncTable(
     };
   }
 
+  let finalRows = rows;
+
   // ── Inject Auth Metadata for Users ──────────────────────────────────────────
   if (tableName === "users") {
     try {
-      console.log(`[sync-to-hub] Injecting auth metadata into users payload...`);
-      let allAuthUsers: any[] = [];
-      let page = 1;
+      console.log(`[sync-to-hub] 👤 Injecting auth metadata...`);
+      const { data: authData, error: authError } = await sourceClient.auth.admin.listUsers();
       
-      while (true) {
-        const { data: authData, error: authError } = await sourceClient.auth.admin.listUsers({ page, perPage: 1000 });
-        if (authError) {
-          console.warn(`[sync-to-hub] Failed to fetch auth users page ${page}:`, authError.message);
-          break;
-        }
-        if (!authData || !authData.users || authData.users.length === 0) break;
+      if (authError) {
+        console.warn(`[sync-to-hub] ⚠️ Could not fetch auth users:`, authError.message);
+      } else {
+        const authMap = new Map();
+        authData.users.forEach((u: any) => authMap.set(u.id, u.user_metadata || {}));
         
-        allAuthUsers.push(...authData.users);
-        if (authData.users.length < 1000) break;
-        page++;
-      }
-
-      const authMap = new Map();
-      for (const u of allAuthUsers) {
-        authMap.set(u.id, u.user_metadata || {});
-      }
-      
-      // Merge metadata into rows
-      rows = rows.map(row => {
-        const meta = authMap.get(row.id);
-        if (meta) {
+        finalRows = rows.map((row: any) => {
+          const meta = authMap.get(row.id) || {};
           return {
             ...row,
             plan: row.plan || meta.plan || "Free",
             subscription_status: row.subscription_status || meta.subscription_status || "active",
           };
-        }
-        return row;
-      });
-      console.log(`[sync-to-hub] ✅ Injected auth metadata for ${allAuthUsers.length} users.`);
+        });
+        console.log(`[sync-to-hub] ✅ Merged auth metadata for ${authData.users.length} users.`);
+      }
     } catch (err) {
-      console.warn(`[sync-to-hub] Exception while fetching auth users:`, err);
+      console.warn(`[sync-to-hub] ⚠️ Auth injection exception:`, err);
     }
   }
 
-  // ── Upsert to Hub in chunks ─────────────────────────────────────────────────
-  const chunks = chunkArray(rows, CHUNK_SIZE);
+  // ── Upsert to Hub ───────────────────────────────────────────────────────────
+  const chunks = chunkArray(finalRows, CHUNK_SIZE);
   let totalUpserted = 0;
 
-  for (const chunk of chunks) {
-    const { error: upsertError, count } = await hubClient
+  for (const [index, chunk] of chunks.entries()) {
+    const { error: upsertError } = await hubClient
       .from(tableName)
-      .upsert(chunk, {
-        onConflict: "id",         // All tables have a UUID primary key `id`
-        ignoreDuplicates: false,   // Update existing rows with new data
-      })
-      .select("id");              // Only fetch count — not full rows
+      .upsert(chunk, { onConflict: "id" });
 
     if (upsertError) {
-      console.error(`[sync-to-hub] ERROR upserting into ${tableName}:`, upsertError.message);
+      console.error(`[sync-to-hub] ❌ Upsert Error (${tableName}, chunk ${index + 1}):`, upsertError.message);
+      console.error(`[sync-to-hub] 💡 Tip: Check if '${tableName}' in Hub has all columns present in Source.`);
       return {
         table: tableName,
-        rowsFetched: rows.length,
+        rowsFetched: rowCount,
         rowsUpserted: totalUpserted,
         status: "error",
-        error: `Upsert error: ${upsertError.message}`,
+        error: `Upsert failed: ${upsertError.message}`,
       };
     }
 
     totalUpserted += chunk.length;
-    console.log(`[sync-to-hub] ${tableName}: upserted chunk of ${chunk.length} rows`);
+    console.log(`[sync-to-hub] 📤 ${tableName}: Upserted chunk ${index + 1}/${chunks.length}`);
   }
-
-  console.log(`[sync-to-hub] ${tableName}: ✅ ${rows.length} rows synced`);
 
   return {
     table: tableName,
-    rowsFetched: rows.length,
+    rowsFetched: rowCount,
     rowsUpserted: totalUpserted,
     status: "success",
   };
@@ -176,7 +155,7 @@ async function syncTable(
 // ──────────────────────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
-  // ── CORS Preflight ──────────────────────────────────────────────────────────
+  // CORS Preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 204,
@@ -188,78 +167,59 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // ── Only allow POST ─────────────────────────────────────────────────────────
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed. Use POST." }), {
-      status: 405,
-      headers: { "Content-Type": "application/json" },
+    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 });
+  }
+
+  try {
+    const SOURCE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SOURCE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const HUB_URL = Deno.env.get("HUB_SUPABASE_URL");
+    const HUB_KEY = Deno.env.get("HUB_SUPABASE_SERVICE_ROLE_KEY");
+
+    if (!HUB_URL || !HUB_KEY) {
+      throw new Error("Missing HUB_SUPABASE_URL or HUB_SUPABASE_SERVICE_ROLE_KEY secrets.");
+    }
+
+    const sourceClient = createClient(SOURCE_URL, SOURCE_KEY, { auth: { persistSession: false } });
+    const hubClient = createClient(HUB_URL, HUB_KEY, { auth: { persistSession: false } });
+
+    console.log("[sync-to-hub] 🚀 Starting Sync...");
+    const tableResults: SyncTableResult[] = [];
+
+    for (const table of TABLES_TO_SYNC) {
+      const result = await syncTable(sourceClient, hubClient, table);
+      tableResults.push(result);
+      if (result.status === "error" && table === "users") break;
+    }
+
+    const failed = tableResults.filter(r => r.status === "error").length;
+    const summary = {
+      total_tables: tableResults.length,
+      succeeded: tableResults.filter(r => r.status === "success").length,
+      failed,
+      total_rows_synced: tableResults.reduce((acc, r) => acc + r.rowsUpserted, 0),
+    };
+
+    const responseData = {
+      success: failed === 0,
+      timestamp: new Date().toISOString(),
+      tables: tableResults,
+      summary,
+    };
+
+    console.log(`[sync-to-hub] ✨ Finished. Synced ${summary.total_rows_synced} rows across ${summary.succeeded} tables.`);
+
+    return new Response(JSON.stringify(responseData, null, 2), {
+      status: failed > 0 ? 207 : 200,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    });
+
+  } catch (err: any) {
+    console.error("[sync-to-hub] 💥 Critical Function Error:", err.message);
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
     });
   }
-
-  // ── Validate required environment secrets ───────────────────────────────────
-  const SOURCE_URL = Deno.env.get("SUPABASE_URL");
-  const SOURCE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const HUB_URL = Deno.env.get("HUB_SUPABASE_URL");
-  const HUB_SERVICE_KEY = Deno.env.get("HUB_SUPABASE_SERVICE_ROLE_KEY");
-
-  if (!SOURCE_URL || !SOURCE_SERVICE_KEY || !HUB_URL || !HUB_SERVICE_KEY) {
-    return new Response(
-      JSON.stringify({
-        error: "Missing environment variables. Set: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, HUB_SUPABASE_URL, HUB_SUPABASE_SERVICE_ROLE_KEY",
-      }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  // ── Build Supabase clients ──────────────────────────────────────────────────
-  const sourceClient = createClient(SOURCE_URL, SOURCE_SERVICE_KEY, {
-    auth: { persistSession: false },
-  });
-
-  const hubClient = createClient(HUB_URL, HUB_SERVICE_KEY, {
-    auth: { persistSession: false },
-  });
-
-  // ── Sync tables sequentially (maintain FK order) ────────────────────────────
-  console.log("[sync-to-hub] 🚀 Starting data sync to Hub...");
-
-  const tableResults: SyncTableResult[] = [];
-
-  for (const table of TABLES_TO_SYNC) {
-    const result = await syncTable(sourceClient, hubClient, table);
-    tableResults.push(result);
-
-    // Stop if a parent table fails (child rows would fail FK constraint anyway)
-    if (result.status === "error" && (table === "users")) {
-      console.error(`[sync-to-hub] Critical table '${table}' failed — aborting sync.`);
-      break;
-    }
-  }
-
-  // ── Build summary ───────────────────────────────────────────────────────────
-  const succeeded = tableResults.filter((r) => r.status === "success").length;
-  const failed = tableResults.filter((r) => r.status === "error").length;
-  const total_rows_synced = tableResults.reduce((acc, r) => acc + r.rowsUpserted, 0);
-
-  const result: SyncResult = {
-    success: failed === 0,
-    timestamp: new Date().toISOString(),
-    tables: tableResults,
-    summary: {
-      total_tables: tableResults.length,
-      succeeded,
-      failed,
-      total_rows_synced,
-    },
-  };
-
-  console.log(`[sync-to-hub] ✅ Sync complete. ${succeeded} tables OK, ${failed} failed. ${total_rows_synced} rows synced.`);
-
-  return new Response(JSON.stringify(result, null, 2), {
-    status: failed > 0 ? 207 : 200,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-    },
-  });
 });
