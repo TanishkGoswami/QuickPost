@@ -72,9 +72,6 @@ export default function AuthPage() {
             <p className="text-2xl font-medium leading-relaxed text-ink/90">
               &ldquo;QuickPost has completely transformed how I handle multi-platform content. What used to take hours now takes minutes.&rdquo;
             </p>
-            <footer className="font-mono text-sm font-bold uppercase tracking-wider text-arc">
-              — Sarah K. · Content Strategist
-            </footer>
           </blockquote>
         </div>
 
