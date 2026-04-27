@@ -505,6 +505,24 @@ export default function PricingPage() {
             <div style={{ fontSize: 13, fontWeight: 450, color: 'var(--slate)' }}>
               © 2025 GAP Social-pilot. All rights reserved.
             </div>
+
+            {isAuthenticated && user && (
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 8, 
+                padding: '6px 12px', 
+                background: 'rgba(20,20,19,0.03)', 
+                borderRadius: '10px',
+                border: '1px solid rgba(20,20,19,0.05)'
+              }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />
+                <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--slate)' }}>
+                  Logged in as: <span style={{ color: 'var(--ink)' }}>{user.email}</span>
+                </span>
+              </div>
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
               {[
                 { label: 'Privacy Policy', to: '/privacy' },

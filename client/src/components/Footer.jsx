@@ -1,7 +1,9 @@
 import React from 'react';
-import { Instagram, Youtube, Github, Heart } from 'lucide-react';
+import { Instagram, Youtube, Github, Heart, User } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 function Footer() {
+  const { user, isAuthenticated } = useAuth();
   return (
     <footer className="relative z-10 px-6 py-8 border-t border-white/10">
       <div className="max-w-7xl mx-auto">
@@ -22,10 +24,20 @@ function Footer() {
           </div>
 
           {/* Copyright */}
-          <div className="flex items-center gap-2 text-sm text-white/60">
-            <span>Made with</span>
-            <Heart className="w-4 h-4 text-red-500 fill-red-500 animate-pulse" />
-            <span>by Priyansh Gour</span>
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2 text-sm text-white/60">
+              <span>Made with</span>
+              <Heart className="w-4 h-4 text-red-500 fill-red-500 animate-pulse" />
+              <span>by Priyansh Gour</span>
+            </div>
+            {isAuthenticated && user && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full transition-all hover:bg-white/10">
+                <User className="w-3 h-3 text-blue-400" />
+                <span className="text-xs text-white/70 font-medium">
+                  Logged in as: <span className="text-white/90">{user.email}</span>
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Links */}

@@ -65,13 +65,13 @@ export default function AuthPage() {
       {/* Left side - Branding & Hero */}
       <div className="bg-muted/10 relative hidden h-full flex-col border-r p-10 lg:flex">
         <div className="from-background absolute inset-0 z-10 bg-gradient-to-t to-transparent opacity-30" />
-        <div className="z-20 flex items-center gap-4">
+        <Link to="/" className="z-20 flex items-center gap-4 no-underline">
           <img src={logo} alt="QuickPost" className="size-8 object-contain" />
 
           <p className="text-2xl font-bold tracking-tight text-ink">
             GAP SocialPilot
           </p>
-        </div>
+        </Link>
 
         <div className="z-20 mt-auto">
           <blockquote className="space-y-4">
@@ -112,7 +112,7 @@ export default function AuthPage() {
         </Button>
 
         <div className="mx-auto w-full max-w-[400px] space-y-8">
-          <div className="flex items-center gap-3 lg:hidden mb-8">
+          <Link to="/" className="flex items-center gap-3 lg:hidden mb-8 no-underline">
             <div className="bg-ink p-1.5 rounded-lg shadow-lg">
               <img
                 src={logo}
@@ -121,7 +121,7 @@ export default function AuthPage() {
               />
             </div>
             <p className="text-xl font-bold text-ink">QuickPost</p>
-          </div>
+          </Link>
 
           <div className="flex flex-col space-y-2">
             <h1 className="text-3xl font-bold tracking-tight text-ink">
