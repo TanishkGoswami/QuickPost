@@ -28,7 +28,7 @@ export const LazyImage = memo(function LazyImage({ src, alt = "", style = {} }) 
       {!ok && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,rgba(20,20,19,0.04) 25%,rgba(20,20,19,0.09) 50%,rgba(20,20,19,0.04) 75%)", backgroundSize: "400% 100%", animation: "shimmer 1.5s ease-in-out infinite" }} />}
       <img src={err ? fb : src} alt={alt} loading="lazy" decoding="async"
         onLoad={() => setOk(true)} onError={() => { setErr(true); setOk(true); }}
-        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", opacity: ok ? 1 : 0, transform: ok ? "scale(1)" : "scale(1.05)", transition: "opacity 0.45s ease, transform 0.5s ease" }} />
+        style={{ width: "100%", height: "auto", display: "block", opacity: ok ? 1 : 0, transform: ok ? "scale(1)" : "scale(1.05)", transition: "opacity 0.45s ease, transform 0.5s ease" }} />
       <style>{`@keyframes shimmer{0%{background-position:100% 50%}100%{background-position:-100% 50%}}`}</style>
     </div>
   );
@@ -170,7 +170,7 @@ const TrendCard = memo(function TrendCard({
       {/* Hero image */}
       {newsItem?.image && (
         <div style={{ position: "relative" }}>
-          <LazyImage src={newsItem.image} alt={topic} style={{ height: 180, width: "100%" }} />
+          <LazyImage src={newsItem.image} alt={topic} style={{ height: "auto", width: "100%" }} />
           <div style={{ position: "absolute", top: 9, left: 9 }}>
             <span style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 9px", borderRadius: 99, background: "rgba(255,255,255,0.92)", backdropFilter: "blur(12px)", fontSize: 9, fontWeight: 900, color: C.ink, letterSpacing: "0.05em", textTransform: "uppercase", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
               <span style={{ fontSize: 10 }}>{niche.emoji}</span>{niche.id}

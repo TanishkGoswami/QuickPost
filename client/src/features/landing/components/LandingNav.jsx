@@ -89,15 +89,15 @@ export default function LandingNav() {
                 alt="Logo"
                 style={{ height: 32, width: 32, objectFit: "contain", position: "relative", zIndex: 2 }}
               />
-              <div 
-                style={{ 
-                  position: "absolute", 
-                  inset: -4, 
-                  background: "var(--arc)", 
-                  borderRadius: "50%", 
-                  filter: "blur(8px)", 
-                  opacity: 0.2 
-                }} 
+              <div
+                style={{
+                  position: "absolute",
+                  inset: -4,
+                  background: "var(--arc)",
+                  borderRadius: "50%",
+                  filter: "blur(8px)",
+                  opacity: 0.2
+                }}
               />
             </div>
             <span
@@ -115,10 +115,10 @@ export default function LandingNav() {
 
           {/* Desktop Navigation */}
           {!isMobile && (
-            <div 
-              style={{ 
-                display: "flex", 
-                alignItems: "center", 
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
                 background: "rgba(20,20,19,0.03)",
                 padding: "4px",
                 borderRadius: "14px",
