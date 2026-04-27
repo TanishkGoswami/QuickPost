@@ -4,8 +4,6 @@ import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
-  Settings,
-  LogOut,
   CalendarClock,
   Plus,
   Share2,
@@ -60,26 +58,8 @@ function Sidebar() {
   const [showPinterestModal, setShowPinterestModal] = useState(false);
   const [showLinkedInModal, setShowLinkedInModal] = useState(false);
   const [showMastodonModal, setShowMastodonModal] = useState(false);
-  const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
   const [connectingPlatform, setConnectingPlatform] = useState(null);
   const [connectedOpen, setConnectedOpen] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
-
-  const handleLogout = async () => {
-    const confirmed = await confirm(
-      "Logout",
-      "Are you sure you want to log out?",
-      {
-        intent: "logout",
-        confirmText: "Logout",
-        cancelText: "Stay logged in",
-      },
-    );
-    if (confirmed) {
-      logout();
-      navigate("/login");
-    }
-  };
 
   const handleConnectInstagram = () => setShowBusinessSetupModal(true);
   const handleProceedToConnect = () => {
@@ -941,152 +921,7 @@ function Sidebar() {
             Upgrade to Enterprise
           </button>
         )}
-
-        <div style={{ display: "flex", gap: 4 }}>
-          <button
-            onClick={() => setShowSettings(true)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              flex: 1,
-              padding: "8px 10px",
-              borderRadius: "var(--r-btn)",
-              border: "none",
-              background: "transparent",
-              cursor: "pointer",
-              color: "var(--slate)",
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            <Settings size={14} />
-            Settings
-          </button>
-          <button
-            onClick={handleLogout}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              flex: 1,
-              padding: "8px 10px",
-              borderRadius: "var(--r-btn)",
-              border: "none",
-              background: "transparent",
-              cursor: "pointer",
-              color: "#dc2626",
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            <LogOut size={14} />
-            Logout
-          </button>
-        </div>
       </div>
-
-      {/* ── Settings Modal Overlay ── */}
-      {showSettings &&
-        createPortal(
-          <div className="modal-overlay" onClick={() => setShowSettings(false)}>
-            <div
-              className="modal-content"
-              style={{ maxWidth: 460 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div
-                style={{
-                  padding: "24px 32px",
-                  borderBottom: "1px solid rgba(20,20,19,0.08)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <h2 style={{ fontSize: 20, fontWeight: 500 }}>Settings</h2>
-                <button
-                  onClick={() => setShowSettings(false)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              <div style={{ padding: "24px 32px" }}>
-                <div className="eyebrow" style={{ marginBottom: 12 }}>
-                  Connected Accounts
-                </div>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
-                >
-                  {platforms
-                    .filter((p) => p.connected)
-                    .map((p) => (
-                      <div
-                        key={p.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 12,
-                          padding: "12px 16px",
-                          borderRadius: "var(--r-btn)",
-                          background: "var(--canvas)",
-                          border: "1px solid rgba(20,20,19,0.08)",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 32,
-                            height: 32,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          {p.icon}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <p
-                            style={{
-                              fontSize: 14,
-                              fontWeight: 600,
-                              color: "var(--ink)",
-                              margin: 0,
-                            }}
-                          >
-                            {p.name}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleDisconnect(p.id)}
-                          disabled={disconnectingPlatform === p.id}
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 700,
-                            padding: "4px 12px",
-                            borderRadius: "var(--r-btn)",
-                            border: "1px solid #dc2626",
-                            color: "#dc2626",
-                            background: "none",
-                            cursor: "pointer",
-                          }}
-                        >
-                          {disconnectingPlatform === p.id
-                            ? "..."
-                            : "Disconnect"}
-                        </button>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
 
       {/* ── Connection Modals ── */}
       {createPortal(

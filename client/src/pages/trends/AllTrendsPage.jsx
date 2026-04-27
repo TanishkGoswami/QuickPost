@@ -409,19 +409,71 @@ const SearchBar = memo(function SearchBar({ value, onChange, onClear }) {
   const ref = useRef(null);
   const [focused, setFocused] = useState(false);
   return (
-    <div style={{ position: "relative", flex: 1, minWidth: 180, maxWidth: 480 }}>
-      <Search size={15} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: focused ? C.arc : C.dust, transition: "color 0.18s", pointerEvents: "none", zIndex: 1 }} />
-      <input ref={ref} type="search" value={value} onChange={e => onChange(e.target.value)}
-        onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-        placeholder="Search trends, news, topics…" aria-label="Search trends" autoComplete="off"
-        style={{ width: "100%", padding: "11px 40px 11px 40px", background: C.white, border: `1.5px solid ${focused ? C.arc : C.border}`, borderRadius: 13, fontSize: 13, fontWeight: 500, color: C.ink, fontFamily: "inherit", outline: "none", transition: "border-color 0.18s, box-shadow 0.18s", boxShadow: focused ? `0 0 0 3px ${C.arc}14` : "none" }} />
+    <div style={{ position: "relative", flex: 1, minWidth: 200, maxWidth: 520 }}>
+      <Search 
+        size={16} 
+        style={{ 
+          position: "absolute", 
+          left: 16, 
+          top: "50%", 
+          transform: "translateY(-50%)", 
+          color: focused ? C.arc : C.dust, 
+          transition: "color 0.2s", 
+          pointerEvents: "none", 
+          zIndex: 1 
+        }} 
+      />
+      <input 
+        ref={ref} 
+        type="search" 
+        value={value} 
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setFocused(true)} 
+        onBlur={() => setFocused(false)}
+        placeholder="Search trends, news, topics…" 
+        aria-label="Search trends" 
+        autoComplete="off"
+        style={{ 
+          width: "100%", 
+          padding: "13px 44px 13px 46px", 
+          background: C.white, 
+          border: `1.5px solid ${focused ? C.arc : "rgba(20,20,19,0.06)"}`, 
+          borderRadius: 16, 
+          fontSize: 14, 
+          fontWeight: 500, 
+          color: C.ink, 
+          fontFamily: "inherit", 
+          outline: "none", 
+          transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)", 
+          boxShadow: focused ? `0 8px 24px ${C.arc}15, 0 0 0 3px ${C.arc}08` : "0 2px 4px rgba(0,0,0,0.02)" 
+        }} 
+      />
       <AnimatePresence>
         {value && (
-          <motion.button initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.7 }}
+          <motion.button 
+            initial={{ opacity: 0, scale: 0.7 }} 
+            animate={{ opacity: 1, scale: 1 }} 
+            exit={{ opacity: 0, scale: 0.7 }}
             onClick={() => { onClear(); ref.current?.focus(); }}
-            style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(20,20,19,0.09)", border: "none", borderRadius: "50%", cursor: "pointer", color: C.slate }}
-            aria-label="Clear search">
-            <X size={10} />
+            style={{ 
+              position: "absolute", 
+              right: 12, 
+              top: "50%", 
+              transform: "translateY(-50%)", 
+              width: 22, 
+              height: 22, 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center", 
+              background: "rgba(20,20,19,0.08)", 
+              border: "none", 
+              borderRadius: "50%", 
+              cursor: "pointer", 
+              color: C.slate 
+            }}
+            aria-label="Clear search"
+          >
+            <X size={11} />
           </motion.button>
         )}
       </AnimatePresence>
@@ -431,16 +483,16 @@ const SearchBar = memo(function SearchBar({ value, onChange, onClear }) {
 
 // ─── FILTER PILLS ────────────────────────────────────────────────
 const PILLS = [
-  { id: "All",           icon: <Zap size={12} /> },
-  { id: "AI & Tech",     icon: <Cpu size={12} /> },
-  { id: "Trading",       icon: <BarChart2 size={12} /> },
-  { id: "Crypto",        icon: <Activity size={12} /> },
-  { id: "Sports",        icon: <Trophy size={12} /> },
-  { id: "Entertainment", icon: <Tv2 size={12} /> },
-  { id: "Business",      icon: <TrendingUp size={12} /> },
-  { id: "Music",         icon: <Music size={12} /> },
-  { id: "Politics",      icon: <Globe size={12} /> },
-  { id: "Fitness",       icon: <Flame size={12} /> },
+  { id: "All",           icon: <Zap size={14} /> },
+  { id: "AI & Tech",     icon: <Cpu size={14} /> },
+  { id: "Trading",       icon: <BarChart2 size={14} /> },
+  { id: "Crypto",        icon: <Activity size={14} /> },
+  { id: "Sports",        icon: <Trophy size={14} /> },
+  { id: "Entertainment", icon: <Tv2 size={14} /> },
+  { id: "Business",      icon: <TrendingUp size={14} /> },
+  { id: "Music",         icon: <Music size={14} /> },
+  { id: "Politics",      icon: <Globe size={14} /> },
+  { id: "Fitness",       icon: <Flame size={14} /> },
 ];
 
 const FilterPills = memo(function FilterPills({ active, onChange }) {
@@ -451,14 +503,61 @@ const FilterPills = memo(function FilterPills({ active, onChange }) {
     el?.scrollIntoView({ inline: "center", behavior: "smooth", block: "nearest" });
   };
   return (
-    <div ref={scrollRef} role="tablist" aria-label="Filter by category" style={{ display: "flex", gap: 5, overflowX: "auto", padding: "1px 0 4px", scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}>
+    <div 
+      ref={scrollRef} 
+      role="tablist" 
+      aria-label="Filter by category" 
+      className="tpills"
+      style={{ 
+        display: "flex", 
+        gap: 8, 
+        overflowX: "auto", 
+        padding: "8px 0 12px", 
+        scrollbarWidth: "none", 
+        WebkitOverflowScrolling: "touch" 
+      }}
+    >
       {PILLS.map(({ id, icon }) => {
         const on = active === id;
         return (
-          <motion.button key={id} data-pid={id} role="tab" aria-selected={on}
-            whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.94 }} onClick={() => select(id)}
-            style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 14px", background: on ? "#2c2c2b" : C.white, border: `1.5px solid ${on ? "#2c2c2b" : C.border}`, borderRadius: 99, color: on ? C.canvas : C.slate, fontSize: 12, fontWeight: on ? 700 : 500, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit", flexShrink: 0, transition: "all 0.14s", boxShadow: on ? "0 3px 12px rgba(20,20,19,0.2)" : "none" }}>
-            <span style={{ color: on ? C.arc : C.dust }}>{icon}</span>{id}
+          <motion.button 
+            key={id} 
+            data-pid={id} 
+            role="tab" 
+            aria-selected={on}
+            whileHover={{ y: -2, scale: 1.02 }} 
+            whileTap={{ scale: 0.95 }} 
+            onClick={() => select(id)}
+            style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: 8, 
+              padding: "10px 20px", 
+              background: on ? "rgba(243, 115, 56, 0.08)" : C.white, 
+              border: on ? `1.5px solid ${C.arc}` : `1.5px solid rgba(20,20,19,0.08)`, 
+              borderRadius: 16, 
+              color: on ? C.arc : C.slate, 
+              fontSize: 13, 
+              fontWeight: on ? 800 : 600, 
+              cursor: "pointer", 
+              whiteSpace: "nowrap", 
+              fontFamily: "inherit", 
+              flexShrink: 0, 
+              transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)", 
+              boxShadow: on ? `0 8px 20px rgba(243, 115, 56, 0.12)` : "0 2px 4px rgba(0,0,0,0.02)" 
+            }}
+          >
+            <span style={{ 
+              color: on ? C.arc : C.dust,
+              opacity: on ? 1 : 0.7,
+              display: "flex",
+              alignItems: "center",
+              transition: "transform 0.3s ease",
+              transform: on ? "scale(1.1) rotate(-5deg)" : "none"
+            }}>
+              {icon}
+            </span>
+            {id}
           </motion.button>
         );
       })}
@@ -587,7 +686,7 @@ function Sentinel({ hasMore, loading, onMore, count }) {
 }
 
 // ─── MASONRY CONFIG ─────────────────────────────────────────────
-const COLS = { default: 3, 1380: 3, 1100: 2, 740: 2, 600: 1 };
+const COLS = { default: 4, 1550: 4, 1380: 3, 1100: 2, 740: 2, 600: 1 };
 const SKH = [170, 130, 200, 150, 185, 140, 220, 155];
 
 // ─── MAIN PAGE ──────────────────────────────────────────────────
@@ -601,6 +700,23 @@ export default function AllTrendsPage() {
   const [toast, setToast] = useState(false);
   const [savedPanel, setSavedPanel] = useState(false);
   const toastRef = useRef(null);
+
+  // Hide on scroll logic
+  const [headerVisible, setHeaderVisible] = useState(true);
+  const [lastY, setLastY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const y = window.scrollY;
+      // Hide if scrolling down and past threshold (100px)
+      if (y > lastY && y > 100) setHeaderVisible(false);
+      // Show if scrolling up
+      else setHeaderVisible(true);
+      setLastY(y);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastY]);
 
   const { ids: savedIds, toggle: toggleSave } = useSaved();
 
@@ -680,17 +796,39 @@ export default function AllTrendsPage() {
       `}</style>
 
       {/* ── STICKY HEADER ── */}
-      <div style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(242,240,237,0.88)", backdropFilter: "blur(20px) saturate(1.8)", WebkitBackdropFilter: "blur(20px) saturate(1.8)", borderBottom: `1px solid ${C.border}`, padding: "11px 20px 9px" }}>
+      <div style={{ 
+        position: "sticky", 
+        top: 0, 
+        zIndex: 100, 
+        background: "rgba(242,240,237,0.88)", 
+        backdropFilter: "blur(20px) saturate(1.8)", 
+        WebkitBackdropFilter: "blur(20px) saturate(1.8)", 
+        borderBottom: `1px solid ${C.border}`, 
+        padding: "11px 20px 9px",
+        transform: headerVisible ? "translateY(0)" : "translateY(-100%)",
+        transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+        willChange: "transform"
+      }}>
         {/* Row 1 */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
           {/* Brand */}
-          <div style={{ display: "flex", alignItems: "center", gap: 9, flexShrink: 0 }}>
-            <div style={{ width: 36, height: 36, background: C.ink, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 14px rgba(20,20,19,0.22)" }}>
-              <Flame size={18} style={{ color: C.arc }} aria-hidden />
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+            <div style={{ 
+              width: 40, 
+              height: 40, 
+              background: C.white,
+              border: `1.5px solid rgba(243, 115, 56, 0.15)`,
+              borderRadius: 12, 
+              display: "flex", 
+              alignItems: "center", 
+              justifyContent: "center", 
+              boxShadow: "0 4px 12px rgba(243, 115, 56, 0.08)",
+            }}>
+              <Flame size={22} style={{ color: C.arc, filter: "none" }} aria-hidden />
             </div>
             <div>
-              <h1 style={{ fontSize: 18, fontWeight: 800, color: C.ink, margin: 0, letterSpacing: "-0.03em", lineHeight: 1 }}>Trend Intelligence</h1>
-              <p style={{ fontSize: 10, color: C.slate, margin: "1px 0 0", fontWeight: 500 }}>What's happening right now</p>
+              <h1 style={{ fontSize: 20, fontWeight: 900, color: C.ink, margin: 0, letterSpacing: "-0.04em", lineHeight: 1 }}>Trend Intelligence</h1>
+              <p style={{ fontSize: 11, color: C.slate, margin: "2px 0 0", fontWeight: 600, letterSpacing: "-0.01em" }}>What's happening right now</p>
             </div>
           </div>
 
@@ -719,7 +857,7 @@ export default function AllTrendsPage() {
       </div>
 
       {/* ── MAIN CONTENT ── */}
-      <div style={{ padding: "18px 20px 80px", maxWidth: 1560, margin: "0 auto" }}>
+      <div style={{ padding: "18px 20px 80px", maxWidth: 1820, margin: "0 auto" }}>
         {/* Toolbar */}
         <div className="t-topbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
           <div className="t-statbar"><StatsBar news={newsItems.length} memes={memeItems.length} total={feed.length} loading={loading} /></div>
