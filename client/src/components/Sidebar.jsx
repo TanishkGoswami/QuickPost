@@ -11,6 +11,7 @@ import {
   Share2,
   ChevronDown,
   X,
+  Flame,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
 import logo from "/logo.png";
@@ -19,9 +20,9 @@ import BlueskyConnectModal from "./BlueskyConnectModal";
 import PinterestConnectModal from "./PinterestConnectModal";
 import LinkedInConnectModal from "./LinkedInConnectModal";
 import MastodonConnectModal from "./MastodonConnectModal";
-import TikTokConnectModal from "./TikTokConnectModal";
+import apiClient from "../utils/apiClient";
 
-const API_BASE_URL = '/';
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
 /* ── tiny SVG orbital arc decoration ── */
 const OrbitalArc = () => (
@@ -57,7 +58,6 @@ function Sidebar() {
   const [showPinterestModal, setShowPinterestModal] = useState(false);
   const [showLinkedInModal, setShowLinkedInModal] = useState(false);
   const [showMastodonModal, setShowMastodonModal] = useState(false);
-  const [showTikTokModal, setShowTikTokModal] = useState(false);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
   const [connectingPlatform, setConnectingPlatform] = useState(null);
   const [connectedOpen, setConnectedOpen] = useState(true);
@@ -84,52 +84,70 @@ function Sidebar() {
     setShowBusinessSetupModal(false);
     const token = localStorage.getItem("quickpost_token");
     if (!token) {
-      alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
+      alert("Error", "Authentication token missing. Please log in again.", {
+        intent: "danger",
+      });
       return;
     }
-    window.location.href = `/api/auth/instagram?token=${token}`;
+    const apiUrl = import.meta.env.VITE_API_URL || "";
+    window.location.href = `${apiUrl}/api/auth/instagram?token=${token}`;
   };
   const handleConnectFacebook = () => {
     const token = localStorage.getItem("quickpost_token");
     if (!token) {
-      alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
+      alert("Error", "Authentication token missing. Please log in again.", {
+        intent: "danger",
+      });
       return;
     }
-    window.location.href = `/api/auth/facebook?token=${token}`;
+    const apiUrl = import.meta.env.VITE_API_URL || "";
+    window.location.href = `${apiUrl}/api/auth/facebook?token=${token}`;
   };
   const handleConnectThreads = () => {
     const token = localStorage.getItem("quickpost_token");
     if (!token) {
-      alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
+      alert("Error", "Authentication token missing. Please log in again.", {
+        intent: "danger",
+      });
       return;
     }
-    window.location.href = `/api/auth/threads?token=${token}`;
+    const apiUrl = import.meta.env.VITE_API_URL || "";
+    window.location.href = `${apiUrl}/api/auth/threads?token=${token}`;
   };
   const handleConnectX = () => {
     const token = localStorage.getItem("quickpost_token");
     if (!token) {
-      alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
+      alert("Error", "Authentication token missing. Please log in again.", {
+        intent: "danger",
+      });
       return;
     }
+    const apiUrl = import.meta.env.VITE_API_URL || "";
     setConnectingPlatform("x");
-    window.location.href = `/api/auth/x?token=${token}`;
+    window.location.href = `${apiUrl}/api/auth/x?token=${token}`;
   };
   const handleConnectReddit = () => {
     const token = localStorage.getItem("quickpost_token");
     if (!token) {
-      alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
+      alert("Error", "Authentication token missing. Please log in again.", {
+        intent: "danger",
+      });
       return;
     }
+    const apiUrl = import.meta.env.VITE_API_URL || "";
     setConnectingPlatform("reddit");
-    window.location.href = `/api/auth/reddit?token=${token}`;
+    window.location.href = `${apiUrl}/api/auth/reddit?token=${token}`;
   };
   const handleConnectYouTube = () => {
     const token = localStorage.getItem("quickpost_token");
     if (!token) {
-      alert("Error", "Authentication token missing. Please log in again.", { intent: "danger" });
+      alert("Error", "Authentication token missing. Please log in again.", {
+        intent: "danger",
+      });
       return;
     }
-    window.location.href = `/api/auth/youtube?token=${token}`;
+    const apiUrl = import.meta.env.VITE_API_URL || "";
+    window.location.href = `${apiUrl}/api/auth/youtube?token=${token}`;
   };
   const handleDisconnect = async (platform) => {
     const confirmed = await confirm(
@@ -144,18 +162,8 @@ function Sidebar() {
     if (!confirmed) return;
     setDisconnectingPlatform(platform);
     try {
-      const token = localStorage.getItem("quickpost_token");
-      const response = await fetch(
-        `/api/auth/disconnect/${platform}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        },
-      );
-      const data = await response.json();
+      const response = await apiClient.delete(`/api/auth/disconnect/${platform}`);
+      const data = response.data;
       if (data.success) {
         await refreshAccounts();
         alert("Success", `Successfully disconnected from ${platform}`, {
@@ -179,7 +187,7 @@ function Sidebar() {
     {
       id: "facebook",
       name: "Facebook",
-      connected: connectedAccounts.facebook,
+      connected: connectedAccounts.facebook?.connected,
       icon: (
         <img
           src="/icons/facebook-round-color-icon.svg"
@@ -192,7 +200,7 @@ function Sidebar() {
     {
       id: "instagram",
       name: "Instagram",
-      connected: connectedAccounts.instagram,
+      connected: connectedAccounts.instagram?.connected,
       icon: (
         <img
           src="/icons/ig-instagram-icon.svg"
@@ -205,7 +213,7 @@ function Sidebar() {
     {
       id: "x",
       name: "X",
-      connected: connectedAccounts.x,
+      connected: connectedAccounts.x?.connected,
       icon: (
         <img
           src="/icons/x-social-media-round-icon.svg"
@@ -213,12 +221,16 @@ function Sidebar() {
           alt=""
         />
       ),
-      onConnect: handleConnectX,
+      onConnect: () =>
+        alert("Coming Soon", "X integration coming soon!", {
+          intent: "warning",
+        }),
+      disabled: true,
     },
     {
       id: "linkedin",
       name: "LinkedIn",
-      connected: connectedAccounts.linkedin,
+      connected: connectedAccounts.linkedin?.connected,
       icon: (
         <img
           src="/icons/linkedin-icon.svg"
@@ -229,22 +241,9 @@ function Sidebar() {
       onConnect: () => setShowLinkedInModal(true),
     },
     {
-      id: "tiktok",
-      name: "TikTok",
-      connected: connectedAccounts.tiktok,
-      icon: (
-        <img
-          src="/icons/tiktok-circle-icon.svg"
-          style={{ width: 20, height: 20 }}
-          alt=""
-        />
-      ),
-      onConnect: () => setShowTikTokModal(true),
-    },
-    {
       id: "youtube",
       name: "YouTube",
-      connected: connectedAccounts.youtube,
+      connected: connectedAccounts.youtube?.connected,
       icon: (
         <img
           src="/icons/youtube-color-icon.svg"
@@ -257,7 +256,7 @@ function Sidebar() {
     {
       id: "pinterest",
       name: "Pinterest",
-      connected: connectedAccounts.pinterest,
+      connected: connectedAccounts.pinterest?.connected,
       icon: (
         <img
           src="/icons/pinterest-round-color-icon.svg"
@@ -265,12 +264,16 @@ function Sidebar() {
           alt=""
         />
       ),
-      onConnect: () => setShowPinterestModal(true),
+      onConnect: () =>
+        alert("Coming Soon", "Pinterest integration coming soon!", {
+          intent: "warning",
+        }),
+      disabled: true,
     },
     {
       id: "threads",
       name: "Threads",
-      connected: connectedAccounts.threads,
+      connected: connectedAccounts.threads?.connected,
       icon: (
         <img
           src="/icons/threads-icon.svg"
@@ -283,7 +286,7 @@ function Sidebar() {
     {
       id: "mastodon",
       name: "Mastodon",
-      connected: connectedAccounts.mastodon,
+      connected: connectedAccounts.mastodon?.connected,
       icon: (
         <img
           src="/icons/mastodon-round-icon.svg"
@@ -296,7 +299,7 @@ function Sidebar() {
     {
       id: "bluesky",
       name: "Bluesky",
-      connected: connectedAccounts.bluesky,
+      connected: connectedAccounts.bluesky?.connected,
       icon: (
         <img
           src="/icons/bluesky-circle-color-icon.svg"
@@ -307,9 +310,9 @@ function Sidebar() {
       onConnect: () => setShowBlueskyModal(true),
     },
     {
-      id: "google-business",
+      id: "googleBusiness",
       name: "Google Business",
-      connected: connectedAccounts.googleBusiness,
+      connected: connectedAccounts.googleBusiness?.connected,
       icon: (
         <img
           src="/icons/google-icon.svg"
@@ -327,7 +330,7 @@ function Sidebar() {
     {
       id: "reddit",
       name: "Reddit",
-      connected: connectedAccounts.reddit,
+      connected: connectedAccounts.reddit?.connected,
       icon: (
         <img
           src="/icons/reddit-icon.svg"
@@ -335,7 +338,10 @@ function Sidebar() {
           alt=""
         />
       ),
-      onConnect: handleConnectReddit,
+      onConnect: () =>
+        alert("Coming Soon", "Reddit integration coming soon!", {
+          intent: "warning",
+        }),
       disabled: true,
     },
   ];
@@ -400,6 +406,11 @@ function Sidebar() {
               to: "/dashboard/queue",
               label: "Scheduled Queue",
               icon: <CalendarClock size={16} />,
+            },
+            {
+              to: "/dashboard/trends",
+              label: "All Trends",
+              icon: <Flame size={16} />,
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);
@@ -670,7 +681,7 @@ function Sidebar() {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {platform.name}
+                            {connectedAccounts[platform.id]?.username || platform.name}
                           </div>
                           <div
                             style={{
@@ -715,8 +726,8 @@ function Sidebar() {
                   onClick={platform.onConnect}
                   title={`Connect ${platform.name}`}
                   style={{
-                    width: 42,
-                    height: 42,
+                    width: 44,
+                    height: 44,
                     borderRadius: "var(--r-btn)",
                     background: "var(--canvas-lifted)",
                     border: "1px dashed rgba(20,20,19,0.2)",
@@ -997,11 +1008,7 @@ function Sidebar() {
             onClose={() => setShowMastodonModal(false)}
             onSuccess={refreshAccounts}
           />
-          <TikTokConnectModal
-            isOpen={showTikTokModal}
-            onClose={() => setShowTikTokModal(false)}
-            onSuccess={refreshAccounts}
-          />
+
         </>,
         document.body,
       )}

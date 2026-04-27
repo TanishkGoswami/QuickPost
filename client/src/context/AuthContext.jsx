@@ -1,6 +1,13 @@
-import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
-import apiClient from '../utils/apiClient';
-import { supabase } from '../lib/supabase';
+import React, {
+  createContext,
+  useState,
+  useContext,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
+import apiClient from "../utils/apiClient";
+import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
 
@@ -8,42 +15,34 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
   const [connectedAccounts, setConnectedAccounts] = useState({
-    instagram: false,
-    youtube: false,
-    pinterest: false,
-    facebook: false,
-    bluesky: false,
-    linkedin: false,
-    mastodon: false,
-    tiktok: false,
-    threads: false,
-    x: false,
-    reddit: false
+    instagram: { connected: false },
+    youtube: { connected: false },
+    pinterest: { connected: false },
+    facebook: { connected: false },
+    bluesky: { connected: false },
+    linkedin: { connected: false },
+    mastodon: { connected: false },
+    threads: { connected: false },
+    x: { connected: false },
+    reddit: { connected: false },
+    googleBusiness: { connected: false },
   });
   const [loading, setLoading] = useState(true);
 
   const fetchConnectedAccounts = useCallback(async () => {
     try {
-      const response = await apiClient.get('/api/auth/accounts');
+      console.log("🔄 Fetching connected accounts...");
+      const response = await apiClient.get("/api/auth/accounts");
       if (response.data.success) {
         const accounts = response.data.accounts;
-        const transformedAccounts = {
-          instagram: accounts.instagram?.connected || false,
-          youtube: accounts.youtube?.connected || false,
-          pinterest: accounts.pinterest?.connected || false,
-          facebook: accounts.facebook?.connected || false,
-          bluesky: accounts.bluesky?.connected || false,
-          linkedin: accounts.linkedin?.connected || false,
-          mastodon: accounts.mastodon?.connected || false,
-          tiktok: accounts.tiktok?.connected || false,
-          threads: accounts.threads?.connected || false,
-          x: accounts.x?.connected || false,
-          reddit: accounts.reddit?.connected || false,
-        };
-        setConnectedAccounts(transformedAccounts);
+        console.log("✅ Accounts fetched successfully:", Object.keys(accounts).filter(k => accounts[k].connected));
+        console.log("📊 Full accounts data:", accounts);
+        setConnectedAccounts(accounts);
+      } else {
+        console.error("❌ Failed to fetch accounts:", response.data.error);
       }
     } catch (error) {
-      console.error('Error fetching connected accounts:', error);
+      console.error("💥 Error fetching connected accounts:", error.message || error);
     }
   }, []);
 
@@ -55,31 +54,46 @@ export function AuthProvider({ children }) {
         setUser({
           userId: session.user.id,
           email: session.user.email,
-          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0]
+          name:
+            session.user.user_metadata?.full_name ||
+            session.user.email?.split("@")[0],
         });
-        localStorage.setItem('quickpost_token', session.access_token);
+        localStorage.setItem("quickpost_token", session.access_token);
         fetchConnectedAccounts();
       }
       setLoading(false);
     });
 
     // Listen for changes on auth state (logged in, signed out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) {
         setUser({
           userId: session.user.id,
           email: session.user.email,
-          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0]
+          name:
+            session.user.user_metadata?.full_name ||
+            session.user.email?.split("@")[0],
         });
-        localStorage.setItem('quickpost_token', session.access_token);
+        localStorage.setItem("quickpost_token", session.access_token);
         fetchConnectedAccounts();
       } else {
         setUser(null);
-        localStorage.removeItem('quickpost_token');
-        setConnectedAccounts({ 
-          instagram: false, youtube: false, pinterest: false, facebook: false, 
-          bluesky: false, linkedin: false, mastodon: false, tiktok: false, threads: false, x: false, reddit: false
+        localStorage.removeItem("quickpost_token");
+        setConnectedAccounts({
+          instagram: { connected: false },
+          youtube: { connected: false },
+          pinterest: { connected: false },
+          facebook: { connected: false },
+          bluesky: { connected: false },
+          linkedin: { connected: false },
+          mastodon: { connected: false },
+          threads: { connected: false },
+          x: { connected: false },
+          reddit: { connected: false },
+          googleBusiness: { connected: false },
         });
       }
       setLoading(false);
@@ -113,10 +127,10 @@ export function AuthProvider({ children }) {
 
   const googleSignIn = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider: "google",
       options: {
-        redirectTo: window.location.origin
-      }
+        redirectTo: window.location.origin,
+      },
     });
     if (error) throw error;
     return data;
@@ -130,30 +144,29 @@ export function AuthProvider({ children }) {
     await fetchConnectedAccounts();
   }, [fetchConnectedAccounts]);
 
-  const value = useMemo(() => ({
-    user,
-    session,
-    connectedAccounts,
-    loading,
-    login,
-    signUp,
-    googleSignIn,
-    logout,
-    refreshAccounts,
-    isAuthenticated: !!user
-  }), [user, session, connectedAccounts, loading, refreshAccounts]);
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({
+      user,
+      session,
+      connectedAccounts,
+      loading,
+      login,
+      signUp,
+      googleSignIn,
+      logout,
+      refreshAccounts,
+      isAuthenticated: !!user,
+    }),
+    [user, session, connectedAccounts, loading, refreshAccounts],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
 }

@@ -7,7 +7,6 @@ import BlueskyConnectModal from "./BlueskyConnectModal";
 import PinterestConnectModal from "./PinterestConnectModal";
 import LinkedInConnectModal from "./LinkedInConnectModal";
 import MastodonConnectModal from "./MastodonConnectModal";
-import TikTokConnectModal from "./TikTokConnectModal";
 import InstagramBusinessSetupModal from "./InstagramBusinessSetupModal";
 
 const SESSION_KEY = "qp_channels_skipped";
@@ -15,15 +14,15 @@ const SESSION_KEY = "qp_channels_skipped";
 const platforms = [
   { id: "instagram",  name: "Instagram",       icon: "/icons/ig-instagram-icon.svg",              type: "oauth-instagram" },
   { id: "facebook",   name: "Facebook",         icon: "/icons/facebook-round-color-icon.svg",      type: "oauth" },
-  { id: "x",          name: "X",                icon: "/icons/x-social-media-round-icon.svg",      type: "oauth" },
+  { id: "x",          name: "X",                icon: "/icons/x-social-media-round-icon.svg",      type: "coming-soon" },
   { id: "linkedin",   name: "LinkedIn",         icon: "/icons/linkedin-icon.svg",                  type: "modal-linkedin" },
-  { id: "tiktok",     name: "TikTok",           icon: "/icons/tiktok-circle-icon.svg",             type: "modal-tiktok" },
   { id: "youtube",    name: "YouTube",          icon: "/icons/youtube-color-icon.svg",             type: "oauth" },
-  { id: "pinterest",  name: "Pinterest",        icon: "/icons/pinterest-round-color-icon.svg",     type: "modal-pinterest" },
+  { id: "pinterest",  name: "Pinterest",        icon: "/icons/pinterest-round-color-icon.svg",     type: "coming-soon" },
   { id: "threads",    name: "Threads",          icon: "/icons/threads-icon.svg",                   type: "oauth" },
   { id: "mastodon",   name: "Mastodon",         icon: "/icons/mastodon-round-icon.svg",            type: "modal-mastodon" },
   { id: "bluesky",    name: "Bluesky",          icon: "/icons/bluesky-circle-color-icon.svg",      type: "modal-bluesky" },
-  { id: "google-business", name: "Google Business", icon: "/icons/google-icon.svg",               type: "coming-soon" },
+  { id: "googleBusiness", name: "Google Business", icon: "/icons/google-icon.svg",               type: "coming-soon" },
+  { id: "reddit",     name: "Reddit",           icon: "/icons/reddit-icon.svg",                    type: "coming-soon" },
 ];
 
 export default function ConnectChannelsModal() {
@@ -33,7 +32,6 @@ export default function ConnectChannelsModal() {
   const [showPinterestModal, setShowPinterestModal] = useState(false);
   const [showLinkedInModal, setShowLinkedInModal] = useState(false);
   const [showMastodonModal, setShowMastodonModal] = useState(false);
-  const [showTikTokModal, setShowTikTokModal] = useState(false);
   const [showInstagramModal, setShowInstagramModal] = useState(false);
 
   useEffect(() => {
@@ -41,7 +39,7 @@ export default function ConnectChannelsModal() {
     const skipped = sessionStorage.getItem(SESSION_KEY);
     if (skipped) return;
 
-    const hasAnyConnected = Object.values(connectedAccounts).some(Boolean);
+    const hasAnyConnected = Object.values(connectedAccounts).some((a) => a?.connected);
     if (!hasAnyConnected) {
       const t = setTimeout(() => setVisible(true), 800);
       return () => clearTimeout(t);
@@ -69,17 +67,16 @@ export default function ConnectChannelsModal() {
       return;
     }
     if (type === "modal-linkedin")  { setShowLinkedInModal(true);  return; }
-    if (type === "modal-tiktok")    { setShowTikTokModal(true);    return; }
     if (type === "modal-pinterest") { setShowPinterestModal(true); return; }
     if (type === "modal-mastodon")  { setShowMastodonModal(true);  return; }
     if (type === "modal-bluesky")   { setShowBlueskyModal(true);   return; }
     if (type === "coming-soon") {
-      alert("Google Business Profile integration is coming soon!");
+      alert(`${platform.name} integration is coming soon!`);
     }
   };
 
   const unconnectedPlatforms = platforms.filter(
-    (p) => !connectedAccounts[p.id]
+    (p) => !connectedAccounts[p.id]?.connected
   );
 
   if (!visible) return null;
@@ -260,12 +257,6 @@ export default function ConnectChannelsModal() {
         <LinkedInConnectModal
           isOpen={showLinkedInModal}
           onClose={() => { setShowLinkedInModal(false); refreshAccounts(); }}
-        />
-      )}
-      {showTikTokModal && (
-        <TikTokConnectModal
-          isOpen={showTikTokModal}
-          onClose={() => { setShowTikTokModal(false); refreshAccounts(); }}
         />
       )}
       {showPinterestModal && (

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { AnimatePresence } from "framer-motion";
-import Masonry from "react-masonry-css"; 
+import Masonry from "react-masonry-css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -67,8 +67,7 @@ function getPlatformIcon(id) {
       );
     case "linkedin":
       return <img src="/icons/linkedin-icon.svg" style={s} alt="LinkedIn" />;
-    case "tiktok":
-      return <img src="/icons/tiktok-circle-icon.svg" style={s} alt="TikTok" />;
+
     case "youtube":
       return (
         <img src="/icons/youtube-color-icon.svg" style={s} alt="YouTube" />
@@ -134,13 +133,7 @@ function buildPlatforms(post) {
       error: post.facebook_error,
       url: post.facebook_url,
     },
-    {
-      id: "tiktok",
-      name: "TikTok",
-      success: post.tiktok_success,
-      error: post.tiktok_error,
-      url: null,
-    },
+
     {
       id: "mastodon",
       name: "Mastodon",
@@ -391,8 +384,7 @@ function PinterestCard({ post, onOpen, formatDate }) {
     /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || "");
   const displayUrl = post.thumbnail_url || (isImage ? post.media_url : null);
   const hasMedia = !!displayUrl;
-  const allSuccess =
-    platforms.length > 0 && platforms.every((p) => p.success);
+  const allSuccess = platforms.length > 0 && platforms.every((p) => p.success);
 
   const ICON_MAP = {
     instagram: "ig-instagram-icon.svg",
@@ -400,7 +392,7 @@ function PinterestCard({ post, onOpen, formatDate }) {
     linkedin: "linkedin-icon.svg",
     youtube: "youtube-color-icon.svg",
     facebook: "facebook-round-color-icon.svg",
-    tiktok: "tiktok-circle-icon.svg",
+
     pinterest: "pinterest-round-color-icon.svg",
     threads: "threads-icon.svg",
     mastodon: "mastodon-round-icon.svg",
@@ -409,9 +401,10 @@ function PinterestCard({ post, onOpen, formatDate }) {
   };
 
   // Multi-media / carousel detection
-  const mediaUrls = Array.isArray(post.media_urls) && post.media_urls.length > 1
-    ? post.media_urls
-    : null;
+  const mediaUrls =
+    Array.isArray(post.media_urls) && post.media_urls.length > 1
+      ? post.media_urls
+      : null;
   const isCarousel = !!mediaUrls;
   const carouselCount = mediaUrls?.length || 1;
 
@@ -439,7 +432,13 @@ function PinterestCard({ post, onOpen, formatDate }) {
     >
       {hasMedia ? (
         /* ─── Image-first: no fixed height, aspect ratio preserved ─── */
-        <div style={{ position: "relative", lineHeight: 0, minHeight: imgLoaded ? 0 : 180 }}>
+        <div
+          style={{
+            position: "relative",
+            lineHeight: 0,
+            minHeight: imgLoaded ? 0 : 180,
+          }}
+        >
           {/* Shimmer shown until image loads */}
           {!imgLoaded && (
             <div
@@ -568,20 +567,28 @@ function PinterestCard({ post, onOpen, formatDate }) {
                 pointerEvents: "none",
               }}
             >
-              {Array.from({ length: Math.min(carouselCount, 5) }).map((_, i) => (
-                <div
-                  key={i}
-                  style={{
-                    width: i === 0 ? 14 : 5,
-                    height: 5,
-                    borderRadius: 3,
-                    background: i === 0 ? "#fff" : "rgba(255,255,255,0.45)",
-                    transition: "width 0.2s",
-                  }}
-                />
-              ))}
+              {Array.from({ length: Math.min(carouselCount, 5) }).map(
+                (_, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      width: i === 0 ? 14 : 5,
+                      height: 5,
+                      borderRadius: 3,
+                      background: i === 0 ? "#fff" : "rgba(255,255,255,0.45)",
+                      transition: "width 0.2s",
+                    }}
+                  />
+                ),
+              )}
               {carouselCount > 5 && (
-                <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 8, fontWeight: 700 }}>
+                <span
+                  style={{
+                    color: "rgba(255,255,255,0.6)",
+                    fontSize: 8,
+                    fontWeight: 700,
+                  }}
+                >
                   +{carouselCount - 5}
                 </span>
               )}
@@ -795,10 +802,7 @@ function PinterestCard({ post, onOpen, formatDate }) {
             >
               {post.media_type === "video" ? (
                 <>
-                  <Video
-                    size={26}
-                    style={{ color: "rgba(243,240,238,0.3)" }}
-                  />
+                  <Video size={26} style={{ color: "rgba(243,240,238,0.3)" }} />
                   <span
                     style={{
                       fontSize: 9,
@@ -1144,7 +1148,9 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
 }
 
 /* ── Skeleton card for loading state ── */
-const SKELETON_HEIGHTS = [280, 180, 350, 220, 315, 260, 385, 200, 295, 340, 170, 235];
+const SKELETON_HEIGHTS = [
+  280, 180, 350, 220, 315, 260, 385, 200, 295, 340, 170, 235,
+];
 
 function SkeletonCard({ height }) {
   return (
@@ -1266,15 +1272,11 @@ function Dashboard() {
     }
   };
 
-  const formatDate = (dateString) =>
-    new Date(dateString).toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const formatDate = useCallback((dateString) =>
+    new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'short', month: 'short', day: 'numeric',
+      year: 'numeric', hour: '2-digit', minute: '2-digit',
+    }), []);
 
   const toggleExpand = (id) =>
     setExpandedId((prev) => (prev === id ? null : id));
@@ -1295,55 +1297,26 @@ function Dashboard() {
   const displayedItems = filtered.slice(0, displayCount);
   const hasMore = displayCount < filtered.length;
 
-  // ── Infinite scroll: scroll-container-aware ──
   useEffect(() => {
     if (!hasMore || isLoadingMore) return;
-
     const sentinel = loadMoreRef.current;
     if (!sentinel) return;
 
-    // Walk up the DOM to find the actual scrollable container
-    const getScrollParent = (node) => {
-      if (!node || node === document.body) return window;
-      const { overflowY, overflow } = window.getComputedStyle(node);
-      if (
-        overflowY === "auto" ||
-        overflowY === "scroll" ||
-        overflow === "auto" ||
-        overflow === "scroll"
-      )
-        return node;
-      return getScrollParent(node.parentElement);
-    };
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isLoadingMore) {
+          setIsLoadingMore(true);
+          setTimeout(() => {
+            setDisplayCount(prev => Math.min(prev + BATCH_SIZE, filtered.length));
+            setIsLoadingMore(false);
+          }, 300);
+        }
+      },
+      { rootMargin: '400px', threshold: 0 }
+    );
 
-    const scrollParent = getScrollParent(sentinel.parentElement);
-
-    const triggerLoadMore = () => {
-      const sentinelRect = sentinel.getBoundingClientRect();
-      const containerBottom =
-        scrollParent === window
-          ? window.innerHeight
-          : scrollParent.getBoundingClientRect().bottom;
-
-      // Load when sentinel is within 400px of the visible bottom
-      if (sentinelRect.top <= containerBottom + 400) {
-        setIsLoadingMore(true);
-        setTimeout(() => {
-          setDisplayCount((prev) =>
-            Math.min(prev + BATCH_SIZE, filtered.length),
-          );
-          setIsLoadingMore(false);
-        }, 500);
-      }
-    };
-
-    // 1. Immediate check (handles content that fits inside the viewport)
-    triggerLoadMore();
-
-    // 2. Scroll listener on the real scroll container
-    const target = scrollParent === window ? window : scrollParent;
-    target.addEventListener("scroll", triggerLoadMore, { passive: true });
-    return () => target.removeEventListener("scroll", triggerLoadMore);
+    observer.observe(sentinel);
+    return () => observer.disconnect();
   }, [hasMore, isLoadingMore, filtered.length]);
 
   return (
@@ -1665,7 +1638,9 @@ function Dashboard() {
 
       {/* ── Main content ── */}
       <div
-        style={{ padding: "clamp(16px, 3vw, 28px) clamp(16px, 3vw, 28px) 40px" }}
+        style={{
+          padding: "clamp(16px, 3vw, 28px) clamp(16px, 3vw, 28px) 40px",
+        }}
       >
         {loading ? (
           <Masonry
@@ -1760,14 +1735,58 @@ function Dashboard() {
               </Masonry>
             )}
             {isLoadingMore && viewMode === "list" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 860, margin: "0 auto" }}>
-                {[1,2,3].map((i) => (
-                  <div key={i} className="skeleton-card" style={{ display: "flex", alignItems: "center", gap: 20, padding: "20px 24px" }}>
-                    <div className="skeleton-shimmer" style={{ width: 84, height: 84, borderRadius: 12, flexShrink: 0 }} />
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
+                  maxWidth: 860,
+                  margin: "0 auto",
+                }}
+              >
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="skeleton-card"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 20,
+                      padding: "20px 24px",
+                    }}
+                  >
+                    <div
+                      className="skeleton-shimmer"
+                      style={{
+                        width: 84,
+                        height: 84,
+                        borderRadius: 12,
+                        flexShrink: 0,
+                      }}
+                    />
                     <div style={{ flex: 1 }}>
-                      <div className="skeleton-shimmer" style={{ height: 14, borderRadius: 6, marginBottom: 10, width: "60%" }} />
-                      <div className="skeleton-shimmer" style={{ height: 11, borderRadius: 6, marginBottom: 8, width: "85%" }} />
-                      <div className="skeleton-shimmer" style={{ height: 10, borderRadius: 6, width: "40%" }} />
+                      <div
+                        className="skeleton-shimmer"
+                        style={{
+                          height: 14,
+                          borderRadius: 6,
+                          marginBottom: 10,
+                          width: "60%",
+                        }}
+                      />
+                      <div
+                        className="skeleton-shimmer"
+                        style={{
+                          height: 11,
+                          borderRadius: 6,
+                          marginBottom: 8,
+                          width: "85%",
+                        }}
+                      />
+                      <div
+                        className="skeleton-shimmer"
+                        style={{ height: 10, borderRadius: 6, width: "40%" }}
+                      />
                     </div>
                   </div>
                 ))}
@@ -1775,7 +1794,18 @@ function Dashboard() {
             )}
 
             {!hasMore && displayedItems.length > 0 && (
-              <div style={{ textAlign: "center", padding: "32px 0 48px", color: css.slate, fontSize: 12, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", opacity: 0.5 }}>
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "32px 0 48px",
+                  color: css.slate,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  opacity: 0.5,
+                }}
+              >
                 ✦ All posts loaded
               </div>
             )}

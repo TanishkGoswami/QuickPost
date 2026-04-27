@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
+import { usePlatformMetrics } from '../utils/metrics';
 import {
   X, ExternalLink, CheckCircle2, XCircle,
   Clock, Heart, MessageCircle, Share2, Bookmark,
@@ -65,15 +67,7 @@ const PLATFORM_CONFIG = {
     headerBg: '#fff',
     textColor: '#000',
   },
-  tiktok: {
-    name: 'TikTok', color: '#000', bg: '#000',
-    icon: '/icons/tiktok-circle-icon.svg',
-    formats: [
-      { id: 'tk_video', label: 'Video',       ratio: '9:16', w: 1080, h: 1920, css: 'aspect-[9/16]', full: true },
-    ],
-    headerBg: '#000',
-    textColor: '#fff',
-  },
+
   pinterest: {
     name: 'Pinterest', color: '#BD081C', bg: '#fff',
     icon: '/icons/pinterest-round-color-icon.svg',
@@ -93,65 +87,129 @@ const PLATFORM_CONFIG = {
     ],
     headerBg: '#fff',
     textColor: '#000',
+  },
+  bluesky: {
+    name: 'Bluesky', color: '#0085FF', bg: '#fff',
+    icon: '/icons/bluesky-circle-color-icon.svg',
+    formats: [
+      { id: 'bsky_post', label: 'Post', ratio: '16:9', w: 1200, h: 675, css: 'aspect-video' },
+      { id: 'bsky_sq',   label: 'Square', ratio: '1:1',  w: 1080, h: 1080, css: 'aspect-square' },
+    ],
+    headerBg: '#fff',
+    textColor: '#000',
+  },
+  mastodon: {
+    name: 'Mastodon', color: '#6364FF', bg: '#191b22',
+    icon: '/icons/mastodon-round-icon.svg',
+    formats: [
+      { id: 'masto_post', label: 'Post', ratio: '16:9', w: 1200, h: 675, css: 'aspect-video' },
+      { id: 'masto_sq',   label: 'Square', ratio: '1:1',  w: 1080, h: 1080, css: 'aspect-square' },
+    ],
+    headerBg: '#191b22',
+    textColor: '#fff',
+  },
+  reddit: {
+    name: 'Reddit', color: '#FF4500', bg: '#fff',
+    icon: '/icons/reddit-icon.svg',
+    formats: [
+      { id: 'rd_post', label: 'Post', ratio: '1:1', w: 1080, h: 1080, css: 'aspect-square' },
+    ],
+    headerBg: '#fff',
+    textColor: '#000',
   }
 };
 
 /* ── UI Components for each Platform ────────────────────────────────── */
 
-const InstagramOverlay = ({ format, caption, children, isFull }) => {
+const InstagramOverlay = ({ format, caption, children, isFull, platformUsername, metrics, user }) => {
   if (isFull) {
     const isReel = format.id === 'ig_reel';
+    const isStory = format.id === 'ig_story';
+
+    if (isStory) {
+      return (
+        <div className="absolute inset-0 flex flex-col pointer-events-none text-white">
+          <div className="absolute inset-0 z-[-1] bg-black border-2 border-black">{children}</div>
+
+          {/* Story Progress Bar */}
+          <div className="px-2 pt-3 flex gap-1.5 z-10">
+            <div className="h-0.5 flex-1 bg-white/30 rounded-full overflow-hidden">
+              <div className="h-full bg-white w-1/3" />
+            </div>
+          </div>
+
+          {/* Story Header */}
+          <div className="px-3 flex items-center justify-between mt-3 z-10">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full border-2 border-white/20 p-0.5 overflow-hidden">
+                {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full rounded-full object-cover" /> : <div className="w-full h-full bg-indigo-500 rounded-full flex items-center justify-center text-[10px]">{user?.name?.[0] || '?'}</div>}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-bold shadow-sm">{platformUsername || 'Your Story'}</span>
+                <span className="text-[9px] opacity-70 shadow-sm">{metrics.timestamp || '2h ago'}</span>
+              </div>
+            </div>
+            <MoreHorizontal className="w-4 h-4 shadow-sm" />
+          </div>
+
+          {/* Story Bottom Bar */}
+          <div className="mt-auto p-4 pb-6 flex items-center gap-4 bg-gradient-to-t from-black/50 to-transparent z-10">
+            <div className="flex-1 h-10 rounded-full border border-white/40 px-4 flex items-center text-[12px] bg-black/10 backdrop-blur-md">
+              Send message
+            </div>
+            <Heart className="w-6 h-6" />
+            <Send className="w-6 h-6" />
+          </div>
+        </div>
+      );
+    }
+
+    if (isReel) {
+      return (
+        <div className="absolute inset-0 flex flex-col pointer-events-none text-white">
+          <div className="absolute inset-0 z-[-1] bg-black border-2 border-black">{children}</div>
+
+          {/* Reels Sidebar */}
+          <div className="absolute right-3 bottom-24 flex flex-col gap-6 items-center z-10">
+            <div className="flex flex-col items-center gap-1">
+              <Heart className="w-7 h-7 drop-shadow-lg" />
+              <span className="text-[11px] font-bold drop-shadow-md">{metrics.likes?.toLocaleString() || '1.4k'}</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <MessageCircle className="w-7 h-7 drop-shadow-lg" />
+              <span className="text-[11px] font-bold drop-shadow-md">{metrics.comments?.toLocaleString() || '42'}</span>
+            </div>
+            <Send className="w-6 h-6 drop-shadow-lg" />
+            <MoreVertical className="w-5 h-5 drop-shadow-lg" />
+            <div className="w-7 h-7 rounded-lg border-2 border-white/80 overflow-hidden mt-1">
+              {user?.profile_picture && <img src={user.profile_picture} className="w-full h-full object-cover" />}
+            </div>
+          </div>
+
+          {/* Reels Bottom Info */}
+          <div className="mt-auto p-4 pb-8 bg-gradient-to-t from-black/60 via-black/20 to-transparent z-10">
+            <div className="flex items-center gap-2.5 mb-2.5">
+              <div className="w-9 h-9 rounded-full border-2 border-white/20 p-0.5 overflow-hidden">
+                {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full rounded-full object-cover" /> : <div className="w-full h-full bg-indigo-500 rounded-full flex items-center justify-center text-[10px]">{user?.name?.[0] || '?'}</div>}
+              </div>
+              <span className="text-[13px] font-bold drop-shadow-md">{platformUsername || 'username'}</span>
+              <button className="px-2.5 py-1 rounded-lg border border-white/40 text-[10px] font-bold backdrop-blur-sm">Follow</button>
+            </div>
+            <p className="text-[12px] line-clamp-2 mb-3 drop-shadow-md">{caption}</p>
+            <div className="flex items-center gap-2">
+              <div className="bg-white/20 backdrop-blur-md p-1.5 rounded-full">
+                <Music2 className="w-3 h-3" />
+              </div>
+              <span className="text-[11px] drop-shadow-md">Original Audio • {platformUsername || 'creator'}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="absolute inset-0 flex flex-col pointer-events-none text-white">
-        <div className="absolute inset-0 z-[-1] bg-black">{children}</div>
-
-        {/* Story/Reel Top Bar */}
-        <div className="p-3 flex gap-1 mt-2">
-          <div className="h-0.5 flex-1 bg-white/40 rounded-full overflow-hidden">
-            <div className="h-full bg-white w-1/3" />
-          </div>
-        </div>
-        <div className="px-3 flex items-center justify-between mt-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gray-300 border border-white/20" />
-            <span className="text-[10px] font-bold">Your Story</span>
-            <span className="text-[10px] opacity-60">1h</span>
-          </div>
-          <MoreHorizontal className="w-4 h-4" />
-        </div>
-
-        {/* Reels Sidebar */}
-        {isReel && (
-          <div className="absolute right-2 bottom-20 flex flex-col gap-4 items-center">
-            <div className="flex flex-col items-center gap-0.5">
-              <Heart className="w-5 h-5" />
-              <span className="text-[9px]">Likes</span>
-            </div>
-            <div className="flex flex-col items-center gap-0.5">
-              <MessageCircle className="w-5 h-5" />
-              <span className="text-[9px]">12</span>
-            </div>
-            <Send className="w-5 h-5" />
-            <MoreVertical className="w-4 h-4" />
-          </div>
-        )}
-
-        {/* Story/Reel Bottom Bar */}
-        <div className="mt-auto p-3 flex items-center gap-3 bg-gradient-to-t from-black/40 to-transparent">
-          <div className="flex-1">
-            {isReel && (
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-6 h-6 rounded-full bg-gray-300 border border-white/20" />
-                <span className="text-[9px] font-bold">username</span>
-              </div>
-            )}
-            <div className="h-8 rounded-full border border-white/40 px-3 flex items-center text-[10px] backdrop-blur-sm">
-              {isReel ? 'Add comment...' : 'Send message'}
-            </div>
-          </div>
-          <Heart className="w-5 h-5" />
-          <Send className="w-5 h-5" />
-        </div>
+        <div className="absolute inset-0 z-[-1] bg-black border-2 border-black">{children}</div>
       </div>
     );
   }
@@ -163,10 +221,10 @@ const InstagramOverlay = ({ format, caption, children, isFull }) => {
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 to-purple-600 p-[1.5px]">
             <div className="w-full h-full rounded-full bg-white p-[1.5px]">
-              <div className="w-full h-full rounded-full bg-gray-200" />
+               {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full rounded-full object-cover" /> : <div className="w-full h-full rounded-full bg-gray-200 flex items-center justify-center text-[10px]">{user?.name?.[0] || '?'}</div>}
             </div>
           </div>
-          <span className="text-[11px] font-bold text-black">username</span>
+          <span className="text-[11px] font-bold text-black">{platformUsername || 'username'}</span>
         </div>
         <MoreHorizontal className="w-4 h-4 text-black" />
       </div>
@@ -184,53 +242,64 @@ const InstagramOverlay = ({ format, caption, children, isFull }) => {
           </div>
           <Bookmark className="w-5 h-5 text-black" />
         </div>
-        <div className="text-[11px] font-bold text-black mb-1">1,234 likes</div>
-        <p className="text-[11px] text-black"><span className="font-bold mr-1">username</span>{caption}</p>
+        <div className="text-[11px] font-bold text-black mb-1">{metrics.likes.toLocaleString()} likes</div>
+        <p className="text-[11px] text-black"><span className="font-bold mr-1">{platformUsername || 'username'}</span>{caption}</p>
+        <p className="text-[9px] text-gray-400 mt-1 uppercase">{metrics.timestamp}</p>
       </div>
     </div>
   );
 };
 
-const YouTubeOverlay = ({ format, caption, children, isFull }) => {
+const YouTubeOverlay = ({ format, caption, children, isFull, platformUsername, metrics, user }) => {
   if (isFull) {
     return (
-      <div className="absolute inset-0 flex flex-col pointer-events-none text-white p-3 justify-end bg-gradient-to-t from-black/60 to-transparent">
-        <div className="absolute inset-0 z-[-1] bg-black">{children}</div>
-        <div className="flex justify-between items-end gap-2">
-          <div className="flex-1 pr-2">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-full bg-gray-400" />
-              <span className="text-[10px] font-bold">@channelname</span>
-              <button className="bg-white text-black px-2.5 py-1 rounded-full text-[9px] font-bold">Subscribe</button>
+      <div className="absolute inset-0 flex flex-col pointer-events-none text-white">
+        <div className="absolute inset-0 z-[-1] bg-black border-2 border-black">{children}</div>
+
+        {/* Shorts Sidebar */}
+        <div className="absolute right-3 bottom-24 flex flex-col gap-6 items-center z-10">
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-11 h-11 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
+              <ThumbsUp className="w-5 h-5 fill-white" />
             </div>
-            <p className="text-[11px] font-medium mb-2">{caption}</p>
+            <span className="text-[11px] font-bold">{metrics.likes?.toLocaleString() || 'Like'}</span>
           </div>
-          <div className="flex flex-col gap-4 items-center mb-1">
-            <div className="flex flex-col items-center gap-0.5">
-              <div className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
-                <ThumbsUp className="w-4 h-4" />
-              </div>
-              <span className="text-[9px]">Like</span>
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-11 h-11 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
+              <ThumbsDown className="w-5 h-5" />
             </div>
-            <div className="flex flex-col items-center gap-0.5">
-              <div className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
-                <ThumbsDown className="w-4 h-4" />
-              </div>
-              <span className="text-[9px]">Dislike</span>
+            <span className="text-[11px] font-bold">Dislike</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-11 h-11 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
+              <MessageSquare className="w-5 h-5 fill-white" />
             </div>
-            <div className="flex flex-col items-center gap-0.5">
-              <div className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
-                <MessageSquare className="w-4 h-4" />
-              </div>
-              <span className="text-[9px]">123</span>
+            <span className="text-[11px] font-bold">{metrics.comments?.toLocaleString() || '42'}</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-11 h-11 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
+              <Share2 className="w-5 h-5 fill-white" />
             </div>
-            <div className="flex flex-col items-center gap-0.5">
-              <div className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
-                <Share2 className="w-4 h-4" />
-              </div>
-              <span className="text-[9px]">Share</span>
+            <span className="text-[11px] font-bold">Share</span>
+          </div>
+          <div className="w-10 h-10 rounded border-2 border-white/20 mt-1 overflow-hidden">
+            {user?.profile_picture && <img src={user.profile_picture} className="w-full h-full object-cover" />}
+          </div>
+        </div>
+
+        {/* Shorts Bottom Info */}
+        <div className="mt-auto p-4 pb-8 bg-gradient-to-t from-black/60 to-transparent z-10">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 rounded-full bg-red-600 border-2 border-white/10 overflow-hidden">
+              {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[10px] font-bold">{user?.name?.[0] || '?'}</div>}
             </div>
-            <div className="w-8 h-8 rounded bg-gray-500 border border-white/20 mt-1" />
+            <span className="text-[13px] font-bold">@{platformUsername || user?.name || 'channel'}</span>
+            <button className="bg-red-600 text-white px-3.5 py-1.5 rounded-full text-[11px] font-bold">Subscribe</button>
+          </div>
+          <p className="text-[13px] font-medium line-clamp-2 mb-3">{caption}</p>
+          <div className="flex items-center gap-2">
+            <Music2 className="w-3.5 h-3.5" />
+            <span className="text-[11px]">Original Audio • {platformUsername || 'creator'}</span>
           </div>
         </div>
       </div>
@@ -244,10 +313,12 @@ const YouTubeOverlay = ({ format, caption, children, isFull }) => {
        </div>
        <div className="p-3 text-white">
           <div className="flex gap-3">
-            <div className="w-10 h-10 rounded-full bg-gray-600 flex-shrink-0" />
+            <div className="w-10 h-10 rounded-full bg-gray-600 flex-shrink-0 overflow-hidden">
+               {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-red-600 flex items-center justify-center text-xs">{user?.name?.[0] || '?'}</div>}
+            </div>
             <div className="flex-1">
               <p className="text-[13px] font-bold leading-tight mb-1">{caption || 'Video Title'}</p>
-              <p className="text-[11px] text-gray-400">Channel Name • 12K views • 2 hours ago</p>
+              <p className="text-[11px] text-gray-400">{platformUsername || user?.name || 'Channel Name'} • {metrics.views.toLocaleString()} views • {metrics.timestamp}</p>
             </div>
             <MoreVertical className="w-4 h-4 text-gray-400" />
           </div>
@@ -256,15 +327,17 @@ const YouTubeOverlay = ({ format, caption, children, isFull }) => {
   );
 };
 
-const LinkedInOverlay = ({ format, caption, children, isFull }) => {
+const LinkedInOverlay = ({ format, caption, children, isFull, platformUsername, metrics, user }) => {
   return (
     <div className="flex flex-col bg-white pointer-events-none">
       <div className="p-3 flex items-center gap-2 border-b border-gray-100">
-        <div className="w-10 h-10 rounded-sm bg-gray-200" />
+        <div className="w-10 h-10 rounded-sm bg-gray-200 overflow-hidden">
+           {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-[#0A66C2] flex items-center justify-center text-white text-xs">{user?.name?.[0] || '?'}</div>}
+        </div>
         <div className="flex-1">
-          <p className="text-[11px] font-bold text-black">Your Name</p>
-          <p className="text-[9px] text-gray-500">Professional Headline</p>
-          <p className="text-[9px] text-gray-400">1h • 🌐</p>
+          <p className="text-[11px] font-bold text-black">{platformUsername || user?.name || 'Your Name'}</p>
+          <p className="text-[9px] text-gray-500">QuickPost User</p>
+          <p className="text-[9px] text-gray-400">{metrics.timestamp} • 🌐</p>
         </div>
         <MoreHorizontal className="w-4 h-4 text-gray-400" />
       </div>
@@ -274,38 +347,32 @@ const LinkedInOverlay = ({ format, caption, children, isFull }) => {
       <div className={`relative overflow-hidden bg-gray-50 ${format.css} w-full`}>
         {children}
       </div>
-      <div className="p-3 border-t border-gray-100 flex items-center justify-between bg-white">
-        <div className="flex flex-col items-center gap-1">
-          <ThumbsUp className="w-4 h-4 text-gray-600" />
-          <span className="text-[9px] text-gray-500">Like</span>
+      <div className="p-2.5 flex items-center justify-between border-t border-gray-100 bg-white">
+        <div className="flex items-center gap-1">
+          <div className="flex -space-x-1">
+             <div className="w-3.5 h-3.5 rounded-full bg-[#0a66c2] flex items-center justify-center border border-white"><ThumbsUp size={7} color="white" fill="white" /></div>
+             <div className="w-3.5 h-3.5 rounded-full bg-[#df704d] flex items-center justify-center border border-white"><Heart size={7} color="white" fill="white" /></div>
+          </div>
+          <span className="text-[10px] text-gray-500">{metrics.likes.toLocaleString()}</span>
         </div>
-        <div className="flex flex-col items-center gap-1">
-          <MessageCircle className="w-4 h-4 text-gray-600" />
-          <span className="text-[9px] text-gray-500">Comment</span>
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <Repeat className="w-4 h-4 text-gray-600" />
-          <span className="text-[9px] text-gray-500">Repost</span>
-        </div>
-        <div className="flex flex-col items-center gap-1">
-          <Send className="w-4 h-4 text-gray-600" />
-          <span className="text-[9px] text-gray-500">Send</span>
-        </div>
+        <div className="text-[10px] text-gray-500">{metrics.comments.toLocaleString()} comments • {metrics.shares.toLocaleString()} shares</div>
       </div>
     </div>
   );
 };
 
-const XOverlay = ({ format, caption, children, isFull }) => {
+const XOverlay = ({ format, caption, children, isFull, platformUsername, metrics, user }) => {
   return (
-    <div className="flex flex-col bg-black text-white p-3 pointer-events-none">
+    <div className="flex flex-col bg-black pointer-events-none text-white p-3">
       <div className="flex gap-3 mb-2">
-        <div className="w-10 h-10 rounded-full bg-gray-700" />
-        <div className="flex-1">
+        <div className="w-10 h-10 rounded-full bg-gray-800 overflow-hidden flex-shrink-0">
+           {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-700 flex items-center justify-center text-sm">{user?.name?.[0] || '?'}</div>}
+        </div>
+        <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1">
-              <span className="text-[11px] font-bold">Your Name</span>
-              <span className="text-[11px] text-gray-500">@handle • 1h</span>
+              <span className="text-[11px] font-bold truncate">{user?.name || 'Your Name'}</span>
+              <span className="text-[11px] text-gray-500 truncate">@{platformUsername || user?.name?.toLowerCase().replace(/\s+/g, '') || 'handle'} · {metrics.timestamp}</span>
             </div>
             <MoreHorizontal className="w-4 h-4 text-gray-500" />
           </div>
@@ -316,84 +383,51 @@ const XOverlay = ({ format, caption, children, isFull }) => {
         {children}
       </div>
       <div className="py-2 border-t border-gray-800 flex items-center justify-around">
-        <MessageSquare className="w-4 h-4 text-gray-500" />
-        <Repeat className="w-4 h-4 text-gray-500" />
-        <Heart className="w-4 h-4 text-gray-500" />
-        <Share2 className="w-4 h-4 text-gray-500" />
+        <div className="flex items-center gap-1.5 text-gray-500"><MessageSquare className="w-4 h-4" /><span className="text-[10px]">{metrics.comments.toLocaleString()}</span></div>
+        <div className="flex items-center gap-1.5 text-gray-500"><Repeat className="w-4 h-4" /><span className="text-[10px]">{metrics.shares.toLocaleString()}</span></div>
+        <div className="flex items-center gap-1.5 text-gray-500"><Heart className="w-4 h-4" /><span className="text-[10px]">{metrics.likes.toLocaleString()}</span></div>
+        <div className="flex items-center gap-1.5 text-gray-500"><Share2 className="w-4 h-4" /></div>
       </div>
     </div>
   );
 };
 
-const TikTokOverlay = ({ format, caption, children, isFull }) => {
-  return (
-    <div className="absolute inset-0 flex flex-col pointer-events-none text-white p-3 justify-end bg-gradient-to-t from-black/40 to-transparent">
-      <div className="absolute inset-0 z-[-1] bg-black">{children}</div>
-      <div className="flex justify-between items-end gap-2">
-        <div className="flex-1 pr-2">
-          <p className="text-[11px] font-bold mb-1">@username</p>
-          <p className="text-[10px] mb-3">{caption}</p>
-          <div className="flex items-center gap-2">
-            <Music2 className="w-3 h-3" />
-            <span className="text-[9px]">Original sound - username</span>
-          </div>
-        </div>
-        <div className="flex flex-col gap-3 items-center mb-1">
-          <div className="relative mb-2">
-            <div className="w-9 h-9 rounded-full bg-gray-500 border-2 border-white" />
-            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-[#FE2C55] rounded-full p-0.5">
-              <Plus className="w-2.5 h-2.5" />
-            </div>
-          </div>
-          <div className="flex flex-col items-center gap-0.5">
-            <Heart className="w-6 h-6 fill-white/10" />
-            <span className="text-[9px] font-bold">123K</span>
-          </div>
-          <div className="flex flex-col items-center gap-0.5">
-            <MessageCircle className="w-6 h-6 fill-white/10" />
-            <span className="text-[9px] font-bold">1234</span>
-          </div>
-          <div className="flex flex-col items-center gap-0.5">
-            <Bookmark className="w-6 h-6 fill-white/10" />
-            <span className="text-[9px] font-bold">567</span>
-          </div>
-          <div className="flex flex-col items-center gap-0.5">
-            <Share2 className="w-6 h-6 fill-white/10" />
-            <span className="text-[9px] font-bold">89</span>
-          </div>
-          <div className="w-8 h-8 rounded-full border-4 border-gray-800 bg-gray-600 mt-1 animate-spin-slow" />
-        </div>
-      </div>
-    </div>
-  );
-};
 
-const FacebookOverlay = ({ format, caption, children, isFull }) => {
+
+const FacebookOverlay = ({ format, caption, children, isFull, platformUsername, metrics, user }) => {
   if (isFull) {
     return (
       <div className="absolute inset-0 flex flex-col pointer-events-none text-white">
-        <div className="absolute inset-0 z-[-1] bg-black">{children}</div>
-        <div className="p-3 flex gap-1 mt-2">
+        <div className="absolute inset-0 z-[-1] bg-black border-2 border-black">{children}</div>
+
+        {/* Story Progress Bar */}
+        <div className="px-2 pt-3 flex gap-1 z-10">
           <div className="h-0.5 flex-1 bg-white/40 rounded-full overflow-hidden">
             <div className="h-full bg-white w-1/3" />
           </div>
         </div>
-        <div className="px-3 flex items-center justify-between mt-2">
+
+        {/* Story Header */}
+        <div className="px-3 flex items-center justify-between mt-3 z-10">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gray-300 border border-white/20" />
-            <span className="text-[10px] font-bold">Your Story</span>
+            <div className="w-8 h-8 rounded-full bg-gray-300 border border-white/20 overflow-hidden">
+               {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-[#1877F2] flex items-center justify-center text-white text-[10px] font-bold">{user?.name?.[0] || '?'}</div>}
+            </div>
+            <span className="text-[10px] font-bold shadow-sm">{platformUsername || user?.name || 'Your Story'}</span>
           </div>
           <div className="flex gap-4">
-             <MoreHorizontal className="w-4 h-4" />
-             <X className="w-4 h-4" />
+             <MoreHorizontal className="w-4 h-4 shadow-sm" />
+             <X className="w-4 h-4 shadow-sm" />
           </div>
         </div>
-        <div className="mt-auto p-4 flex items-center gap-3 bg-gradient-to-t from-black/40 to-transparent">
-          <div className="flex-1 h-9 rounded-full bg-white/20 backdrop-blur-md px-4 flex items-center text-[11px] border border-white/20">
+
+        {/* Story Bottom Bar */}
+        <div className="mt-auto p-4 pb-8 flex items-center gap-4 bg-gradient-to-t from-black/50 to-transparent z-10">
+          <div className="flex-1 h-10 rounded-full bg-white/10 backdrop-blur-md px-4 flex items-center text-[11px] border border-white/20">
             Reply...
           </div>
-          <Heart className="w-5 h-5" />
-          <ThumbsUp className="w-5 h-5" />
+          <Heart className="w-6 h-6" />
+          <ThumbsUp className="w-6 h-6" />
         </div>
       </div>
     );
@@ -402,10 +436,12 @@ const FacebookOverlay = ({ format, caption, children, isFull }) => {
   return (
     <div className="flex flex-col bg-white pointer-events-none">
       <div className="p-3 flex items-center gap-2">
-        <div className="w-10 h-10 rounded-full bg-gray-200" />
+        <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
+           {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-[#1877F2] flex items-center justify-center text-white text-xs">{user?.name?.[0] || '?'}</div>}
+        </div>
         <div className="flex-1">
-          <p className="text-[12px] font-bold text-black leading-tight">Your Page Name</p>
-          <p className="text-[10px] text-gray-500 font-medium">1h • 🌎</p>
+          <p className="text-[12px] font-bold text-black leading-tight">{platformUsername || user?.name || 'Your Page Name'}</p>
+          <p className="text-[10px] text-gray-500 font-medium">{metrics.timestamp} • 🌎</p>
         </div>
         <MoreHorizontal className="w-4 h-4 text-gray-500" />
       </div>
@@ -415,38 +451,49 @@ const FacebookOverlay = ({ format, caption, children, isFull }) => {
       <div className={`relative overflow-hidden bg-gray-100 ${format.css} w-full`}>
         {children}
       </div>
-      <div className="border-t border-gray-100 flex items-center justify-between px-6 py-2 bg-white">
-        <div className="flex items-center gap-2 text-gray-600">
+      <div className="px-3 py-2 border-b border-gray-100 flex justify-between items-center text-[11px] text-gray-500">
+         <div className="flex items-center gap-1">
+            <div className="w-3.5 h-3.5 rounded-full bg-[#1877F2] flex items-center justify-center"><ThumbsUp size={7} color="white" fill="white" /></div>
+            <span>{metrics.likes.toLocaleString()}</span>
+         </div>
+         <div>{metrics.comments.toLocaleString()} comments • {metrics.shares.toLocaleString()} shares</div>
+      </div>
+      <div className="flex items-center justify-between px-6 py-1 bg-white">
+        <div className="flex flex-col items-center gap-0.5 text-gray-600">
           <ThumbsUp className="w-4 h-4" />
-          <span className="text-[11px] font-bold">Like</span>
+          <span className="text-[9px] font-bold">Like</span>
         </div>
-        <div className="flex items-center gap-2 text-gray-600">
+        <div className="flex flex-col items-center gap-0.5 text-gray-600">
           <MessageCircle className="w-4 h-4" />
-          <span className="text-[11px] font-bold">Comment</span>
+          <span className="text-[9px] font-bold">Comment</span>
         </div>
-        <div className="flex items-center gap-2 text-gray-600">
+        <div className="flex flex-col items-center gap-0.5 text-gray-600">
           <Share2 className="w-4 h-4" />
-          <span className="text-[11px] font-bold">Share</span>
+          <span className="text-[9px] font-bold">Share</span>
         </div>
       </div>
     </div>
   );
 };
 
-const ThreadsOverlay = ({ format, caption, children, isFull }) => {
+const ThreadsOverlay = ({ format, caption, children, isFull, platformUsername, metrics, user }) => {
   return (
     <div className="flex flex-col bg-white p-4 pointer-events-none">
       <div className="flex gap-3">
         <div className="flex flex-col items-center gap-2">
-           <div className="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0" />
+           <div className="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0 overflow-hidden">
+              {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-100 flex items-center justify-center text-[10px]">{user?.name?.[0] || '?'}</div>}
+           </div>
            <div className="w-0.5 flex-1 bg-gray-100 rounded-full" />
-           <div className="w-4 h-4 rounded-full bg-gray-100" />
+           <div className="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center">
+              <div className="w-2 h-2 rounded-full bg-gray-300" />
+           </div>
         </div>
         <div className="flex-1 flex flex-col">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[13px] font-bold text-black">yourhandle</span>
+            <span className="text-[13px] font-bold text-black">{platformUsername || user?.name?.toLowerCase().replace(/\s+/g, '') || 'yourhandle'}</span>
             <div className="flex items-center gap-2 text-gray-400">
-              <span className="text-[12px]">1h</span>
+              <span className="text-[12px]">{metrics.timestamp}</span>
               <MoreHorizontal className="w-4 h-4" />
             </div>
           </div>
@@ -462,13 +509,140 @@ const ThreadsOverlay = ({ format, caption, children, isFull }) => {
             <Repeat className="w-5 h-5" />
             <Send className="w-5 h-5" />
           </div>
+          <div className="mt-3 text-[12px] text-gray-400">
+             {metrics.likes.toLocaleString()} likes • {metrics.comments.toLocaleString()} replies
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-const PinterestOverlay = ({ format, caption, children, isFull }) => {
+const BlueskyOverlay = ({ format, caption, children, isFull, platformUsername, metrics, user }) => {
+  return (
+    <div className="flex flex-col bg-[#161e27] p-4 pointer-events-none text-white">
+      <div className="flex gap-3">
+        <div className="w-10 h-10 rounded-full bg-gray-600 flex-shrink-0 overflow-hidden">
+           {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-[#0085ff] flex items-center justify-center text-white text-sm">{user?.name?.[0] || '?'}</div>}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-0.5">
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="text-[14px] font-bold text-white truncate">{user?.name || 'Your Name'}</span>
+              <span className="text-[13px] text-gray-400 truncate">@{platformUsername || user?.name?.toLowerCase().replace(/\s+/g, '') || 'handle'}.bsky.social</span>
+              <span className="text-gray-500 mx-1">·</span>
+              <span className="text-[13px] text-gray-500">{metrics.timestamp}</span>
+            </div>
+          </div>
+          <p className="text-[14px] text-white leading-normal mb-3 whitespace-pre-wrap">{caption}</p>
+          <div className={`relative overflow-hidden rounded-xl border border-white/10 ${format.css} w-full mb-3`}>
+            {children}
+          </div>
+          <div className="flex items-center justify-between text-gray-400 max-w-[300px]">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              <span className="text-[11px]">{metrics.comments.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Repeat className="w-4 h-4" />
+              <span className="text-[11px]">{metrics.shares.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-2 text-pink-500/80">
+              <Heart className="w-4 h-4" />
+              <span className="text-[11px]">{metrics.likes.toLocaleString()}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Bookmark className="w-4 h-4" />
+            </div>
+            <Share2 className="w-4 h-4" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const MastodonOverlay = ({ format, caption, children, isFull, platformUsername, metrics, user }) => {
+  return (
+    <div className="flex flex-col bg-[#282c37] p-4 pointer-events-none text-white">
+      <div className="flex gap-3">
+        <div className="w-11 h-11 rounded bg-gray-600 flex-shrink-0 overflow-hidden">
+           {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-[#6364ff] flex items-center justify-center text-white font-bold">{user?.name?.[0] || '?'}</div>}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1 mb-0.5">
+            <span className="text-[14px] font-bold text-white truncate">{user?.name || 'Your Name'}</span>
+            <span className="text-[14px] text-gray-400 truncate">@{platformUsername || user?.name?.toLowerCase().replace(/\s+/g, '') || 'handle'}</span>
+          </div>
+          <p className="text-[14px] text-white leading-normal mb-3">{caption}</p>
+          <div className={`relative overflow-hidden rounded-md border border-white/10 ${format.css} w-full mb-3`}>
+            {children}
+          </div>
+          <div className="flex items-center gap-6 text-gray-400">
+             <MessageSquare className="w-4 h-4" />
+             <Repeat className="w-4 h-4" />
+             <Heart className="w-4 h-4" />
+             <MoreHorizontal className="w-4 h-4" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const RedditOverlay = ({ format, caption, children, isFull, platformUsername, metrics, user }) => {
+  return (
+    <div className="flex flex-col bg-white pointer-events-none">
+      <div className="p-3 flex items-center gap-2">
+        <div className="w-6 h-6 rounded-full bg-[#ff4500] flex items-center justify-center text-white text-[10px] font-bold">r/</div>
+        <div className="flex items-center gap-1">
+          <span className="text-[12px] font-bold text-black">r/quickpost</span>
+          <span className="text-[10px] text-gray-500">• Posted by u/{platformUsername || user?.name?.toLowerCase().replace(/\s+/g, '') || 'user'}</span>
+        </div>
+      </div>
+      <div className="px-3 pb-2">
+        <p className="text-[14px] font-bold text-black mb-1">{caption || 'Post Title'}</p>
+      </div>
+      <div className={`relative overflow-hidden bg-gray-50 ${format.css} w-full`}>
+        {children}
+      </div>
+      <div className="p-2 flex items-center gap-4 text-gray-500 border-t border-gray-100">
+         <div className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full">
+            <ThumbsUp className="w-3.5 h-3.5" />
+            <span className="text-[11px] font-bold">{metrics.likes.toLocaleString()}</span>
+            <ThumbsDown className="w-3.5 h-3.5" />
+         </div>
+         <div className="flex items-center gap-1.5"><MessageSquare className="w-3.5 h-3.5" /><span className="text-[11px]">{metrics.comments.toLocaleString()}</span></div>
+         <div className="flex items-center gap-1.5"><Share2 className="w-3.5 h-3.5" /><span className="text-[11px]">Share</span></div>
+      </div>
+    </div>
+  );
+};
+
+const GoogleBusinessOverlay = ({ format, caption, children, isFull, platformUsername, metrics, user }) => {
+  return (
+    <div className="flex flex-col bg-white pointer-events-none border border-gray-200 rounded-lg shadow-sm">
+      <div className="p-4 flex gap-3">
+         <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+            <User className="w-6 h-6 text-blue-600" />
+         </div>
+         <div className="flex-1">
+            <p className="text-[14px] font-bold text-gray-900">{platformUsername || user?.name || 'Business Name'}</p>
+            <p className="text-[12px] text-gray-500">Posted on Google</p>
+         </div>
+      </div>
+      <div className={`relative overflow-hidden ${format.css} w-full`}>
+        {children}
+      </div>
+      <div className="p-4">
+        <p className="text-[13px] text-gray-700 leading-relaxed mb-4">{caption}</p>
+        <button className="w-full py-2 bg-blue-600 text-white rounded-md text-[13px] font-bold">Learn More</button>
+      </div>
+    </div>
+  );
+};
+
+const PinterestOverlay = ({ format, caption, children, isFull, platformUsername, metrics, user }) => {
   return (
     <div className="flex flex-col bg-white pointer-events-none">
        <div className="p-3 flex items-center justify-between">
@@ -484,8 +658,10 @@ const PinterestOverlay = ({ format, caption, children, isFull }) => {
           <h3 className="text-sm font-bold text-gray-900 mb-2">{caption || 'Pin Title'}</h3>
           <div className="flex items-center justify-between">
              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gray-200" />
-                <span className="text-[11px] font-bold">Username</span>
+                <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden">
+                   {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-red-600 flex items-center justify-center text-white text-[10px]">{user?.name?.[0] || '?'}</div>}
+                </div>
+                <span className="text-[11px] font-bold">{platformUsername || user?.name || 'Username'}</span>
              </div>
              <button className="bg-gray-100 text-black px-3 py-1.5 rounded-full text-[11px] font-bold">Follow</button>
           </div>
@@ -495,21 +671,25 @@ const PinterestOverlay = ({ format, caption, children, isFull }) => {
 };
 
 /* ── Preview Container (Refactored) ────────────────────────────────── */
-function PreviewContainer({ children, config, format, caption }) {
+function PreviewContainer({ children, config, format, caption, platformUsername, metrics, user }) {
   const isVertical = format.ratio.includes('9:16') || format.ratio === '2:3' || format.ratio === '1:2.1' || format.ratio === '4:5';
   const isFull = format.full === true;
 
   const getOverlay = () => {
     const name = config.name.toLowerCase();
-    const props = { format, caption, children, isFull };
+    const props = { format, caption, children, isFull, platformUsername, metrics, user };
     if (name === 'instagram') return <InstagramOverlay {...props} />;
     if (name === 'youtube') return <YouTubeOverlay {...props} />;
     if (name === 'linkedin') return <LinkedInOverlay {...props} />;
     if (name === 'x (twitter)') return <XOverlay {...props} />;
-    if (name === 'tiktok') return <TikTokOverlay {...props} />;
+
     if (name === 'facebook') return <FacebookOverlay {...props} />;
     if (name === 'threads') return <ThreadsOverlay {...props} />;
     if (name === 'pinterest') return <PinterestOverlay {...props} />;
+    if (name === 'bluesky') return <BlueskyOverlay {...props} />;
+    if (name === 'mastodon') return <MastodonOverlay {...props} />;
+    if (name === 'reddit') return <RedditOverlay {...props} />;
+    if (name === 'google business') return <GoogleBusinessOverlay {...props} />;
     return children;
   };
 
@@ -547,6 +727,8 @@ function PreviewContainer({ children, config, format, caption }) {
 }
 /* ── Main Modal ──────────────────────────────────────────────────────── */
 export default function PostPreviewModal({ post, onClose }) {
+  const { connectedAccounts, user } = useAuth();
+  const metrics = usePlatformMetrics(post.caption || "");
   const [activePlatformIdx, setActivePlatformIdx] = useState(0);
   const [activeFormatIdx, setActiveFormatIdx] = useState(0);
 
@@ -699,13 +881,16 @@ export default function PostPreviewModal({ post, onClose }) {
                       config={activePlatform}
                       format={activeFormat}
                       caption={post.caption}
+                      platformUsername={connectedAccounts[activePlatform.id]?.username}
+                      metrics={metrics}
+                      user={user}
                     >
                       {(() => {
                         const isImage = post.media_type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || '');
                         const displayUrl = post.thumbnail_url || post.media_url;
 
                         if (displayUrl) {
-                          // If it's a video and we have a media_url but it's the video itself, 
+                          // If it's a video and we have a media_url but it's the video itself,
                           // the img tag might fail unless it's the thumbnail_url.
                           // Cloudinary thumbnail_url is always an image.
                           return (
@@ -713,7 +898,7 @@ export default function PostPreviewModal({ post, onClose }) {
                               src={displayUrl}
                               alt="Post Preview"
                               className="w-full h-full object-cover"
-                              onError={e => { 
+                              onError={e => {
                                 if (!isImage && post.media_url && e.target.src !== post.media_url) {
                                   e.target.src = post.media_url;
                                 } else {
