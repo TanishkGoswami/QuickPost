@@ -54,16 +54,23 @@ import MediaUploader from "./composer/components/MediaUploader.jsx";
 import PreviewPanel from "./composer/components/PreviewPanel.jsx";
 
 const QUICK_SUGGESTIONS = [
-  "Hell yeh !! 🔥",
-  "Excited to share this! ✨",
-  "What do you think? 💭",
-  "Check it out! 👀",
-  "Behind the scenes 🎬",
-  "New update! 🚀",
-  "Link in bio! 🔗",
-  "Weekend vibes 🌴",
-  "Stay tuned! 📢",
-  "New update! 🚀",
+  "Building something special...",
+  "Insights from the week 📈",
+  "Consistency is the key 🗝️",
+  "Quick thoughts on this 💡",
+  "Milestone reached! 🎯",
+  "Behind the strategy 🧠",
+  "Leveling up... ⚡",
+  "Fresh perspective 🌿",
+  "Daily workflow 💻",
+  "The progress is real...",
+  "Deep dive into the workflow 🛠️",
+  "Strategy of the day 📊",
+  "Beyond the surface 🌊",
+  "Crafting the future ✨",
+  "Perspective matters 👁️",
+  "Systematic growth 📈",
+  "Efficiency unlocked 🔓",
 ];
 
 const SUGGESTED_HASHTAGS = [

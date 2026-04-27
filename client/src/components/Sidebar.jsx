@@ -360,14 +360,18 @@ function Sidebar() {
           />
           <span
             style={{
-              fontSize: 17,
-              fontWeight: 600,
+              fontSize: 18,
+              fontWeight: 800,
               color: "var(--ink)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1.1,
+              fontFamily: "var(--font-logo)",
+              letterSpacing: "-0.03em",
+              lineHeight: 0.9,
+              display: 'flex',
+              flexDirection: 'column'
             }}
           >
-            GAP Social‑pilot
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--arc)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 2 }}>GAP</span>
+            <span>Social‑pilot</span>
           </span>
         </Link>
       </div>

@@ -287,6 +287,22 @@ export async function getConnectedAccounts(userId) {
 
     for (const row of data || []) {
       const providerKey = row.provider === 'google-business' ? 'googleBusiness' : row.provider;
+      
+      // Extract profile picture from profile_data
+      let profilePicture = null;
+      if (row.profile_data) {
+        const pd = row.profile_data;
+        profilePicture = 
+          pd.picture?.data?.url || // Facebook format
+          pd.profile_picture_url || // Instagram format
+          pd.threads_profile_picture_url || // Threads format
+          pd.picture || // LinkedIn/Google format
+          pd.profilePicture || 
+          pd.profileImage || 
+          pd.avatar_url ||
+          pd.profile_image_url;
+      }
+
       result[providerKey] = {
         connected: true,
         updated_at: row.updated_at,
@@ -296,7 +312,8 @@ export async function getConnectedAccounts(userId) {
         account_id: row.account_id || null,
         bluesky_did: row.bluesky_did || null,
         bluesky_handle: row.bluesky_handle || null,
-        username: row.username || null
+        username: row.username || null,
+        profilePicture: profilePicture
       };
     }
 

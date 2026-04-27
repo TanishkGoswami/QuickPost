@@ -64,7 +64,21 @@ function OnboardingShell({ children, step }) {
           <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(243,240,238,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <img src={logo} alt="GAP Social-pilot" style={{ width: 22, height: 22, objectFit: 'contain' }} />
           </div>
-          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--canvas)', letterSpacing: '-0.02em' }}>GAP Social-pilot</span>
+          <span
+            style={{
+              fontSize: 15,
+              fontWeight: 800,
+              color: "var(--canvas)",
+              fontFamily: "var(--font-logo)",
+              letterSpacing: "-0.02em",
+              lineHeight: 0.9,
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--arc)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 1 }}>GAP</span>
+            <span>Social‑pilot</span>
+          </span>
         </Link>
 
         {/* Step info */}
