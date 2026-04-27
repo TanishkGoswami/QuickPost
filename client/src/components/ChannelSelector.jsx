@@ -136,7 +136,7 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect }) {
                 </motion.div>
               )}
 
-              <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-ink text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest z-20">
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-ink text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest z-30">
                 {p.name}
               </div>
             </button>
@@ -151,11 +151,9 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect }) {
         )}
       </div>
 
-      {selectedChannels.length > 0 && (
-        <p className="text-[10px] font-bold text-slate mt-2 px-1 uppercase tracking-wider opacity-50">
-          Posting to {selectedChannels.length} channel{selectedChannels.length > 1 ? 's' : ''}
-        </p>
-      )}
+      <p className="text-[10px] font-bold text-slate mt-2 px-1 uppercase tracking-wider opacity-50">
+        Posting to {selectedChannels.length} channel{selectedChannels.length !== 1 ? 's' : ''}
+      </p>
     </div>
   );
 }
