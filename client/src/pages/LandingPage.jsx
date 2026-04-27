@@ -19,9 +19,10 @@ export default function LandingPage() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (isAuthenticated) navigate("/dashboard");
-  }, [isAuthenticated, navigate]);
+  // Removed automatic redirect to allow logged-in users to visit home page
+  // useEffect(() => {
+  //   if (isAuthenticated) navigate("/dashboard");
+  // }, [isAuthenticated, navigate]);
 
   return (
     <SmoothScroll>

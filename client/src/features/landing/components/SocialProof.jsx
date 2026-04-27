@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Star } from 'lucide-react';
+import { Star, Sparkles } from 'lucide-react';
 import MacOSDock from '../../../components/ui/MacOSDock';
 
 const TESTIMONIALS = [
@@ -102,16 +102,22 @@ export default function SocialProof() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          style={{ textAlign: 'center', marginBottom: 'clamp(36px, 5vw, 52px)' }}
+          className="text-center mb-16"
         >
-          <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: 14 }}>From creators</div>
-          <h2 style={{ fontSize: 'clamp(26px, 4vw, 48px)', fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.035em', margin: 0, lineHeight: 1.1 }}>
-            Real results, real people
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-arc/10 text-arc text-xs font-bold uppercase tracking-wider mb-4">
+            <Sparkles size={14} />
+            <span>Success Stories</span>
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-ink mb-4 leading-tight">
+            Real results, <span className="text-arc">real people</span>
           </h2>
+          <p className="text-slate text-base md:text-lg max-w-2xl mx-auto font-medium">
+            Join the elite circle of creators who have unlocked the power of multi-platform broadcasting.
+          </p>
         </motion.div>
 
         {/* Testimonial cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'clamp(14px, 2.5vw, 20px)', marginBottom: 'clamp(48px, 8vw, 80px)' }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
           {TESTIMONIALS.map((t, i) => (
             <motion.div
               key={t.name}
@@ -119,48 +125,59 @@ export default function SocialProof() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
+              className="relative group p-8 rounded-[32px] bg-white border border-ink/5 shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden"
               style={{
-                background: 'var(--canvas-lifted)',
-                border: '1px solid rgba(20,20,19,0.07)',
-                borderRadius: 'var(--r-hero)',
-                padding: '28px',
-                position: 'relative', overflow: 'hidden',
-                transition: 'transform 0.25s, box-shadow 0.25s',
+                backdropFilter: 'blur(10px)',
               }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
             >
-              {/* Accent top border */}
-              <div style={{
-                position: 'absolute', top: 0, left: 0, right: 0, height: 3,
-                background: `linear-gradient(90deg, ${t.color}, transparent)`,
-                borderRadius: 'var(--r-hero) var(--r-hero) 0 0',
-              }} />
+              {/* Background gradient hint */}
+              <div 
+                className="absolute -right-4 -top-4 w-24 h-24 blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-700"
+                style={{ background: t.color }}
+              />
 
-              {/* Stars */}
-              <StarRow />
+              {/* Top Accent */}
+              <div 
+                className="absolute top-0 left-8 right-8 h-[2px] opacity-30 group-hover:opacity-100 transition-opacity duration-500"
+                style={{ 
+                  background: `linear-gradient(90deg, transparent, ${t.color}, transparent)` 
+                }} 
+              />
 
-              {/* Big quote mark */}
-              <div style={{ fontSize: 52, fontWeight: 700, color: 'var(--arc)', lineHeight: 0.8, marginBottom: 10, fontFamily: 'Georgia, serif', opacity: 0.7 }}>"</div>
+              <div className="relative z-10">
+                <StarRow />
 
-              <p style={{ fontSize: 15, fontWeight: 450, color: 'var(--ink)', lineHeight: 1.65, margin: '0 0 24px', fontStyle: 'italic' }}>
-                {t.quote}
-              </p>
-
-              {/* Author */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 16, borderTop: '1px solid rgba(20,20,19,0.07)' }}>
-                <div style={{
-                  width: 42, height: 42, borderRadius: '50%',
-                  background: t.color, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0, color: '#fff', fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em',
-                  boxShadow: `0 4px 14px ${t.color}40`,
-                }}>
-                  {t.initials}
+                {/* Styled Quote */}
+                <div className="mb-6">
+                  <span 
+                    className="text-6xl font-serif text-arc/20 absolute -top-4 -left-2 pointer-events-none"
+                    style={{ fontFamily: 'Georgia, serif' }}
+                  >
+                    &ldquo;
+                  </span>
+                  <p className="text-lg font-medium text-ink/90 leading-relaxed italic relative z-10">
+                    {t.quote}
+                  </p>
                 </div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em' }}>{t.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--slate)', marginTop: 2 }}>
-                    {t.title} · <span style={{ color: 'var(--arc)', fontWeight: 600 }}>{t.sub}</span>
+
+                {/* Author Info */}
+                <div className="flex items-center gap-4 pt-6 border-t border-ink/5">
+                  <div className="relative">
+                    <div 
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-sm shadow-lg transform rotate-3 group-hover:rotate-0 transition-transform duration-500"
+                      style={{ 
+                        background: t.color,
+                        boxShadow: `0 8px 16px ${t.color}30`
+                      }}
+                    >
+                      {t.initials}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-ink text-sm tracking-tight">{t.name}</h4>
+                    <p className="text-xs text-slate font-semibold">
+                      {t.title} <span className="text-arc/80 mx-1">·</span> <span className="text-arc font-bold">{t.sub}</span>
+                    </p>
                   </div>
                 </div>
               </div>
