@@ -63,6 +63,11 @@ export default defineConfig(({ mode }) => {
               return 'vendor-supabase';
             }
 
+            // ── Vendor: React Core ──
+            if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/') || id.includes('node_modules/scheduler/')) {
+              return 'vendor-core';
+            }
+
             // ── Vendor: React Router ──
             if (id.includes('react-router') || id.includes('react-router-dom')) {
               return 'vendor-router';

@@ -4,11 +4,13 @@ import React from "react";
 import { motion } from "framer-motion";
 
 export function FloatingPaths({ position }) {
-  const paths = Array.from({ length: 30 }, (_, i) => ({
-    id: i,
-    d: `M ${-100 + i * 25} ${-100} C ${200 + i * 15} ${100} ${400 - i * 15} ${200} ${800 + i * 25} ${450}`,
-    width: 0.2 + i * 0.03,
-  }));
+  const paths = React.useMemo(() => 
+    Array.from({ length: 12 }, (_, i) => ({
+      id: i,
+      d: `M ${-100 + i * 60} ${-100} C ${200 + i * 40} ${100} ${400 - i * 40} ${200} ${800 + i * 60} ${450}`,
+      width: 0.5 + i * 0.08,
+      duration: 20 + Math.random() * 15,
+    })), []);
 
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -17,6 +19,7 @@ export function FloatingPaths({ position }) {
         viewBox="0 0 800 450"
         fill="none"
         preserveAspectRatio="none"
+        style={{ willChange: "transform" }}
       >
         <title>Background Paths</title>
         {paths.map((path) => (
@@ -33,7 +36,7 @@ export function FloatingPaths({ position }) {
               pathOffset: [0, 1],
             }}
             transition={{
-              duration: 25 + Math.random() * 10,
+              duration: path.duration,
               repeat: Number.POSITIVE_INFINITY,
               ease: "linear",
             }}

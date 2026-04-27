@@ -93,7 +93,7 @@ export default function AuthPage() {
           aria-hidden
           className="absolute inset-0 isolate contain-strict -z-10 opacity-40 pointer-events-none"
         >
-          <div className="bg-[radial-gradient(68.54%_68.72%_at_55.02%_31.46%,var(--arc)_0,transparent_70%)] absolute top-0 right-0 h-[600px] w-[600px] -translate-y-1/2 opacity-10 blur-3xl rounded-full" />
+          <div className="bg-[radial-gradient(68.54%_68.72%_at_55.02%_31.46%,var(--arc)_0,transparent_70%)] absolute top-0 right-0 h-[600px] w-[600px] -translate-y-1/2 opacity-10 blur-3xl rounded-full" style={{ willChange: "transform" }} />
         </div>
 
         <Button
@@ -255,25 +255,28 @@ export default function AuthPage() {
 }
 
 function FloatingPaths({ position }) {
-  const paths = Array.from({ length: 36 }, (_, i) => ({
-    id: i,
-    d: `M-${380 - i * 5 * position} -${189 + i * 6}C-${
-      380 - i * 5 * position
-    } -${189 + i * 6} -${312 - i * 5 * position} ${216 - i * 6} ${
-      152 - i * 5 * position
-    } ${343 - i * 6}C${616 - i * 5 * position} ${470 - i * 6} ${
-      684 - i * 5 * position
-    } ${875 - i * 6} ${684 - i * 5 * position} ${875 - i * 6}`,
-    color: `rgba(243, 115, 56, ${0.12 + i * 0.03})`, // Much more visible
-    width: 0.8 + i * 0.04, // Slightly thicker
-  }));
+  const paths = React.useMemo(() => 
+    Array.from({ length: 12 }, (_, i) => ({
+      id: i,
+      d: `M-${380 - i * 15 * position} -${189 + i * 18}C-${
+        380 - i * 15 * position
+      } -${189 + i * 18} -${312 - i * 15 * position} ${216 - i * 18} ${
+        152 - i * 15 * position
+      } ${343 - i * 18}C${616 - i * 15 * position} ${470 - i * 18} ${
+        684 - i * 15 * position
+      } ${875 - i * 18} ${684 - i * 15 * position} ${875 - i * 18}`,
+      color: `rgba(243, 115, 56, ${0.1 + i * 0.05})`,
+      width: 1 + i * 0.1,
+      duration: 15 + Math.random() * 10,
+    })), [position]);
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       <svg
-        className="h-full w-full opacity-60" // Increased svg opacity
+        className="h-full w-full opacity-40"
         viewBox="0 0 696 316"
         fill="none"
+        style={{ willChange: "transform" }}
       >
         <title>Background Paths</title>
         {paths.map((path) => (
@@ -285,11 +288,11 @@ function FloatingPaths({ position }) {
             initial={{ pathLength: 0.3, opacity: 0 }}
             animate={{
               pathLength: 1,
-              opacity: [0, 0.5, 0],
-              pathOffset: [0, 1, 0],
+              opacity: [0, 0.4, 0],
+              pathOffset: [0, 1],
             }}
             transition={{
-              duration: 15 + Math.random() * 10,
+              duration: path.duration,
               repeat: Infinity,
               ease: "linear",
             }}

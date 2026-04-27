@@ -31,7 +31,7 @@ export default function HowItWorks() {
     <section
       id="how-it-works"
       className="landing-section"
-      style={{ padding: 'clamp(60px, 10vh, 100px) 24px', background: 'var(--canvas-lifted)' }}
+      style={{ padding: '80px 24px', background: 'var(--canvas-lifted)' }}
     >
       <div className="landing-container" style={{ maxWidth: 1280, margin: '0 auto' }}>
 

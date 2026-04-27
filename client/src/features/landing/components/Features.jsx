@@ -47,7 +47,7 @@ export default function Features() {
     <section
       id="features"
       className="landing-section"
-      style={{ padding: 'clamp(60px, 10vh, 100px) 24px', background: 'var(--canvas)', position: 'relative', overflow: 'hidden' }}
+      style={{ padding: '80px 24px', background: 'var(--canvas)', position: 'relative', overflow: 'hidden' }}
     >
       <div className="landing-container" style={{ maxWidth: '1280px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
         {/* Header */}

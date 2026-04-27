@@ -21,7 +21,7 @@ const platforms = [
   { id: "threads",    name: "Threads",          icon: "/icons/threads-icon.svg",                   type: "oauth" },
   { id: "mastodon",   name: "Mastodon",         icon: "/icons/mastodon-round-icon.svg",            type: "modal-mastodon" },
   { id: "bluesky",    name: "Bluesky",          icon: "/icons/bluesky-circle-color-icon.svg",      type: "modal-bluesky" },
-  { id: "google-business", name: "Google Business", icon: "/icons/google-icon.svg",               type: "coming-soon" },
+  { id: "googleBusiness", name: "Google Business", icon: "/icons/google-icon.svg",               type: "coming-soon" },
   { id: "reddit",     name: "Reddit",           icon: "/icons/reddit-icon.svg",                    type: "coming-soon" },
 ];
 

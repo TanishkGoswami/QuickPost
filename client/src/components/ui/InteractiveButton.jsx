@@ -32,7 +32,7 @@ export default function InteractiveButton({
       {...props}
     >
       <InteractiveGradientBackground
-        intensity={1.4}
+        intensity={0.8}
         dark={false}
         style={{
           padding: '12px 24px',
