@@ -3,6 +3,7 @@ import { AnimatePresence } from "framer-motion";
 import Masonry from "react-masonry-css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabase";
 import {
   Plus,
   Search,
@@ -23,6 +24,7 @@ import {
   Play,
   Eye,
   X,
+  Lock,
 } from "lucide-react";
 import apiClient from "../utils/apiClient";
 import ComposerModal from "./ComposerModal";
@@ -1237,10 +1239,48 @@ function Dashboard() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    
+    const verifyPayment = async () => {
+      const paymentLinkStatus = params.get("razorpay_payment_link_status");
+      const paymentLinkId = params.get("razorpay_payment_link_id");
+      
+      if (params.get("payment") === "success" && paymentLinkId) {
+        try {
+          const { data, error } = await supabase.functions.invoke('verify-subscription', {
+            body: { razorpayPaymentLinkId: paymentLinkId }
+          });
+          
+          if (error) throw error;
+          
+          if (data.success) {
+            if (data.status === "paid") {
+              await supabase.auth.refreshSession();
+              navigate('/dashboard/payment-success');
+              return; // Exit so we don't replaceState below
+            } else {
+              alert("Payment status is: " + data.status + ". Your plan was not upgraded.");
+            }
+          } else {
+            throw new Error(data.error || "Unknown verification error");
+          }
+        } catch (err) {
+          console.error("Payment verification error:", err);
+          alert("Payment verification failed: " + (err.message || JSON.stringify(err)));
+        } finally {
+          window.history.replaceState({}, "", "/dashboard");
+        }
+      }
+    };
+
+    if (params.get("payment") === "success") {
+      verifyPayment();
+    }
+
     if (params.get("success")) {
       refreshAccounts();
       window.history.replaceState({}, "", "/dashboard");
     }
+    
     apiClient
       .get("/api/broadcasts/stats")
       .then((r) => setQueueCount(r.data.pending || 0))
@@ -1399,8 +1439,14 @@ function Dashboard() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button
-            onClick={() => setComposerOpen(true)}
-            className="btn-ink"
+            onClick={() => {
+              if (user?.plan === 'Free' || !user?.plan) {
+                alert("Please upgrade to Pro to create new posts.");
+                return;
+              }
+              setComposerOpen(true);
+            }}
+            className={user?.plan === 'Free' || !user?.plan ? "" : "btn-ink"}
             style={{
               display: "flex",
               alignItems: "center",
@@ -1408,9 +1454,14 @@ function Dashboard() {
               fontSize: 14,
               padding: "10px 20px",
               borderRadius: css.r_pill,
+              background: (user?.plan === 'Free' || !user?.plan) ? "var(--canvas-lifted)" : undefined,
+              color: (user?.plan === 'Free' || !user?.plan) ? "var(--dust)" : undefined,
+              border: (user?.plan === 'Free' || !user?.plan) ? "1px solid rgba(20,20,19,0.08)" : undefined,
+              opacity: (user?.plan === 'Free' || !user?.plan) ? 0.6 : 1,
+              cursor: (user?.plan === 'Free' || !user?.plan) ? "not-allowed" : "pointer"
             }}
           >
-            <Plus size={16} />
+            {user?.plan === 'Free' || !user?.plan ? <Lock size={16} /> : <Plus size={16} />}
             <span className="hidden sm:inline">New Post</span>
             <span className="sm:hidden">New</span>
           </button>
@@ -1891,10 +1942,28 @@ function Dashboard() {
             </p>
             {(activeTab === "sent" || activeTab === "history") && (
               <button
-                className="btn-ink"
-                onClick={() => setComposerOpen(true)}
-                style={{ fontSize: 15, padding: "12px 32px" }}
+                onClick={() => {
+                  if (user?.plan === 'Free' || !user?.plan) {
+                    alert("Please upgrade to Pro to create new posts.");
+                    return;
+                  }
+                  setComposerOpen(true);
+                }}
+                className={user?.plan === 'Free' || !user?.plan ? "" : "btn-ink"}
+                style={{
+                  fontSize: 15,
+                  padding: "12px 32px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  borderRadius: css.r_pill,
+                  background: (user?.plan === 'Free' || !user?.plan) ? "var(--canvas-lifted)" : undefined,
+                  color: (user?.plan === 'Free' || !user?.plan) ? "var(--dust)" : undefined,
+                  border: (user?.plan === 'Free' || !user?.plan) ? "1px solid rgba(20,20,19,0.08)" : undefined,
+                  opacity: (user?.plan === 'Free' || !user?.plan) ? 0.6 : 1,
+                  cursor: (user?.plan === 'Free' || !user?.plan) ? "not-allowed" : "pointer"
+                }}
               >
+                {user?.plan === 'Free' || !user?.plan ? <Lock size={16} style={{ marginRight: 6 }} /> : null}
                 Launch your first post
                 <svg
                   width="14"

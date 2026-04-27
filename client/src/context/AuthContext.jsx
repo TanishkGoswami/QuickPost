@@ -46,20 +46,49 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const fetchUserProfile = useCallback(async (sessionUser) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('plan, subscription_status')
+        .eq('id', sessionUser.id)
+        .maybeSingle();
+      
+      setUser(prev => prev ? { 
+        ...prev, 
+        plan: data?.plan || sessionUser.user_metadata?.plan || 'Free', 
+        subscription_status: data?.subscription_status || sessionUser.user_metadata?.subscription_status || 'active' 
+      } : null);
+      
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      // Fallback to user_metadata
+      setUser(prev => prev ? { 
+        ...prev, 
+        plan: sessionUser.user_metadata?.plan || 'Free', 
+        subscription_status: sessionUser.user_metadata?.subscription_status || 'active' 
+      } : null);
+    }
+  }, []);
+
   useEffect(() => {
     // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
-        setUser({
+        const userData = {
           userId: session.user.id,
           email: session.user.email,
           name:
             session.user.user_metadata?.full_name ||
             session.user.email?.split("@")[0],
-        });
+          plan: session.user.user_metadata?.plan || 'Free',
+          subscription_status: session.user.user_metadata?.subscription_status || 'active',
+        };
+        setUser(userData);
         localStorage.setItem("quickpost_token", session.access_token);
         fetchConnectedAccounts();
+        fetchUserProfile(session.user);
       }
       setLoading(false);
     });
@@ -70,15 +99,19 @@ export function AuthProvider({ children }) {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) {
-        setUser({
+        const userData = {
           userId: session.user.id,
           email: session.user.email,
           name:
             session.user.user_metadata?.full_name ||
             session.user.email?.split("@")[0],
-        });
+          plan: session.user.user_metadata?.plan || 'Free',
+          subscription_status: session.user.user_metadata?.subscription_status || 'active',
+        };
+        setUser(userData);
         localStorage.setItem("quickpost_token", session.access_token);
         fetchConnectedAccounts();
+        fetchUserProfile(session.user);
       } else {
         setUser(null);
         localStorage.removeItem("quickpost_token");
@@ -100,7 +133,7 @@ export function AuthProvider({ children }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchConnectedAccounts]);
+  }, [fetchConnectedAccounts, fetchUserProfile]);
 
   const login = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({

@@ -2,14 +2,17 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Zap, Sparkles, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext';
+import { supabase } from '../../../lib/supabase';
+
 const PLANS = [
   {
     name: 'Free',
+    id: 'free',
     price: { monthly: 0, annual: 0 },
-    description: 'Try all features with a 3-day free trial. Perfect for testing.',
+    description: 'Perfect for getting started with basic scheduling.',
     icon: <Zap size={20} />,
     features: [
-      '3-day full access trial',
       '3 connected social accounts',
       '10 posts per month',
       'Basic scheduling',
@@ -20,6 +23,7 @@ const PLANS = [
   },
   {
     name: 'Pro',
+    id: '999',
     price: { monthly: 999, annual: 799 },
     description: 'For creators who broadcast seriously.',
     icon: <Sparkles size={20} />,
@@ -31,13 +35,14 @@ const PLANS = [
       '90-day post history',
       'Priority email support',
     ],
-    cta: 'Start Pro — 3-day trial',
+    cta: 'Upgrade to Pro',
     highlighted: true,
     badge: 'Most popular',
   },
   {
     name: 'Enterprise',
-    price: { monthly: 1999, annual: 1599 },
+    id: '2999',
+    price: { monthly: 2999, annual: 2399 },
     description: 'For teams and agencies at scale.',
     icon: <Building2 size={20} />,
     features: [
@@ -55,7 +60,46 @@ const PLANS = [
 
 export default function Pricing() {
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const [billing, setBilling] = useState('monthly');
+  const [upgrading, setUpgrading] = useState(null);
+
+  const handleUpgrade = async (plan) => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    if (plan.id === 'free') {
+      navigate('/dashboard');
+      return;
+    }
+
+    try {
+      setUpgrading(plan.id);
+      
+      const { data, error } = await supabase.functions.invoke('create-payment-link', {
+        body: {
+          planId: plan.id,
+          userId: user.userId,
+          customerName: user.name,
+          customerEmail: user.email,
+        },
+      });
+
+      if (error) throw error;
+      if (data.success && data.payment_link) {
+        window.location.href = data.payment_link;
+      } else {
+        throw new Error(data.error || 'Failed to create payment link');
+      }
+    } catch (err) {
+      console.error('Upgrade error:', err);
+      alert(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setUpgrading(null);
+    }
+  };
 
   return (
     <section id="pricing" className="landing-section" style={{ padding: '80px 24px', background: 'var(--canvas)' }}>
@@ -202,7 +246,8 @@ export default function Pricing() {
 
               {/* CTA */}
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => handleUpgrade(plan)}
+                disabled={upgrading === plan.id}
                 style={{
                   width: '100%', padding: '12px 20px',
                   borderRadius: 'var(--r-btn)',
@@ -212,6 +257,7 @@ export default function Pricing() {
                   fontFamily: 'var(--font)', fontSize: 14, fontWeight: 600,
                   letterSpacing: '-0.01em', cursor: 'pointer',
                   transition: 'all 0.2s', marginBottom: 24,
+                  opacity: upgrading === plan.id ? 0.7 : 1,
                 }}
                 onMouseEnter={e => {
                   if (plan.highlighted) e.currentTarget.style.transform = 'scale(1.02)';
@@ -222,7 +268,7 @@ export default function Pricing() {
                   if (!plan.highlighted) e.currentTarget.style.background = 'transparent';
                 }}
               >
-                {plan.cta}
+                {upgrading === plan.id ? 'Processing...' : plan.cta}
               </button>
 
               {/* Divider */}
