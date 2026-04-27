@@ -154,7 +154,7 @@ class FacebookOAuth {
         const pagesRes = await axios.get(
           `https://graph.facebook.com/${GRAPH_VERSION}/me/accounts`,
           {
-            params: { access_token: longUserToken, fields: 'id,name,access_token' }
+            params: { access_token: longUserToken, fields: 'id,name,access_token,picture' }
           }
         );
         pages = pagesRes.data?.data || [];
@@ -170,7 +170,7 @@ class FacebookOAuth {
           const pageDetails = await axios.get(
             `https://graph.facebook.com/${GRAPH_VERSION}/${pid}`,
             {
-              params: { access_token: longUserToken, fields: 'id,name,access_token' }
+              params: { access_token: longUserToken, fields: 'id,name,access_token,picture' }
             }
           );
           pages.push(pageDetails.data);
@@ -193,7 +193,8 @@ class FacebookOAuth {
         pageId: selectedPage.id,
         userInfo: {
           pageName: selectedPage.name,
-          pageId: selectedPage.id
+          pageId: selectedPage.id,
+          picture: selectedPage.picture
         }
       };
     } catch (error) {
@@ -219,6 +220,7 @@ class FacebookOAuth {
         page_id: tokenData.pageId,
         account_id: tokenData.pageId,
         username: tokenData.userInfo?.pageName,
+        profile_data: tokenData.userInfo,
         updated_at: new Date().toISOString()
       };
 
