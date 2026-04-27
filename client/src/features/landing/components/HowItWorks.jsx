@@ -31,7 +31,7 @@ export default function HowItWorks() {
     <section
       id="how-it-works"
       className="landing-section"
-      style={{ padding: '80px 24px', background: 'var(--canvas-lifted)' }}
+      style={{ padding: 'clamp(60px, 10vh, 100px) 24px', background: 'var(--canvas-lifted)' }}
     >
       <div className="landing-container" style={{ maxWidth: 1280, margin: '0 auto' }}>
 
@@ -73,7 +73,7 @@ export default function HowItWorks() {
               whileHover={{ y: -5, boxShadow: 'var(--shadow-card)' }}
             >
               {/* Step number watermark */}
-              <motion.div 
+              <motion.div
                 initial={{ scale: 0.7, opacity: 0 }}
                 whileInView={{ scale: 1, opacity: 0.045 }}
                 viewport={{ once: true }}
@@ -135,7 +135,7 @@ export default function HowItWorks() {
 
               {/* Connector arrow (between cards) - hidden on mobile via CSS or media query would be better, but we can use a class or inline check if available. Since it's a landing page, we'll use a responsive style approach. */}
               {i < STEPS.length - 1 && (
-                <div 
+                <div
                   className="step-connector"
                   style={{
                     position: 'absolute', top: 44, right: -13,

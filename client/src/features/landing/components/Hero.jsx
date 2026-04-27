@@ -46,7 +46,7 @@ export default function Hero() {
     {
       stiffness: 40,
       damping: 20,
-    }
+    },
   );
 
   const travelProgress = useTransform(scrollYProgress, [0, 1], [0, 1000]);
@@ -76,7 +76,7 @@ export default function Hero() {
       ref={sectionRef}
       className="hero-bg landing-section"
       style={{
-        padding: "180px 20px 80px",
+        padding: "clamp(180px, 30vh, 240px) 20px 80px",
         position: "relative",
         overflow: "hidden",
       }}
@@ -105,7 +105,7 @@ export default function Hero() {
       >
         <svg
           aria-hidden="true"
-          style={{ width: "100%", height: "100%", overflow: "visible", willChange: "transform" }}
+          style={{ width: "100%", height: "100%", overflow: "visible" }}
           viewBox="0 0 1400 700"
           preserveAspectRatio="none"
         >
@@ -131,7 +131,10 @@ export default function Hero() {
             strokeDasharray="300 150"
           />
           <motion.path
-            style={{ pathLength: arcProgress, strokeDashoffset: useTransform(travelProgress, v => -v) }}
+            style={{
+              pathLength: arcProgress,
+              strokeDashoffset: useTransform(travelProgress, (v) => -v),
+            }}
             d="M 100 680 Q 450 300 1000 600 Q 1300 800 1700 400"
             stroke="#F37338"
             strokeWidth="1.5"
@@ -142,7 +145,7 @@ export default function Hero() {
           <motion.path
             style={{
               pathLength: arcProgress,
-              strokeDashoffset: useTransform(travelProgress, v => v * 0.5),
+              strokeDashoffset: useTransform(travelProgress, (v) => v * 0.5),
             }}
             d="M -200 400 Q 300 50 800 450"
             stroke="#F37338"
@@ -208,7 +211,6 @@ export default function Hero() {
             WebkitTextStroke: "2px var(--ink)",
             textAlign: "center",
             y: watermarkY,
-            willChange: "transform, opacity",
           }}
         >
           Broadcast
@@ -317,7 +319,6 @@ export default function Hero() {
             justifyContent: "center",
             flexWrap: "wrap",
             gap: 10,
-            minHeight: 44, // Pre-allocate height
           }}
         >
           <span

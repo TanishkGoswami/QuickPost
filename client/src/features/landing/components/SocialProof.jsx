@@ -177,10 +177,10 @@ export default function SocialProof() {
           style={{ textAlign: 'center', marginTop: 40 }}
         >
           <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: 32 }}>Broadcasts to</div>
-          
+
           <div style={{ padding: '20px 0', overflow: 'visible' }}>
-            <MacOSDock 
-              apps={DOCK_APPS} 
+            <MacOSDock
+              apps={DOCK_APPS}
               openApps={['ig', 'yt', 'li', 'x']}
               onAppClick={(id) => console.log('Dock click:', id)}
             />
