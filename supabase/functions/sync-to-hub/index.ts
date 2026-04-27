@@ -65,7 +65,7 @@ async function syncTable(
   console.log(`[sync-to-hub] Syncing table: ${tableName}`);
 
   // ── Fetch all rows from source ──────────────────────────────────────────────
-  const { data: rows, error: fetchError } = await sourceClient
+  let { data: rows, error: fetchError } = await sourceClient
     .from(tableName)
     .select("*");
 
@@ -88,6 +88,49 @@ async function syncTable(
       rowsUpserted: 0,
       status: "success",
     };
+  }
+
+  // ── Inject Auth Metadata for Users ──────────────────────────────────────────
+  if (tableName === "users") {
+    try {
+      console.log(`[sync-to-hub] Injecting auth metadata into users payload...`);
+      let allAuthUsers: any[] = [];
+      let page = 1;
+      
+      while (true) {
+        const { data: authData, error: authError } = await sourceClient.auth.admin.listUsers({ page, perPage: 1000 });
+        if (authError) {
+          console.warn(`[sync-to-hub] Failed to fetch auth users page ${page}:`, authError.message);
+          break;
+        }
+        if (!authData || !authData.users || authData.users.length === 0) break;
+        
+        allAuthUsers.push(...authData.users);
+        if (authData.users.length < 1000) break;
+        page++;
+      }
+
+      const authMap = new Map();
+      for (const u of allAuthUsers) {
+        authMap.set(u.id, u.user_metadata || {});
+      }
+      
+      // Merge metadata into rows
+      rows = rows.map(row => {
+        const meta = authMap.get(row.id);
+        if (meta) {
+          return {
+            ...row,
+            plan: row.plan || meta.plan || "Free",
+            subscription_status: row.subscription_status || meta.subscription_status || "active",
+          };
+        }
+        return row;
+      });
+      console.log(`[sync-to-hub] ✅ Injected auth metadata for ${allAuthUsers.length} users.`);
+    } catch (err) {
+      console.warn(`[sync-to-hub] Exception while fetching auth users:`, err);
+    }
   }
 
   // ── Upsert to Hub in chunks ─────────────────────────────────────────────────

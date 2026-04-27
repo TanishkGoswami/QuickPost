@@ -23,10 +23,12 @@ import {
   Smartphone,
   Square,
   RectangleVertical,
+  Lock,
 } from "lucide-react";
 import { Reorder } from "framer-motion";
 
 import apiClient from "../utils/apiClient";
+import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 import { useUploadJobs } from "../context/UploadJobContext";
 import { useDialog } from "../context/DialogContext";
@@ -993,6 +995,28 @@ function ComposerModal({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Free tier restrictions
+  const isFree = user?.plan === "Free" || !user?.plan;
+  const [freeBroadcastsCount, setFreeBroadcastsCount] = useState(0);
+
+  useEffect(() => {
+    if (isFree && isOpen) {
+      const fetchCount = async () => {
+        const { count, error } = await supabase
+          .from("broadcasts")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id);
+        if (!error && count !== null) {
+          setFreeBroadcastsCount(count);
+        }
+      };
+      fetchCount();
+    }
+  }, [isFree, isOpen, user?.id]);
+
+  const isFreeLimitReached = isFree && freeBroadcastsCount >= 3;
+
   const [activePreviewPlatform, setActivePreviewPlatform] =
     useState("instagram");
   const [platformPresets, setPlatformPresets] = useState({
@@ -2376,6 +2400,28 @@ function ComposerModal({
                   <AlertCircle size={11} /> Fix errors above
                 </motion.span>
               )}
+              
+              {/* Free Limit Warning */}
+              {isFree && (
+                <div style={{
+                  fontSize: 11,
+                  color: isFreeLimitReached ? "#dc2626" : "var(--slate)",
+                  fontWeight: 600,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 4
+                }}>
+                  {isFreeLimitReached ? (
+                    <>
+                      <Lock size={12} /> Limit reached (3/3 posts)
+                    </>
+                  ) : (
+                    <>
+                      Free posts: {freeBroadcastsCount}/3
+                    </>
+                  )}
+                </div>
+              )}
 
               {/* PUBLISH BUTTON */}
               <motion.button
@@ -2393,9 +2439,9 @@ function ComposerModal({
                 whileTap={!publishDisabled ? { scale: 0.97 } : {}}
                 type="button"
                 onClick={handleSubmit}
-                disabled={publishDisabled}
+                disabled={publishDisabled || isFreeLimitReached}
                 style={{
-                  background: publishDisabled
+                  background: (publishDisabled || isFreeLimitReached)
                     ? "rgba(20,20,19,0.18)"
                     : isScheduled
                       ? "linear-gradient(135deg,var(--arc,#f37338) 0%,#ff8c5a 100%)"
@@ -2408,7 +2454,7 @@ function ComposerModal({
                   gap: 9,
                   color: "white",
                   border: "none",
-                  cursor: publishDisabled ? "not-allowed" : "pointer",
+                  cursor: (publishDisabled || isFreeLimitReached) ? "not-allowed" : "pointer",
                   transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)",
                   fontFamily: "inherit",
                 }}
