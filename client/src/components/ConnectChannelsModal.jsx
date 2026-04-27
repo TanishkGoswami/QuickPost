@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, ArrowRight, Zap } from "lucide-react";
+import { X, ArrowRight, Zap, Sparkles } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import BlueskyConnectModal from "./BlueskyConnectModal";
 import PinterestConnectModal from "./PinterestConnectModal";
@@ -113,73 +113,83 @@ export default function ConnectChannelsModal() {
               style={{
                 zIndex: 9999,
                 width: "min(520px, 92vw)",
-                background: "#fff",
-                borderRadius: 20,
-                boxShadow: "0 24px 80px rgba(20,20,19,0.18), 0 4px 16px rgba(20,20,19,0.08)",
+                background: "rgba(255, 255, 255, 0.95)",
+                backdropFilter: "blur(20px)",
+                borderRadius: 32,
+                boxShadow: "0 32px 100px rgba(20,20,19,0.25), 0 4px 16px rgba(20,20,19,0.08)",
                 overflow: "hidden",
+                border: "1px solid rgba(255, 255, 255, 0.5)",
               }}
             >
               {/* Header gradient strip */}
               <div style={{
-                background: "linear-gradient(135deg, #5b47e0 0%, #8b5cf6 50%, #ec4899 100%)",
-                padding: "28px 28px 24px",
+                backgroundImage: 'url("/download (2).jpg")',
+                backgroundSize: 'cover',
+                backgroundPosition: '20% 50%',
+                padding: "32px 28px 28px",
                 position: "relative",
               }}>
                 <button
                   onClick={dismiss}
                   style={{
                     position: "absolute",
-                    top: 14,
-                    right: 14,
-                    width: 30,
-                    height: 30,
+                    top: 16,
+                    right: 16,
+                    width: 32,
+                    height: 32,
                     borderRadius: "50%",
                     background: "rgba(255,255,255,0.2)",
-                    border: "none",
+                    backdropFilter: "blur(4px)",
+                    border: "1px solid rgba(255,255,255,0.3)",
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     color: "#fff",
+                    transition: "all 0.2s",
                   }}
+                  onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.3)"}
+                  onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.2)"}
                 >
-                  <X size={15} />
+                  <X size={16} />
                 </button>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
                   <div style={{
                     width: 36,
                     height: 36,
-                    borderRadius: 10,
-                    background: "rgba(255,255,255,0.2)",
+                    borderRadius: 12,
+                    background: "rgba(255,255,255,0.25)",
+                    backdropFilter: "blur(8px)",
+                    border: "1px solid rgba(255,255,255,0.3)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                   }}>
-                    <Zap size={18} color="#fff" fill="#fff" />
+                    <Sparkles size={18} color="#fff" fill="rgba(255,255,255,0.5)" />
                   </div>
-                  <span style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: 600, letterSpacing: 1, textTransform: "uppercase" }}>
-                    Get Started
+                  <span style={{ color: "rgba(255,255,255,0.95)", fontSize: 12, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase" }}>
+                    Onboarding
                   </span>
                 </div>
 
-                <h2 style={{ color: "#fff", fontSize: 22, fontWeight: 700, margin: 0, lineHeight: 1.3 }}>
+                <h2 style={{ color: "#fff", fontSize: 26, fontWeight: 700, margin: 0, lineHeight: 1.2, letterSpacing: "-0.02em" }}>
                   Connect your social channels
                 </h2>
-                <p style={{ color: "rgba(255,255,255,0.8)", fontSize: 14, margin: "6px 0 0", lineHeight: 1.5 }}>
-                  Post to all your networks from one place. Connect at least one channel to get started.
+                <p style={{ color: "rgba(255,255,255,0.9)", fontSize: 14, margin: "8px 0 0", lineHeight: 1.5, fontWeight: 500 }}>
+                  Post to all your networks from one place. Connect at least one channel to unlock your dashboard.
                 </p>
               </div>
 
               {/* Platform grid */}
-              <div style={{ padding: "20px 28px 8px" }}>
-                <p style={{ fontSize: 12, fontWeight: 600, color: "rgba(20,20,19,0.45)", letterSpacing: 0.6, textTransform: "uppercase", margin: "0 0 14px" }}>
+              <div style={{ padding: "24px 28px 12px" }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--slate)", letterSpacing: 1, textTransform: "uppercase", margin: "0 0 16px" }}>
                   Choose platforms to connect
                 </p>
                 <div style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))",
-                  gap: 10,
+                  gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))",
+                  gap: 12,
                 }}>
                   {unconnectedPlatforms.map((platform) => (
                     <PlatformTile
@@ -189,16 +199,18 @@ export default function ConnectChannelsModal() {
                     />
                   ))}
                   {unconnectedPlatforms.length === 0 && (
-                    <p style={{ gridColumn: "1/-1", textAlign: "center", color: "rgba(20,20,19,0.5)", fontSize: 14, padding: "12px 0" }}>
-                      All channels connected!
-                    </p>
+                    <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "24px 0", background: "rgba(20,20,19,0.02)", borderRadius: 16 }}>
+                      <p style={{ color: "var(--ink)", fontWeight: 600, fontSize: 14, margin: 0 }}>
+                        All channels connected! 🎉
+                      </p>
+                    </div>
                   )}
                 </div>
               </div>
 
               {/* Footer */}
               <div style={{
-                padding: "16px 28px 24px",
+                padding: "16px 28px 32px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
@@ -208,11 +220,15 @@ export default function ConnectChannelsModal() {
                   style={{
                     background: "none",
                     border: "none",
-                    color: "rgba(20,20,19,0.45)",
-                    fontSize: 13,
+                    color: "var(--slate)",
+                    fontSize: 14,
+                    fontWeight: 600,
                     cursor: "pointer",
-                    padding: "6px 0",
+                    padding: "8px 0",
+                    transition: "color 0.2s",
                   }}
+                  onMouseEnter={e => e.currentTarget.style.color = "var(--ink)"}
+                  onMouseLeave={e => e.currentTarget.style.color = "var(--slate)"}
                 >
                   Skip for now
                 </button>
@@ -221,19 +237,25 @@ export default function ConnectChannelsModal() {
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 6,
-                    background: "#141413",
+                    gap: 8,
+                    backgroundImage: 'url("/download (2).jpg")',
+                    backgroundSize: 'cover',
+                    backgroundPosition: '20% 50%',
                     color: "#fff",
-                    border: "none",
-                    borderRadius: 10,
-                    padding: "9px 18px",
-                    fontSize: 13,
-                    fontWeight: 600,
+                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                    borderRadius: 14,
+                    padding: "12px 24px",
+                    fontSize: 14,
+                    fontWeight: 700,
                     cursor: "pointer",
+                    boxShadow: "0 0 20px rgba(255, 255, 255, 0.1), 0 10px 30px rgba(0, 0, 0, 0.2)",
+                    transition: "transform 0.2s, brightness 0.2s",
                   }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.filter = "brightness(1.1)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.filter = "brightness(1)"; }}
                 >
                   Go to Dashboard
-                  <ArrowRight size={14} />
+                  <ArrowRight size={16} />
                 </button>
               </div>
             </motion.div>
@@ -295,24 +317,35 @@ function PlatformTile({ platform, onClick }) {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 6,
-        padding: "12px 8px",
-        borderRadius: 12,
-        border: hovered ? "1.5px solid rgba(91,71,224,0.4)" : "1.5px solid rgba(20,20,19,0.08)",
-        background: hovered ? "rgba(91,71,224,0.05)" : "#fff",
+        gap: 8,
+        padding: "16px 10px",
+        borderRadius: 20,
+        border: hovered ? "1px solid var(--arc)" : "1px solid rgba(20,20,19,0.06)",
+        background: hovered ? "rgba(243, 115, 56, 0.04)" : "var(--canvas-lifted)",
         cursor: "pointer",
-        transition: "all 0.15s ease",
-        transform: hovered ? "translateY(-2px)" : "none",
-        boxShadow: hovered ? "0 4px 12px rgba(91,71,224,0.12)" : "none",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        transform: hovered ? "translateY(-4px)" : "none",
+        boxShadow: hovered ? "0 12px 24px rgba(243, 115, 56, 0.12)" : "none",
       }}
     >
-      <img src={platform.icon} alt={platform.name} style={{ width: 28, height: 28 }} />
+      <div style={{
+        width: 40,
+        height: 40,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transition: "transform 0.3s ease",
+        transform: hovered ? "scale(1.1)" : "none",
+      }}>
+        <img src={platform.icon} alt={platform.name} style={{ width: 32, height: 32, objectFit: "contain" }} />
+      </div>
       <span style={{
-        fontSize: 10,
-        fontWeight: 500,
-        color: "rgba(20,20,19,0.6)",
+        fontSize: 11,
+        fontWeight: 700,
+        color: hovered ? "var(--ink)" : "var(--slate)",
         textAlign: "center",
         lineHeight: 1.2,
+        transition: "color 0.2s",
       }}>
         {platform.name}
       </span>

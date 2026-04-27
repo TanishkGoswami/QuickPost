@@ -3,6 +3,7 @@ import { AnimatePresence } from "framer-motion";
 import Masonry from "react-masonry-css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabase";
 import {
   Plus,
   Search,
@@ -23,6 +24,7 @@ import {
   Play,
   Eye,
   X,
+  Lock,
 } from "lucide-react";
 import apiClient from "../utils/apiClient";
 import ComposerModal from "./ComposerModal";
@@ -1237,10 +1239,48 @@ function Dashboard() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    
+    const verifyPayment = async () => {
+      const paymentLinkStatus = params.get("razorpay_payment_link_status");
+      const paymentLinkId = params.get("razorpay_payment_link_id");
+      
+      if (params.get("payment") === "success" && paymentLinkId) {
+        try {
+          const { data, error } = await supabase.functions.invoke('verify-subscription', {
+            body: { razorpayPaymentLinkId: paymentLinkId }
+          });
+          
+          if (error) throw error;
+          
+          if (data.success) {
+            if (data.status === "paid") {
+              await supabase.auth.refreshSession();
+              navigate('/dashboard/payment-success');
+              return; // Exit so we don't replaceState below
+            } else {
+              alert("Payment status is: " + data.status + ". Your plan was not upgraded.");
+            }
+          } else {
+            throw new Error(data.error || "Unknown verification error");
+          }
+        } catch (err) {
+          console.error("Payment verification error:", err);
+          alert("Payment verification failed: " + (err.message || JSON.stringify(err)));
+        } finally {
+          window.history.replaceState({}, "", "/dashboard");
+        }
+      }
+    };
+
+    if (params.get("payment") === "success") {
+      verifyPayment();
+    }
+
     if (params.get("success")) {
       refreshAccounts();
       window.history.replaceState({}, "", "/dashboard");
     }
+    
     apiClient
       .get("/api/broadcasts/stats")
       .then((r) => setQueueCount(r.data.pending || 0))
