@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check } from 'lucide-react';
+import { Check, Lock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const PLATFORMS = [
@@ -60,7 +60,9 @@ const PLATFORMS = [
 ];
 
 function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect }) {
-  const { connectedAccounts } = useAuth();
+  const { connectedAccounts, user } = useAuth();
+  const isFree = user?.plan === 'Free' || !user?.plan;
+  const allowedFreePlatforms = ['youtube', 'linkedin', 'bluesky'];
   const [connectedOpen, setConnectedOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const connectedRef = useRef(null);
@@ -110,23 +112,31 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect }) {
       <div className="flex items-center gap-3.5 flex-wrap">
         {connectedPlatforms.map((p) => {
           const isSelected = selectedChannels.includes(p.id);
+          const isLocked = isFree && !allowedFreePlatforms.includes(p.id);
           return (
             <button
               key={p.id}
               type="button"
-              onClick={() => onChannelToggle(p.id)}
+              onClick={() => {
+                if (isLocked) {
+                  alert("Please upgrade to Pro to post on this platform.");
+                  return;
+                }
+                onChannelToggle(p.id);
+              }}
               title={p.name}
               className={`group relative w-[52px] h-[52px] rounded-2xl flex items-center justify-center transition-all duration-500 ${
+                isLocked ? "bg-gray-100 opacity-60 cursor-not-allowed" :
                 isSelected
                   ? "bg-white shadow-[0_12px_32px_rgba(20,20,19,0.12)] border-[2.5px] border-ink scale-110 z-10"
                   : "bg-white border border-gray-100 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 hover:scale-105 hover:shadow-lg"
               }`}
             >
-              <div className={`w-8 h-8 flex items-center justify-center transition-transform duration-500 ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`}>
+              <div className={`w-8 h-8 flex items-center justify-center transition-transform duration-500 ${isSelected ? 'scale-110' : 'group-hover:scale-110'} ${isLocked ? 'grayscale opacity-50' : ''}`}>
                 {p.icon}
               </div>
 
-              {isSelected && (
+              {isSelected && !isLocked && (
                 <motion.div
                   initial={{ scale: 0, rotate: -45 }}
                   animate={{ scale: 1, rotate: 0 }}
@@ -135,9 +145,15 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect }) {
                   <Check size={12} color="white" strokeWidth={4} />
                 </motion.div>
               )}
+              
+              {isLocked && (
+                <div className="absolute -bottom-2 -right-2 w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center border-2 border-white shadow-sm z-20">
+                  <Lock size={10} className="text-gray-500" />
+                </div>
+              )}
 
-              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-ink text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest z-30">
-                {p.name}
+              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-ink text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest z-30 whitespace-nowrap">
+                {p.name} {isLocked ? "(PRO)" : ""}
               </div>
             </button>
           );

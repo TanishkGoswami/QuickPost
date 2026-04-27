@@ -1439,14 +1439,8 @@ function Dashboard() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button
-            onClick={() => {
-              if (user?.plan === 'Free' || !user?.plan) {
-                alert("Please upgrade to Pro to create new posts.");
-                return;
-              }
-              setComposerOpen(true);
-            }}
-            className={user?.plan === 'Free' || !user?.plan ? "" : "btn-ink"}
+            onClick={() => setComposerOpen(true)}
+            className="btn-ink"
             style={{
               display: "flex",
               alignItems: "center",
@@ -1454,14 +1448,9 @@ function Dashboard() {
               fontSize: 14,
               padding: "10px 20px",
               borderRadius: css.r_pill,
-              background: (user?.plan === 'Free' || !user?.plan) ? "var(--canvas-lifted)" : undefined,
-              color: (user?.plan === 'Free' || !user?.plan) ? "var(--dust)" : undefined,
-              border: (user?.plan === 'Free' || !user?.plan) ? "1px solid rgba(20,20,19,0.08)" : undefined,
-              opacity: (user?.plan === 'Free' || !user?.plan) ? 0.6 : 1,
-              cursor: (user?.plan === 'Free' || !user?.plan) ? "not-allowed" : "pointer"
             }}
           >
-            {user?.plan === 'Free' || !user?.plan ? <Lock size={16} /> : <Plus size={16} />}
+            <Plus size={16} />
             <span className="hidden sm:inline">New Post</span>
             <span className="sm:hidden">New</span>
           </button>
@@ -1942,28 +1931,10 @@ function Dashboard() {
             </p>
             {(activeTab === "sent" || activeTab === "history") && (
               <button
-                onClick={() => {
-                  if (user?.plan === 'Free' || !user?.plan) {
-                    alert("Please upgrade to Pro to create new posts.");
-                    return;
-                  }
-                  setComposerOpen(true);
-                }}
-                className={user?.plan === 'Free' || !user?.plan ? "" : "btn-ink"}
-                style={{
-                  fontSize: 15,
-                  padding: "12px 32px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  borderRadius: css.r_pill,
-                  background: (user?.plan === 'Free' || !user?.plan) ? "var(--canvas-lifted)" : undefined,
-                  color: (user?.plan === 'Free' || !user?.plan) ? "var(--dust)" : undefined,
-                  border: (user?.plan === 'Free' || !user?.plan) ? "1px solid rgba(20,20,19,0.08)" : undefined,
-                  opacity: (user?.plan === 'Free' || !user?.plan) ? 0.6 : 1,
-                  cursor: (user?.plan === 'Free' || !user?.plan) ? "not-allowed" : "pointer"
-                }}
+                className="btn-ink"
+                onClick={() => setComposerOpen(true)}
+                style={{ fontSize: 15, padding: "12px 32px" }}
               >
-                {user?.plan === 'Free' || !user?.plan ? <Lock size={16} style={{ marginRight: 6 }} /> : null}
                 Launch your first post
                 <svg
                   width="14"
