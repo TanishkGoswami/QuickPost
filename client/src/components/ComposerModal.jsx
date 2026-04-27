@@ -13,6 +13,9 @@ import {
   Loader2,
   Sparkles,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
   AtSign,
   Calendar,
   Clock,
@@ -1186,6 +1189,21 @@ function ComposerModal({
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [postType, setPostType] = useState("post");
+  const [quickSuggestions, setQuickSuggestions] = useState(QUICK_SUGGESTIONS);
+  const [suggestedHashtags, setSuggestedHashtags] = useState(SUGGESTED_HASHTAGS);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isFetchingMoreIdeas, setIsFetchingMoreIdeas] = useState(false);
+  const [isFetchingMoreHashtags, setIsFetchingMoreHashtags] = useState(false);
+  const ideasScrollRef = useRef(null);
+  const hashtagsScrollRef = useRef(null);
+
+  const scrollContainer = (ref, direction) => {
+    if (ref.current) {
+      const scrollAmount = direction === 'left' ? -300 : 300;
+      ref.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
   const [platformData, setPlatformData] = useState({
     instagram: { type: "post" },
     youtube: { type: "short" },
@@ -1661,6 +1679,79 @@ function ComposerModal({
     }
   };
 
+  const handleAiAssistantClick = async () => {
+    if (!caption || caption.trim() === '') {
+      setError("Please write some text in the caption field first for the AI to analyze.");
+      return;
+    }
+    
+    setIsAiLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.post('/api/ai/suggest', { text: caption });
+      if (response.data) {
+        if (response.data.ideas && response.data.ideas.length > 0) {
+          setQuickSuggestions(response.data.ideas);
+        }
+        if (response.data.hashtags && response.data.hashtags.length > 0) {
+          setSuggestedHashtags(response.data.hashtags);
+        }
+        if (response.data.titles && response.data.titles.length > 0) {
+          // You could also use titles in another way, or just mix them with ideas
+          setQuickSuggestions(prev => [...response.data.titles, ...prev]);
+        }
+      }
+    } catch (err) {
+      console.error("AI Assistant error:", err);
+      setError(err.response?.data?.error || "Failed to fetch AI suggestions.");
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const fetchMoreIdeas = async () => {
+    if (!caption || caption.trim() === '') {
+      setError("Please write some text in the caption field first.");
+      return;
+    }
+    
+    setIsFetchingMoreIdeas(true);
+    try {
+      const response = await apiClient.post('/api/ai/suggest', { text: caption, type: 'ideas' });
+      if (response.data && response.data.ideas && response.data.ideas.length > 0) {
+        setQuickSuggestions(prev => [...prev, ...response.data.ideas]);
+        // scroll to the right to show the newly added ideas after a short delay
+        setTimeout(() => scrollContainer(ideasScrollRef, 'right'), 100);
+      }
+    } catch (err) {
+      console.error("AI Assistant error:", err);
+      setError(err.response?.data?.error || "Failed to fetch more ideas.");
+    } finally {
+      setIsFetchingMoreIdeas(false);
+    }
+  };
+
+  const fetchMoreHashtags = async () => {
+    if (!caption || caption.trim() === '') {
+      setError("Please write some text in the caption field first.");
+      return;
+    }
+    
+    setIsFetchingMoreHashtags(true);
+    try {
+      const response = await apiClient.post('/api/ai/suggest', { text: caption, type: 'hashtags' });
+      if (response.data && response.data.hashtags && response.data.hashtags.length > 0) {
+        setSuggestedHashtags(prev => [...prev, ...response.data.hashtags]);
+        setTimeout(() => scrollContainer(hashtagsScrollRef, 'right'), 100);
+      }
+    } catch (err) {
+      console.error("AI Assistant error:", err);
+      setError(err.response?.data?.error || "Failed to fetch more hashtags.");
+    } finally {
+      setIsFetchingMoreHashtags(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const publishDisabled = loading || hasBlockingError;
@@ -1807,28 +1898,6 @@ function ComposerModal({
               </motion.div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <motion.button
-                type="button"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  padding: "5px 12px",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: "var(--slate,#8a8a82)",
-                  background: "transparent",
-                  border: "1px solid rgba(20,20,19,0.1)",
-                  borderRadius: "var(--r-btn,10px)",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                <Sparkles size={12} />
-                {!isMobile && "AI Assistant"}
-              </motion.button>
               <motion.button
                 type="button"
                 onClick={handleClose}
@@ -2004,6 +2073,34 @@ function ComposerModal({
                         onChannelToggle={handleChannelToggle}
                         onBulkSelect={handleBulkSelect}
                         connectedAccounts={connectedAccounts}
+                        rightContent={
+                          <motion.button
+                            type="button"
+                            onClick={handleAiAssistantClick}
+                            disabled={isAiLoading}
+                            whileHover={{ scale: isAiLoading ? 1 : 1.02 }}
+                            whileTap={{ scale: isAiLoading ? 1 : 0.97 }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              padding: "4px 10px",
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: isAiLoading ? "var(--slate,#8a8a82)" : "#4f46e5",
+                              background: isAiLoading ? "transparent" : "rgba(79,70,229,0.06)",
+                              border: "1px solid rgba(20,20,19,0.1)",
+                              borderRadius: "var(--r-btn,10px)",
+                              cursor: isAiLoading ? "wait" : "pointer",
+                              fontFamily: "inherit",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.04em"
+                            }}
+                          >
+                            {isAiLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                            {isAiLoading ? "Thinking..." : "AI Assistant"}
+                          </motion.button>
+                        }
                       />
                     </Section>
 
@@ -2094,8 +2191,18 @@ function ComposerModal({
 
                     {/* Quick suggestions */}
                     <div style={{ marginTop: 10 }}>
-                      <RowLabel>Quick Ideas</RowLabel>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <RowLabel>Quick Ideas</RowLabel>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button type="button" onClick={() => scrollContainer(ideasScrollRef, 'left')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronLeft size={14} /></button>
+                          <button type="button" onClick={() => scrollContainer(ideasScrollRef, 'right')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronRight size={14} /></button>
+                          <button type="button" onClick={fetchMoreIdeas} disabled={isFetchingMoreIdeas} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {isFetchingMoreIdeas ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                          </button>
+                        </div>
+                      </div>
                       <div
+                        ref={ideasScrollRef}
                         style={{
                           display: "flex",
                           gap: 6,
@@ -2104,7 +2211,7 @@ function ComposerModal({
                           scrollbarWidth: "none",
                         }}
                       >
-                        {QUICK_SUGGESTIONS.map((s, i) => (
+                        {quickSuggestions.map((s, i) => (
                           <motion.button
                             key={i}
                             type="button"
@@ -2115,15 +2222,15 @@ function ComposerModal({
                             }}
                             whileTap={{ scale: 0.97 }}
                             onClick={() =>
-                              setCaption((p) => (p ? `${p} ${s}` : s))
+                              setCaption(s)
                             }
                             style={{
                               flexShrink: 0,
-                              padding: "4px 11px",
+                              padding: "6px 14px",
                               background: "var(--canvas-lifted,#f5f5f4)",
                               border: "1px solid rgba(20,20,19,0.1)",
                               borderRadius: 20,
-                              fontSize: 11,
+                              fontSize: 13,
                               color: "var(--slate,#8a8a82)",
                               cursor: "pointer",
                               whiteSpace: "nowrap",
@@ -2140,8 +2247,18 @@ function ComposerModal({
 
                     {/* Hashtags */}
                     <div style={{ marginTop: 10 }}>
-                      <RowLabel>Hashtags</RowLabel>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <RowLabel>Hashtags</RowLabel>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button type="button" onClick={() => scrollContainer(hashtagsScrollRef, 'left')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronLeft size={14} /></button>
+                          <button type="button" onClick={() => scrollContainer(hashtagsScrollRef, 'right')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronRight size={14} /></button>
+                          <button type="button" onClick={fetchMoreHashtags} disabled={isFetchingMoreHashtags} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {isFetchingMoreHashtags ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                          </button>
+                        </div>
+                      </div>
                       <div
+                        ref={hashtagsScrollRef}
                         style={{
                           display: "flex",
                           gap: 6,
@@ -2154,13 +2271,13 @@ function ComposerModal({
                           type="text"
                           placeholder="+ Add tag (Enter)"
                           style={{
-                            fontSize: 11,
-                            padding: "4px 12px",
+                            fontSize: 13,
+                            padding: "6px 14px",
                             border: "1px dashed rgba(20,20,19,0.2)",
                             borderRadius: 20,
                             background: "transparent",
                             outline: "none",
-                            width: 120,
+                            width: 140,
                           }}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
@@ -2175,7 +2292,7 @@ function ComposerModal({
                             }
                           }}
                         />
-                        {SUGGESTED_HASHTAGS.map((h, i) => (
+                        {suggestedHashtags.map((h, i) => (
                           <button
                             key={i}
                             onClick={() =>
@@ -2183,12 +2300,12 @@ function ComposerModal({
                             }
                             style={{
                               flexShrink: 0,
-                              fontSize: 10,
+                              fontSize: 12,
                               fontWeight: 700,
                               color: "#4f46e5",
                               background: "rgba(79,70,229,0.06)",
                               border: "none",
-                              padding: "4px 10px",
+                              padding: "6px 14px",
                               borderRadius: 20,
                               cursor: "pointer",
                             }}

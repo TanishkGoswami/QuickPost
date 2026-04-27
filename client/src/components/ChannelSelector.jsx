@@ -59,7 +59,7 @@ const PLATFORMS = [
   },
 ];
 
-function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect }) {
+function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect, rightContent }) {
   const { connectedAccounts, user } = useAuth();
   const isFree = user?.plan === 'Free' || !user?.plan;
   const allowedFreePlatforms = ['youtube', 'linkedin', 'bluesky'];
@@ -167,9 +167,12 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect }) {
         )}
       </div>
 
-      <p className="text-[10px] font-bold text-slate mt-2 px-1 uppercase tracking-wider opacity-50">
-        Posting to {selectedChannels.length} channel{selectedChannels.length !== 1 ? 's' : ''}
-      </p>
+      <div className="flex items-center justify-between mt-2 px-1">
+        <p className="text-[10px] font-bold text-slate uppercase tracking-wider opacity-50 m-0">
+          Posting to {selectedChannels.length} channel{selectedChannels.length !== 1 ? 's' : ''}
+        </p>
+        {rightContent}
+      </div>
     </div>
   );
 }
