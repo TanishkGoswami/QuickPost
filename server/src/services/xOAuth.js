@@ -134,6 +134,7 @@ class XOAuth {
         token_expiry: expiryDate.toISOString(),
         account_id: tokenData.xUserId || tokenData.account_id,
         username: tokenData.userInfo?.username,
+        profile_data: tokenData.userInfo,
         updated_at: new Date().toISOString()
       };
 
