@@ -147,14 +147,12 @@ export default function AuthPage() {
               type="button"
               variant="outline"
               size="lg"
-              className="w-full h-12 bg-white text-[#3c4043] font-medium border border-[#dadce0] rounded-lg shadow-sm hover:shadow-md hover:bg-[#f8f9fa] transition-all duration-200 flex items-center justify-center gap-3 px-4"
+              className="w-full h-12 border-muted hover:border-slate-300 hover:bg-white hover:shadow-md transition-all duration-300 font-bold bg-white text-ink shadow-sm"
               onClick={handleGoogleLogin}
               disabled={loading}
             >
-              <div className="flex items-center justify-center bg-white p-1">
-                <GoogleIcon className="size-5" />
-              </div>
-              <span className="text-sm font-semibold tracking-tight">Sign in with Google</span>
+              <GoogleIcon className="size-5 me-3" />
+              Continue with Google
             </Button>
             {/* You can add GitHub/Apple here if implemented in useAuth */}
           </div>
