@@ -102,15 +102,11 @@ export default function InteractiveGradientBackground({
           opacity: dark ? 0 : 1,
           transition: 'opacity 0.5s ease',
           background: `
-            linear-gradient(115deg, rgb(211 255 215), rgb(0 0 0)),
-            radial-gradient(90% 100% at calc(50% + var(--posX)*1px) calc(0% + var(--posY)*1px), rgb(200 200 200), rgb(22 0 45)),
-            radial-gradient(100% 100% at calc(80% - var(--posX)*1px) calc(0% - var(--posY)*1px), rgb(250 255 0), rgb(36 0 0)),
-            radial-gradient(150% 210% at calc(100% + var(--posX)*1px) calc(0% + var(--posY)*1px), rgb(20 175 125), rgb(0 10 255)),
-            radial-gradient(100% 100% at calc(100% - var(--posX)*1px) calc(30% - var(--posY)*1px), rgb(255 77 0), rgb(0 200 255)),
-            linear-gradient(60deg, rgb(255 0 0), rgb(120 86 255))
+            radial-gradient(90% 100% at calc(50% + var(--posX)*1px) calc(0% + var(--posY)*1px), rgba(243, 115, 56, 0.4), rgba(20, 20, 19, 1)),
+            radial-gradient(100% 100% at calc(80% - var(--posX)*1px) calc(0% - var(--posY)*1px), rgba(245, 158, 11, 0.3), rgba(36, 0, 0, 1)),
+            linear-gradient(60deg, rgba(243, 115, 56, 0.5), rgba(120, 86, 255, 1))
           `,
-          backgroundBlendMode:
-            'overlay, overlay, difference, difference, difference, normal',
+          backgroundBlendMode: 'overlay, difference, normal',
         }}
       />
       {/* Dark layer */}
@@ -122,15 +118,11 @@ export default function InteractiveGradientBackground({
           opacity: dark ? 1 : 0,
           transition: 'opacity 0.5s ease',
           background: `
-            linear-gradient(115deg, rgb(30 40 50), rgb(0 0 0)),
-            radial-gradient(90% 100% at calc(50% + var(--posX)*1px) calc(0% + var(--posY)*1px), rgb(120 120 160), rgb(20 0 50)),
-            radial-gradient(100% 100% at calc(80% - var(--posX)*1px) calc(0% - var(--posY)*1px), rgb(150 180 0), rgb(30 0 0)),
-            radial-gradient(150% 210% at calc(100% + var(--posX)*1px) calc(0% + var(--posY)*1px), rgb(20 150 120), rgb(0 10 200)),
-            radial-gradient(100% 100% at calc(100% - var(--posX)*1px) calc(30% - var(--posY)*1px), rgb(200 60 0), rgb(0 160 220)),
-            linear-gradient(60deg, rgb(150 0 0), rgb(90 60 220))
+            radial-gradient(90% 100% at calc(50% + var(--posX)*1px) calc(0% + var(--posY)*1px), rgba(120, 120, 160, 0.4), rgba(20, 0, 50, 1)),
+            radial-gradient(100% 100% at calc(80% - var(--posX)*1px) calc(0% - var(--posY)*1px), rgba(150, 180, 0, 0.3), rgba(30, 0, 0, 1)),
+            linear-gradient(60deg, rgba(150, 0, 0, 0.5), rgba(90, 60, 220, 1))
           `,
-          backgroundBlendMode:
-            'overlay, overlay, difference, difference, difference, normal',
+          backgroundBlendMode: 'overlay, difference, normal',
         }}
       />
 

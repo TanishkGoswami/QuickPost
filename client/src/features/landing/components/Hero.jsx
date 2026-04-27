@@ -76,7 +76,7 @@ export default function Hero() {
       ref={sectionRef}
       className="hero-bg landing-section"
       style={{
-        padding: "clamp(180px, 30vh, 240px) 20px 80px",
+        padding: "180px 20px 80px",
         position: "relative",
         overflow: "hidden",
       }}
@@ -105,7 +105,7 @@ export default function Hero() {
       >
         <svg
           aria-hidden="true"
-          style={{ width: "100%", height: "100%", overflow: "visible" }}
+          style={{ width: "100%", height: "100%", overflow: "visible", willChange: "transform" }}
           viewBox="0 0 1400 700"
           preserveAspectRatio="none"
         >
@@ -208,6 +208,7 @@ export default function Hero() {
             WebkitTextStroke: "2px var(--ink)",
             textAlign: "center",
             y: watermarkY,
+            willChange: "transform, opacity",
           }}
         >
           Broadcast
@@ -316,6 +317,7 @@ export default function Hero() {
             justifyContent: "center",
             flexWrap: "wrap",
             gap: 10,
+            minHeight: 44, // Pre-allocate height
           }}
         >
           <span
