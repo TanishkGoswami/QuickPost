@@ -57,10 +57,44 @@ body {
 .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
 
-/* Disable text selection for landing sections */
-/* .landing-section {
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;     
-} */
+/* ── Fly-1 Animation for Publish Button ── */
+@keyframes fly-1 {
+  from { transform: translateY(0.1em); }
+  to { transform: translateY(-0.1em); }
+}
+
+.btn-fly .svg-wrapper {
+  transition: transform 0.3s ease-in-out;
+}
+
+.btn-fly svg {
+  transition: transform 0.3s ease-in-out;
+}
+
+.btn-fly span {
+  transition: all 0.3s ease-in-out;
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.btn-fly:hover .svg-wrapper {
+  animation: fly-1 0.6s ease-in-out infinite alternate;
+}
+
+.btn-fly:hover svg {
+  transform: rotate(45deg) scale(1.5);
+}
+
+.btn-fly:hover span {
+  width: 0;
+  height: 0;
+  opacity: 0;
+  margin: 0;
+  padding: 0;
+  transform: translateX(-2em);
+}
+
+.btn-fly:active {
+  transform: scale(0.95);
+}

@@ -154,7 +154,14 @@ const MediaCarousel = memo(function MediaCarousel({ mediaFiles, cssClass }) {
 /* ── Platform-specific preview shells ── */
 
 const UserAvatar = ({ user, size = 28, background = "#eee" }) => {
+  const [imgError, setImgError] = useState(false);
   const initials = user?.name ? user.name[0].toUpperCase() : "?";
+
+  // Reset error state if user or picture changes
+  useEffect(() => {
+    setImgError(false);
+  }, [user?.picture]);
+
   return (
     <div
       style={{
@@ -162,25 +169,26 @@ const UserAvatar = ({ user, size = 28, background = "#eee" }) => {
         height: size,
         borderRadius: "50%",
         flexShrink: 0,
-        background: background,
+        background: (imgError || !user?.picture) ? "var(--ink, #141413)" : background,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         overflow: "hidden",
       }}
     >
-      {user?.picture ? (
+      {user?.picture && !imgError ? (
         <img
           src={user.picture}
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
           alt=""
+          onError={() => setImgError(true)}
         />
       ) : (
         <span
           style={{
             fontSize: size * 0.4,
             fontWeight: 800,
-            color: "rgba(0,0,0,0.4)",
+            color: "white",
           }}
         >
           {initials}

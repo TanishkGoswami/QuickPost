@@ -12,6 +12,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
   const navigate = useNavigate();
   const [showSettings, setShowSettings] = useState(false);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
+  const [imgError, setImgError] = useState(false);
 
   if (!user) return null;
 
@@ -161,24 +162,16 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
           </button>
           <button
             onClick={handleLogout}
-            title="Logout"
-            style={{
-              width: 36,
-              height: 36,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: "50%",
-              border: "none",
-              background: "transparent",
-              cursor: "pointer",
-              color: "var(--slate)",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(220,38,38,0.05)"; e.currentTarget.style.color = "#dc2626"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--slate)"; }}
+            className="group flex items-center justify-start w-[36px] hover:w-[100px] h-[36px] border-none rounded-full hover:rounded-[18px] cursor-pointer relative overflow-hidden transition-all duration-300 shadow-[1px_1px_5px_rgba(0,0,0,0.08)] bg-[#ff4141] active:translate-x-[1px] active:translate-y-[1px]"
           >
-            <LogOut size={18} />
+            <div className="flex items-center justify-center w-full group-hover:w-[35%] transition-all duration-300 group-hover:pl-4">
+              <svg viewBox="0 0 512 512" className="w-[16px] fill-white">
+                <path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z" />
+              </svg>
+            </div>
+            <div className="absolute right-0 w-0 group-hover:w-[65%] opacity-0 group-hover:opacity-100 text-white text-[11px] font-semibold transition-all duration-300 group-hover:pr-3 whitespace-nowrap">
+              Logout
+            </div>
           </button>
         </div>
 
@@ -196,10 +189,11 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
             boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
           }}
         >
-          {user.picture ? (
+          {user.picture && !imgError ? (
             <img
               src={user.picture}
               alt={user.name}
+              onError={() => setImgError(true)}
               style={{
                 width: 26,
                 height: 26,

@@ -84,6 +84,7 @@ export function AuthProvider({ children }) {
             session.user.email?.split("@")[0],
           plan: session.user.user_metadata?.plan || 'Free',
           subscription_status: session.user.user_metadata?.subscription_status || 'active',
+          picture: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
         };
         setUser(userData);
         localStorage.setItem("quickpost_token", session.access_token);
@@ -107,6 +108,7 @@ export function AuthProvider({ children }) {
             session.user.email?.split("@")[0],
           plan: session.user.user_metadata?.plan || 'Free',
           subscription_status: session.user.user_metadata?.subscription_status || 'active',
+          picture: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
         };
         setUser(userData);
         localStorage.setItem("quickpost_token", session.access_token);

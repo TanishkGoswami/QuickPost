@@ -6,8 +6,11 @@ import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { FloatingPaths } from "../../../components/ui/BackgroundPaths";
 
+import { useAuth } from "../../../context/AuthContext";
+
 export default function CTASection() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   return (
     <section
@@ -44,17 +47,20 @@ export default function CTASection() {
 
           <div className="flex flex-col items-center md:items-end gap-4 shrink-0 relative z-10">
             <button
-              onClick={() => navigate("/login")}
+              onClick={() =>
+                navigate(isAuthenticated ? "/dashboard" : "/login")
+              }
               className="group flex h-14 items-center justify-center gap-2 rounded-full px-8 text-base font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98] shadow-2xl border-none"
               style={{
                 backgroundImage: 'url("/download (2).jpg")',
-                backgroundSize: 'cover',
-                backgroundPosition: '20% 50%',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                boxShadow: '0 0 20px rgba(255, 255, 255, 0.1), 0 12px 40px rgba(0, 0, 0, 0.3)',
+                backgroundSize: "cover",
+                backgroundPosition: "20% 50%",
+                border: "1px solid rgba(255, 255, 255, 0.3)",
+                boxShadow:
+                  "0 0 20px rgba(255, 255, 255, 0.1), 0 12px 40px rgba(0, 0, 0, 0.3)",
               }}
             >
-              Get started
+              {isAuthenticated ? "Go to Dashboard" : "Get started"}
               <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
             </button>
           </div>

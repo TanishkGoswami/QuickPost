@@ -60,6 +60,7 @@ function Sidebar() {
   const [showMastodonModal, setShowMastodonModal] = useState(false);
   const [connectingPlatform, setConnectingPlatform] = useState(null);
   const [connectedOpen, setConnectedOpen] = useState(true);
+  const [imgError, setImgError] = useState(false);
 
   const handleConnectInstagram = () => setShowBusinessSetupModal(true);
   const handleProceedToConnect = () => {
@@ -348,7 +349,7 @@ function Sidebar() {
         }}
       >
         <Link
-          to="/dashboard"
+          to="/"
           className="flex items-center gap-3"
           style={{ textDecoration: "none" }}
         >
@@ -360,7 +361,7 @@ function Sidebar() {
           <span
             style={{
               fontSize: 17,
-              fontWeight: 700,
+              fontWeight: 600,
               color: "var(--ink)",
               letterSpacing: "-0.02em",
               lineHeight: 1.1,
@@ -430,7 +431,7 @@ function Sidebar() {
               marginBottom: 2,
               background: active ? "var(--ink)" : "transparent",
               color: active ? "var(--canvas)" : (isLocked ? "var(--dust)" : "var(--slate)"),
-              fontWeight: 600,
+              fontWeight: 500,
               fontSize: 14,
               textDecoration: "none",
               transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -565,7 +566,7 @@ function Sidebar() {
                 <motion.span
                   animate={{ marginLeft: connectedOpen ? 6 : 8 }}
                   transition={{ duration: 0.2, ease: "easeOut" }}
-                  style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}
+                  style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}
                 >
                   Connected
                 </motion.span>
@@ -682,7 +683,7 @@ function Sidebar() {
                           <div
                             style={{
                               fontSize: 13,
-                              fontWeight: 600,
+                              fontWeight: 500,
                               color: "var(--ink)",
                               lineHeight: 1.2,
                               overflow: "hidden",
@@ -804,7 +805,7 @@ function Sidebar() {
                 width: 28,
                 height: 28,
                 borderRadius: "50%",
-                background: "var(--ink)",
+                background: (user.picture && !imgError) ? "transparent" : "var(--ink)",
                 color: "var(--canvas)",
                 display: "flex",
                 alignItems: "center",
@@ -812,9 +813,20 @@ function Sidebar() {
                 fontSize: 12,
                 fontWeight: 700,
                 flexShrink: 0,
+                overflow: "hidden",
+                border: (user.picture && !imgError) ? "1px solid rgba(20,20,19,0.08)" : "none"
               }}
             >
-              {(user.name || user.email || "U")[0].toUpperCase()}
+              {user.picture && !imgError ? (
+                <img 
+                  src={user.picture} 
+                  alt="" 
+                  onError={() => setImgError(true)}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+                />
+              ) : (
+                (user.name || user.email || "U")[0].toUpperCase()
+              )}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div
