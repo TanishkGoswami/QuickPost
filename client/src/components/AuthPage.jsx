@@ -68,9 +68,21 @@ export default function AuthPage() {
         <Link to="/" className="z-20 flex items-center gap-4 no-underline">
           <img src={logo} alt="QuickPost" className="size-8 object-contain" />
 
-          <p className="text-2xl font-bold tracking-tight text-ink">
-            GAP SocialPilot
-          </p>
+          <span
+            style={{
+              fontSize: 22,
+              fontWeight: 800,
+              color: "var(--ink)",
+              fontFamily: "var(--font-logo)",
+              letterSpacing: "-0.03em",
+              lineHeight: 0.9,
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--arc)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 2 }}>GAP</span>
+            <span>Social‑pilot</span>
+          </span>
         </Link>
 
         <div className="z-20 mt-auto">
@@ -120,7 +132,21 @@ export default function AuthPage() {
                 className="size-5 object-contain"
               />
             </div>
-            <p className="text-xl font-bold text-ink">QuickPost</p>
+            <span
+              style={{
+                fontSize: 18,
+                fontWeight: 800,
+                color: "var(--ink)",
+                fontFamily: "var(--font-logo)",
+                letterSpacing: "-0.03em",
+                lineHeight: 0.9,
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--arc)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 1 }}>GAP</span>
+              <span>Social‑pilot</span>
+            </span>
           </Link>
 
           <div className="flex flex-col space-y-2">
