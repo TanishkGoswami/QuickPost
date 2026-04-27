@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   motion,
@@ -10,6 +10,7 @@ import {
 } from "framer-motion";
 import { FloatingPaths } from "../../../components/ui/BackgroundPaths";
 import InteractiveButton from "../../../components/ui/InteractiveButton.jsx";
+import { useAuth } from "../../../context/AuthContext";
 
 const PLATFORMS = [
   { src: "/icons/ig-instagram-icon.svg", label: "Instagram" },
@@ -28,9 +29,19 @@ const PLATFORMS = [
 
 export default function Hero() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const sectionRef = useRef(null);
+  const canvasRef = useRef(null);
+  const targetRef = useRef(null);
+  const mousePosRef = useRef({ x: null, y: null });
+  const ctxRef = useRef(null);
+  const animationFrameIdRef = useRef(null);
   const [platformCount, setPlatformCount] = useState(0);
   const flowValue = useMotionValue(0);
+
+  const resolvedCanvasColorsRef = useRef({
+    strokeStyle: { r: 105, g: 105, b: 105 }, // Default to slate gray
+  });
 
   // Scroll-based animations
   const { scrollYProgress } = useScroll({
@@ -70,6 +81,124 @@ export default function Hero() {
     });
     return () => controls.stop();
   }, []);
+
+  const drawArrow = useCallback(() => {
+    if (!canvasRef.current || !targetRef.current || !ctxRef.current) return;
+
+    const targetEl = targetRef.current;
+    const ctx = ctxRef.current;
+    const mouse = mousePosRef.current;
+
+    const x0 = mouse.x;
+    const y0 = mouse.y;
+
+    if (x0 === null || y0 === null) return;
+
+    const rect = targetEl.getBoundingClientRect();
+    const sectionRect = sectionRef.current.getBoundingClientRect();
+    
+    // Adjust target coordinates to be relative to the section
+    const cx = (rect.left - sectionRect.left) + rect.width / 2;
+    const cy = (rect.top - sectionRect.top) + rect.height / 2;
+
+    const a = Math.atan2(cy - y0, cx - x0);
+    const x1 = cx - Math.cos(a) * (rect.width / 2 + 12);
+    const y1 = cy - Math.sin(a) * (rect.height / 2 + 12);
+
+    const midX = (x0 + x1) / 2;
+    const midY = (y0 + y1) / 2;
+    const offset = Math.min(200, Math.hypot(x1 - x0, y1 - y0) * 0.5);
+    const t = Math.max(-1, Math.min(1, (y0 - y1) / 200));
+    const controlX = midX;
+    const controlY = midY + offset * t;
+    
+    const r = Math.sqrt((x1 - x0)**2 + (y1 - y0)**2);
+    const opacity = Math.min(1.0, (r - Math.max(rect.width, rect.height) / 2) / 500); 
+
+    const arrowColor = resolvedCanvasColorsRef.current.strokeStyle;
+    ctx.strokeStyle = `rgba(${arrowColor.r}, ${arrowColor.g}, ${arrowColor.b}, ${opacity})`;
+    ctx.lineWidth = 2;
+
+    // Draw curve
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.quadraticCurveTo(controlX, controlY, x1, y1);
+    ctx.setLineDash([10, 5]);
+    ctx.stroke();
+    ctx.restore();
+
+    // Draw arrowhead
+    const angle = Math.atan2(y1 - controlY, x1 - controlX);
+    const headLength = 10 * (ctx.lineWidth / 1.5); 
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(
+        x1 - headLength * Math.cos(angle - Math.PI / 6),
+        y1 - headLength * Math.sin(angle - Math.PI / 6)
+    );
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(
+        x1 - headLength * Math.cos(angle + Math.PI / 6),
+        y1 - headLength * Math.sin(angle + Math.PI / 6)
+    );
+    ctx.stroke();
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    ctxRef.current = canvas.getContext("2d");
+    const ctx = ctxRef.current;
+
+    const updateCanvasSize = () => {
+      if (!sectionRef.current) return;
+      canvas.width = sectionRef.current.offsetWidth;
+      canvas.height = sectionRef.current.offsetHeight;
+    };
+
+    const handleMouseMove = (e) => {
+      if (!sectionRef.current) return;
+      const rect = sectionRef.current.getBoundingClientRect();
+      const isInside = 
+        e.clientX >= rect.left && 
+        e.clientX <= rect.right && 
+        e.clientY >= rect.top && 
+        e.clientY <= rect.bottom;
+      
+      if (isInside) {
+        mousePosRef.current = { 
+          x: e.clientX - rect.left, 
+          y: e.clientY - rect.top 
+        };
+      } else {
+        mousePosRef.current = { x: null, y: null };
+      }
+    };
+
+    window.addEventListener("resize", updateCanvasSize);
+    window.addEventListener("mousemove", handleMouseMove);
+    updateCanvasSize();
+
+    const animateLoop = () => {
+      if (ctx && canvas) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawArrow();
+      }
+      animationFrameIdRef.current = requestAnimationFrame(animateLoop);
+    };
+    
+    animateLoop();
+
+    return () => {
+      window.removeEventListener("resize", updateCanvasSize);
+      window.removeEventListener("mousemove", handleMouseMove);
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+      }
+    };
+  }, [drawArrow]);
 
   return (
     <section
@@ -280,27 +409,29 @@ export default function Hero() {
               marginBottom: 32,
             }}
           >
-            <InteractiveButton
-              onClick={() => navigate("/login")}
-              style={{ fontSize: 16 }}
-            >
-              Start broadcasting free
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                style={{ marginLeft: 6 }}
+            <div ref={targetRef}>
+              <InteractiveButton
+                onClick={() => navigate(isAuthenticated ? "/dashboard" : "/login")}
+                style={{ fontSize: 16 }}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 12h14M12 5l7 7-7 7"
-                />
-              </svg>
-            </InteractiveButton>
+                {isAuthenticated ? "Go to Dashboard" : "Start broadcasting"}
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  style={{ marginLeft: 6 }}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 12h14M12 5l7 7-7 7"
+                  />
+                </svg>
+              </InteractiveButton>
+            </div>
             <a
               href="#how-it-works"
               className="btn-outline"
@@ -461,6 +592,7 @@ export default function Hero() {
           50% { box-shadow: 0 0 0 6px rgba(34,197,94,0.08); }
         }
       `}</style>
+      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 100 }}></canvas>
     </section>
   );
 }
