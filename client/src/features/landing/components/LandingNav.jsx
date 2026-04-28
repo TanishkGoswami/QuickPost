@@ -118,17 +118,35 @@ export default function LandingNav() {
                 }}
               />
             </div>
+          <div style={{ display: "flex", flexDirection: "column", marginLeft: 2 }}>
             <span
               style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: "var(--ink)",
-                letterSpacing: "-0.03em",
-                whiteSpace: "nowrap",
+                fontSize: 10,
+                fontWeight: 800,
+                fontFamily: "var(--font-display)",
+                color: "var(--arc)",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                marginBottom: 2,
+                lineHeight: 1,
               }}
             >
-              GAP Social‑pilot
+              GAP
             </span>
+            <span
+              style={{
+                fontSize: 20,
+                fontWeight: 400,
+                color: "var(--ink)",
+                fontFamily: "var(--font-logo)",
+                letterSpacing: "normal",
+                whiteSpace: "nowrap",
+                lineHeight: 1,
+              }}
+            >
+              Social‑pilot
+            </span>
+          </div>
           </Link>
 
           {/* Desktop Navigation */}
@@ -183,7 +201,9 @@ export default function LandingNav() {
                     onClick={() => navigate("/dashboard")}
                     style={{ fontSize: 13, height: 40 }}
                   >
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 6 }}
+                    >
                       Dashboard
                       <ArrowUpRight size={14} />
                     </div>
@@ -202,7 +222,8 @@ export default function LandingNav() {
                         transition: "all 0.2s",
                       }}
                       onMouseEnter={(e) =>
-                        (e.currentTarget.style.background = "rgba(20,20,19,0.04)")
+                        (e.currentTarget.style.background =
+                          "rgba(20,20,19,0.04)")
                       }
                       onMouseLeave={(e) =>
                         (e.currentTarget.style.background = "transparent")
@@ -298,7 +319,14 @@ export default function LandingNav() {
                   }}
                   style={{ width: "100%", fontSize: 16 }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 10,
+                    }}
+                  >
                     Go to Dashboard
                     <ArrowUpRight size={18} />
                   </div>

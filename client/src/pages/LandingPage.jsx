@@ -35,23 +35,25 @@ export default function LandingPage() {
         }}
       >
         <LandingNav />
-        
+
         {/* Shared Background Container for Hero & Features */}
-        <div style={{ position: 'relative', width: '100%' }}>
-          <div style={{ 
-            position: 'absolute', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0, 
-            zIndex: 0, 
-            overflow: 'hidden', 
-            pointerEvents: 'none' 
-          }}>
+        <div style={{ position: "relative", width: "100%" }}>
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 0,
+              overflow: "hidden",
+              pointerEvents: "none",
+            }}
+          >
             <FloatingPaths position={1} />
           </div>
-          
-          <div style={{ position: 'relative', zIndex: 1 }}>
+
+          <div style={{ position: "relative", zIndex: 1 }}>
             <Hero />
             <Features />
           </div>
@@ -97,18 +99,34 @@ export default function LandingPage() {
               </div>
 
               {isAuthenticated && user && (
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 8, 
-                  padding: '6px 12px', 
-                  background: 'rgba(20,20,19,0.03)', 
-                  borderRadius: '10px',
-                  border: '1px solid rgba(20,20,19,0.05)'
-                }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />
-                  <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--slate)' }}>
-                    Logged in as: <span style={{ color: 'var(--ink)' }}>{user.email}</span>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "6px 12px",
+                    background: "rgba(20,20,19,0.03)",
+                    borderRadius: "10px",
+                    border: "1px solid rgba(20,20,19,0.05)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: "50%",
+                      background: "#22c55e",
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 500,
+                      color: "var(--slate)",
+                    }}
+                  >
+                    Logged in as:{" "}
+                    <span style={{ color: "var(--ink)" }}>{user.email}</span>
                   </span>
                 </div>
               )}

@@ -54,16 +54,23 @@ import MediaUploader from "./composer/components/MediaUploader.jsx";
 import PreviewPanel from "./composer/components/PreviewPanel.jsx";
 
 const QUICK_SUGGESTIONS = [
-  "Hell yeh !! 🔥",
-  "Excited to share this! ✨",
-  "What do you think? 💭",
-  "Check it out! 👀",
-  "Behind the scenes 🎬",
-  "New update! 🚀",
-  "Link in bio! 🔗",
-  "Weekend vibes 🌴",
-  "Stay tuned! 📢",
-  "New update! 🚀",
+  "Building something special...",
+  "Insights from the week 📈",
+  "Consistency is the key 🗝️",
+  "Quick thoughts on this 💡",
+  "Milestone reached! 🎯",
+  "Behind the strategy 🧠",
+  "Leveling up... ⚡",
+  "Fresh perspective 🌿",
+  "Daily workflow 💻",
+  "The progress is real...",
+  "Deep dive into the workflow 🛠️",
+  "Strategy of the day 📊",
+  "Beyond the surface 🌊",
+  "Crafting the future ✨",
+  "Perspective matters 👁️",
+  "Systematic growth 📈",
+  "Efficiency unlocked 🔓",
 ];
 
 const SUGGESTED_HASHTAGS = [
@@ -799,22 +806,38 @@ const CustomSelect = memo(function CustomSelect({
     left: 0,
     right: 0,
     upward: false,
+    isMobileCentered: false,
   });
 
   useEffect(() => {
     if (open && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const dropdownHeight = isCalendar ? 360 : isTime ? 400 : 240;
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const shouldOpenUp =
-        spaceBelow < dropdownHeight && rect.top > dropdownHeight;
+      const isMobile = window.innerWidth <= 768;
+      
+      if (isMobile) {
+        // On mobile, pop up in the center of the screen to avoid clipping
+        setPosition({
+          top: "50%",
+          left: "50%",
+          right: "auto",
+          upward: false,
+          isMobileCentered: true,
+        });
+      } else {
+        const rect = containerRef.current.getBoundingClientRect();
+        const dropdownHeight = isCalendar ? 360 : isTime ? 400 : 240;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        // Open upwards if there's not enough space below AND there's more space above than below
+        const shouldOpenUp = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
 
-      setPosition({
-        top: shouldOpenUp ? rect.top - 8 : rect.bottom + 8,
-        left: align === "left" ? rect.left : "auto",
-        right: align === "right" ? window.innerWidth - rect.right : "auto",
-        upward: shouldOpenUp,
-      });
+        setPosition({
+          top: shouldOpenUp ? rect.top - 8 : rect.bottom + 8,
+          left: align === "left" ? rect.left : "auto",
+          right: align === "right" ? window.innerWidth - rect.right : "auto",
+          upward: shouldOpenUp,
+          isMobileCentered: false,
+        });
+      }
     }
   }, [open, isCalendar, isTime, align]);
 
@@ -887,28 +910,48 @@ const CustomSelect = memo(function CustomSelect({
 
       {open &&
         createPortal(
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: position.upward ? 4 : -4 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: position.upward ? 4 : -4 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            onMouseDown={(e) => e.stopPropagation()}
+          <div
             style={{
               position: "fixed",
-              top: position.top,
-              left: position.left,
-              right: position.right,
+              top: position.isMobileCentered ? 0 : position.top,
+              left: position.isMobileCentered ? 0 : position.left,
+              right: position.isMobileCentered ? 0 : position.right,
+              bottom: position.isMobileCentered ? 0 : "auto",
+              display: position.isMobileCentered ? "flex" : "block",
+              alignItems: "center",
+              justifyContent: "center",
               zIndex: 9999,
-              background: "var(--white)",
-              borderRadius: "20px",
-              border: "1px solid rgba(20,20,19,0.1)",
-              boxShadow:
-                "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(20,20,19,0.02)",
-              overflow: "hidden",
-              transformOrigin: position.upward ? "bottom" : "top",
-              transform: position.upward ? "translateY(-100%)" : "none",
+              pointerEvents: position.isMobileCentered ? "auto" : "none",
+              background: position.isMobileCentered ? "rgba(0,0,0,0.4)" : "transparent",
+            }}
+            onMouseDown={(e) => {
+              if (position.isMobileCentered && e.target === e.currentTarget) {
+                setOpen(false);
+              }
             }}
           >
+            <div
+              style={{
+                transform: position.isMobileCentered ? "none" : position.upward ? "translateY(-100%)" : "none",
+                pointerEvents: "none",
+              }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: position.isMobileCentered ? 0 : position.upward ? 4 : -4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: position.isMobileCentered ? 0 : position.upward ? 4 : -4 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                onMouseDown={(e) => e.stopPropagation()}
+                style={{
+                  background: "var(--white)",
+                  borderRadius: "20px",
+                  border: "1px solid rgba(20,20,19,0.1)",
+                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(20,20,19,0.02)",
+                  overflow: "hidden",
+                  transformOrigin: position.isMobileCentered ? "center" : position.upward ? "bottom" : "top",
+                  pointerEvents: "auto",
+                }}
+              >
             {isCalendar ? (
               <CalendarView
                 value={value}
@@ -985,7 +1028,9 @@ const CustomSelect = memo(function CustomSelect({
                 })}
               </div>
             )}
-          </motion.div>,
+          </motion.div>
+            </div>
+          </div>,
           document.body,
         )}
     </div>
@@ -2798,7 +2843,7 @@ function ComposerModal({
           <div
             style={{
               borderTop: "1px solid rgba(20,20,19,0.08)",
-              padding: "14px 22px",
+              padding: isMobile ? "12px 16px" : "14px 22px",
               background: "var(--canvas-lifted,#fafaf9)",
               display: "flex",
               alignItems: "center",
@@ -2806,6 +2851,8 @@ function ComposerModal({
               flexShrink: 0,
               borderBottomLeftRadius: isMobile ? 0 : "var(--r-hero,20px)",
               borderBottomRightRadius: isMobile ? 0 : "var(--r-hero,20px)",
+              gap: isMobile ? 8 : 16,
+              flexWrap: isMobile ? "wrap" : "nowrap",
             }}
           >
             <motion.button
@@ -2828,7 +2875,7 @@ function ComposerModal({
               Cancel
             </motion.button>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 14, flexWrap: "wrap", justifyContent: "flex-end", flex: 1 }}>
               {/* Scheduled badge */}
               {isScheduled && scheduledAt && (
                 <motion.div
@@ -2842,18 +2889,30 @@ function ComposerModal({
                     alignItems: "center",
                     gap: 5,
                     background: "rgba(243,115,56,0.06)",
-                    padding: "5px 12px",
+                    padding: isMobile ? "4px 8px" : "5px 12px",
                     borderRadius: 20,
                     border: "1px solid rgba(243,115,56,0.15)",
+                    textAlign: "center",
                   }}
                 >
                   <Clock size={11} />
-                  {new Date(scheduledAt).toLocaleString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {isMobile ? (
+                    <span>
+                      {new Date(scheduledAt).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }).replace(',', '')}
+                    </span>
+                  ) : (
+                    new Date(scheduledAt).toLocaleString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  )}
                 </motion.div>
               )}
 
@@ -2871,7 +2930,7 @@ function ComposerModal({
                     gap: 4,
                   }}
                 >
-                  <AlertCircle size={11} /> Fix errors above
+                  <AlertCircle size={11} /> {isMobile ? "Fix errors" : "Fix errors above"}
                 </motion.span>
               )}
 
@@ -2922,10 +2981,10 @@ function ComposerModal({
                       : isScheduled
                         ? "linear-gradient(135deg,var(--arc,#f37338) 0%,#ff8c5a 100%)"
                         : "linear-gradient(135deg,var(--ink,#141413) 0%,#3a3a37 100%)",
-                  height: 48,
-                  minWidth: 175,
+                  height: isMobile ? 42 : 48,
+                  minWidth: isMobile ? 120 : 175,
                   borderRadius: "16px",
-                  padding: "0 28px",
+                  padding: isMobile ? "0 16px" : "0 28px",
                   display: "flex",
                   flexDirection: "row-reverse",
                   justifyContent: "center",
@@ -2941,6 +3000,8 @@ function ComposerModal({
                   fontFamily: "inherit",
                   overflow: "hidden",
                   position: "relative",
+                  width: isMobile && (hasBlockingError || isScheduled) ? "100%" : "auto", // Expand to full width if wrapped to new line on mobile
+                  marginTop: isMobile && (hasBlockingError || isScheduled) ? 4 : 0,
                 }}
               >
                 {loading ? (
@@ -2977,13 +3038,13 @@ function ComposerModal({
                         style={{ overflow: "visible" }}
                       >
                         {isScheduled ? (
-                          <Calendar size={20} strokeWidth={2.5} />
+                          <Calendar size={isMobile ? 16 : 20} strokeWidth={2.5} />
                         ) : (
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             viewBox="0 0 24 24"
-                            width={24}
-                            height={24}
+                            width={isMobile ? 18 : 24}
+                            height={isMobile ? 18 : 24}
                             fill="currentColor"
                           >
                             <path fill="none" d="M0 0h24v24H0z" />

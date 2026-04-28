@@ -123,6 +123,7 @@ class GoogleOAuthService {
             refresh_token: tokenData.refreshToken,
             token_expiry: expiryDate.toISOString(),
             username: tokenData.userInfo?.username,
+            profile_data: tokenData.userInfo,
             updated_at: new Date().toISOString(),
           },
           {

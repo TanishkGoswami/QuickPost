@@ -5,6 +5,15 @@
    Import in: client/src/index.css at the top
 ═══════════════════════════════════════════════════════════════════ */
 
+/* ── Custom Logo Font ── */
+@font-face {
+  font-family: "Geffroge Authentic";
+  src: url("/font/Geffroge Authentic-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* ── Color Primitives ── */
   --color-ink-950:  #0a0a09;
@@ -54,8 +63,9 @@
   --info-border:   rgba(0, 133, 255, 0.15);
 
   /* ── Typography ── */
-  --font-display: "Sofia Sans", "Helvetica Neue", sans-serif;
-  --font-body:    "Sofia Sans", system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Sofia Sans", "Helvetica Neue", sans-serif;
+  --font-body:    "Plus Jakarta Sans", "Sofia Sans", system-ui, sans-serif;
+  --font-logo:    "Geffroge Authentic", "Syne", "Plus Jakarta Sans", sans-serif;
   --font-mono:    "JetBrains Mono", "Fira Code", monospace;
 
   --text-2xs:  9px;

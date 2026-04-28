@@ -96,10 +96,10 @@ export default function Hero() {
 
     const rect = targetEl.getBoundingClientRect();
     const sectionRect = sectionRef.current.getBoundingClientRect();
-    
+
     // Adjust target coordinates to be relative to the section
-    const cx = (rect.left - sectionRect.left) + rect.width / 2;
-    const cy = (rect.top - sectionRect.top) + rect.height / 2;
+    const cx = rect.left - sectionRect.left + rect.width / 2;
+    const cy = rect.top - sectionRect.top + rect.height / 2;
 
     const a = Math.atan2(cy - y0, cx - x0);
     const x1 = cx - Math.cos(a) * (rect.width / 2 + 12);
@@ -111,9 +111,12 @@ export default function Hero() {
     const t = Math.max(-1, Math.min(1, (y0 - y1) / 200));
     const controlX = midX;
     const controlY = midY + offset * t;
-    
-    const r = Math.sqrt((x1 - x0)**2 + (y1 - y0)**2);
-    const opacity = Math.min(1.0, (r - Math.max(rect.width, rect.height) / 2) / 500); 
+
+    const r = Math.sqrt((x1 - x0) ** 2 + (y1 - y0) ** 2);
+    const opacity = Math.min(
+      1.0,
+      (r - Math.max(rect.width, rect.height) / 2) / 500,
+    );
 
     const arrowColor = resolvedCanvasColorsRef.current.strokeStyle;
     ctx.strokeStyle = `rgba(${arrowColor.r}, ${arrowColor.g}, ${arrowColor.b}, ${opacity})`;
@@ -130,17 +133,17 @@ export default function Hero() {
 
     // Draw arrowhead
     const angle = Math.atan2(y1 - controlY, x1 - controlX);
-    const headLength = 10 * (ctx.lineWidth / 1.5); 
+    const headLength = 10 * (ctx.lineWidth / 1.5);
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(
-        x1 - headLength * Math.cos(angle - Math.PI / 6),
-        y1 - headLength * Math.sin(angle - Math.PI / 6)
+      x1 - headLength * Math.cos(angle - Math.PI / 6),
+      y1 - headLength * Math.sin(angle - Math.PI / 6),
     );
     ctx.moveTo(x1, y1);
     ctx.lineTo(
-        x1 - headLength * Math.cos(angle + Math.PI / 6),
-        y1 - headLength * Math.sin(angle + Math.PI / 6)
+      x1 - headLength * Math.cos(angle + Math.PI / 6),
+      y1 - headLength * Math.sin(angle + Math.PI / 6),
     );
     ctx.stroke();
   }, []);
@@ -161,16 +164,20 @@ export default function Hero() {
     const handleMouseMove = (e) => {
       if (!sectionRef.current) return;
       const rect = sectionRef.current.getBoundingClientRect();
-      const isInside = 
-        e.clientX >= rect.left && 
-        e.clientX <= rect.right && 
-        e.clientY >= rect.top && 
+
+      // Stop the arrow effect if the cursor is hovering over the navbar area
+      const isOverNavbar = e.clientY < 80;
+
+      const isInside =
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
         e.clientY <= rect.bottom;
-      
-      if (isInside) {
-        mousePosRef.current = { 
-          x: e.clientX - rect.left, 
-          y: e.clientY - rect.top 
+
+      if (isInside && !isOverNavbar) {
+        mousePosRef.current = {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
         };
       } else {
         mousePosRef.current = { x: null, y: null };
@@ -188,7 +195,7 @@ export default function Hero() {
       }
       animationFrameIdRef.current = requestAnimationFrame(animateLoop);
     };
-    
+
     animateLoop();
 
     return () => {
@@ -411,7 +418,9 @@ export default function Hero() {
           >
             <div ref={targetRef}>
               <InteractiveButton
-                onClick={() => navigate(isAuthenticated ? "/dashboard" : "/login")}
+                onClick={() =>
+                  navigate(isAuthenticated ? "/dashboard" : "/login")
+                }
                 style={{ fontSize: 16 }}
               >
                 {isAuthenticated ? "Go to Dashboard" : "Start broadcasting"}
@@ -592,7 +601,15 @@ export default function Hero() {
           50% { box-shadow: 0 0 0 6px rgba(34,197,94,0.08); }
         }
       `}</style>
-      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 100 }}></canvas>
+      <canvas
+        ref={canvasRef}
+        style={{
+          position: "absolute",
+          inset: 0,
+          pointerEvents: "none",
+          zIndex: 100,
+        }}
+      ></canvas>
     </section>
   );
 }

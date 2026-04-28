@@ -153,14 +153,15 @@ const MediaCarousel = memo(function MediaCarousel({ mediaFiles, cssClass }) {
 
 /* ── Platform-specific preview shells ── */
 
-const UserAvatar = ({ user, size = 28, background = "#eee" }) => {
+const UserAvatar = ({ user, picture, size = 28, background = "#eee" }) => {
   const [imgError, setImgError] = useState(false);
+  const displayPicture = picture || user?.picture;
   const initials = user?.name ? user.name[0].toUpperCase() : "?";
 
-  // Reset error state if user or picture changes
+  // Reset error state if picture changes
   useEffect(() => {
     setImgError(false);
-  }, [user?.picture]);
+  }, [displayPicture]);
 
   return (
     <div
@@ -169,16 +170,16 @@ const UserAvatar = ({ user, size = 28, background = "#eee" }) => {
         height: size,
         borderRadius: "50%",
         flexShrink: 0,
-        background: (imgError || !user?.picture) ? "var(--ink, #141413)" : background,
+        background: (imgError || !displayPicture) ? "var(--ink, #141413)" : background,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         overflow: "hidden",
       }}
     >
-      {user?.picture && !imgError ? (
+      {displayPicture && !imgError ? (
         <img
-          src={user.picture}
+          src={displayPicture}
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
           alt=""
           onError={() => setImgError(true)}
@@ -199,7 +200,7 @@ const UserAvatar = ({ user, size = 28, background = "#eee" }) => {
 };
 
 const InstagramPreview = memo(
-  ({ caption, mediaFiles, cssClass, user, platformUsername, selectedRatio, selectedSizePreset }) => {
+  ({ caption, mediaFiles, cssClass, user, platformPicture, platformUsername, selectedRatio, selectedSizePreset }) => {
     const metrics = usePlatformMetrics(caption);
     const username =
       platformUsername ||
@@ -234,7 +235,7 @@ const InstagramPreview = memo(
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <UserAvatar user={user} size={28} />
+              <UserAvatar user={user} picture={platformPicture} size={28} />
               <span style={{ color: "white", fontSize: 12, fontWeight: 700 }}>{username}</span>
               <button style={{ border: "1px solid white", background: "none", color: "white", fontSize: 10, padding: "2px 8px", borderRadius: 4, fontWeight: 600 }}>Follow</button>
             </div>
@@ -248,7 +249,7 @@ const InstagramPreview = memo(
             <Send size={24} color="white" />
             <MoreHorizontal size={24} color="white" />
             <div style={{ width: 24, height: 24, borderRadius: 4, border: "2px solid white", overflow: "hidden" }}>
-              <UserAvatar user={user} size={24} />
+              <UserAvatar user={user} picture={platformPicture} size={24} />
             </div>
           </div>
         </div>
@@ -274,7 +275,7 @@ const InstagramPreview = memo(
           </div>
           {/* Story Header */}
           <div style={{ position: "absolute", top: 20, left: 12, display: "flex", alignItems: "center", gap: 8 }}>
-            <UserAvatar user={user} size={32} />
+            <UserAvatar user={user} picture={platformPicture} size={32} />
             <span style={{ color: "white", fontSize: 12, fontWeight: 700 }}>{username}</span>
             <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 11 }}>1h</span>
           </div>
@@ -312,6 +313,7 @@ const InstagramPreview = memo(
         >
           <UserAvatar
             user={user}
+            picture={platformPicture}
             size={28}
             background="linear-gradient(45deg,#f09433,#dc2743,#bc1888)"
           />
@@ -388,6 +390,7 @@ const YouTubePreview = memo(
     cssClass,
     user,
     thumbnailFile,
+    platformPicture,
     platformUsername,
     selectedRatio,
     selectedSizePreset,
@@ -422,7 +425,7 @@ const YouTubePreview = memo(
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <UserAvatar user={user} size={36} background="#f00" />
+              <UserAvatar user={user} picture={platformPicture} size={36} background="#f00" />
               <span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>@{username.replace(/\s+/g, "").toLowerCase()}</span>
               <button style={{ background: "white", color: "black", fontSize: 12, fontWeight: 700, padding: "6px 14px", borderRadius: 20 }}>Subscribe</button>
             </div>
@@ -436,7 +439,7 @@ const YouTubePreview = memo(
             <div style={{ textAlign: "center" }}><MessageSquare size={26} color="white" fill="white" /><span style={{ color: "white", fontSize: 11, marginTop: 4, fontWeight: 600 }}>{metrics.comments}</span></div>
             <div style={{ textAlign: "center" }}><Share2 size={26} color="white" fill="white" /><span style={{ color: "white", fontSize: 11, marginTop: 4, fontWeight: 600 }}>Share</span></div>
             <div style={{ width: 32, height: 32, borderRadius: 6, border: "2px solid white", overflow: "hidden" }}>
-               <UserAvatar user={user} size={32} />
+               <UserAvatar user={user} picture={platformPicture} size={32} />
             </div>
           </div>
         </div>
@@ -478,7 +481,7 @@ const YouTubePreview = memo(
         </div>
 
         <div style={{ display: "flex", gap: 10, padding: "10px 12px" }}>
-          <UserAvatar user={user} size={32} background="#e00" />
+          <UserAvatar user={user} picture={platformPicture} size={32} background="#e00" />
           <div style={{ flex: 1, minWidth: 0 }}>
             <p
               style={{
@@ -503,7 +506,7 @@ const YouTubePreview = memo(
 );
 
 const FacebookPreview = memo(
-  ({ caption, mediaFiles, cssClass, user, platformUsername }) => {
+  ({ caption, mediaFiles, cssClass, user, platformPicture, platformUsername }) => {
     const metrics = usePlatformMetrics(caption);
     const username = platformUsername || user?.name || "Your Account";
 
@@ -524,7 +527,7 @@ const FacebookPreview = memo(
             padding: "10px 12px",
           }}
         >
-          <UserAvatar user={user} size={36} background="#1877F2" />
+          <UserAvatar user={user} picture={platformPicture} size={36} background="#1877F2" />
           <div>
             <p
               style={{
@@ -624,7 +627,7 @@ const FacebookPreview = memo(
 );
 
 const LinkedInPreview = memo(
-  ({ caption, mediaFiles, cssClass, user, platformUsername }) => {
+  ({ caption, mediaFiles, cssClass, user, platformPicture, platformUsername }) => {
     const metrics = usePlatformMetrics(caption);
     const username = platformUsername || user?.name || "Your Name";
 
@@ -645,7 +648,7 @@ const LinkedInPreview = memo(
             alignItems: "flex-start",
           }}
         >
-          <UserAvatar user={user} size={40} background="#0A66C2" />
+          <UserAvatar user={user} picture={platformPicture} size={40} background="#0A66C2" />
           <div style={{ flex: 1 }}>
             <p
               style={{
@@ -724,7 +727,7 @@ const LinkedInPreview = memo(
 );
 
 const XPreview = memo(
-  ({ caption, mediaFiles, cssClass, user, platformUsername }) => {
+  ({ caption, mediaFiles, cssClass, user, platformPicture, platformUsername }) => {
     const metrics = usePlatformMetrics(caption);
     const username = platformUsername || user?.name || "Your Name";
     const handle = platformUsername
@@ -741,7 +744,7 @@ const XPreview = memo(
         }}
       >
         <div style={{ display: "flex", gap: 10, marginBottom: 8 }}>
-          <UserAvatar user={user} size={36} background="#333" />
+          <UserAvatar user={user} picture={platformPicture} size={36} background="#333" />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
@@ -816,7 +819,7 @@ const XPreview = memo(
 
 /* Generic fallback for Threads, Bluesky, etc. */
 const GenericPreview = memo(
-  ({ caption, mediaFiles, cssClass, user, platformId }) => {
+  ({ caption, mediaFiles, cssClass, user, platformPicture, platformId }) => {
     const meta = PLATFORM_META[platformId];
     return (
       <div
@@ -830,6 +833,7 @@ const GenericPreview = memo(
         <div style={{ display: "flex", gap: 8, padding: "10px 12px" }}>
           <UserAvatar
             user={user}
+            picture={platformPicture}
             size={28}
             background={meta?.color || "#888"}
           />
@@ -887,6 +891,7 @@ const PreviewPanel = memo(function PreviewPanel({
 
   const PreviewComponent = PREVIEW_MAP[activeId] || GenericPreview;
   const platformUsername = connectedAccounts?.[activeId]?.username || "your_account";
+  const platformPicture = connectedAccounts?.[activeId]?.profilePicture || user?.picture;
 
   return (
     <div
@@ -1028,6 +1033,7 @@ const PreviewPanel = memo(function PreviewPanel({
                 platformId={activeId}
                 thumbnailFile={activeId === "youtube" ? youtubeThumbnail : null}
                 platformUsername={platformUsername}
+                platformPicture={platformPicture}
                 selectedRatio={selectedRatio}
                 selectedSizePreset={selectedSizePreset}
               />

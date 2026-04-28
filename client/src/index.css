@@ -1,6 +1,9 @@
 @import './styles/design-tokens.css';
 
 
+
+
+
 /* [ignoring loop detection] */
 :root {
   /* Colors */
@@ -25,12 +28,18 @@
   --r-sm: 6px;
   
   /* Typography */
-  --font: "Sofia Sans", "Inter", Arial, sans-serif;
+  --font: "Plus Jakarta Sans", "Inter", Arial, sans-serif;
   --tracking-tight: -0.02em;
 }
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}
+
 body {
   background-color: var(--canvas);
   color: var(--ink);
