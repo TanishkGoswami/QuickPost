@@ -162,7 +162,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
           </button>
           <button
             onClick={handleLogout}
-            className="group flex items-center justify-start w-[36px] hover:w-[100px] h-[36px] border-none rounded-full hover:rounded-[18px] cursor-pointer relative overflow-hidden transition-all duration-300 shadow-[1px_1px_5px_rgba(0,0,0,0.08)] bg-[#ff4141] active:translate-x-[1px] active:translate-y-[1px]"
+            className="group flex items-center justify-start w-[36px] hover:w-[100px] h-[36px] border-none rounded-full hover:rounded-[18px] cursor-pointer relative overflow-hidden transition-all duration-300 shadow-[1px_1px_5px_rgba(0,0,0,0.08)] bg-[#141413] active:translate-x-[1px] active:translate-y-[1px]"
           >
             <div className="flex items-center justify-center w-full group-hover:w-[35%] transition-all duration-300 group-hover:pl-4">
               <svg viewBox="0 0 512 512" className="w-[16px] fill-white">
