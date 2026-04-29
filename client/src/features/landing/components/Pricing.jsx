@@ -7,10 +7,10 @@ import { supabase } from "../../../lib/supabase";
 
 const PLANS = [
   {
-    name: "Free",
-    id: "free",
-    price: { monthly: 0, annual: 0 },
-    description: "Perfect for getting started with basic scheduling.",
+    name: 'Free',
+    id: 'free',
+    price: { 1: 0, 3: 0, 6: 0, 12: 0 },
+    description: 'Perfect for getting started with basic scheduling.',
     icon: <Zap size={20} />,
     features: [
       "3 connected social accounts",
@@ -22,10 +22,10 @@ const PLANS = [
     highlighted: false,
   },
   {
-    name: "Pro",
-    id: "999",
-    price: { monthly: 999, annual: 799 },
-    description: "For creators who broadcast seriously.",
+    name: 'Pro',
+    id: '999',
+    price: { 1: 999, 3: 899, 6: 799, 12: 699 },
+    description: 'For creators who broadcast seriously.',
     icon: <Sparkles size={20} />,
     features: [
       "10 connected social accounts",
@@ -39,29 +39,12 @@ const PLANS = [
     highlighted: true,
     badge: "Most popular",
   },
-  {
-    name: "Enterprise",
-    id: "2999",
-    price: { monthly: 2999, annual: 2399 },
-    description: "For teams and agencies at scale.",
-    icon: <Building2 size={20} />,
-    features: [
-      "Unlimited connected accounts",
-      "Unlimited posts",
-      "Advanced analytics & exports",
-      "Team collaboration (5 seats)",
-      "Custom integrations",
-      "Dedicated account support",
-    ],
-    cta: "Start Enterprise",
-    highlighted: false,
-  },
 ];
 
 export default function Pricing() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
-  const [billing, setBilling] = useState("monthly");
+  const [billing, setBilling] = useState(1);
   const [upgrading, setUpgrading] = useState(null);
 
   const handleUpgrade = async (plan) => {
@@ -78,16 +61,14 @@ export default function Pricing() {
     try {
       setUpgrading(plan.id);
 
-      const { data, error } = await supabase.functions.invoke(
-        "create-payment-link",
-        {
-          body: {
-            planId: plan.id,
-            userId: user.userId,
-            customerName: user.name,
-            customerEmail: user.email,
-          },
-        },
+      const { data, error } = await supabase.functions.invoke('create-payment-link', {
+        body: {
+          planId: plan.id,
+          interval: billing,
+          userId: user.userId,
+          customerName: user.name,
+          customerEmail: user.email,
+        },}
       );
 
       if (error) throw error;
@@ -157,53 +138,41 @@ export default function Pricing() {
           </p>
 
           {/* Billing toggle */}
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              background: "var(--canvas-lifted)",
-              border: "1px solid rgba(20,20,19,0.08)",
-              borderRadius: "var(--r-pill)",
-              padding: 4,
-            }}
-          >
-            {["monthly", "annual"].map((b) => (
+          <div style={{
+            display: 'inline-flex', alignItems: 'center',
+            background: 'var(--canvas-lifted)',
+            border: '1px solid rgba(20,20,19,0.08)',
+            borderRadius: 'var(--r-pill)',
+            padding: 4, flexWrap: 'wrap', justifyContent: 'center', gap: 4
+          }}>
+            {[
+              { months: 1, discount: 0 },
+              { months: 3, discount: 10 },
+              { months: 6, discount: 20 },
+              { months: 12, discount: 30 },
+            ].map(({ months, discount }) => (
               <button
-                key={b}
-                onClick={() => setBilling(b)}
+                key={months}
+                onClick={() => setBilling(months)}
                 style={{
-                  padding: "7px 20px",
-                  borderRadius: "var(--r-pill)",
-                  border: "none",
-                  fontFamily: "var(--font)",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                  background: billing === b ? "var(--ink)" : "transparent",
-                  color: billing === b ? "var(--canvas)" : "var(--slate)",
-                  letterSpacing: "-0.01em",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
+                  padding: '7px 20px', borderRadius: 'var(--r-pill)', border: 'none',
+                  fontFamily: 'var(--font)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  background: billing === months ? 'var(--ink)' : 'transparent',
+                  color: billing === months ? 'var(--canvas)' : 'var(--slate)',
+                  letterSpacing: '-0.01em',
+                  display: 'flex', alignItems: 'center', gap: 6,
                 }}
               >
-                {b === "monthly" ? "Monthly" : "Annual"}
-                {b === "annual" && (
-                  <span
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      padding: "2px 6px",
-                      borderRadius: "var(--r-pill)",
-                      background:
-                        billing === "annual"
-                          ? "rgba(243,115,56,0.2)"
-                          : "rgba(243,115,56,0.12)",
-                      color: "var(--arc)",
-                    }}
-                  >
-                    −20%
+                {months} Month{months > 1 ? 's' : ''}
+                {discount > 0 && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, padding: '2px 6px',
+                    borderRadius: 'var(--r-pill)',
+                    background: billing === months ? 'rgba(243,115,56,0.2)' : 'rgba(243,115,56,0.12)',
+                    color: 'var(--arc)',
+                  }}>
+                    -{discount}%
                   </span>
                 )}
               </button>
@@ -212,14 +181,14 @@ export default function Pricing() {
         </motion.div>
 
         {/* Cards */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))",
-            gap: 20,
-            alignItems: "start",
-          }}
-        >
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
+          gap: 20,
+          alignItems: 'start',
+          maxWidth: 850,
+          margin: '0 auto',
+        }}>
           {PLANS.map((plan, i) => (
             <motion.div
               key={plan.name}
@@ -341,17 +310,9 @@ export default function Pricing() {
                     {plan.price[billing] === 0 ? "forever" : "/ mo"}
                   </span>
                 </div>
-                {billing === "annual" && plan.price.monthly > 0 && (
-                  <div
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 500,
-                      color: "var(--arc)",
-                      marginTop: 4,
-                    }}
-                  >
-                    Billed ₹{plan.price.annual * 12}/yr · Save ₹
-                    {(plan.price.monthly - plan.price.annual) * 12}
+                {billing > 1 && plan.price[1] > 0 && (
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--arc)', marginTop: 4 }}>
+                    Billed ₹{plan.price[billing] * billing} {billing === 12 ? 'yearly' : `every ${billing} months`} · Save ₹{(plan.price[1] - plan.price[billing]) * billing}
                   </div>
                 )}
               </div>

@@ -4,11 +4,18 @@ import { Check, Zap, Building2, Sparkles, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
+// Returns true if user has any paid plan (from hub or social)
+function hasPaidPlan(plan) {
+  if (!plan) return false;
+  const p = plan.toLowerCase();
+  return p !== 'free' && p !== '';
+}
+
 const PLANS = [
   {
     name: 'Free',
     id: 'free',
-    price: { monthly: 0, annual: 0 },
+    price: { 1: 0, 3: 0, 6: 0, 12: 0 },
     description: 'Perfect for getting started with basic scheduling.',
     icon: <Zap size={20} />,
     features: [
@@ -23,7 +30,7 @@ const PLANS = [
   {
     name: 'Pro',
     id: '999',
-    price: { monthly: 999, annual: 799 },
+    price: { 1: 999, 3: 899, 6: 849, 12: 799 },
     description: 'For creators who broadcast seriously across every platform.',
     icon: <Sparkles size={20} />,
     features: [
@@ -40,33 +47,37 @@ const PLANS = [
   },
   {
     name: 'Enterprise',
-    id: '2999',
-    price: { monthly: 2999, annual: 2399 },
-    description: 'For teams and agencies managing multiple brands at scale.',
+    id: 'enterprise',
+    price: { 1: 2499, 3: 2199, 6: 1999, 12: 1799 },
+    description: 'Full access for teams and power users — includes All-in-One bundle.',
     icon: <Building2 size={20} />,
     features: [
       'Unlimited connected accounts',
       'Unlimited posts',
-      'Advanced analytics & exports',
-      'Team collaboration (5 seats)',
-      'Custom integrations',
-      'Dedicated account support',
-      'Full post history',
+      'All-in-One GetAIPilot bundle',
+      'Team collaboration',
+      'Advanced analytics',
+      'Dedicated support',
     ],
     cta: 'Upgrade to Enterprise',
     highlighted: false,
   },
 ];
 
+
 export default function BillingPage() {
   const { user } = useAuth();
-  const [billing, setBilling] = useState('monthly');
+  const [billing, setBilling] = useState(1);
   const [upgrading, setUpgrading] = useState(null);
+
+  // Show exact plan name from hub (e.g. "Social Pilot", "GAP Ultimate Ecosystem")
+  const currentPlanName = user?.plan || 'Free';
+  const isPaid = hasPaidPlan(currentPlanName);
 
   React.useEffect(() => { window.scrollTo(0, 0); }, []);
 
   const handleUpgrade = async (plan) => {
-    if (plan.name === user?.plan || plan.id === 'free') {
+    if (currentPlanName === plan.name || plan.id === 'free') {
       return;
     }
 
@@ -76,6 +87,7 @@ export default function BillingPage() {
       const { data, error } = await supabase.functions.invoke('create-payment-link', {
         body: {
           planId: plan.id,
+          interval: billing,
           userId: user.userId,
           customerName: user.name,
           customerEmail: user.email,
@@ -126,13 +138,13 @@ export default function BillingPage() {
             Current Plan
           </div>
           <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--ink)' }}>
-            {user?.plan || 'Free'} Plan
+            {currentPlanName} Plan
           </div>
         </div>
-        {user?.plan !== 'Free' && (
+        {isPaid && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--slate)', background: 'var(--canvas)', padding: '8px 12px', borderRadius: 'var(--r-btn)', border: '1px solid rgba(20,20,19,0.05)' }}>
             <AlertCircle size={14} />
-            Subscription managed via Razorpay
+            Subscription managed via getaipilot.in
           </div>
         )}
       </div>
@@ -144,31 +156,36 @@ export default function BillingPage() {
           background: 'var(--canvas-lifted)',
           border: '1px solid rgba(20,20,19,0.08)',
           borderRadius: 'var(--r-pill)',
-          padding: 4, gap: 2,
+          padding: 4, gap: 4, flexWrap: 'wrap', justifyContent: 'center'
         }}>
-          {['monthly', 'annual'].map(b => (
+          {[
+            { months: 1, discount: 0 },
+            { months: 3, discount: 10 },
+            { months: 6, discount: 15 },
+            { months: 12, discount: 20 },
+          ].map(({ months, discount }) => (
             <button
-              key={b}
-              onClick={() => setBilling(b)}
+              key={months}
+              onClick={() => setBilling(months)}
               style={{
                 padding: '7px 20px', borderRadius: 'var(--r-pill)', border: 'none',
                 fontFamily: 'var(--font)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
                 transition: 'all 0.2s',
-                background: billing === b ? 'var(--ink)' : 'transparent',
-                color: billing === b ? 'var(--canvas)' : 'var(--slate)',
+                background: billing === months ? 'var(--ink)' : 'transparent',
+                color: billing === months ? 'var(--canvas)' : 'var(--slate)',
                 letterSpacing: '-0.01em',
                 display: 'flex', alignItems: 'center', gap: 6,
               }}
             >
-              {b === 'monthly' ? 'Monthly' : 'Annual'}
-              {b === 'annual' && (
+              {months} Month{months > 1 ? 's' : ''}
+              {discount > 0 && (
                 <span style={{
                   fontSize: 10, fontWeight: 700, padding: '2px 6px',
                   borderRadius: 'var(--r-pill)',
-                  background: billing === 'annual' ? 'rgba(243,115,56,0.2)' : 'rgba(243,115,56,0.12)',
+                  background: billing === months ? 'rgba(243,115,56,0.2)' : 'rgba(243,115,56,0.12)',
                   color: 'var(--arc)',
                 }}>
-                  −20%
+                  -{discount}%
                 </span>
               )}
             </button>
@@ -177,9 +194,9 @@ export default function BillingPage() {
       </div>
 
       {/* Pricing cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, alignItems: 'start' }}>
+      <div style={{ maxWidth: 850, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, alignItems: 'start' }}>
         {PLANS.map((plan, i) => {
-          const isCurrentPlan = (user?.plan || 'Free') === plan.name;
+          const isCurrentPlan = currentPlanName === plan.name;
           
           return (
             <motion.div
@@ -250,9 +267,9 @@ export default function BillingPage() {
                     {plan.price[billing] === 0 ? 'forever' : `/ mo`}
                   </span>
                 </div>
-                {billing === 'annual' && plan.price.monthly > 0 && (
+                {billing > 1 && plan.price[1] > 0 && (
                   <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--arc)', marginTop: 4 }}>
-                    Billed ₹{plan.price.annual * 12}/year · Save ₹{(plan.price.monthly - plan.price.annual) * 12}
+                    Billed ₹{plan.price[billing] * billing} {billing === 12 ? 'yearly' : `every ${billing} months`} · Save ₹{(plan.price[1] - plan.price[billing]) * billing}
                   </div>
                 )}
               </div>

@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { planId, userId, customerName, customerEmail, customerContact } = await req.json();
+    const { planId, interval = 1, userId, customerName, customerEmail, customerContact } = await req.json();
 
     if (!userId || !planId) {
       throw new Error("userId and planId are required");
@@ -27,8 +27,13 @@ Deno.serve(async (req) => {
     let amount = 0;
     let description = "";
     if (planId === "999") {
-      amount = 999 * 100; // in paise
-      description = "QuickPost Pro Plan Subscription";
+      let monthlyPrice = 999;
+      if (interval === 3) monthlyPrice = 899;
+      else if (interval === 6) monthlyPrice = 799;
+      else if (interval === 12) monthlyPrice = 699;
+      
+      amount = monthlyPrice * interval * 100; // in paise
+      description = `QuickPost Pro Plan Subscription (${interval} Month${interval > 1 ? 's' : ''})`;
     } else if (planId === "2999") {
       amount = 2999 * 100; // in paise
       description = "QuickPost Enterprise Plan Subscription";
@@ -65,6 +70,7 @@ Deno.serve(async (req) => {
         notes: {
           user_id: userId,
           plan: planId,
+          interval: interval.toString(),
         },
         callback_url: `${req.headers.get("origin") || "http://localhost:5173"}/dashboard?payment=success`,
         callback_method: "get",

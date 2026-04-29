@@ -24,6 +24,12 @@ import apiClient from "../utils/apiClient";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
 
+// User has paid access if plan is anything other than Free
+function isFree(plan) {
+  if (!plan) return true;
+  return plan.toLowerCase() === 'free';
+}
+
 /* ── tiny SVG orbital arc decoration ── */
 const OrbitalArc = () => (
   <svg
@@ -415,7 +421,7 @@ function Sidebar() {
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);
-            const isLocked = user?.plan === "Free" || !user?.plan;
+            const isLocked = isFree(user?.plan);
 
             const content = (
               <>
@@ -509,9 +515,9 @@ function Sidebar() {
             return (
               <button
                 onClick={() => {
-                  if (user?.plan === "Free" || !user?.plan) {
+                  if (isFree(user?.plan)) {
                     alert(
-                      "Please upgrade to Pro to manage your social channels.",
+                      "Please upgrade your Social Pilot plan to manage your social channels.",
                     );
                     return;
                   }
@@ -893,13 +899,13 @@ function Sidebar() {
                       padding: "2px 5px",
                       borderRadius: 4,
                       background:
-                        user.plan === "Free" ? "var(--dust)" : "var(--arc)",
-                      color: user.plan === "Free" ? "var(--slate)" : "white",
+                        isFree(user.plan) ? "var(--dust)" : "var(--arc)",
+                      color: isFree(user.plan) ? "var(--slate)" : "white",
                       textTransform: "uppercase",
                       flexShrink: 0,
                     }}
                   >
-                    {user.plan}
+                    {user.plan || 'Free'}
                   </span>
                 )}
               </div>
@@ -919,7 +925,7 @@ function Sidebar() {
         )}
 
         {/* ── Upgrade Button ── */}
-        {(user?.plan === "Free" || !user?.plan) && (
+        {isFree(user?.plan) && (
           <button
             onClick={() => navigate("/dashboard/billing")}
             style={{
@@ -942,34 +948,10 @@ function Sidebar() {
             }}
           >
             <Sparkles size={14} />
-            Upgrade to Pro
+            Upgrade to Social Pilot
           </button>
         )}
-        {user?.plan === "Pro" && (
-          <button
-            onClick={() => navigate("/dashboard/billing")}
-            style={{
-              width: "100%",
-              padding: "8px 12px",
-              borderRadius: "var(--r-btn)",
-              border: "none",
-              background: "linear-gradient(135deg, #5b47e0 0%, #8a77f5 100%)",
-              color: "var(--white)",
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer",
-              marginBottom: 8,
-              boxShadow: "0 4px 12px rgba(91,71,224,0.2)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-            }}
-          >
-            <Sparkles size={14} />
-            Upgrade to Enterprise
-          </button>
-        )}
+
       </div>
 
       {/* ── Connection Modals ── */}
