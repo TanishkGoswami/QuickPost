@@ -145,7 +145,9 @@ function Sidebar() {
     if (!confirmed) return;
     setDisconnectingPlatform(platform);
     try {
-      const response = await apiClient.delete(`/api/auth/disconnect/${platform}`);
+      const response = await apiClient.delete(
+        `/api/auth/disconnect/${platform}`,
+      );
       const data = response.data;
       if (data.success) {
         await refreshAccounts();
@@ -360,17 +362,29 @@ function Sidebar() {
           />
           <span
             style={{
-              fontSize: 18,
-              fontWeight: 800,
+              fontSize: 20,
+              fontWeight: 400,
               color: "var(--ink)",
               fontFamily: "var(--font-logo)",
-              letterSpacing: "-0.03em",
+              letterSpacing: "normal",
               lineHeight: 0.9,
-              display: 'flex',
-              flexDirection: 'column'
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--arc)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 2 }}>GAP</span>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                fontFamily: "var(--font-display)",
+                color: "var(--arc)",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                marginBottom: 2,
+              }}
+            >
+              GAP
+            </span>
             <span>Social‑pilot</span>
           </span>
         </Link>
@@ -401,7 +415,7 @@ function Sidebar() {
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);
-            const isLocked = user?.plan === 'Free' || !user?.plan;
+            const isLocked = user?.plan === "Free" || !user?.plan;
 
             const content = (
               <>
@@ -434,18 +448,28 @@ function Sidebar() {
               borderRadius: "var(--r-btn)",
               marginBottom: 2,
               background: active ? "var(--ink)" : "transparent",
-              color: active ? "var(--canvas)" : (isLocked ? "var(--dust)" : "var(--slate)"),
+              color: active
+                ? "var(--canvas)"
+                : isLocked
+                  ? "var(--dust)"
+                  : "var(--slate)",
               fontWeight: 500,
               fontSize: 14,
               textDecoration: "none",
               transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
               opacity: isLocked ? 0.6 : 1,
-              cursor: isLocked ? "not-allowed" : "pointer"
+              cursor: isLocked ? "not-allowed" : "pointer",
             };
 
             if (isLocked) {
               return (
-                <div key={to} style={style} onClick={() => alert("Please upgrade your plan to access this feature.")}>
+                <div
+                  key={to}
+                  style={style}
+                  onClick={() =>
+                    alert("Please upgrade your plan to access this feature.")
+                  }
+                >
                   {content}
                 </div>
               );
@@ -485,8 +509,10 @@ function Sidebar() {
             return (
               <button
                 onClick={() => {
-                  if (user?.plan === 'Free' || !user?.plan) {
-                    alert("Please upgrade to Pro to manage your social channels.");
+                  if (user?.plan === "Free" || !user?.plan) {
+                    alert(
+                      "Please upgrade to Pro to manage your social channels.",
+                    );
                     return;
                   }
                   setConnectedOpen(!connectedOpen);
@@ -695,7 +721,8 @@ function Sidebar() {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {connectedAccounts[platform.id]?.username || platform.name}
+                            {connectedAccounts[platform.id]?.username ||
+                              platform.name}
                           </div>
                           <div
                             style={{
@@ -809,7 +836,8 @@ function Sidebar() {
                 width: 28,
                 height: 28,
                 borderRadius: "50%",
-                background: (user.picture && !imgError) ? "transparent" : "var(--ink)",
+                background:
+                  user.picture && !imgError ? "transparent" : "var(--ink)",
                 color: "var(--canvas)",
                 display: "flex",
                 alignItems: "center",
@@ -818,15 +846,18 @@ function Sidebar() {
                 fontWeight: 700,
                 flexShrink: 0,
                 overflow: "hidden",
-                border: (user.picture && !imgError) ? "1px solid rgba(20,20,19,0.08)" : "none"
+                border:
+                  user.picture && !imgError
+                    ? "1px solid rgba(20,20,19,0.08)"
+                    : "none",
               }}
             >
               {user.picture && !imgError ? (
-                <img 
-                  src={user.picture} 
-                  alt="" 
+                <img
+                  src={user.picture}
+                  alt=""
                   onError={() => setImgError(true)}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
                 />
               ) : (
                 (user.name || user.email || "U")[0].toUpperCase()
@@ -861,7 +892,8 @@ function Sidebar() {
                       fontWeight: 800,
                       padding: "2px 5px",
                       borderRadius: 4,
-                      background: user.plan === "Free" ? "var(--dust)" : "var(--arc)",
+                      background:
+                        user.plan === "Free" ? "var(--dust)" : "var(--arc)",
                       color: user.plan === "Free" ? "var(--slate)" : "white",
                       textTransform: "uppercase",
                       flexShrink: 0,
@@ -887,50 +919,51 @@ function Sidebar() {
         )}
 
         {/* ── Upgrade Button ── */}
-        {(user?.plan === 'Free' || !user?.plan) && (
+        {(user?.plan === "Free" || !user?.plan) && (
           <button
-            onClick={() => navigate('/dashboard/billing')}
+            onClick={() => navigate("/dashboard/billing")}
             style={{
-              width: '100%',
-              padding: '8px 12px',
-              borderRadius: 'var(--r-btn)',
-              border: 'none',
-              background: 'linear-gradient(135deg, var(--arc) 0%, #ff8c42 100%)',
-              color: 'var(--white)',
+              width: "100%",
+              padding: "8px 12px",
+              borderRadius: "var(--r-btn)",
+              border: "none",
+              background:
+                "linear-gradient(135deg, var(--arc) 0%, #ff8c42 100%)",
+              color: "var(--white)",
               fontSize: 12,
               fontWeight: 700,
-              cursor: 'pointer',
+              cursor: "pointer",
               marginBottom: 8,
-              boxShadow: '0 4px 12px rgba(243,115,56,0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6
+              boxShadow: "0 4px 12px rgba(243,115,56,0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
             }}
           >
             <Sparkles size={14} />
             Upgrade to Pro
           </button>
         )}
-        {user?.plan === 'Pro' && (
+        {user?.plan === "Pro" && (
           <button
-            onClick={() => navigate('/dashboard/billing')}
+            onClick={() => navigate("/dashboard/billing")}
             style={{
-              width: '100%',
-              padding: '8px 12px',
-              borderRadius: 'var(--r-btn)',
-              border: 'none',
-              background: 'linear-gradient(135deg, #5b47e0 0%, #8a77f5 100%)',
-              color: 'var(--white)',
+              width: "100%",
+              padding: "8px 12px",
+              borderRadius: "var(--r-btn)",
+              border: "none",
+              background: "linear-gradient(135deg, #5b47e0 0%, #8a77f5 100%)",
+              color: "var(--white)",
               fontSize: 12,
               fontWeight: 700,
-              cursor: 'pointer',
+              cursor: "pointer",
               marginBottom: 8,
-              boxShadow: '0 4px 12px rgba(91,71,224,0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6
+              boxShadow: "0 4px 12px rgba(91,71,224,0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
             }}
           >
             <Sparkles size={14} />
@@ -967,7 +1000,6 @@ function Sidebar() {
             onClose={() => setShowMastodonModal(false)}
             onSuccess={refreshAccounts}
           />
-
         </>,
         document.body,
       )}
