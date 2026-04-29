@@ -4,6 +4,13 @@ import { Check, Zap, Building2, Sparkles, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 
+// Returns true if user has any paid plan (from hub or social)
+function hasPaidPlan(plan) {
+  if (!plan) return false;
+  const p = plan.toLowerCase();
+  return p !== 'free' && p !== '';
+}
+
 const PLANS = [
   {
     name: 'Free',
@@ -38,18 +45,39 @@ const PLANS = [
     highlighted: true,
     badge: 'Most popular',
   },
-
+  {
+    name: 'Enterprise',
+    id: 'enterprise',
+    price: { 1: 2499, 3: 2199, 6: 1999, 12: 1799 },
+    description: 'Full access for teams and power users — includes All-in-One bundle.',
+    icon: <Building2 size={20} />,
+    features: [
+      'Unlimited connected accounts',
+      'Unlimited posts',
+      'All-in-One GetAIPilot bundle',
+      'Team collaboration',
+      'Advanced analytics',
+      'Dedicated support',
+    ],
+    cta: 'Upgrade to Enterprise',
+    highlighted: false,
+  },
 ];
+
 
 export default function BillingPage() {
   const { user } = useAuth();
   const [billing, setBilling] = useState(1);
   const [upgrading, setUpgrading] = useState(null);
 
+  // Show exact plan name from hub (e.g. "Social Pilot", "GAP Ultimate Ecosystem")
+  const currentPlanName = user?.plan || 'Free';
+  const isPaid = hasPaidPlan(currentPlanName);
+
   React.useEffect(() => { window.scrollTo(0, 0); }, []);
 
   const handleUpgrade = async (plan) => {
-    if (plan.name === user?.plan || plan.id === 'free') {
+    if (currentPlanName === plan.name || plan.id === 'free') {
       return;
     }
 
@@ -110,13 +138,13 @@ export default function BillingPage() {
             Current Plan
           </div>
           <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--ink)' }}>
-            {user?.plan || 'Free'} Plan
+            {currentPlanName} Plan
           </div>
         </div>
-        {user?.plan !== 'Free' && (
+        {isPaid && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--slate)', background: 'var(--canvas)', padding: '8px 12px', borderRadius: 'var(--r-btn)', border: '1px solid rgba(20,20,19,0.05)' }}>
             <AlertCircle size={14} />
-            Subscription managed via Razorpay
+            Subscription managed via getaipilot.in
           </div>
         )}
       </div>
@@ -168,7 +196,7 @@ export default function BillingPage() {
       {/* Pricing cards */}
       <div style={{ maxWidth: 850, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, alignItems: 'start' }}>
         {PLANS.map((plan, i) => {
-          const isCurrentPlan = (user?.plan || 'Free') === plan.name;
+          const isCurrentPlan = currentPlanName === plan.name;
           
           return (
             <motion.div

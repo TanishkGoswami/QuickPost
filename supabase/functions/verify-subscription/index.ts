@@ -6,6 +6,10 @@ const RAZORPAY_KEY_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
+// Hub sync configuration
+const HUB_SYNC_URL    = Deno.env.get("HUB_SYNC_FUNCTION_URL"); // https://uklxlappjcuvdqjvecfh.supabase.co/functions/v1/sync-from-social
+const SOCIAL_SYNC_SECRET = Deno.env.get("SOCIAL_SYNC_SECRET");
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -40,6 +44,7 @@ Deno.serve(async (req) => {
     const status = razorpayData.status; // status can be created, partial, paid, expired, cancelled
     const userId = razorpayData.notes?.user_id;
     const planId = razorpayData.notes?.plan;
+    const amount = razorpayData.amount; // in paise
 
     // 2. Initialize Supabase client
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
@@ -57,6 +62,8 @@ Deno.serve(async (req) => {
     // 4. If paid, update user plan
     if (status === "paid" && userId && planId) {
       const planName = planId === "999" ? "Pro" : "Enterprise";
+      // Map social plan names to hub plan_ids
+      const hubPlanId = planName === "Enterprise" ? "social_pilot_pro" : "social_pilot_starter";
 
       // Update public.users (might fail if column doesn't exist)
       const { error: userUpdateError } = await supabase
@@ -77,6 +84,50 @@ Deno.serve(async (req) => {
       if (authUpdateError) {
         console.error("Auth Admin Update Error:", authUpdateError);
         throw new Error("Payment successful but failed to update user plan. Please contact support.");
+      }
+
+      // ── Get user details for hub sync ───────────────────────────────────
+      const { data: userRow } = await supabase
+        .from("users")
+        .select("email, name, google_id, profile_picture")
+        .eq("id", userId)
+        .maybeSingle();
+
+      // ── Fire-and-forget sync subscription to hub ─────────────────────────
+      if (userRow?.email && HUB_SYNC_URL && SOCIAL_SYNC_SECRET) {
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
+
+        const syncPayload = {
+          email: userRow.email,
+          name: userRow.name ?? undefined,
+          google_id: userRow.google_id ?? undefined,
+          profile_picture: userRow.profile_picture ?? undefined,
+          social_user_id: userId,
+          subscription: {
+            plan_id: hubPlanId,
+            plan_label: planName,
+            expires_at: expiresAt,
+            started_at: new Date().toISOString(),
+            transaction_id: razorpayPaymentLinkId,
+            amount_paise: amount ?? 0,
+          },
+        };
+
+        fetch(HUB_SYNC_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-sync-secret": SOCIAL_SYNC_SECRET,
+          },
+          body: JSON.stringify(syncPayload),
+        }).then(async (r) => {
+          const d = await r.json().catch(() => ({}));
+          console.log("[verify-subscription] Hub sync result:", r.status, JSON.stringify(d));
+        }).catch((e) => {
+          console.warn("[verify-subscription] Hub sync failed (non-fatal):", e.message);
+        });
+      } else {
+        console.warn("[verify-subscription] Hub sync skipped: missing config or user email");
       }
 
       return new Response(JSON.stringify({ success: true, status, plan: planName }), {
