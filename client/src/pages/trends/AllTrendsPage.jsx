@@ -754,7 +754,11 @@ export default function AllTrendsPage() {
       if (i < fm.length) combined.push(fm[i]);
     }
 
-    if (sort === "score") combined.sort((a, b) => hashScore(`${b.title}${b.source || b.subreddit || ""}`, 65, 99) - hashScore(`${a.title}${a.source || a.subreddit || ""}`, 65, 99));
+    // Note: We deliberately avoid sorting the full 'combined' array here
+    // (e.g., by hashScore) because changing the order of previously rendered
+    // items forces react-masonry-css to move elements between column divs,
+    // which unmounts and remounts them (causing the "page reload" glitch).
+    // The API already returns trending/latest items, so interleaving is enough.
 
     return combined;
   }, [newsItems, memeItems, niche, sort, savedIds]);
