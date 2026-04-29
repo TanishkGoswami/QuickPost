@@ -945,6 +945,7 @@ function Sidebar() {
             Upgrade to Pro
           </button>
         )}
+<<<<<<< Updated upstream
         {user?.plan === "Pro" && (
           <button
             onClick={() => navigate("/dashboard/billing")}
@@ -970,6 +971,9 @@ function Sidebar() {
             Upgrade to Enterprise
           </button>
         )}
+=======
+
+>>>>>>> Stashed changes
       </div>
 
       {/* ── Connection Modals ── */}
