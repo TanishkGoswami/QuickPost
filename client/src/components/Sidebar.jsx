@@ -4,14 +4,14 @@ import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
-  Settings,
-  LogOut,
   CalendarClock,
   Plus,
   Share2,
   ChevronDown,
   X,
   Flame,
+  Sparkles,
+  Lock,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
 import logo from "/logo.png";
@@ -23,6 +23,12 @@ import MastodonConnectModal from "./MastodonConnectModal";
 import apiClient from "../utils/apiClient";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+
+// User has paid access if plan is anything other than Free
+function isFree(plan) {
+  if (!plan) return true;
+  return plan.toLowerCase() === 'free';
+}
 
 /* ── tiny SVG orbital arc decoration ── */
 const OrbitalArc = () => (
@@ -58,26 +64,9 @@ function Sidebar() {
   const [showPinterestModal, setShowPinterestModal] = useState(false);
   const [showLinkedInModal, setShowLinkedInModal] = useState(false);
   const [showMastodonModal, setShowMastodonModal] = useState(false);
-  const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
   const [connectingPlatform, setConnectingPlatform] = useState(null);
   const [connectedOpen, setConnectedOpen] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
-
-  const handleLogout = async () => {
-    const confirmed = await confirm(
-      "Logout",
-      "Are you sure you want to log out?",
-      {
-        intent: "logout",
-        confirmText: "Logout",
-        cancelText: "Stay logged in",
-      },
-    );
-    if (confirmed) {
-      logout();
-      navigate("/login");
-    }
-  };
+  const [imgError, setImgError] = useState(false);
 
   const handleConnectInstagram = () => setShowBusinessSetupModal(true);
   const handleProceedToConnect = () => {
@@ -162,7 +151,9 @@ function Sidebar() {
     if (!confirmed) return;
     setDisconnectingPlatform(platform);
     try {
-      const response = await apiClient.delete(`/api/auth/disconnect/${platform}`);
+      const response = await apiClient.delete(
+        `/api/auth/disconnect/${platform}`,
+      );
       const data = response.data;
       if (data.success) {
         await refreshAccounts();
@@ -366,7 +357,7 @@ function Sidebar() {
         }}
       >
         <Link
-          to="/dashboard"
+          to="/"
           className="flex items-center gap-3"
           style={{ textDecoration: "none" }}
         >
@@ -377,14 +368,30 @@ function Sidebar() {
           />
           <span
             style={{
-              fontSize: 17,
-              fontWeight: 700,
+              fontSize: 20,
+              fontWeight: 400,
               color: "var(--ink)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1.1,
+              fontFamily: "var(--font-logo)",
+              letterSpacing: "normal",
+              lineHeight: 0.9,
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            GAP Social‑pilot
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 800,
+                fontFamily: "var(--font-display)",
+                color: "var(--arc)",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                marginBottom: 2,
+              }}
+            >
+              GAP
+            </span>
+            <span>Social‑pilot</span>
           </span>
         </Link>
       </div>
@@ -414,37 +421,10 @@ function Sidebar() {
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);
-            return (
-              <Link
-                key={to}
-                to={to}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "9px 12px",
-                  borderRadius: "var(--r-btn)",
-                  marginBottom: 2,
-                  background: active ? "var(--ink)" : "transparent",
-                  color: active ? "var(--canvas)" : "var(--slate)",
-                  fontWeight: 600,
-                  fontSize: 14,
-                  textDecoration: "none",
-                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                }}
-                onMouseEnter={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.background = "rgba(20,20,19,0.05)";
-                    e.currentTarget.style.color = "var(--ink)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "var(--slate)";
-                  }
-                }}
-              >
+            const isLocked = isFree(user?.plan);
+
+            const content = (
+              <>
                 <span
                   style={{
                     width: 28,
@@ -461,7 +441,65 @@ function Sidebar() {
                 >
                   {icon}
                 </span>
-                {label}
+                <span style={{ flex: 1 }}>{label}</span>
+                {isLocked && <Lock size={14} style={{ opacity: 0.5 }} />}
+              </>
+            );
+
+            const style = {
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "9px 12px",
+              borderRadius: "var(--r-btn)",
+              marginBottom: 2,
+              background: active ? "var(--ink)" : "transparent",
+              color: active
+                ? "var(--canvas)"
+                : isLocked
+                  ? "var(--dust)"
+                  : "var(--slate)",
+              fontWeight: 500,
+              fontSize: 14,
+              textDecoration: "none",
+              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+              opacity: isLocked ? 0.6 : 1,
+              cursor: isLocked ? "not-allowed" : "pointer",
+            };
+
+            if (isLocked) {
+              return (
+                <div
+                  key={to}
+                  style={style}
+                  onClick={() =>
+                    alert("Please upgrade your plan to access this feature.")
+                  }
+                >
+                  {content}
+                </div>
+              );
+            }
+
+            return (
+              <Link
+                key={to}
+                to={to}
+                style={style}
+                onMouseEnter={(e) => {
+                  if (!active) {
+                    e.currentTarget.style.background = "rgba(20,20,19,0.05)";
+                    e.currentTarget.style.color = "var(--ink)";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!active) {
+                    e.currentTarget.style.background = "transparent";
+                    e.currentTarget.style.color = "var(--slate)";
+                  }
+                }}
+              >
+                {content}
               </Link>
             );
           })}
@@ -476,7 +514,15 @@ function Sidebar() {
 
             return (
               <button
-                onClick={() => setConnectedOpen(!connectedOpen)}
+                onClick={() => {
+                  if (isFree(user?.plan)) {
+                    alert(
+                      "Please upgrade your Social Pilot plan to manage your social channels.",
+                    );
+                    return;
+                  }
+                  setConnectedOpen(!connectedOpen);
+                }}
                 style={{
                   width: "100%",
                   display: "flex",
@@ -556,7 +602,7 @@ function Sidebar() {
                 <motion.span
                   animate={{ marginLeft: connectedOpen ? 6 : 8 }}
                   transition={{ duration: 0.2, ease: "easeOut" }}
-                  style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}
+                  style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}
                 >
                   Connected
                 </motion.span>
@@ -673,7 +719,7 @@ function Sidebar() {
                           <div
                             style={{
                               fontSize: 13,
-                              fontWeight: 600,
+                              fontWeight: 500,
                               color: "var(--ink)",
                               lineHeight: 1.2,
                               overflow: "hidden",
@@ -681,7 +727,8 @@ function Sidebar() {
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {connectedAccounts[platform.id]?.username || platform.name}
+                            {connectedAccounts[platform.id]?.username ||
+                              platform.name}
                           </div>
                           <div
                             style={{
@@ -795,7 +842,8 @@ function Sidebar() {
                 width: 28,
                 height: 28,
                 borderRadius: "50%",
-                background: "var(--ink)",
+                background:
+                  user.picture && !imgError ? "transparent" : "var(--ink)",
                 color: "var(--canvas)",
                 display: "flex",
                 alignItems: "center",
@@ -803,9 +851,23 @@ function Sidebar() {
                 fontSize: 12,
                 fontWeight: 700,
                 flexShrink: 0,
+                overflow: "hidden",
+                border:
+                  user.picture && !imgError
+                    ? "1px solid rgba(20,20,19,0.08)"
+                    : "none",
               }}
             >
-              {(user.name || user.email || "U")[0].toUpperCase()}
+              {user.picture && !imgError ? (
+                <img
+                  src={user.picture}
+                  alt=""
+                  onError={() => setImgError(true)}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : (
+                (user.name || user.email || "U")[0].toUpperCase()
+              )}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div
@@ -813,12 +875,39 @@ function Sidebar() {
                   fontSize: 12,
                   fontWeight: 600,
                   color: "var(--ink)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
                 }}
               >
-                {user.name || "My Account"}
+                <span
+                  style={{
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  {user.name || "My Account"}
+                </span>
+                {user.plan && (
+                  <span
+                    style={{
+                      fontSize: 8,
+                      fontWeight: 800,
+                      padding: "2px 5px",
+                      borderRadius: 4,
+                      background:
+                        isFree(user.plan) ? "var(--dust)" : "var(--arc)",
+                      color: isFree(user.plan) ? "var(--slate)" : "white",
+                      textTransform: "uppercase",
+                      flexShrink: 0,
+                    }}
+                  >
+                    {user.plan || 'Free'}
+                  </span>
+                )}
               </div>
               <div
                 style={{
@@ -834,151 +923,36 @@ function Sidebar() {
             </div>
           </div>
         )}
-        <div style={{ display: "flex", gap: 4 }}>
-          <button
-            onClick={() => setShowSettings(true)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              flex: 1,
-              padding: "8px 10px",
-              borderRadius: "var(--r-btn)",
-              border: "none",
-              background: "transparent",
-              cursor: "pointer",
-              color: "var(--slate)",
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            <Settings size={14} />
-            Settings
-          </button>
-          <button
-            onClick={handleLogout}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              flex: 1,
-              padding: "8px 10px",
-              borderRadius: "var(--r-btn)",
-              border: "none",
-              background: "transparent",
-              cursor: "pointer",
-              color: "#dc2626",
-              fontSize: 12,
-              fontWeight: 600,
-            }}
-          >
-            <LogOut size={14} />
-            Logout
-          </button>
-        </div>
-      </div>
 
-      {/* ── Settings Modal Overlay ── */}
-      {showSettings &&
-        createPortal(
-          <div className="modal-overlay" onClick={() => setShowSettings(false)}>
-            <div
-              className="modal-content"
-              style={{ maxWidth: 460 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div
-                style={{
-                  padding: "24px 32px",
-                  borderBottom: "1px solid rgba(20,20,19,0.08)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <h2 style={{ fontSize: 20, fontWeight: 500 }}>Settings</h2>
-                <button
-                  onClick={() => setShowSettings(false)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  <X size={20} />
-                </button>
-              </div>
-              <div style={{ padding: "24px 32px" }}>
-                <div className="eyebrow" style={{ marginBottom: 12 }}>
-                  Connected Accounts
-                </div>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
-                >
-                  {platforms
-                    .filter((p) => p.connected)
-                    .map((p) => (
-                      <div
-                        key={p.id}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 12,
-                          padding: "12px 16px",
-                          borderRadius: "var(--r-btn)",
-                          background: "var(--canvas)",
-                          border: "1px solid rgba(20,20,19,0.08)",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 32,
-                            height: 32,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          {p.icon}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <p
-                            style={{
-                              fontSize: 14,
-                              fontWeight: 600,
-                              color: "var(--ink)",
-                              margin: 0,
-                            }}
-                          >
-                            {p.name}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleDisconnect(p.id)}
-                          disabled={disconnectingPlatform === p.id}
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 700,
-                            padding: "4px 12px",
-                            borderRadius: "var(--r-btn)",
-                            border: "1px solid #dc2626",
-                            color: "#dc2626",
-                            background: "none",
-                            cursor: "pointer",
-                          }}
-                        >
-                          {disconnectingPlatform === p.id
-                            ? "..."
-                            : "Disconnect"}
-                        </button>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            </div>
-          </div>,
-          document.body,
+        {/* ── Upgrade Button ── */}
+        {isFree(user?.plan) && (
+          <button
+            onClick={() => navigate("/dashboard/billing")}
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              borderRadius: "var(--r-btn)",
+              border: "none",
+              background:
+                "linear-gradient(135deg, var(--arc) 0%, #ff8c42 100%)",
+              color: "var(--white)",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              marginBottom: 8,
+              boxShadow: "0 4px 12px rgba(243,115,56,0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+            }}
+          >
+            <Sparkles size={14} />
+            Upgrade to Social Pilot
+          </button>
         )}
+
+      </div>
 
       {/* ── Connection Modals ── */}
       {createPortal(
@@ -1008,7 +982,6 @@ function Sidebar() {
             onClose={() => setShowMastodonModal(false)}
             onSuccess={refreshAccounts}
           />
-
         </>,
         document.body,
       )}

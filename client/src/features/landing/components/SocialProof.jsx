@@ -1,60 +1,71 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Star } from 'lucide-react';
-import MacOSDock from '../../../components/ui/MacOSDock';
+import React from "react";
+import { motion } from "framer-motion";
+import { Star, Sparkles } from "lucide-react";
+import MacOSDock from "../../../components/ui/MacOSDock";
 
 const TESTIMONIALS = [
   {
-    quote: "I used to spend 45 minutes posting to each platform individually. Now it's one click and I'm done.",
-    name: 'Sarah K.',
-    title: 'Content Creator',
-    sub: '180K followers',
-    initials: 'SK',
-    color: '#f37338',
+    quote:
+      "I used to spend 45 minutes posting to each platform individually. Now it's one click and I'm done.",
+    name: "Sarah K.",
+    title: "Content Creator",
+    sub: "180K followers",
+    initials: "SK",
+    color: "#f37338",
   },
   {
-    quote: "The scheduling is rock-solid. Posts go out at exactly the right time even across different timezones.",
-    name: 'Marcus T.',
-    title: 'Digital Marketing Lead',
-    sub: 'Agency',
-    initials: 'MT',
-    color: '#3860be',
+    quote:
+      "The scheduling is rock-solid. Posts go out at exactly the right time even across different timezones.",
+    name: "Marcus T.",
+    title: "Digital Marketing Lead",
+    sub: "Agency",
+    initials: "MT",
+    color: "#3860be",
   },
   {
-    quote: "Finally a tool that handles YouTube, Instagram, and LinkedIn without me babysitting it.",
-    name: 'Priya M.',
-    title: 'Founder & Solopreneur',
-    sub: 'B2B SaaS',
-    initials: 'PM',
-    color: '#22c55e',
+    quote:
+      "Finally a tool that handles YouTube, Instagram, and LinkedIn without me babysitting it.",
+    name: "Priya M.",
+    title: "Founder & Solopreneur",
+    sub: "B2B SaaS",
+    initials: "PM",
+    color: "#22c55e",
   },
 ];
 
 const METRICS = [
-  { value: '200+', label: 'Active creators' },
-  { value: '11+', label: 'Platforms supported' },
-  { value: '99.9%', label: 'Scheduler uptime' },
-  { value: '< 2 min', label: 'Setup time' },
+  { value: "200+", label: "Active creators" },
+  { value: "11+", label: "Platforms supported" },
+  { value: "99.9%", label: "Scheduler uptime" },
+  { value: "< 2 min", label: "Setup time" },
 ];
 
 const DOCK_APPS = [
-  { id: 'ig', name: 'Instagram', icon: '/icons/ig-instagram-icon.svg' },
-  { id: 'yt', name: 'YouTube', icon: '/icons/youtube-color-icon.svg' },
-  { id: 'x', name: 'X', icon: '/icons/x-social-media-round-icon.svg' },
-  { id: 'li', name: 'LinkedIn', icon: '/icons/linkedin-icon.svg' },
-  { id: 'fb', name: 'Facebook', icon: '/icons/facebook-round-color-icon.svg' },
-  { id: 'snap', name: 'Snapchat', icon: '/icons/snapchat-square-color-icon.svg' },
-  { id: 'google', name: 'Google', icon: '/icons/google-icon.svg' },
-  { id: 'reddit', name: 'Reddit', icon: '/icons/reddit-icon.svg' },
-  { id: 'pin', name: 'Pinterest', icon: '/icons/pinterest-round-color-icon.svg' },
-  { id: 'th', name: 'Threads', icon: '/icons/threads-icon.svg' },
-  { id: 'bs', name: 'Bluesky', icon: '/icons/bluesky-circle-color-icon.svg' },
-  { id: 'mas', name: 'Mastodon', icon: '/icons/mastodon-round-icon.svg' },
+  { id: "ig", name: "Instagram", icon: "/icons/ig-instagram-icon.svg" },
+  { id: "yt", name: "YouTube", icon: "/icons/youtube-color-icon.svg" },
+  { id: "x", name: "X", icon: "/icons/x-social-media-round-icon.svg" },
+  { id: "li", name: "LinkedIn", icon: "/icons/linkedin-icon.svg" },
+  { id: "fb", name: "Facebook", icon: "/icons/facebook-round-color-icon.svg" },
+  {
+    id: "snap",
+    name: "Snapchat",
+    icon: "/icons/snapchat-square-color-icon.svg",
+  },
+  { id: "google", name: "Google", icon: "/icons/google-icon.svg" },
+  { id: "reddit", name: "Reddit", icon: "/icons/reddit-icon.svg" },
+  {
+    id: "pin",
+    name: "Pinterest",
+    icon: "/icons/pinterest-round-color-icon.svg",
+  },
+  { id: "th", name: "Threads", icon: "/icons/threads-icon.svg" },
+  { id: "bs", name: "Bluesky", icon: "/icons/bluesky-circle-color-icon.svg" },
+  { id: "mas", name: "Mastodon", icon: "/icons/mastodon-round-icon.svg" },
 ];
 
 function StarRow() {
   return (
-    <div style={{ display: 'flex', gap: 3, marginBottom: 16 }}>
+    <div style={{ display: "flex", gap: 3, marginBottom: 16 }}>
       {[...Array(5)].map((_, i) => (
         <Star key={i} size={14} fill="#f37338" color="#f37338" />
       ))}
@@ -64,9 +75,17 @@ function StarRow() {
 
 export default function SocialProof() {
   return (
-    <section className="landing-section" style={{ padding: 'clamp(64px, 10vh, 104px) 24px', background: 'var(--canvas)' }}>
-      <div className="landing-container" style={{ maxWidth: 1400, margin: '0 auto' }}>
-
+    <section
+      className="landing-section"
+      style={{
+        padding: "clamp(64px, 10vh, 104px) 24px",
+        background: "var(--canvas)",
+      }}
+    >
+      <div
+        className="landing-container"
+        style={{ maxWidth: 1400, margin: "0 auto" }}
+      >
         {/* Metrics banner */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -74,22 +93,49 @@ export default function SocialProof() {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
           style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-            gap: 1, background: 'rgba(20,20,19,0.08)',
-            borderRadius: 'var(--r-hero)', overflow: 'hidden',
-            marginBottom: 'clamp(48px, 7vw, 72px)',
-            border: '1px solid rgba(20,20,19,0.08)',
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+            gap: 1,
+            background: "rgba(20,20,19,0.08)",
+            borderRadius: "var(--r-hero)",
+            overflow: "hidden",
+            marginBottom: "clamp(48px, 7vw, 72px)",
+            border: "1px solid rgba(20,20,19,0.08)",
           }}
         >
           {METRICS.map((m, i) => (
-            <div key={m.label} style={{
-              background: 'var(--canvas-lifted)', padding: '28px 24px',
-              textAlign: 'center',
-            }}>
-              <div style={{ fontSize: 'clamp(24px, 3.5vw, 34px)', fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.04em', lineHeight: 1 }}>
+            <div
+              key={m.label}
+              style={{
+                background: "var(--canvas-lifted)",
+                padding: "clamp(20px, 4vw, 28px) clamp(16px, 3vw, 24px)",
+                textAlign: "center",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "clamp(24px, 3.5vw, 34px)",
+                  fontWeight: 700,
+                  color: "var(--ink)",
+                  letterSpacing: "-0.04em",
+                  lineHeight: 1,
+                }}
+              >
                 {m.value}
               </div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--slate)', marginTop: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "var(--slate)",
+                  marginTop: 6,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
                 {m.label}
               </div>
             </div>
@@ -102,16 +148,23 @@ export default function SocialProof() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          style={{ textAlign: 'center', marginBottom: 'clamp(36px, 5vw, 52px)' }}
+          className="text-center mb-16"
         >
-          <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: 14 }}>From creators</div>
-          <h2 style={{ fontSize: 'clamp(26px, 4vw, 48px)', fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.035em', margin: 0, lineHeight: 1.1 }}>
-            Real results, real people
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-arc/10 text-arc text-xs font-bold uppercase tracking-wider mb-4">
+            <Sparkles size={14} />
+            <span>Success Stories</span>
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-ink mb-4 leading-tight">
+            Real results, <span className="text-arc">real people</span>
           </h2>
+          <p className="text-slate text-base md:text-lg max-w-2xl mx-auto font-medium">
+            Join the elite circle of creators who have unlocked the power of
+            multi-platform broadcasting.
+          </p>
         </motion.div>
 
         {/* Testimonial cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'clamp(14px, 2.5vw, 20px)', marginBottom: 'clamp(48px, 8vw, 80px)' }}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
           {TESTIMONIALS.map((t, i) => (
             <motion.div
               key={t.name}
@@ -119,48 +172,62 @@ export default function SocialProof() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
+              className="relative group p-8 rounded-[32px] bg-white border border-ink/5 shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden"
               style={{
-                background: 'var(--canvas-lifted)',
-                border: '1px solid rgba(20,20,19,0.07)',
-                borderRadius: 'var(--r-hero)',
-                padding: '28px',
-                position: 'relative', overflow: 'hidden',
-                transition: 'transform 0.25s, box-shadow 0.25s',
+                backdropFilter: "blur(10px)",
               }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-5px)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; }}
             >
-              {/* Accent top border */}
-              <div style={{
-                position: 'absolute', top: 0, left: 0, right: 0, height: 3,
-                background: `linear-gradient(90deg, ${t.color}, transparent)`,
-                borderRadius: 'var(--r-hero) var(--r-hero) 0 0',
-              }} />
+              {/* Background gradient hint */}
+              <div
+                className="absolute -right-4 -top-4 w-24 h-24 blur-3xl opacity-0 group-hover:opacity-20 transition-opacity duration-700"
+                style={{ background: t.color }}
+              />
 
-              {/* Stars */}
-              <StarRow />
+              {/* Top Accent */}
+              <div
+                className="absolute top-0 left-8 right-8 h-[2px] opacity-30 group-hover:opacity-100 transition-opacity duration-500"
+                style={{
+                  background: `linear-gradient(90deg, transparent, ${t.color}, transparent)`,
+                }}
+              />
 
-              {/* Big quote mark */}
-              <div style={{ fontSize: 52, fontWeight: 700, color: 'var(--arc)', lineHeight: 0.8, marginBottom: 10, fontFamily: 'Georgia, serif', opacity: 0.7 }}>"</div>
+              <div className="relative z-10">
+                <StarRow />
 
-              <p style={{ fontSize: 15, fontWeight: 450, color: 'var(--ink)', lineHeight: 1.65, margin: '0 0 24px', fontStyle: 'italic' }}>
-                {t.quote}
-              </p>
-
-              {/* Author */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 16, borderTop: '1px solid rgba(20,20,19,0.07)' }}>
-                <div style={{
-                  width: 42, height: 42, borderRadius: '50%',
-                  background: t.color, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0, color: '#fff', fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em',
-                  boxShadow: `0 4px 14px ${t.color}40`,
-                }}>
-                  {t.initials}
+                {/* Styled Quote */}
+                <div className="mb-6">
+                  <span
+                    className="text-6xl font-serif text-arc/20 absolute -top-4 -left-2 pointer-events-none"
+                    style={{ fontFamily: "Georgia, serif" }}
+                  >
+                    &ldquo;
+                  </span>
+                  <p className="text-lg font-medium text-ink/90 leading-relaxed italic relative z-10">
+                    {t.quote}
+                  </p>
                 </div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em' }}>{t.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--slate)', marginTop: 2 }}>
-                    {t.title} · <span style={{ color: 'var(--arc)', fontWeight: 600 }}>{t.sub}</span>
+
+                {/* Author Info */}
+                <div className="flex items-center gap-4 pt-6 border-t border-ink/5">
+                  <div className="relative">
+                    <div
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-sm shadow-lg transform rotate-3 group-hover:rotate-0 transition-transform duration-500"
+                      style={{
+                        background: t.color,
+                        boxShadow: `0 8px 16px ${t.color}30`,
+                      }}
+                    >
+                      {t.initials}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-ink text-sm tracking-tight">
+                      {t.name}
+                    </h4>
+                    <p className="text-xs text-slate font-semibold">
+                      {t.title} <span className="text-arc/80 mx-1">·</span>{" "}
+                      <span className="text-arc font-bold">{t.sub}</span>
+                    </p>
                   </div>
                 </div>
               </div>
@@ -174,20 +241,70 @@ export default function SocialProof() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7, ease: [0.23, 1, 0.32, 1] }}
-          style={{ textAlign: 'center', marginTop: 40 }}
+          style={{ textAlign: "center", marginTop: 40 }}
         >
-          <div className="eyebrow" style={{ justifyContent: 'center', marginBottom: 32 }}>Broadcasts to</div>
-          
-          <div style={{ padding: '20px 0', overflow: 'visible' }}>
-            <MacOSDock 
-              apps={DOCK_APPS} 
-              openApps={['ig', 'yt', 'li', 'x']}
-              onAppClick={(id) => console.log('Dock click:', id)}
-            />
+          <div
+            className="eyebrow"
+            style={{ justifyContent: "center", marginBottom: 32 }}
+          >
+            Broadcasts to
           </div>
 
+          <div
+            className="hide-scrollbar"
+            style={{
+              padding: "20px 0",
+              overflowX: "auto",
+              overflowY: "visible",
+              WebkitOverflowScrolling: "touch",
+              margin: "0 -24px",
+            }}
+          >
+            <div
+              style={{
+                minWidth: "max-content",
+                padding: "0 24px",
+                display: "flex",
+                justifyContent: "center",
+              }}
+            >
+              <MacOSDock
+                apps={DOCK_APPS}
+                openApps={["ig", "yt", "li", "x"]}
+                onAppClick={(id) => console.log("Dock click:", id)}
+              />
+            </div>
+          </div>
         </motion.div>
       </div>
+
+      <style>{`
+        .dock-scroll-container {
+          padding: 20px 24px;
+          overflow-x: auto;
+          overflow-y: visible;
+          -webkit-overflow-scrolling: touch;
+          margin: 0 -24px;
+          display: flex;
+        }
+        
+        /* On mobile, align left so the overflowing dock is properly scrollable from the start */
+        @media (max-width: 768px) {
+          .dock-scroll-container {
+            justify-content: flex-start;
+          }
+          .dock-scroll-container > div {
+            margin: 0 !important;
+          }
+          /* Add some padding at the end so scrolling feels natural */
+          .dock-scroll-container::after {
+            content: '';
+            min-width: 24px;
+            height: 1px;
+            flex-shrink: 0;
+          }
+        }
+      `}</style>
     </section>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   ArrowRight, Check,
@@ -60,12 +60,26 @@ function OnboardingShell({ children, step }) {
         justifyContent: 'space-between', padding: '40px 36px',
       }} className="hidden lg:flex">
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(243,240,238,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <img src={logo} alt="GAP Social-pilot" style={{ width: 22, height: 22, objectFit: 'contain' }} />
           </div>
-          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--canvas)', letterSpacing: '-0.02em' }}>GAP Social-pilot</span>
-        </div>
+          <span
+            style={{
+              fontSize: 15,
+              fontWeight: 800,
+              color: "var(--canvas)",
+              fontFamily: "var(--font-logo)",
+              letterSpacing: "-0.02em",
+              lineHeight: 0.9,
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+          >
+            <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--arc)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 1 }}>GAP</span>
+            <span>Social‑pilot</span>
+          </span>
+        </Link>
 
         {/* Step info */}
         {step > 0 && (
@@ -117,10 +131,10 @@ function OnboardingShell({ children, step }) {
         {step > 0 && (
           <div className="lg:hidden" style={{ padding: '16px 20px 12px', borderBottom: '1px solid rgba(20,20,19,0.08)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
                 <img src={logo} alt="" style={{ height: 24, width: 24 }} />
                 <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.01em' }}>GAP Social-pilot</span>
-              </div>
+              </Link>
               <span style={{ fontSize: 11, color: 'var(--slate)', fontWeight: 600 }}>Step {step}/3</span>
             </div>
             <div style={{ height: 3, background: 'rgba(20,20,19,0.08)', borderRadius: 999 }}>
@@ -213,7 +227,8 @@ export default function Onboarding() {
 
       <div style={{ position: 'relative', zIndex: 2, textAlign: 'center', padding: '40px 24px', maxWidth: 460 }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div
+          <Link
+            to="/"
             style={{
               width: 72,
               height: 72,
@@ -224,10 +239,11 @@ export default function Onboarding() {
               justifyContent: 'center',
               margin: '0 auto 16px',
               boxShadow: '0 12px 40px rgba(20,20,19,0.18)',
+              textDecoration: 'none'
             }}
           >
             <img src={logo} alt="GAP Social-pilot" style={{ width: 44, height: 44, objectFit: 'contain' }} />
-          </div>
+          </Link>
           <h1
             style={{
               fontSize: 'clamp(32px, 8vw, 40px)',

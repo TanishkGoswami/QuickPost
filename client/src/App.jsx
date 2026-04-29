@@ -31,6 +31,8 @@ const History        = lazy(() => import('./pages/History'));
 const ScheduledQueue = lazy(() => import('./pages/ScheduledQueue'));
 const AllTrendsPage  = lazy(() => import('./pages/trends/AllTrendsPage'));
 const Onboarding     = lazy(() => import('./components/Onboarding'));
+const BillingPage    = lazy(() => import('./pages/BillingPage'));
+const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
 
 // ── Page loader ──
 const PageLoader = () => (
@@ -91,6 +93,8 @@ function AppContent() {
         <Route path="history"  element={<History />} />
         <Route path="queue"    element={<ScheduledQueue />} />
         <Route path="trends"   element={<AllTrendsPage />} />
+        <Route path="billing"  element={<BillingPage />} />
+        <Route path="payment-success" element={<PaymentSuccessPage />} />
       </Route>
 
       // 404

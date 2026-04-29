@@ -10,16 +10,16 @@ import React, { useEffect } from 'react';
  */
 const ContentProtection = () => {
   useEffect(() => {
-    const handleContextMenu = (e) => {
-      // Allow context menu only on inputs and textareas
-      const isInput = e.target.tagName === 'INPUT' || 
-                     e.target.tagName === 'TEXTAREA' || 
-                     e.target.isContentEditable;
-      if (!isInput) {
-        e.preventDefault();
-      }
-    };
 
+    // const handleContextMenu = (e) => {
+    //   // Allow context menu only on inputs and textareas
+    //   const isInput = e.target.tagName === 'INPUT' || 
+    //                  e.target.tagName === 'TEXTAREA' || 
+    //                  e.target.isContentEditable;
+    //   if (!isInput) {
+    //     e.preventDefault();
+    //   }
+    // };
     const handleKeyDown = (e) => {
       // Detect specific key combinations
       const isCtrl = e.ctrlKey || e.metaKey; // Meta for Mac
@@ -45,7 +45,7 @@ const ContentProtection = () => {
     };
 
     // Attach listeners
-    document.addEventListener('contextmenu', handleContextMenu);
+    //  document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('dragstart', handleDragStart);
 
@@ -94,7 +94,7 @@ const ContentProtection = () => {
 
     return () => {
       // Cleanup
-      document.removeEventListener('contextmenu', handleContextMenu);
+      // document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('dragstart', handleDragStart);
       const injectedStyle = document.getElementById('content-protection-styles');

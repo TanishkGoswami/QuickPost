@@ -25,6 +25,51 @@ if (!process.env.SUPABASE_SERVICE_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY)
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Hub Sync Helper
+// Syncs this user to getaipilot.in (hub) database — fire-and-forget.
+// Called after every createOrUpdateUser() success.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * @param {object} opts
+ * @param {string} opts.email
+ * @param {string} [opts.name]
+ * @param {string} [opts.google_id]   numeric Google ID string
+ * @param {string} [opts.profile_picture]
+ * @param {string} opts.social_user_id  UUID from social DB
+ * @param {object} [opts.subscription]
+ */
+async function syncUserToHub(opts) {
+  const hubFnUrl    = process.env.HUB_SYNC_FUNCTION_URL;  // e.g. https://uklxlappjcuvdqjvecfh.supabase.co/functions/v1/sync-from-social
+  const syncSecret  = process.env.SOCIAL_SYNC_SECRET;
+
+  if (!hubFnUrl || !syncSecret) {
+    // Not configured — skip silently in dev
+    return;
+  }
+
+  try {
+    const res = await fetch(hubFnUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-sync-secret': syncSecret,
+      },
+      body: JSON.stringify(opts),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      console.log(`✅ [HUB-SYNC] User synced to hub: ${opts.email} → hub_user_id=${data.hub_user_id}`);
+    } else {
+      console.warn(`⚠️ [HUB-SYNC] Sync returned ${res.status}:`, data);
+    }
+  } catch (err) {
+    console.warn('⚠️ [HUB-SYNC] Fire-and-forget sync failed (non-fatal):', err.message);
+  }
+}
+
 /**
  * Fetch social media tokens for a user (all providers)
  * @param {string} userId
@@ -255,6 +300,7 @@ export async function createOrUpdateUser(email, name, externalId = null, profile
       .single();
 
     if (error) throw error;
+
     return data;
   } catch (err) {
     console.error('💥 [SUPABASE] createOrUpdateUser error:', err?.message || err);
@@ -287,6 +333,22 @@ export async function getConnectedAccounts(userId) {
 
     for (const row of data || []) {
       const providerKey = row.provider === 'google-business' ? 'googleBusiness' : row.provider;
+      
+      // Extract profile picture from profile_data
+      let profilePicture = null;
+      if (row.profile_data) {
+        const pd = row.profile_data;
+        profilePicture = 
+          pd.picture?.data?.url || // Facebook format
+          pd.profile_picture_url || // Instagram format
+          pd.threads_profile_picture_url || // Threads format
+          pd.picture || // LinkedIn/Google format
+          pd.profilePicture || 
+          pd.profileImage || 
+          pd.avatar_url ||
+          pd.profile_image_url;
+      }
+
       result[providerKey] = {
         connected: true,
         updated_at: row.updated_at,
@@ -296,7 +358,8 @@ export async function getConnectedAccounts(userId) {
         account_id: row.account_id || null,
         bluesky_did: row.bluesky_did || null,
         bluesky_handle: row.bluesky_handle || null,
-        username: row.username || null
+        username: row.username || null,
+        profilePicture: profilePicture
       };
     }
 

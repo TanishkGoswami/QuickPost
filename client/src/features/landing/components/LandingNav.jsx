@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, X } from "lucide-react";
+import { Menu, X, ArrowUpRight } from "lucide-react";
 import {
   motion,
   AnimatePresence,
@@ -9,9 +9,11 @@ import {
 } from "framer-motion";
 import logo from "/logo.png";
 import InteractiveButton from "../../../components/ui/InteractiveButton.jsx";
+import { useAuth } from "../../../context/AuthContext";
 
 export default function LandingNav() {
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const { scrollY } = useScroll();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -51,10 +53,14 @@ export default function LandingNav() {
       >
         <motion.div
           animate={{
-            backgroundColor: scrolled ? "rgba(255, 255, 255, 0.8)" : "rgba(255, 255, 255, 0.4)",
+            backgroundColor: scrolled
+              ? "rgba(255, 255, 255, 0.8)"
+              : "rgba(255, 255, 255, 0.4)",
             backdropFilter: "blur(12px)",
             WebkitBackdropFilter: "blur(12px)",
-            boxShadow: scrolled ? "0 4px 24px -1px rgba(0, 0, 0, 0.05), 0 0 1px 0 rgba(0, 0, 0, 0.1)" : "0 0 0 rgba(0,0,0,0)",
+            boxShadow: scrolled
+              ? "0 4px 24px -1px rgba(0, 0, 0, 0.05), 0 0 1px 0 rgba(0, 0, 0, 0.1)"
+              : "0 0 0 rgba(0,0,0,0)",
             marginTop: scrolled ? 12 : 16,
             borderRadius: scrolled ? "24px" : "20px",
             border: scrolled ? "1px solid rgba(255, 255, 255, 0.5)" : "none",
@@ -83,46 +89,76 @@ export default function LandingNav() {
             onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
             onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
           >
-            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+            <div
+              style={{
+                position: "relative",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
               <img
                 src={logo}
                 alt="Logo"
-                style={{ height: 32, width: 32, objectFit: "contain", position: "relative", zIndex: 2 }}
+                style={{
+                  height: 32,
+                  width: 32,
+                  objectFit: "contain",
+                  position: "relative",
+                  zIndex: 2,
+                }}
               />
-              <div 
-                style={{ 
-                  position: "absolute", 
-                  inset: -4, 
-                  background: "var(--arc)", 
-                  borderRadius: "50%", 
-                  filter: "blur(8px)", 
-                  opacity: 0.2 
-                }} 
+              <div
+                style={{
+                  position: "absolute",
+                  inset: -4,
+                  background: "var(--arc)",
+                  borderRadius: "50%",
+                  filter: "blur(8px)",
+                  opacity: 0.2,
+                }}
               />
             </div>
+          <div style={{ display: "flex", flexDirection: "column", marginLeft: 2 }}>
             <span
               style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: "var(--ink)",
-                letterSpacing: "-0.03em",
-                whiteSpace: "nowrap",
+                fontSize: 10,
+                fontWeight: 800,
+                fontFamily: "var(--font-display)",
+                color: "var(--arc)",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                marginBottom: 2,
+                lineHeight: 1,
               }}
             >
-              GAP Social‑pilot
+              GAP
             </span>
+            <span
+              style={{
+                fontSize: 20,
+                fontWeight: 400,
+                color: "var(--ink)",
+                fontFamily: "var(--font-logo)",
+                letterSpacing: "normal",
+                whiteSpace: "nowrap",
+                lineHeight: 1,
+              }}
+            >
+              Social‑pilot
+            </span>
+          </div>
           </Link>
 
           {/* Desktop Navigation */}
           {!isMobile && (
-            <div 
-              style={{ 
-                display: "flex", 
-                alignItems: "center", 
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
                 background: "rgba(20,20,19,0.03)",
                 padding: "4px",
                 borderRadius: "14px",
-                gap: 4
+                gap: 4,
               }}
             >
               {navLinks.map((link) => (
@@ -141,7 +177,8 @@ export default function LandingNav() {
                   onMouseEnter={(e) => {
                     e.currentTarget.style.color = "var(--ink)";
                     e.currentTarget.style.background = "rgba(255,255,255,0.8)";
-                    e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)";
+                    e.currentTarget.style.boxShadow =
+                      "0 2px 8px rgba(0,0,0,0.04)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.color = "var(--slate)";
@@ -159,28 +196,49 @@ export default function LandingNav() {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {!isMobile && (
               <>
-                <Link
-                  to="/login"
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: "var(--ink)",
-                    textDecoration: "none",
-                    padding: "10px 20px",
-                    borderRadius: "12px",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(20,20,19,0.04)")}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                >
-                  Sign in
-                </Link>
-                <InteractiveButton
-                  onClick={() => navigate("/login")}
-                  style={{ fontSize: 13, height: 40 }}
-                >
-                  Get started
-                </InteractiveButton>
+                {isAuthenticated ? (
+                  <InteractiveButton
+                    onClick={() => navigate("/dashboard")}
+                    style={{ fontSize: 13, height: 40 }}
+                  >
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 6 }}
+                    >
+                      Dashboard
+                      <ArrowUpRight size={14} />
+                    </div>
+                  </InteractiveButton>
+                ) : (
+                  <>
+                    <Link
+                      to="/login"
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 600,
+                        color: "var(--ink)",
+                        textDecoration: "none",
+                        padding: "10px 20px",
+                        borderRadius: "12px",
+                        transition: "all 0.2s",
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background =
+                          "rgba(20,20,19,0.04)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background = "transparent")
+                      }
+                    >
+                      Sign in
+                    </Link>
+                    <InteractiveButton
+                      onClick={() => navigate("/login")}
+                      style={{ fontSize: 13, height: 40 }}
+                    >
+                      Get started
+                    </InteractiveButton>
+                  </>
+                )}
               </>
             )}
 
@@ -253,33 +311,57 @@ export default function LandingNav() {
               ))}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  navigate("/login");
-                }}
-                style={{
-                  width: "100%",
-                  padding: "16px",
-                  borderRadius: "16px",
-                  background: "rgba(20,20,19,0.04)",
-                  border: "none",
-                  fontSize: 16,
-                  fontWeight: 600,
-                  color: "var(--ink)",
-                }}
-              >
-                Sign in
-              </button>
-              <InteractiveButton
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  navigate("/login");
-                }}
-                style={{ width: "100%", fontSize: 16 }}
-              >
-                Get started — Free
-              </InteractiveButton>
+              {isAuthenticated ? (
+                <InteractiveButton
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate("/dashboard");
+                  }}
+                  style={{ width: "100%", fontSize: 16 }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 10,
+                    }}
+                  >
+                    Go to Dashboard
+                    <ArrowUpRight size={18} />
+                  </div>
+                </InteractiveButton>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      navigate("/login");
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "16px",
+                      borderRadius: "16px",
+                      background: "rgba(20,20,19,0.04)",
+                      border: "none",
+                      fontSize: 16,
+                      fontWeight: 600,
+                      color: "var(--ink)",
+                    }}
+                  >
+                    Sign in
+                  </button>
+                  <InteractiveButton
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      navigate("/login");
+                    }}
+                    style={{ width: "100%", fontSize: 16 }}
+                  >
+                    Get started — Free
+                  </InteractiveButton>
+                </>
+              )}
             </div>
           </motion.div>
         )}

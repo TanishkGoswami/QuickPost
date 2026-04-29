@@ -13,6 +13,9 @@ import {
   Loader2,
   Sparkles,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
   AtSign,
   Calendar,
   Clock,
@@ -23,10 +26,13 @@ import {
   Smartphone,
   Square,
   RectangleVertical,
+  Lock,
+  Upload,
 } from "lucide-react";
 import { Reorder } from "framer-motion";
 
 import apiClient from "../utils/apiClient";
+import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
 import { useUploadJobs } from "../context/UploadJobContext";
 import { useDialog } from "../context/DialogContext";
@@ -48,16 +54,23 @@ import MediaUploader from "./composer/components/MediaUploader.jsx";
 import PreviewPanel from "./composer/components/PreviewPanel.jsx";
 
 const QUICK_SUGGESTIONS = [
-  "Hell yeh !! 🔥",
-  "Excited to share this! ✨",
-  "What do you think? 💭",
-  "Check it out! 👀",
-  "Behind the scenes 🎬",
-  "New update! 🚀",
-  "Link in bio! 🔗",
-  "Weekend vibes 🌴",
-  "Stay tuned! 📢",
-  "New update! 🚀",
+  "Building something special...",
+  "Insights from the week 📈",
+  "Consistency is the key 🗝️",
+  "Quick thoughts on this 💡",
+  "Milestone reached! 🎯",
+  "Behind the strategy 🧠",
+  "Leveling up... ⚡",
+  "Fresh perspective 🌿",
+  "Daily workflow 💻",
+  "The progress is real...",
+  "Deep dive into the workflow 🛠️",
+  "Strategy of the day 📊",
+  "Beyond the surface 🌊",
+  "Crafting the future ✨",
+  "Perspective matters 👁️",
+  "Systematic growth 📈",
+  "Efficiency unlocked 🔓",
 ];
 
 const SUGGESTED_HASHTAGS = [
@@ -89,36 +102,59 @@ const ClockView = memo(function ClockView({ value, onChange, minTime }) {
     setMeridiem(h >= 12 ? "PM" : "AM");
   }, [value]);
 
-  const [minH, minM] = useMemo(() => 
-    minTime ? minTime.split(":").map(Number) : [null, null], 
-  [minTime]);
+  const [minH, minM] = useMemo(
+    () => (minTime ? minTime.split(":").map(Number) : [null, null]),
+    [minTime],
+  );
 
-  const isPastH = useCallback((h12, mer) => {
-    if (minH === null) return false;
-    const h24 = (mer === "PM" ? (h12 % 12) + 12 : h12 % 12);
-    return h24 < minH;
-  }, [minH]);
+  const isPastH = useCallback(
+    (h12, mer) => {
+      if (minH === null) return false;
+      const h24 = mer === "PM" ? (h12 % 12) + 12 : h12 % 12;
+      return h24 < minH;
+    },
+    [minH],
+  );
 
-  const isPastM = useCallback((h12, m, mer) => {
-    if (minH === null) return false;
-    const h24 = (mer === "PM" ? (h12 % 12) + 12 : h12 % 12);
-    if (h24 < minH) return true;
-    if (h24 === minH && m < minM) return true;
-    return false;
-  }, [minH, minM]);
+  const isPastM = useCallback(
+    (h12, m, mer) => {
+      if (minH === null) return false;
+      const h24 = mer === "PM" ? (h12 % 12) + 12 : h12 % 12;
+      if (h24 < minH) return true;
+      if (h24 === minH && m < minM) return true;
+      return false;
+    },
+    [minH, minM],
+  );
 
   const hours = [
-    { v: 12, x: 0, y: -84 }, { v: 1, x: 42, y: -73 }, { v: 2, x: 73, y: -42 },
-    { v: 3, x: 84, y: 0 }, { v: 4, x: 73, y: 42 }, { v: 5, x: 42, y: 73 },
-    { v: 6, x: 0, y: 84 }, { v: 7, x: -42, y: 73 }, { v: 8, x: -73, y: 42 },
-    { v: 9, x: -84, y: 0 }, { v: 10, x: -73, y: -42 }, { v: 11, x: -42, y: -73 }
+    { v: 12, x: 0, y: -84 },
+    { v: 1, x: 42, y: -73 },
+    { v: 2, x: 73, y: -42 },
+    { v: 3, x: 84, y: 0 },
+    { v: 4, x: 73, y: 42 },
+    { v: 5, x: 42, y: 73 },
+    { v: 6, x: 0, y: 84 },
+    { v: 7, x: -42, y: 73 },
+    { v: 8, x: -73, y: 42 },
+    { v: 9, x: -84, y: 0 },
+    { v: 10, x: -73, y: -42 },
+    { v: 11, x: -42, y: -73 },
   ];
 
   const minutes = [
-    { v: 0, x: 0, y: -84 }, { v: 5, x: 42, y: -73 }, { v: 10, x: 73, y: -42 },
-    { v: 15, x: 84, y: 0 }, { v: 20, x: 73, y: 42 }, { v: 25, x: 42, y: 73 },
-    { v: 30, x: 0, y: 84 }, { v: 35, x: -42, y: 73 }, { v: 40, x: -73, y: 42 },
-    { v: 45, x: -84, y: 0 }, { v: 50, x: -73, y: -42 }, { v: 55, x: -42, y: -73 }
+    { v: 0, x: 0, y: -84 },
+    { v: 5, x: 42, y: -73 },
+    { v: 10, x: 73, y: -42 },
+    { v: 15, x: 84, y: 0 },
+    { v: 20, x: 73, y: 42 },
+    { v: 25, x: 42, y: 73 },
+    { v: 30, x: 0, y: 84 },
+    { v: 35, x: -42, y: 73 },
+    { v: 40, x: -73, y: 42 },
+    { v: 45, x: -84, y: 0 },
+    { v: 50, x: -73, y: -42 },
+    { v: 55, x: -42, y: -73 },
   ];
 
   const to24h = (h, m, ampm) => {
@@ -209,39 +245,45 @@ const ClockView = memo(function ClockView({ value, onChange, minTime }) {
   const getAngle = () => {
     if (mode === "hours") {
       const h = hour % 12;
-      return (h * 30);
+      return h * 30;
     } else {
-      return (minute * 6);
+      return minute * 6;
     }
   };
 
   return (
-    <div style={{ 
-      width: 270, 
-      padding: "20px 14px", 
-      display: "flex", 
-      flexDirection: "column", 
-      alignItems: "center", 
-      userSelect: "none",
-      background: "var(--white)",
-    }}>
-      {/* Header with Time Display & AM/PM */}
-      <div style={{ 
-        display: "flex", 
+    <div
+      style={{
+        width: 270,
+        padding: "20px 14px",
+        display: "flex",
+        flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
-        gap: 12, 
-        marginBottom: 20,
-        width: "100%"
-      }}>
-        <div style={{ 
-          display: "flex", 
+        userSelect: "none",
+        background: "var(--white)",
+      }}
+    >
+      {/* Header with Time Display & AM/PM */}
+      <div
+        style={{
+          display: "flex",
           alignItems: "center",
-          gap: 6, 
-          padding: "5px",
-          background: "rgba(20,20,19,0.04)",
-          borderRadius: "12px",
-        }}>
+          justifyContent: "center",
+          gap: 12,
+          marginBottom: 20,
+          width: "100%",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "5px",
+            background: "rgba(20,20,19,0.04)",
+            borderRadius: "12px",
+          }}
+        >
           <button
             onClick={() => setMode("hours")}
             style={{
@@ -252,10 +294,13 @@ const ClockView = memo(function ClockView({ value, onChange, minTime }) {
               fontWeight: 800,
               border: "none",
               background: mode === "hours" ? "var(--white)" : "transparent",
-              color: isCurrentSelectionPast 
-                ? "#ef4444" 
-                : mode === "hours" ? "var(--arc)" : "var(--slate)",
-              boxShadow: mode === "hours" ? "0 4px 10px rgba(0,0,0,0.06)" : "none",
+              color: isCurrentSelectionPast
+                ? "#ef4444"
+                : mode === "hours"
+                  ? "var(--arc)"
+                  : "var(--slate)",
+              boxShadow:
+                mode === "hours" ? "0 4px 10px rgba(0,0,0,0.06)" : "none",
               cursor: "pointer",
               transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
               fontFamily: "var(--font)",
@@ -263,7 +308,16 @@ const ClockView = memo(function ClockView({ value, onChange, minTime }) {
           >
             {String(hour).padStart(2, "0")}
           </button>
-          <span style={{ fontSize: 20, fontWeight: 800, color: "var(--slate)", opacity: 0.3 }}>:</span>
+          <span
+            style={{
+              fontSize: 20,
+              fontWeight: 800,
+              color: "var(--slate)",
+              opacity: 0.3,
+            }}
+          >
+            :
+          </span>
           <button
             onClick={() => setMode("minutes")}
             style={{
@@ -274,10 +328,13 @@ const ClockView = memo(function ClockView({ value, onChange, minTime }) {
               fontWeight: 800,
               border: "none",
               background: mode === "minutes" ? "var(--white)" : "transparent",
-              color: isCurrentSelectionPast 
-                ? "#ef4444" 
-                : mode === "minutes" ? "var(--arc)" : "var(--slate)",
-              boxShadow: mode === "minutes" ? "0 4px 10px rgba(0,0,0,0.06)" : "none",
+              color: isCurrentSelectionPast
+                ? "#ef4444"
+                : mode === "minutes"
+                  ? "var(--arc)"
+                  : "var(--slate)",
+              boxShadow:
+                mode === "minutes" ? "0 4px 10px rgba(0,0,0,0.06)" : "none",
               cursor: "pointer",
               transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
               fontFamily: "var(--font)",
@@ -287,14 +344,16 @@ const ClockView = memo(function ClockView({ value, onChange, minTime }) {
           </button>
         </div>
 
-        <div style={{ 
-          display: "flex", 
-          flexDirection: "column",
-          gap: 4, 
-          background: "rgba(20,20,19,0.04)", 
-          padding: "4px", 
-          borderRadius: "10px",
-        }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            background: "rgba(20,20,19,0.04)",
+            padding: "4px",
+            borderRadius: "10px",
+          }}
+        >
           {["AM", "PM"].map((m) => (
             <button
               key={m}
@@ -310,7 +369,8 @@ const ClockView = memo(function ClockView({ value, onChange, minTime }) {
                 border: "none",
                 background: meridiem === m ? "var(--white)" : "transparent",
                 color: meridiem === m ? "var(--arc)" : "var(--slate)",
-                boxShadow: meridiem === m ? "0 2px 5px rgba(0,0,0,0.05)" : "none",
+                boxShadow:
+                  meridiem === m ? "0 2px 5px rgba(0,0,0,0.05)" : "none",
                 cursor: "pointer",
                 transition: "all 0.2s",
                 fontFamily: "var(--font)",
@@ -324,15 +384,17 @@ const ClockView = memo(function ClockView({ value, onChange, minTime }) {
       </div>
 
       {isCurrentSelectionPast && (
-        <p style={{ 
-          fontSize: 10, 
-          color: "#ef4444", 
-          fontWeight: 700, 
-          marginTop: -10, 
-          marginBottom: 10,
-          textTransform: "uppercase",
-          letterSpacing: "0.05em"
-        }}>
+        <p
+          style={{
+            fontSize: 10,
+            color: "#ef4444",
+            fontWeight: 700,
+            marginTop: -10,
+            marginBottom: 10,
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+          }}
+        >
           Past time selected
         </p>
       )}
@@ -346,27 +408,47 @@ const ClockView = memo(function ClockView({ value, onChange, minTime }) {
         }}
         onTouchStart={(e) => {
           setIsDragging(true);
-          if (e.touches[0]) calculateValueFromCoords(e.touches[0].clientX, e.touches[0].clientY);
+          if (e.touches[0])
+            calculateValueFromCoords(
+              e.touches[0].clientX,
+              e.touches[0].clientY,
+            );
         }}
-        style={{ 
-          position: "relative", 
-          width: 190, 
-          height: 190, 
-          background: "var(--canvas)", 
-          borderRadius: "50%", 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "center", 
-          marginBottom: 16, 
+        style={{
+          position: "relative",
+          width: 190,
+          height: 190,
+          background: "var(--canvas)",
+          borderRadius: "50%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 16,
           cursor: "crosshair",
           boxShadow: "inset 0 2px 10px rgba(0,0,0,0.05)",
         }}
       >
-        <div style={{ position: "absolute", left: "50%", top: "50%", width: 6, height: 6, margin: -3, background: isCurrentSelectionPast ? "#ef4444" : "var(--arc)", borderRadius: "50%", zIndex: 10 }} />
+        <div
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            width: 6,
+            height: 6,
+            margin: -3,
+            background: isCurrentSelectionPast ? "#ef4444" : "var(--arc)",
+            borderRadius: "50%",
+            zIndex: 10,
+          }}
+        />
 
         <motion.div
           animate={{ rotate: getAngle() }}
-          transition={isDragging ? { type: "just" } : { type: "spring", stiffness: 300, damping: 30 }}
+          transition={
+            isDragging
+              ? { type: "just" }
+              : { type: "spring", stiffness: 300, damping: 30 }
+          }
           style={{
             position: "absolute",
             left: "50%",
@@ -380,8 +462,32 @@ const ClockView = memo(function ClockView({ value, onChange, minTime }) {
             borderRadius: "4px",
           }}
         >
-          <div style={{ position: "absolute", top: 0, left: "50%", width: 28, height: 28, margin: "-14px", background: isCurrentSelectionPast ? "#ef4444" : "var(--arc)", borderRadius: "50%", opacity: 0.15 }} />
-          <div style={{ position: "absolute", top: 0, left: "50%", width: 8, height: 8, margin: "-4px", background: isCurrentSelectionPast ? "#ef4444" : "var(--arc)", borderRadius: "50%", border: "2px solid var(--white)" }} />
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: "50%",
+              width: 28,
+              height: 28,
+              margin: "-14px",
+              background: isCurrentSelectionPast ? "#ef4444" : "var(--arc)",
+              borderRadius: "50%",
+              opacity: 0.15,
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              left: "50%",
+              width: 8,
+              height: 8,
+              margin: "-4px",
+              background: isCurrentSelectionPast ? "#ef4444" : "var(--arc)",
+              borderRadius: "50%",
+              border: "2px solid var(--white)",
+            }}
+          />
         </motion.div>
 
         <AnimatePresence mode="wait">
@@ -395,8 +501,11 @@ const ClockView = memo(function ClockView({ value, onChange, minTime }) {
           >
             {currentList.map((item) => {
               const isSelected = item.v === currentVal;
-              const disabled = mode === "hours" ? isPastH(item.v, meridiem) : isPastM(hour, item.v, meridiem);
-              
+              const disabled =
+                mode === "hours"
+                  ? isPastH(item.v, meridiem)
+                  : isPastM(hour, item.v, meridiem);
+
               // Scale coordinates for smaller face
               const scale = 190 / 210;
               const sx = item.x * scale;
@@ -416,7 +525,11 @@ const ClockView = memo(function ClockView({ value, onChange, minTime }) {
                     alignItems: "center",
                     justifyContent: "center",
                     borderRadius: "50%",
-                    background: isSelected ? (isCurrentSelectionPast ? "#ef4444" : "var(--arc)") : "transparent",
+                    background: isSelected
+                      ? isCurrentSelectionPast
+                        ? "#ef4444"
+                        : "var(--arc)"
+                      : "transparent",
                     color: isSelected ? "var(--white)" : "var(--ink)",
                     fontSize: 12,
                     fontWeight: isSelected ? 800 : 600,
@@ -434,8 +547,22 @@ const ClockView = memo(function ClockView({ value, onChange, minTime }) {
         </AnimatePresence>
       </div>
 
-      <p style={{ fontSize: 9, color: isCurrentSelectionPast ? "#ef4444" : "var(--slate)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.6, marginBottom: 12 }}>
-        {isDragging ? "Adjusting..." : isCurrentSelectionPast ? "Invalid Time" : `Pick ${mode}`}
+      <p
+        style={{
+          fontSize: 9,
+          color: isCurrentSelectionPast ? "#ef4444" : "var(--slate)",
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.1em",
+          opacity: 0.6,
+          marginBottom: 12,
+        }}
+      >
+        {isDragging
+          ? "Adjusting..."
+          : isCurrentSelectionPast
+            ? "Invalid Time"
+            : `Pick ${mode}`}
       </p>
 
       <button
@@ -443,19 +570,23 @@ const ClockView = memo(function ClockView({ value, onChange, minTime }) {
         onClick={(e) => {
           if (isCurrentSelectionPast) return;
           e.stopPropagation();
-          onChange(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
-          window.dispatchEvent(new MouseEvent('mousedown')); 
+          onChange(
+            `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`,
+          );
+          window.dispatchEvent(new MouseEvent("mousedown"));
         }}
         style={{
           width: "100%",
           padding: "10px",
           borderRadius: "12px",
-          background: isCurrentSelectionPast ? "rgba(20,20,19,0.04)" : "var(--ink)",
+          background: isCurrentSelectionPast
+            ? "rgba(20,20,19,0.04)"
+            : "var(--ink)",
           color: isCurrentSelectionPast ? "rgba(20,20,19,0.2)" : "white",
           fontSize: 12,
           fontWeight: 700,
           border: "none",
-          cursor: isCurrentSelectionPast ? "not-allowed" : "pointer"
+          cursor: isCurrentSelectionPast ? "not-allowed" : "pointer",
         }}
       >
         {isCurrentSelectionPast ? "Invalid Time" : "Set Time"}
@@ -479,17 +610,29 @@ const CalendarView = memo(function CalendarView({ value, onChange }) {
   for (let i = 1; i <= daysInMonth; i++) days.push(i);
 
   const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
   return (
-    <div style={{ 
-      width: 260, 
-      padding: "16px",
-      background: "var(--white)",
-      fontFamily: "var(--font)",
-    }}>
+    <div
+      style={{
+        width: 260,
+        padding: "16px",
+        background: "var(--white)",
+        fontFamily: "var(--font)",
+      }}
+    >
       <div
         style={{
           display: "flex",
@@ -514,12 +657,23 @@ const CalendarView = memo(function CalendarView({ value, onChange }) {
             color: "var(--ink)",
             transition: "all 0.2s",
           }}
-          onMouseEnter={(e) => e.target.style.borderColor = "rgba(20,20,19,0.15)"}
-          onMouseLeave={(e) => e.target.style.borderColor = "rgba(20,20,19,0.06)"}
+          onMouseEnter={(e) =>
+            (e.target.style.borderColor = "rgba(20,20,19,0.15)")
+          }
+          onMouseLeave={(e) =>
+            (e.target.style.borderColor = "rgba(20,20,19,0.06)")
+          }
         >
           <ChevronDown size={14} style={{ transform: "rotate(90deg)" }} />
         </button>
-        <span style={{ fontSize: 13, fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.01em" }}>
+        <span
+          style={{
+            fontSize: 13,
+            fontWeight: 800,
+            color: "var(--ink)",
+            letterSpacing: "-0.01em",
+          }}
+        >
           {monthNames[month]} {year}
         </span>
         <button
@@ -537,8 +691,12 @@ const CalendarView = memo(function CalendarView({ value, onChange }) {
             color: "var(--ink)",
             transition: "all 0.2s",
           }}
-          onMouseEnter={(e) => e.target.style.borderColor = "rgba(20,20,19,0.15)"}
-          onMouseLeave={(e) => e.target.style.borderColor = "rgba(20,20,19,0.06)"}
+          onMouseEnter={(e) =>
+            (e.target.style.borderColor = "rgba(20,20,19,0.15)")
+          }
+          onMouseLeave={(e) =>
+            (e.target.style.borderColor = "rgba(20,20,19,0.06)")
+          }
         >
           <ChevronDown size={14} style={{ transform: "rotate(-90deg)" }} />
         </button>
@@ -573,7 +731,9 @@ const CalendarView = memo(function CalendarView({ value, onChange }) {
           const dateStr = `${year}-${(month + 1).toString().padStart(2, "0")}-${d.toString().padStart(2, "0")}`;
           const isSelected = value === dateStr;
           const isToday = today.toISOString().split("T")[0] === dateStr;
-          const isPast = new Date(year, month, d) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          const isPast =
+            new Date(year, month, d) <
+            new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
           return (
             <button
@@ -604,7 +764,9 @@ const CalendarView = memo(function CalendarView({ value, onChange }) {
               }}
               onMouseLeave={(e) => {
                 if (!isSelected) {
-                  e.target.style.background = isToday ? "rgba(243,115,56,0.08)" : "transparent";
+                  e.target.style.background = isToday
+                    ? "rgba(243,115,56,0.08)"
+                    : "transparent";
                 }
               }}
             >
@@ -639,21 +801,43 @@ const CustomSelect = memo(function CustomSelect({
     return () => window.removeEventListener("mousedown", fn);
   }, []);
 
-  const [position, setPosition] = useState({ top: 0, left: 0, right: 0, upward: false });
+  const [position, setPosition] = useState({
+    top: 0,
+    left: 0,
+    right: 0,
+    upward: false,
+    isMobileCentered: false,
+  });
 
   useEffect(() => {
     if (open && containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const dropdownHeight = isCalendar ? 360 : isTime ? 400 : 240;
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const shouldOpenUp = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
+      const isMobile = window.innerWidth <= 768;
+      
+      if (isMobile) {
+        // On mobile, pop up in the center of the screen to avoid clipping
+        setPosition({
+          top: "50%",
+          left: "50%",
+          right: "auto",
+          upward: false,
+          isMobileCentered: true,
+        });
+      } else {
+        const rect = containerRef.current.getBoundingClientRect();
+        const dropdownHeight = isCalendar ? 360 : isTime ? 400 : 240;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        // Open upwards if there's not enough space below AND there's more space above than below
+        const shouldOpenUp = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
 
-      setPosition({
-        top: shouldOpenUp ? rect.top - 8 : rect.bottom + 8,
-        left: align === "left" ? rect.left : "auto",
-        right: align === "right" ? window.innerWidth - rect.right : "auto",
-        upward: shouldOpenUp
-      });
+        setPosition({
+          top: shouldOpenUp ? rect.top - 8 : rect.bottom + 8,
+          left: align === "left" ? rect.left : "auto",
+          right: align === "right" ? window.innerWidth - rect.right : "auto",
+          upward: shouldOpenUp,
+          isMobileCentered: false,
+        });
+      }
     }
   }, [open, isCalendar, isTime, align]);
 
@@ -682,7 +866,9 @@ const CustomSelect = memo(function CustomSelect({
           width: "100%",
           minWidth: isTime ? 130 : 160,
           transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-          boxShadow: open ? "0 4px 12px rgba(243,115,56,0.08)" : "0 2px 4px rgba(0,0,0,0.02)",
+          boxShadow: open
+            ? "0 4px 12px rgba(243,115,56,0.08)"
+            : "0 2px 4px rgba(0,0,0,0.02)",
         }}
         onMouseEnter={(e) => {
           if (!open) {
@@ -698,7 +884,15 @@ const CustomSelect = memo(function CustomSelect({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          {Icon && <Icon size={14} style={{ color: open ? "var(--arc)" : "var(--slate)", transition: "color 0.2s" }} />}
+          {Icon && (
+            <Icon
+              size={14}
+              style={{
+                color: open ? "var(--arc)" : "var(--slate)",
+                transition: "color 0.2s",
+              }}
+            />
+          )}
           <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
             {label}
           </span>
@@ -716,27 +910,48 @@ const CustomSelect = memo(function CustomSelect({
 
       {open &&
         createPortal(
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: position.upward ? 4 : -4 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: position.upward ? 4 : -4 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            onMouseDown={(e) => e.stopPropagation()}
+          <div
             style={{
               position: "fixed",
-              top: position.top,
-              left: position.left,
-              right: position.right,
+              top: position.isMobileCentered ? 0 : position.top,
+              left: position.isMobileCentered ? 0 : position.left,
+              right: position.isMobileCentered ? 0 : position.right,
+              bottom: position.isMobileCentered ? 0 : "auto",
+              display: position.isMobileCentered ? "flex" : "block",
+              alignItems: "center",
+              justifyContent: "center",
               zIndex: 9999,
-              background: "var(--white)",
-              borderRadius: "20px",
-              border: "1px solid rgba(20,20,19,0.1)",
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(20,20,19,0.02)",
-              overflow: "hidden",
-              transformOrigin: position.upward ? "bottom" : "top",
-              transform: position.upward ? "translateY(-100%)" : "none",
+              pointerEvents: position.isMobileCentered ? "auto" : "none",
+              background: position.isMobileCentered ? "rgba(0,0,0,0.4)" : "transparent",
+            }}
+            onMouseDown={(e) => {
+              if (position.isMobileCentered && e.target === e.currentTarget) {
+                setOpen(false);
+              }
             }}
           >
+            <div
+              style={{
+                transform: position.isMobileCentered ? "none" : position.upward ? "translateY(-100%)" : "none",
+                pointerEvents: "none",
+              }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: position.isMobileCentered ? 0 : position.upward ? 4 : -4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: position.isMobileCentered ? 0 : position.upward ? 4 : -4 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                onMouseDown={(e) => e.stopPropagation()}
+                style={{
+                  background: "var(--white)",
+                  borderRadius: "20px",
+                  border: "1px solid rgba(20,20,19,0.1)",
+                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(20,20,19,0.02)",
+                  overflow: "hidden",
+                  transformOrigin: position.isMobileCentered ? "center" : position.upward ? "bottom" : "top",
+                  pointerEvents: "auto",
+                }}
+              >
             {isCalendar ? (
               <CalendarView
                 value={value}
@@ -781,7 +996,10 @@ const CustomSelect = memo(function CustomSelect({
                         width: "100%",
                         padding: "8px 12px",
                         textAlign: "left",
-                        background: value === val ? "rgba(243,115,56,0.08)" : "transparent",
+                        background:
+                          value === val
+                            ? "rgba(243,115,56,0.08)"
+                            : "transparent",
                         border: "none",
                         borderRadius: "8px",
                         fontSize: 12,
@@ -796,10 +1014,12 @@ const CustomSelect = memo(function CustomSelect({
                         marginBottom: "2px",
                       }}
                       onMouseEnter={(e) => {
-                        if (!disabled && value !== val) e.target.style.background = "rgba(20,20,19,0.04)";
+                        if (!disabled && value !== val)
+                          e.target.style.background = "rgba(20,20,19,0.04)";
                       }}
                       onMouseLeave={(e) => {
-                        if (value !== val) e.target.style.background = "transparent";
+                        if (value !== val)
+                          e.target.style.background = "transparent";
                       }}
                     >
                       {lbl}
@@ -808,14 +1028,20 @@ const CustomSelect = memo(function CustomSelect({
                 })}
               </div>
             )}
-          </motion.div>,
-          document.body
+          </motion.div>
+            </div>
+          </div>,
+          document.body,
         )}
     </div>
   );
 });
 
-const SmartWarnings = memo(function SmartWarnings({ selectedChannels, platformData, mediaFiles }) {
+const SmartWarnings = memo(function SmartWarnings({
+  selectedChannels,
+  platformData,
+  mediaFiles,
+}) {
   const warnings = [];
 
   const mainMedia = mediaFiles[0];
@@ -825,14 +1051,22 @@ const SmartWarnings = memo(function SmartWarnings({ selectedChannels, platformDa
   const isHorizontal = ratio > 1.2;
   const isVertical = ratio < 0.8;
 
-  if (selectedChannels.includes("youtube") && platformData.youtube?.type === "short" && isHorizontal) {
+  if (
+    selectedChannels.includes("youtube") &&
+    platformData.youtube?.type === "short" &&
+    isHorizontal
+  ) {
     warnings.push({
       id: "yt-short-ratio",
       text: "YouTube Shorts must be vertical. Your video is landscape and will be uploaded as a normal video.",
     });
   }
 
-  if (selectedChannels.includes("instagram") && platformData.instagram?.type === "reel" && isHorizontal) {
+  if (
+    selectedChannels.includes("instagram") &&
+    platformData.instagram?.type === "reel" &&
+    isHorizontal
+  ) {
     warnings.push({
       id: "ig-reel-ratio",
       text: "Instagram Reels are vertical. This landscape video will have black bars.",
@@ -843,7 +1077,7 @@ const SmartWarnings = memo(function SmartWarnings({ selectedChannels, platformDa
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {warnings.map(w => (
+      {warnings.map((w) => (
         <motion.div
           key={w.id}
           initial={{ opacity: 0, scale: 0.95 }}
@@ -859,7 +1093,17 @@ const SmartWarnings = memo(function SmartWarnings({ selectedChannels, platformDa
           }}
         >
           <Zap size={14} style={{ color: "var(--arc)", flexShrink: 0 }} />
-          <p style={{ fontSize: 11, fontWeight: 700, color: "var(--ink)", margin: 0, lineHeight: 1.4 }}>{w.text}</p>
+          <p
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "var(--ink)",
+              margin: 0,
+              lineHeight: 1.4,
+            }}
+          >
+            {w.text}
+          </p>
         </motion.div>
       ))}
     </div>
@@ -868,7 +1112,8 @@ const SmartWarnings = memo(function SmartWarnings({ selectedChannels, platformDa
 
 const SizeButton = memo(function SizeButton({ size, isSelected, onClick }) {
   const isSquare = size.id === "1:1";
-  const isVertical = size.id === "9:16" || size.id === "4:5" || size.id === "2:3";
+  const isVertical =
+    size.id === "9:16" || size.id === "4:5" || size.id === "2:3";
   const isLandscape = size.id === "16:9" || size.id === "1.91:1";
 
   // Visual aspect ratio preview
@@ -905,34 +1150,42 @@ const SizeButton = memo(function SizeButton({ size, isSelected, onClick }) {
         flex: 1,
         cursor: "pointer",
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        boxShadow: isSelected ? "0 8px 20px rgba(20,20,19,0.15)" : "0 2px 4px rgba(0,0,0,0.02)",
+        boxShadow: isSelected
+          ? "0 8px 20px rgba(20,20,19,0.15)"
+          : "0 2px 4px rgba(0,0,0,0.02)",
       }}
     >
-      <div style={{ 
-        ...ratioStyle, 
-        border: `2px solid ${isSelected ? "var(--white)" : "var(--slate)"}`, 
-        borderRadius: "3px",
-        opacity: isSelected ? 1 : 0.4,
-        transition: "all 0.2s",
-      }} />
-      
+      <div
+        style={{
+          ...ratioStyle,
+          border: `2px solid ${isSelected ? "var(--white)" : "var(--slate)"}`,
+          borderRadius: "3px",
+          opacity: isSelected ? 1 : 0.4,
+          transition: "all 0.2s",
+        }}
+      />
+
       <div style={{ textAlign: "center" }}>
-        <p style={{
-          fontSize: 11,
-          fontWeight: 800,
-          margin: 0,
-          letterSpacing: "-0.01em",
-        }}>
+        <p
+          style={{
+            fontSize: 11,
+            fontWeight: 800,
+            margin: 0,
+            letterSpacing: "-0.01em",
+          }}
+        >
           {size.label}
         </p>
-        <p style={{ 
-          fontSize: 8, 
-          margin: 0, 
-          opacity: isSelected ? 0.7 : 0.4, 
-          fontWeight: 700,
-          textTransform: "uppercase",
-          letterSpacing: "0.05em",
-        }}>
+        <p
+          style={{
+            fontSize: 8,
+            margin: 0,
+            opacity: isSelected ? 0.7 : 0.4,
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+          }}
+        >
           {size.id}
         </p>
       </div>
@@ -965,9 +1218,9 @@ function ComposerModal({
   isOpen,
   onClose,
   initialData = null,
-  initialCaption = '',
+  initialCaption = "",
   initialHashtags = [],
-  initialMediaUrls = []
+  initialMediaUrls = [],
 }) {
   const { user, connectedAccounts } = useAuth();
   const { addJob } = useUploadJobs();
@@ -981,6 +1234,21 @@ function ComposerModal({
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [postType, setPostType] = useState("post");
+  const [quickSuggestions, setQuickSuggestions] = useState(QUICK_SUGGESTIONS);
+  const [suggestedHashtags, setSuggestedHashtags] = useState(SUGGESTED_HASHTAGS);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isFetchingMoreIdeas, setIsFetchingMoreIdeas] = useState(false);
+  const [isFetchingMoreHashtags, setIsFetchingMoreHashtags] = useState(false);
+  const ideasScrollRef = useRef(null);
+  const hashtagsScrollRef = useRef(null);
+
+  const scrollContainer = (ref, direction) => {
+    if (ref.current) {
+      const scrollAmount = direction === 'left' ? -300 : 300;
+      ref.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
   const [platformData, setPlatformData] = useState({
     instagram: { type: "post" },
     youtube: { type: "short" },
@@ -993,6 +1261,89 @@ function ComposerModal({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isGlobalDragging, setIsGlobalDragging] = useState(false);
+
+  /* ── Refs ── */
+  const formatScrollRef = useRef(null);
+
+  const scrollFormats = (direction) => {
+    if (formatScrollRef.current) {
+      const scrollAmount = 260; // Roughly 2 cards
+      formatScrollRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  // Drag & Drop helper
+  const getDimensions = (file) => {
+    return new Promise((resolve) => {
+      if (file.type.startsWith("image/")) {
+        const img = new Image();
+        img.onload = () => {
+          const d = { width: img.width, height: img.height, ratio: img.width / img.height };
+          URL.revokeObjectURL(img.src);
+          resolve(d);
+        };
+        img.src = URL.createObjectURL(file);
+      } else if (file.type.startsWith("video/")) {
+        const video = document.createElement("video");
+        video.onloadedmetadata = () => {
+          const d = { width: video.videoWidth, height: video.videoHeight, ratio: video.videoWidth / video.videoHeight };
+          URL.revokeObjectURL(video.src);
+          resolve(d);
+        };
+        video.src = URL.createObjectURL(file);
+      } else {
+        resolve(null);
+      }
+    });
+  };
+
+  const handleGlobalDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsGlobalDragging(false);
+
+    const files = Array.from(e.dataTransfer.files).filter(
+      (f) => f.type.startsWith("image/") || f.type.startsWith("video/"),
+    );
+
+    if (!files.length) return;
+
+    const newItems = await Promise.all(
+      files.map(async (file) => ({
+        id: `${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+        file,
+        dimensions: await getDimensions(file),
+      }))
+    );
+
+    setMediaFiles((prev) => [...prev, ...newItems].slice(0, 10));
+  };
+
+  // Free tier restrictions
+  const isFree = user?.plan === "Free" || !user?.plan;
+  const [freeBroadcastsCount, setFreeBroadcastsCount] = useState(0);
+
+  useEffect(() => {
+    if (isFree && isOpen) {
+      const fetchCount = async () => {
+        const { count, error } = await supabase
+          .from("broadcasts")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id);
+        if (!error && count !== null) {
+          setFreeBroadcastsCount(count);
+        }
+      };
+      fetchCount();
+    }
+  }, [isFree, isOpen, user?.id]);
+
+  const isFreeLimitReached = isFree && freeBroadcastsCount >= 3;
+
   const [activePreviewPlatform, setActivePreviewPlatform] =
     useState("instagram");
   const [platformPresets, setPlatformPresets] = useState({
@@ -1105,34 +1456,47 @@ function ComposerModal({
                 if (!res.ok) throw new Error("Internal proxy error");
 
                 const blob = await res.blob();
-                const name = url.split('/').pop()?.split('?')[0] || 'media';
+                const name = url.split("/").pop()?.split("?")[0] || "media";
 
                 // Smart mime type detection
                 let mimeType = blob.type;
-                if (!mimeType || mimeType === 'application/octet-stream') {
-                  if (url.toLowerCase().includes('.mp4') || url.toLowerCase().includes('.m4v')) mimeType = 'video/mp4';
-                  else if (url.toLowerCase().includes('.mov')) mimeType = 'video/quicktime';
-                  else if (url.toLowerCase().includes('.webm')) mimeType = 'video/webm';
-                  else if (url.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif)/)) mimeType = 'image/' + url.split('.').pop().split('?')[0];
+                if (!mimeType || mimeType === "application/octet-stream") {
+                  if (
+                    url.toLowerCase().includes(".mp4") ||
+                    url.toLowerCase().includes(".m4v")
+                  )
+                    mimeType = "video/mp4";
+                  else if (url.toLowerCase().includes(".mov"))
+                    mimeType = "video/quicktime";
+                  else if (url.toLowerCase().includes(".webm"))
+                    mimeType = "video/webm";
+                  else if (url.toLowerCase().match(/\.(jpg|jpeg|png|webp|gif)/))
+                    mimeType = "image/" + url.split(".").pop().split("?")[0];
                 }
 
                 // Detect extension
-                let extension = mimeType.split('/')[1] || 'jpg';
-                if (extension === 'jpeg') extension = 'jpg';
-                if (extension.includes('quicktime')) extension = 'mov';
+                let extension = mimeType.split("/")[1] || "jpg";
+                if (extension === "jpeg") extension = "jpg";
+                if (extension.includes("quicktime")) extension = "mov";
 
-                return new File([blob], `${name}.${extension}`, { type: mimeType });
+                return new File([blob], `${name}.${extension}`, {
+                  type: mimeType,
+                });
               } catch (err) {
-                console.error("Failed to load media via internal proxy:", url, err);
+                console.error(
+                  "Failed to load media via internal proxy:",
+                  url,
+                  err,
+                );
                 return null;
               }
-            })
+            }),
           );
 
           const files = results.filter(Boolean);
-          const newItems = files.map(file => ({
+          const newItems = files.map((file) => ({
             id: `initial_${Math.random().toString(36).substr(2, 9)}`,
-            file
+            file,
           }));
           if (newItems.length > 0) {
             setMediaFiles(newItems);
@@ -1318,14 +1682,18 @@ function ComposerModal({
 
       // 3. Add to background manager
       const firstMedia = mediaFiles[0];
-      const detectedMediaType = firstMedia?.file?.type?.startsWith("video/") ? "video" : "image";
+      const detectedMediaType = firstMedia?.file?.type?.startsWith("video/")
+        ? "video"
+        : "image";
 
       addJob(res.data.jobId, {
         caption,
         channels: selectedChannels,
         fileCount: mediaFiles.length,
         mediaType: detectedMediaType,
-        previewUrl: firstMedia?.preview || (firstMedia?.file ? URL.createObjectURL(firstMedia.file) : null)
+        previewUrl:
+          firstMedia?.preview ||
+          (firstMedia?.file ? URL.createObjectURL(firstMedia.file) : null),
       });
 
       // 4. Reset & Close
@@ -1356,6 +1724,79 @@ function ComposerModal({
     }
   };
 
+  const handleAiAssistantClick = async () => {
+    if (!caption || caption.trim() === '') {
+      setError("Please write some text in the caption field first for the AI to analyze.");
+      return;
+    }
+    
+    setIsAiLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.post('/api/ai/suggest', { text: caption });
+      if (response.data) {
+        if (response.data.ideas && response.data.ideas.length > 0) {
+          setQuickSuggestions(response.data.ideas);
+        }
+        if (response.data.hashtags && response.data.hashtags.length > 0) {
+          setSuggestedHashtags(response.data.hashtags);
+        }
+        if (response.data.titles && response.data.titles.length > 0) {
+          // You could also use titles in another way, or just mix them with ideas
+          setQuickSuggestions(prev => [...response.data.titles, ...prev]);
+        }
+      }
+    } catch (err) {
+      console.error("AI Assistant error:", err);
+      setError(err.response?.data?.error || "Failed to fetch AI suggestions.");
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const fetchMoreIdeas = async () => {
+    if (!caption || caption.trim() === '') {
+      setError("Please write some text in the caption field first.");
+      return;
+    }
+    
+    setIsFetchingMoreIdeas(true);
+    try {
+      const response = await apiClient.post('/api/ai/suggest', { text: caption, type: 'ideas' });
+      if (response.data && response.data.ideas && response.data.ideas.length > 0) {
+        setQuickSuggestions(prev => [...prev, ...response.data.ideas]);
+        // scroll to the right to show the newly added ideas after a short delay
+        setTimeout(() => scrollContainer(ideasScrollRef, 'right'), 100);
+      }
+    } catch (err) {
+      console.error("AI Assistant error:", err);
+      setError(err.response?.data?.error || "Failed to fetch more ideas.");
+    } finally {
+      setIsFetchingMoreIdeas(false);
+    }
+  };
+
+  const fetchMoreHashtags = async () => {
+    if (!caption || caption.trim() === '') {
+      setError("Please write some text in the caption field first.");
+      return;
+    }
+    
+    setIsFetchingMoreHashtags(true);
+    try {
+      const response = await apiClient.post('/api/ai/suggest', { text: caption, type: 'hashtags' });
+      if (response.data && response.data.hashtags && response.data.hashtags.length > 0) {
+        setSuggestedHashtags(prev => [...prev, ...response.data.hashtags]);
+        setTimeout(() => scrollContainer(hashtagsScrollRef, 'right'), 100);
+      }
+    } catch (err) {
+      console.error("AI Assistant error:", err);
+      setError(err.response?.data?.error || "Failed to fetch more hashtags.");
+    } finally {
+      setIsFetchingMoreHashtags(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const publishDisabled = loading || hasBlockingError;
@@ -1380,7 +1821,14 @@ function ComposerModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 20 }}
           transition={{ type: "spring", stiffness: 300, damping: 28 }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsGlobalDragging(true);
+          }}
+          onDragLeave={() => setIsGlobalDragging(false)}
+          onDrop={handleGlobalDrop}
           style={{
+            position: "relative",
             width: "100%",
             maxWidth: isMobile ? "100%" : 960,
             height: isMobile ? "100%" : "90vh",
@@ -1393,6 +1841,64 @@ function ComposerModal({
             border: isMobile ? "none" : "1px solid rgba(20,20,19,0.08)",
           }}
         >
+          {/* Global Drag Overlay */}
+          <AnimatePresence>
+            {isGlobalDragging && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  zIndex: 2000,
+                  background: "rgba(255,255,255,0.9)",
+                  backdropFilter: "blur(4px)",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "3px dashed var(--arc)",
+                  margin: 12,
+                  borderRadius: 16,
+                  pointerEvents: "none",
+                }}
+              >
+                <div
+                  style={{
+                    background: "var(--arc)",
+                    color: "white",
+                    padding: "20px",
+                    borderRadius: "50%",
+                    marginBottom: 20,
+                    boxShadow: "0 10px 25px rgba(243,115,56,0.3)",
+                  }}
+                >
+                  <Upload size={40} strokeWidth={2.5} />
+                </div>
+                <h3
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 900,
+                    color: "var(--ink)",
+                    margin: "0 0 8px 0",
+                  }}
+                >
+                  Drop to Upload
+                </h3>
+                <p
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: "var(--slate)",
+                    margin: 0,
+                  }}
+                >
+                  Release your files anywhere to add them to your post
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
           {/* ── HEADER ── */}
           <div
             style={{
@@ -1417,50 +1923,26 @@ function ComposerModal({
               >
                 Create Post
               </h2>
-              {selectedChannels.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                    padding: "3px 8px",
-                    borderRadius: 20,
-                    background: "rgba(20,20,19,0.05)",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: "var(--slate,#8a8a82)",
-                  }}
-                >
-                  <Zap size={9} /> {selectedChannels.length} platform
-                  {selectedChannels.length > 1 ? "s" : ""}
-                </motion.div>
-              )}
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <motion.button
-                type="button"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 6,
-                  padding: "5px 12px",
-                  fontSize: 11,
-                  fontWeight: 600,
+                  gap: 4,
+                  padding: "3px 8px",
+                  borderRadius: 20,
+                  background: "rgba(20,20,19,0.05)",
+                  fontSize: 10,
+                  fontWeight: 700,
                   color: "var(--slate,#8a8a82)",
-                  background: "transparent",
-                  border: "1px solid rgba(20,20,19,0.1)",
-                  borderRadius: "var(--r-btn,10px)",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
                 }}
               >
-                <Sparkles size={12} />
-                {!isMobile && "AI Assistant"}
-              </motion.button>
+                <Zap size={9} /> {selectedChannels.length} platform
+                {selectedChannels.length !== 1 ? "s" : ""}
+              </motion.div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <motion.button
                 type="button"
                 onClick={handleClose}
@@ -1636,6 +2118,34 @@ function ComposerModal({
                         onChannelToggle={handleChannelToggle}
                         onBulkSelect={handleBulkSelect}
                         connectedAccounts={connectedAccounts}
+                        rightContent={
+                          <motion.button
+                            type="button"
+                            onClick={handleAiAssistantClick}
+                            disabled={isAiLoading}
+                            whileHover={{ scale: isAiLoading ? 1 : 1.02 }}
+                            whileTap={{ scale: isAiLoading ? 1 : 0.97 }}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              padding: "4px 10px",
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: isAiLoading ? "var(--slate,#8a8a82)" : "#4f46e5",
+                              background: isAiLoading ? "transparent" : "rgba(79,70,229,0.06)",
+                              border: "1px solid rgba(20,20,19,0.1)",
+                              borderRadius: "var(--r-btn,10px)",
+                              cursor: isAiLoading ? "wait" : "pointer",
+                              fontFamily: "inherit",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.04em"
+                            }}
+                          >
+                            {isAiLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                            {isAiLoading ? "Thinking..." : "AI Assistant"}
+                          </motion.button>
+                        }
                       />
                     </Section>
 
@@ -1684,7 +2194,9 @@ function ComposerModal({
                             type="button"
                             onClick={() =>
                               setCaption((p) =>
-                                p ? `${p} {{MENTION_SELF}}` : "{{MENTION_SELF}}",
+                                p
+                                  ? `${p} {{MENTION_SELF}}`
+                                  : "{{MENTION_SELF}}",
                               )
                             }
                             style={{
@@ -1724,8 +2236,18 @@ function ComposerModal({
 
                     {/* Quick suggestions */}
                     <div style={{ marginTop: 10 }}>
-                      <RowLabel>Quick Ideas</RowLabel>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <RowLabel>Quick Ideas</RowLabel>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button type="button" onClick={() => scrollContainer(ideasScrollRef, 'left')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronLeft size={14} /></button>
+                          <button type="button" onClick={() => scrollContainer(ideasScrollRef, 'right')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronRight size={14} /></button>
+                          <button type="button" onClick={fetchMoreIdeas} disabled={isFetchingMoreIdeas} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {isFetchingMoreIdeas ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                          </button>
+                        </div>
+                      </div>
                       <div
+                        ref={ideasScrollRef}
                         style={{
                           display: "flex",
                           gap: 6,
@@ -1734,7 +2256,7 @@ function ComposerModal({
                           scrollbarWidth: "none",
                         }}
                       >
-                        {QUICK_SUGGESTIONS.map((s, i) => (
+                        {quickSuggestions.map((s, i) => (
                           <motion.button
                             key={i}
                             type="button"
@@ -1745,15 +2267,15 @@ function ComposerModal({
                             }}
                             whileTap={{ scale: 0.97 }}
                             onClick={() =>
-                              setCaption((p) => (p ? `${p} ${s}` : s))
+                              setCaption(s)
                             }
                             style={{
                               flexShrink: 0,
-                              padding: "4px 11px",
+                              padding: "6px 14px",
                               background: "var(--canvas-lifted,#f5f5f4)",
                               border: "1px solid rgba(20,20,19,0.1)",
                               borderRadius: 20,
-                              fontSize: 11,
+                              fontSize: 13,
                               color: "var(--slate,#8a8a82)",
                               cursor: "pointer",
                               whiteSpace: "nowrap",
@@ -1770,8 +2292,18 @@ function ComposerModal({
 
                     {/* Hashtags */}
                     <div style={{ marginTop: 10 }}>
-                      <RowLabel>Hashtags</RowLabel>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                        <RowLabel>Hashtags</RowLabel>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button type="button" onClick={() => scrollContainer(hashtagsScrollRef, 'left')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronLeft size={14} /></button>
+                          <button type="button" onClick={() => scrollContainer(hashtagsScrollRef, 'right')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronRight size={14} /></button>
+                          <button type="button" onClick={fetchMoreHashtags} disabled={isFetchingMoreHashtags} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {isFetchingMoreHashtags ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                          </button>
+                        </div>
+                      </div>
                       <div
+                        ref={hashtagsScrollRef}
                         style={{
                           display: "flex",
                           gap: 6,
@@ -1784,13 +2316,13 @@ function ComposerModal({
                           type="text"
                           placeholder="+ Add tag (Enter)"
                           style={{
-                            fontSize: 11,
-                            padding: "4px 12px",
+                            fontSize: 13,
+                            padding: "6px 14px",
                             border: "1px dashed rgba(20,20,19,0.2)",
                             borderRadius: 20,
                             background: "transparent",
                             outline: "none",
-                            width: 120,
+                            width: 140,
                           }}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
@@ -1805,7 +2337,7 @@ function ComposerModal({
                             }
                           }}
                         />
-                        {SUGGESTED_HASHTAGS.map((h, i) => (
+                        {suggestedHashtags.map((h, i) => (
                           <button
                             key={i}
                             onClick={() =>
@@ -1813,12 +2345,12 @@ function ComposerModal({
                             }
                             style={{
                               flexShrink: 0,
-                              fontSize: 10,
+                              fontSize: 12,
                               fontWeight: 700,
                               color: "#4f46e5",
                               background: "rgba(79,70,229,0.06)",
                               border: "none",
-                              padding: "4px 10px",
+                              padding: "6px 14px",
                               borderRadius: 20,
                               cursor: "pointer",
                             }}
@@ -1875,7 +2407,10 @@ function ComposerModal({
                       gap: 10,
                       flexWrap: "nowrap",
                       overflowX: "auto",
+                      paddingTop: 8,
                       paddingBottom: 10,
+                      paddingLeft: 4,
+                      paddingRight: 4,
                       scrollbarWidth: "none",
                       msOverflowStyle: "none",
                     }}
@@ -1914,7 +2449,8 @@ function ComposerModal({
                               flexDirection: "column",
                               gap: 4,
                               textAlign: "left",
-                              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                              transition:
+                                "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                               boxShadow: isSelected
                                 ? "0 4px 12px rgba(243,115,56,0.12)"
                                 : "0 2px 4px rgba(0,0,0,0.02)",
@@ -1992,10 +2528,14 @@ function ComposerModal({
                       justifyContent: "space-between",
                       cursor: "pointer",
                       padding: "16px 20px",
-                      borderRadius: isScheduled ? "var(--r-hero) var(--r-hero) 0 0" : "var(--r-hero)",
+                      borderRadius: isScheduled
+                        ? "var(--r-hero) var(--r-hero) 0 0"
+                        : "var(--r-hero)",
                       background: "var(--white)",
                       border: "1px solid rgba(20,20,19,0.08)",
-                      borderBottom: isScheduled ? "1px solid rgba(20,20,19,0.03)" : "1px solid rgba(20,20,19,0.08)",
+                      borderBottom: isScheduled
+                        ? "1px solid rgba(20,20,19,0.03)"
+                        : "1px solid rgba(20,20,19,0.08)",
                       boxShadow: "0 2px 8px rgba(0,0,0,0.02)",
                     }}
                   >
@@ -2157,7 +2697,8 @@ function ComposerModal({
                                   e.target.style.color = "var(--arc)";
                                 }}
                                 onMouseLeave={(e) => {
-                                  e.target.style.borderColor = "rgba(20,20,19,0.08)";
+                                  e.target.style.borderColor =
+                                    "rgba(20,20,19,0.08)";
                                   e.target.style.color = "var(--slate)";
                                 }}
                               >
@@ -2302,7 +2843,7 @@ function ComposerModal({
           <div
             style={{
               borderTop: "1px solid rgba(20,20,19,0.08)",
-              padding: "14px 22px",
+              padding: isMobile ? "12px 16px" : "14px 22px",
               background: "var(--canvas-lifted,#fafaf9)",
               display: "flex",
               alignItems: "center",
@@ -2310,6 +2851,8 @@ function ComposerModal({
               flexShrink: 0,
               borderBottomLeftRadius: isMobile ? 0 : "var(--r-hero,20px)",
               borderBottomRightRadius: isMobile ? 0 : "var(--r-hero,20px)",
+              gap: isMobile ? 8 : 16,
+              flexWrap: isMobile ? "wrap" : "nowrap",
             }}
           >
             <motion.button
@@ -2332,7 +2875,7 @@ function ComposerModal({
               Cancel
             </motion.button>
 
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 14, flexWrap: "wrap", justifyContent: "flex-end", flex: 1 }}>
               {/* Scheduled badge */}
               {isScheduled && scheduledAt && (
                 <motion.div
@@ -2346,18 +2889,30 @@ function ComposerModal({
                     alignItems: "center",
                     gap: 5,
                     background: "rgba(243,115,56,0.06)",
-                    padding: "5px 12px",
+                    padding: isMobile ? "4px 8px" : "5px 12px",
                     borderRadius: 20,
                     border: "1px solid rgba(243,115,56,0.15)",
+                    textAlign: "center",
                   }}
                 >
                   <Clock size={11} />
-                  {new Date(scheduledAt).toLocaleString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {isMobile ? (
+                    <span>
+                      {new Date(scheduledAt).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }).replace(',', '')}
+                    </span>
+                  ) : (
+                    new Date(scheduledAt).toLocaleString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  )}
                 </motion.div>
               )}
 
@@ -2375,8 +2930,30 @@ function ComposerModal({
                     gap: 4,
                   }}
                 >
-                  <AlertCircle size={11} /> Fix errors above
+                  <AlertCircle size={11} /> {isMobile ? "Fix errors" : "Fix errors above"}
                 </motion.span>
+              )}
+
+              {/* Free Limit Warning */}
+              {isFree && (
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: isFreeLimitReached ? "#dc2626" : "var(--slate)",
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  {isFreeLimitReached ? (
+                    <>
+                      <Lock size={12} /> Limit reached (3/3 posts)
+                    </>
+                  ) : (
+                    <>Free posts: {freeBroadcastsCount}/3</>
+                  )}
+                </div>
               )}
 
               {/* PUBLISH BUTTON */}
@@ -2395,61 +2972,87 @@ function ComposerModal({
                 whileTap={!publishDisabled ? { scale: 0.97 } : {}}
                 type="button"
                 onClick={handleSubmit}
-                disabled={publishDisabled}
+                disabled={publishDisabled || isFreeLimitReached}
+                className={`btn-fly ${publishDisabled || isFreeLimitReached || loading ? "" : "hovering"}`}
                 style={{
-                  background: publishDisabled
-                    ? "rgba(20,20,19,0.18)"
-                    : isScheduled
-                      ? "linear-gradient(135deg,var(--arc,#f37338) 0%,#ff8c5a 100%)"
-                      : "linear-gradient(135deg,var(--ink,#141413) 0%,#3a3a37 100%)",
-                  height: 46,
-                  borderRadius: "var(--r-btn,10px)",
-                  padding: "0 26px",
+                  background:
+                    publishDisabled || isFreeLimitReached
+                      ? "rgba(20,20,19,0.18)"
+                      : isScheduled
+                        ? "linear-gradient(135deg,var(--arc,#f37338) 0%,#ff8c5a 100%)"
+                        : "linear-gradient(135deg,var(--ink,#141413) 0%,#3a3a37 100%)",
+                  height: isMobile ? 42 : 48,
+                  minWidth: isMobile ? 120 : 175,
+                  borderRadius: "16px",
+                  padding: isMobile ? "0 16px" : "0 28px",
                   display: "flex",
+                  flexDirection: "row-reverse",
+                  justifyContent: "center",
                   alignItems: "center",
-                  gap: 9,
+                  gap: 10,
                   color: "white",
                   border: "none",
-                  cursor: publishDisabled ? "not-allowed" : "pointer",
+                  cursor:
+                    publishDisabled || isFreeLimitReached
+                      ? "not-allowed"
+                      : "pointer",
                   transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)",
                   fontFamily: "inherit",
+                  overflow: "hidden",
+                  position: "relative",
+                  width: isMobile && (hasBlockingError || isScheduled) ? "100%" : "auto", // Expand to full width if wrapped to new line on mobile
+                  marginTop: isMobile && (hasBlockingError || isScheduled) ? 4 : 0,
                 }}
               >
                 {loading ? (
                   <>
-                    <Loader2 size={16} className="animate-spin" />
-                    <span style={{ fontWeight: 700, fontSize: 13 }}>
+                    <Loader2 size={18} className="animate-spin" />
+                    <span style={{ fontWeight: 700, fontSize: 14 }}>
                       Publishing…
                     </span>
                   </>
                 ) : (
                   <>
-                    <div className="svg-wrapper-1">
-                      <div className="svg-wrapper">
+                    <span
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        letterSpacing: "-0.01em",
+                        position: "relative",
+                        zIndex: 1,
+                      }}
+                    >
+                      {isScheduled ? "Schedule Post" : "Publish Now"}
+                    </span>
+                    <div
+                      className="svg-wrapper-1"
+                      style={{
+                        position: "relative",
+                        zIndex: 2,
+                        flexShrink: 0,
+                        overflow: "visible",
+                      }}
+                    >
+                      <div
+                        className="svg-wrapper"
+                        style={{ overflow: "visible" }}
+                      >
                         {isScheduled ? (
-                          <Calendar size={16} strokeWidth={2.5} />
+                          <Calendar size={isMobile ? 16 : 20} strokeWidth={2.5} />
                         ) : (
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             viewBox="0 0 24 24"
-                            width={16}
-                            height={16}
-                            fill="white"
+                            width={isMobile ? 18 : 24}
+                            height={isMobile ? 18 : 24}
+                            fill="currentColor"
                           >
+                            <path fill="none" d="M0 0h24v24H0z" />
                             <path d="M1.946 9.315c-.522-.174-.527-.455.01-.634l19.087-6.362c.529-.176.832.12.684.638l-5.454 19.086c-.15.529-.455.547-.679.045L12 14l6-8-8 6-8.054-2.685z" />
                           </svg>
                         )}
                       </div>
                     </div>
-                    <span
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 700,
-                        letterSpacing: "-0.01em",
-                      }}
-                    >
-                      {isScheduled ? "Schedule Post" : "Publish Now"}
-                    </span>
                   </>
                 )}
               </motion.button>
