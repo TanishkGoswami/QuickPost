@@ -382,7 +382,7 @@ function Sidebar() {
               style={{
                 fontSize: 10,
                 fontWeight: 800,
-                fontFamily: "var(--font-display)",
+                fontFamily: "var(--font)",
                 color: "var(--arc)",
                 letterSpacing: "0.1em",
                 textTransform: "uppercase",
@@ -391,7 +391,18 @@ function Sidebar() {
             >
               GAP
             </span>
-            <span>Social‑pilot</span>
+            <span
+              style={{
+                fontSize: 16,
+                fontWeight: 600,
+                fontFamily: "var(--font)",
+                color: "var(--ink)",
+                letterSpacing: "-0.02em",
+                lineHeight: 1,
+              }}
+            >
+              Social‑pilot
+            </span>
           </span>
         </Link>
       </div>

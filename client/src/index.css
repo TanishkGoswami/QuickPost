@@ -28,7 +28,7 @@
   --r-sm: 6px;
   
   /* Typography */
-  --font: "Plus Jakarta Sans", "Inter", Arial, sans-serif;
+  --font: "Poppins", sans-serif;
   --tracking-tight: -0.02em;
 }
 @tailwind base;

@@ -1,17 +1,25 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function PaymentSuccessPage() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
+  const [refreshing, setRefreshing] = useState(true);
 
   useEffect(() => {
-    // We could do additional verification here, but Dashboard.jsx already verified it.
-    // Confetti effect could be added here.
-  }, []);
+    // Force refresh plan from DB so the sidebar badge updates immediately
+    const refresh = async () => {
+      try {
+        await refreshProfile();
+      } catch (e) {
+        console.warn('[PaymentSuccess] refreshProfile error (non-fatal):', e);
+      } finally {
+        setRefreshing(false);
+      }
+    };
+    refresh();
+  }, [refreshProfile]);
 
   return (
     <div style={{ 
@@ -51,27 +59,41 @@ export default function PaymentSuccessPage() {
         <h1 style={{ fontSize: 28, fontWeight: 700, color: 'var(--ink)', marginBottom: 12, letterSpacing: '-0.02em' }}>
           Payment Successful!
         </h1>
-        <p style={{ fontSize: 15, color: 'var(--slate)', lineHeight: 1.6, marginBottom: 32 }}>
-          Thank you for upgrading, {user?.name || 'there'}. Your subscription is now active and your account has been updated with your new plan features.
+        <p style={{ fontSize: 15, color: 'var(--slate)', lineHeight: 1.6, marginBottom: 8 }}>
+          Thank you for upgrading, {user?.name || 'there'}.
         </p>
+        {user?.plan && user.plan !== 'Free' && (
+          <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--arc)', marginBottom: 24 }}>
+            Plan active: {user.plan} ✓
+          </p>
+        )}
 
         <button
           onClick={() => window.location.href = '/dashboard'}
+          disabled={refreshing}
           style={{
-            background: 'var(--ink)',
-            color: 'var(--canvas)',
+            background: refreshing ? 'var(--dust)' : 'var(--ink)',
+            color: refreshing ? 'var(--slate)' : 'var(--canvas)',
             border: 'none',
             padding: '14px 32px',
             borderRadius: 'var(--r-btn)',
             fontSize: 15,
             fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'transform 0.2s'
+            cursor: refreshing ? 'wait' : 'pointer',
+            transition: 'transform 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            margin: '0 auto',
           }}
-          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
+          onMouseEnter={e => { if (!refreshing) e.currentTarget.style.transform = 'scale(1.02)'; }}
           onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
         >
-          Return to Dashboard
+          {refreshing ? (
+            <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Activating plan...</>
+          ) : (
+            'Return to Dashboard'
+          )}
         </button>
       </motion.div>
     </div>

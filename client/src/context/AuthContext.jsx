@@ -101,28 +101,41 @@ export function AuthProvider({ children }) {
         .eq('id', sessionUser.id)
         .maybeSingle();
 
-      let resolvedPlan   = localUser?.plan || 'Free';
-      let resolvedStatus = localUser?.subscription_status || 'active';
-
-      // Step 2: Check hub_subscriptions by EMAIL
-      // This table is populated by bulk-sync-to-social and sync-from-hub.
-      // If user purchased on getaipilot.in, their plan is stored here.
+      // Step 2: Check hub_subscriptions by EMAIL (hub purchases + social purchases after verify-subscription)
       const { data: hubSub } = await supabase
         .from('hub_subscriptions')
         .select('plan, plan_id, subscription_status')
         .eq('email', sessionUser.email)
         .maybeSingle();
 
-      if (hubSub && hubSub.plan && hubSub.plan !== 'Free') {
-        resolvedPlan   = hubSub.plan;   // Enterprise / Pro
-        resolvedStatus = hubSub.subscription_status || 'active';
-        console.log('✅ [HUB-SUB] Plan from hub_subscriptions:', resolvedPlan, '(', hubSub.plan_id, ')');
+      // Priority: hub_subscriptions > local users table > auth user_metadata
+      let resolvedPlan   = hubSub?.plan
+        || localUser?.plan
+        || sessionUser.user_metadata?.plan   // ← set by verify-subscription immediately after payment
+        || 'Free';
+      let resolvedStatus = hubSub?.subscription_status
+        || localUser?.subscription_status
+        || sessionUser.user_metadata?.subscription_status
+        || 'active';
+
+      // Normalise — if somehow "Pro"/"Enterprise" slipped through from old code, map to new names
+      if (resolvedPlan === 'Pro' || resolvedPlan === 'pro') resolvedPlan = 'Social Pilot';
+      if (resolvedPlan === 'Enterprise' || resolvedPlan === 'enterprise') resolvedPlan = 'GAP Ultimate Ecosystem';
+
+      if (resolvedPlan !== 'Free') {
+        console.log('✅ [AUTH] Plan resolved:', resolvedPlan);
 
         // Write back to local users table so future lookups are instant
         await supabase
           .from('users')
-          .update({ plan: resolvedPlan, subscription_status: resolvedStatus })
-          .eq('id', sessionUser.id);
+          .upsert({ id: sessionUser.id, plan: resolvedPlan, subscription_status: resolvedStatus }, { onConflict: 'id' });
+
+        // Write back to hub_subscriptions if not already there
+        if (!hubSub && sessionUser.email) {
+          await supabase
+            .from('hub_subscriptions')
+            .upsert({ email: sessionUser.email, plan: resolvedPlan, subscription_status: resolvedStatus, updated_at: new Date().toISOString(), synced_at: new Date().toISOString() }, { onConflict: 'email' });
+        }
       }
 
       setUser(prev => prev ? {
@@ -255,6 +268,19 @@ export function AuthProvider({ children }) {
     await fetchConnectedAccounts();
   }, [fetchConnectedAccounts]);
 
+  // Call this after payment to immediately reflect new plan in UI
+  const refreshProfile = useCallback(async () => {
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    if (currentSession?.user) {
+      // Force refresh the session to get latest user_metadata
+      await supabase.auth.refreshSession();
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      if (freshSession?.user) {
+        await fetchUserProfile(freshSession.user);
+      }
+    }
+  }, [fetchUserProfile]);
+
   const value = useMemo(
     () => ({
       user,
@@ -266,9 +292,10 @@ export function AuthProvider({ children }) {
       googleSignIn,
       logout,
       refreshAccounts,
+      refreshProfile,
       isAuthenticated: !!user,
     }),
-    [user, session, connectedAccounts, loading, refreshAccounts],
+    [user, session, connectedAccounts, loading, refreshAccounts, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -123,7 +123,7 @@ export default function LandingNav() {
               style={{
                 fontSize: 10,
                 fontWeight: 800,
-                fontFamily: "var(--font-display)",
+                fontFamily: "var(--font)",
                 color: "var(--arc)",
                 letterSpacing: "0.1em",
                 textTransform: "uppercase",
@@ -135,11 +135,11 @@ export default function LandingNav() {
             </span>
             <span
               style={{
-                fontSize: 20,
-                fontWeight: 400,
+                fontSize: 18,
+                fontWeight: 600,
                 color: "var(--ink)",
-                fontFamily: "var(--font-logo)",
-                letterSpacing: "normal",
+                fontFamily: "var(--font)",
+                letterSpacing: "-0.02em",
                 whiteSpace: "nowrap",
                 lineHeight: 1,
               }}
