@@ -1,19 +1,3 @@
-/**
- * useAllTrends.js v3 — Production-grade data hook
- * ────────────────────────────────────────────────────────────────
- * What's new / fixed vs v2:
- *  1. Proper AbortController per-fetch (not per-load cycle)
- *  2. useDeferredValue for search debounce (no setTimeout leak)
- *  3. Ref-guarded loadMore — cannot double-fire
- *  4. Distinguishes AbortError from real errors
- *  5. Exponential backoff retry on server errors
- *  6. Weighted subreddit pool (niche-aware rotation)
- *  7. Deduplication by URL across pages
- *
- * Replace: client/src/pages/trends/hooks/useAllTrends.js
- * ────────────────────────────────────────────────────────────────
- */
-
 import {
   useState, useEffect, useCallback, useRef, useDeferredValue,
 } from "react";
@@ -51,13 +35,61 @@ async function loadNews({ limit, offset, categories, query }, signal) {
   return data.articles || [];
 }
 
+// ─── REDDIT: direct browser fetch (no backend needed) ────────────
+async function fetchSubreddit(sr, limit, after, signal) {
+  const params = new URLSearchParams({ limit: String(limit), raw_json: "1" });
+  if (after) params.set("after", after);
+
+  const res = await fetch(`https://www.reddit.com/r/${sr}/hot.json?${params}`, {
+    signal,
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) throw new Error(`Reddit r/${sr}: HTTP ${res.status}`);
+  const data = await res.json();
+
+  const posts = (data?.data?.children || [])
+    .map((c) => c.data)
+    .filter((p) => !p.over_18 && !p.stickied)
+    .map((p) => {
+      // Best image: hires preview → thumbnail → direct url
+      let image = null;
+      if (p.preview?.images?.[0]?.source?.url) {
+        image = p.preview.images[0].source.url.replace(/&amp;/g, "&");
+      } else if (p.thumbnail?.startsWith("http")) {
+        image = p.thumbnail;
+      } else if (/\.(jpg|jpeg|png|gif|webp)$/i.test(p.url || "")) {
+        image = p.url;
+      }
+
+      const isVideo = p.is_video || !!p.media?.reddit_video;
+      const videoUrl =
+        p.media?.reddit_video?.fallback_url?.replace(/&amp;/g, "&") || null;
+
+      return {
+        id: p.id,
+        title: p.title,
+        image,
+        score: p.score,
+        upvotes: p.ups,
+        comments: p.num_comments,
+        subreddit: p.subreddit,
+        url: `https://reddit.com${p.permalink}`,
+        link: `https://reddit.com${p.permalink}`,
+        isVideo,
+        videoUrl,
+        isImage: !!image,
+      };
+    })
+    .filter((p) => p.image || p.isVideo);
+
+  return { sr, posts, after: data?.data?.after || null };
+}
+
 async function loadReddit({ subreddits, limitPerSub, afters }, signal) {
   const results = await Promise.allSettled(
-    subreddits.map(async sr => {
-      const p = new URLSearchParams({ sr, limit: String(limitPerSub), ...(afters[sr] && { after: afters[sr] }) });
-      const data = await safeFetch(`${BASE}/api/trends/reddit?${p}`, signal);
-      return { sr, posts: data.posts || [], after: data.after || null };
-    })
+    subreddits.map((sr) =>
+      fetchSubreddit(sr, limitPerSub, afters[sr] || "", signal)
+    )
   );
   const posts = [];
   const newAfters = { ...afters };
