@@ -6,6 +6,7 @@ import 'dotenv/config'; // Load variables before other imports
 
 import broadcastRouter from './routes/broadcast.js';
 import authRouter from './routes/auth.js';
+import ssoRouter from './routes/sso.js';
 import broadcastsRouter from './routes/broadcasts.js';
 import onboardingRouter from './routes/onboarding.js';
 import jobsRouter from './routes/jobs.js';
@@ -57,6 +58,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/auth', authRouter);
+app.use('/api/auth', ssoRouter);
 app.use('/api', broadcastRouter);
 app.use('/api', broadcastsRouter);
 app.use('/api', onboardingRouter);
