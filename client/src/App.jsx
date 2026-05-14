@@ -17,6 +17,7 @@ import { useAuth } from './context/AuthContext';
 // ── Synchronous imports (auth-critical path) ──
 import AuthPage from './components/AuthPage';
 import AuthCallback from './components/AuthCallback';
+import SSOPage from './pages/SSOPage';
 import DashboardLayout from './components/DashboardLayout';
 import { NotFoundPage } from './components/ui/404-page-not-found';
 
@@ -81,6 +82,7 @@ function AppContent() {
       />
 
       <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/social-sso"   element={<SSOPage />} />
       <Route
         path="/onboarding"
         element={isAuthenticated ? <Onboarding /> : <Navigate to="/login" replace />}
