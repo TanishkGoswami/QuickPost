@@ -12,6 +12,7 @@ import {
   Flame,
   Sparkles,
   Lock,
+  MessageCircle,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
 import logo from "/icons/logo.png";
@@ -429,6 +430,11 @@ function Sidebar() {
               to: "/dashboard/trends",
               label: "All Trends",
               icon: <Flame size={16} />,
+            },
+            {
+              to: "/dashboard/auto-dm/automations",
+              label: "Auto DM",
+              icon: <MessageCircle size={16} />,
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);
