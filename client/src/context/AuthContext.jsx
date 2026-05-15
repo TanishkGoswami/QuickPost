@@ -15,6 +15,11 @@ const AuthContext = createContext(null);
 // Called after every successful sign-in on social.getaipilot.in.
 // Ensures the user exists in hub's auth.users + profiles tables.
 async function syncUserToHub(sessionUser) {
+  if (import.meta.env.DEV) {
+    console.info("[HUB-SYNC] Skipping browser-side hub sync in local dev");
+    return;
+  }
+
   const hubSyncUrl   = import.meta.env.VITE_HUB_SYNC_FUNCTION_URL;
   const syncSecret   = import.meta.env.VITE_SOCIAL_SYNC_SECRET;
   // Supabase gateway requires Authorization: Bearer <anon_key>

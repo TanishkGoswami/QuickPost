@@ -111,7 +111,33 @@ class GoogleOAuthService {
    */
   async storeTokens(userId, tokenData) {
     try {
-      const expiryDate = new Date(tokenData.expiryDate);
+      const { data: existingRow, error: existingError } = await supabase
+        .from("social_tokens")
+        .select("refresh_token, username, profile_data, token_expiry")
+        .eq("user_id", userId)
+        .eq("provider", "youtube")
+        .maybeSingle();
+
+      if (existingError) {
+        console.warn(
+          "⚠️ [GOOGLE_OAUTH] Failed to read existing YouTube token row:",
+          existingError.message,
+        );
+      }
+
+      const expiryDate = tokenData.expiryDate
+        ? new Date(tokenData.expiryDate)
+        : null;
+      const resolvedRefreshToken =
+        tokenData.refreshToken ?? existingRow?.refresh_token ?? null;
+      const resolvedUsername =
+        tokenData.userInfo?.username ?? existingRow?.username ?? null;
+      const resolvedProfileData =
+        tokenData.userInfo ?? existingRow?.profile_data ?? null;
+      const resolvedExpiry =
+        expiryDate && !Number.isNaN(expiryDate.getTime())
+          ? expiryDate.toISOString()
+          : existingRow?.token_expiry ?? null;
 
       const { data, error } = await supabase
         .from("social_tokens")
@@ -120,10 +146,10 @@ class GoogleOAuthService {
             user_id: userId,
             provider: "youtube",
             access_token: tokenData.accessToken,
-            refresh_token: tokenData.refreshToken,
-            token_expiry: expiryDate.toISOString(),
-            username: tokenData.userInfo?.username,
-            profile_data: tokenData.userInfo,
+            refresh_token: resolvedRefreshToken,
+            token_expiry: resolvedExpiry,
+            username: resolvedUsername,
+            profile_data: resolvedProfileData,
             updated_at: new Date().toISOString(),
           },
           {
@@ -189,10 +215,30 @@ class GoogleOAuthService {
       }
 
       const now = new Date();
-      const expiry = new Date(data.token_expiry);
+      const expiry = data.token_expiry ? new Date(data.token_expiry) : null;
+      const hasUsableAccessToken = Boolean(data.access_token);
+      const hasRefreshToken = Boolean(data.refresh_token);
+      const isExpiryValid = expiry && !Number.isNaN(expiry.getTime());
 
       // If token expires in less than 5 minutes, refresh it
+      if (!hasUsableAccessToken) {
+        throw new Error("YouTube account not connected");
+      }
+
+      if (!isExpiryValid) {
+        console.warn(
+          "⚠️ [GOOGLE_OAUTH] Missing/invalid YouTube token expiry, using stored access token",
+        );
+        return data.access_token;
+      }
+
       if (expiry - now < 5 * 60 * 1000) {
+        if (!hasRefreshToken) {
+          throw new Error(
+            "YouTube connection expired. Please reconnect your YouTube account.",
+          );
+        }
+
         console.log("Token expired or expiring soon, refreshing...");
         const refreshed = await this.refreshAccessToken(data.refresh_token);
 

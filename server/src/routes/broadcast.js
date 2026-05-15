@@ -444,6 +444,7 @@ async function processBroadcastJob({
   // Bluesky
   if (channels.includes("bluesky") && tokens.bluesky?.did) {
     const bskyTokens = { ...tokens.bluesky };
+    let canPostToBluesky = true;
     // Refresh the Bluesky session — access tokens expire every ~2 hours
     try {
       const refreshed = await blueskyAuth.refreshSession(bskyTokens.refreshToken);
@@ -458,6 +459,23 @@ async function processBroadcastJob({
       console.log(`✅ [JOB:${jobId}] Bluesky token refreshed`);
     } catch (refreshErr) {
       console.warn(`⚠️ [JOB:${jobId}] Bluesky token refresh failed, using stored token:`, refreshErr.message);
+      const hasValidStoredSession = bskyTokens.accessToken
+        ? await blueskyAuth.verifyCredentials(bskyTokens.accessToken)
+        : false;
+
+      if (!hasValidStoredSession) {
+        canPostToBluesky = false;
+        platformPromises.push(
+          Promise.resolve(
+            onChannelComplete("Bluesky", {
+              success: false,
+              platform: "Bluesky",
+              error:
+                "Bluesky session expired. Please reconnect your Bluesky account.",
+            }),
+          ),
+        );
+      }
     }
 
     const resolvedCaption = resolveMentions(caption, 'bluesky', bskyTokens);
@@ -469,7 +487,7 @@ async function processBroadcastJob({
       }
     });
     const totalSize = stats.reduce((a, b) => a + b, 0);
-    if (totalSize <= 30 * 1024 * 1024) {
+    if (canPostToBluesky && totalSize <= 30 * 1024 * 1024) {
       const blobs = filePaths
         .map((p) => {
           try {
@@ -487,7 +505,19 @@ async function processBroadcastJob({
           mediaUrls,
           blobs,
           isVideo,
-        ).then((r) => onChannelComplete("Bluesky", r)),
+        )
+          .then((r) => onChannelComplete("Bluesky", r))
+          .catch((error) =>
+            onChannelComplete("Bluesky", {
+              success: false,
+              platform: "Bluesky",
+              error: error.message || "Failed to post to Bluesky",
+            }),
+          ),
+      );
+    } else if (!canPostToBluesky) {
+      console.warn(
+        `⚠️ [JOB:${jobId}] Bluesky skipped because the stored session is no longer valid.`,
       );
     } else {
       console.warn(`⚠️ [JOB:${jobId}] Media too large for Bluesky, skipping.`);
@@ -513,31 +543,39 @@ async function processBroadcastJob({
   ) {
     platformPromises.push(
       (async () => {
-        const validAccessToken = await googleOAuth.getValidAccessToken(userId);
-        const ytTokens = { ...tokens.youtube, accessToken: validAccessToken };
-        const resolvedCaption = resolveMentions(caption, 'youtube', ytTokens);
-        updateJob(jobId, { step: "Uploading video to YouTube…" });
-        const result = await postToYouTube(primaryVideoPath, resolvedCaption, ytTokens, (pct) => {
-          // Phase 3 spans from 30% to 85%
-          // If multiple platforms, each gets a slice of that 55%
-          const base = 30 + Math.floor((completedChannels / selectedChannelCount) * 55);
-          const slice = Math.floor((1 / selectedChannelCount) * 55);
-          const currentPct = base + Math.floor((pct / 100) * slice);
-          
-          updateJob(jobId, {
-            progress: Math.min(currentPct, 85),
-            step: `Uploading video to YouTube (${pct}%)…`,
+        try {
+          const validAccessToken = await googleOAuth.getValidAccessToken(userId);
+          const ytTokens = { ...tokens.youtube, accessToken: validAccessToken };
+          const resolvedCaption = resolveMentions(caption, 'youtube', ytTokens);
+          updateJob(jobId, { step: "Uploading video to YouTube…" });
+          const result = await postToYouTube(primaryVideoPath, resolvedCaption, ytTokens, (pct) => {
+            // Phase 3 spans from 30% to 85%
+            // If multiple platforms, each gets a slice of that 55%
+            const base = 30 + Math.floor((completedChannels / selectedChannelCount) * 55);
+            const slice = Math.floor((1 / selectedChannelCount) * 55);
+            const currentPct = base + Math.floor((pct / 100) * slice);
+            
+            updateJob(jobId, {
+              progress: Math.min(currentPct, 85),
+              step: `Uploading video to YouTube (${pct}%)…`,
+            });
           });
-        });
-        if (result.success && result.videoId && youtubeThumbnailPath) {
-          const thumbResult = await setVideoThumbnail(
-            result.videoId,
-            youtubeThumbnailPath,
-            ytTokens,
-          );
-          result.thumbnailSuccess = thumbResult.success;
+          if (result.success && result.videoId && youtubeThumbnailPath) {
+            const thumbResult = await setVideoThumbnail(
+              result.videoId,
+              youtubeThumbnailPath,
+              ytTokens,
+            );
+            result.thumbnailSuccess = thumbResult.success;
+          }
+          return onChannelComplete("YouTube", result);
+        } catch (error) {
+          return onChannelComplete("YouTube", {
+            success: false,
+            platform: "YouTube",
+            error: error.message || "Failed to upload to YouTube",
+          });
         }
-        return onChannelComplete("YouTube", result);
       })(),
     );
   }
