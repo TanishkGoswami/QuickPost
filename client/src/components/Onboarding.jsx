@@ -7,7 +7,7 @@ import {
   User, Store, Building2, Briefcase, Megaphone, Heart,
 } from 'lucide-react';
 import apiClient from '../utils/apiClient';
-import logo from '/logo.png';
+import logo from '/icons/logo.png';
 
 /* ── Platform data ── */
 const PLATFORMS = [
@@ -293,11 +293,11 @@ export default function Onboarding() {
       <div style={{ flex: 1, padding: '48px 40px', maxWidth: 640, margin: '0 auto', width: '100%' }}>
         <h1 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: '0 0 6px' }}>Which channels are you active on?</h1>
         <p style={{ fontSize: 14, color: 'var(--slate)', margin: '0 0 32px' }}>Select all that apply. You can connect accounts after setup.</p>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', 
-          gap: 12, 
-          marginBottom: 36 
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+          gap: 12,
+          marginBottom: 36
         }}>
           {PLATFORMS.map(p => {
             const sel = selectedChannels.includes(p.id);
@@ -392,11 +392,11 @@ export default function Onboarding() {
       <div style={{ flex: 1, padding: '48px 40px', maxWidth: 640, margin: '0 auto', width: '100%' }}>
         <h1 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: '0 0 6px' }}>How would you describe yourself?</h1>
         <p style={{ fontSize: 14, color: 'var(--slate)', margin: '0 0 32px' }}>Choose the option that best fits your role.</p>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', 
-          gap: 10, 
-          marginBottom: 36 
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+          gap: 10,
+          marginBottom: 36
         }}>
           {USER_TYPES.map(u => {
             const sel = selectedType === u.id;
