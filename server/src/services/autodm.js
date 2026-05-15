@@ -97,8 +97,44 @@ export async function encryptAutoDMTokenBundle(bundle) {
   return `enc:v1:${bytesToBase64(iv)}:${bytesToBase64(payload)}`;
 }
 
+async function ensureAutoDMUser(user) {
+  try {
+    const res = await fetch(`${autodmUrl}/auth/v1/admin/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${autodmServiceKey}`,
+        apikey: autodmServiceKey,
+      },
+      body: JSON.stringify({
+        id: user.userId,
+        email: user.email,
+        email_confirm: true,
+        user_metadata: {
+          full_name: user.name || user.email?.split('@')[0] || 'User',
+          avatar_url: user.profilePicture || null,
+          bridged_from: 'social.getaipilot.in',
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      // 422 = already registered — fine, ignore
+      if (res.status !== 422) {
+        console.warn('[AUTODM] ensureAutoDMUser warning:', err.msg || err.message);
+      }
+    }
+  } catch (e) {
+    console.warn('[AUTODM] ensureAutoDMUser error:', e.message);
+  }
+}
+
 export async function importInstagramAccountToAutoDM(user) {
   const autoDMSupabase = getAutoDMSupabaseAdmin();
+
+  // Ensure user exists in AutoDM auth.users (required by FK constraint)
+  await ensureAutoDMUser(user);
 
   const { data: socialInstagram, error: socialError } = await supabase
     .from('social_tokens')
@@ -202,4 +238,32 @@ export async function getAutoDMStatus(user) {
     ),
     socialInstagram: socialInstagram || null,
   };
+}
+
+export async function fetchInstagramMediaForUser(user, limit = 30) {
+  const { data: token, error } = await supabase
+    .from('social_tokens')
+    .select('access_token, instagram_business_id')
+    .eq('user_id', user.userId)
+    .eq('provider', 'instagram')
+    .maybeSingle();
+
+  if (error) throw new Error(`Failed to read Instagram token: ${error.message}`);
+  if (!token?.access_token || !token?.instagram_business_id) {
+    throw new Error('Instagram is not connected in Social Pilot.');
+  }
+
+  const url = new URL(`https://graph.instagram.com/${token.instagram_business_id}/media`);
+  url.searchParams.set('access_token', token.access_token);
+  url.searchParams.set('fields', 'id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,like_count,comments_count');
+  url.searchParams.set('limit', String(limit));
+
+  const res = await fetch(url.toString());
+  const json = await res.json();
+
+  if (!res.ok) {
+    throw new Error(json?.error?.message || 'Instagram Graph API error');
+  }
+
+  return json.data || [];
 }

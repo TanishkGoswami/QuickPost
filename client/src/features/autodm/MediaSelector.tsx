@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { autodmSupabase } from "@/services/autodm/supabaseClient";
+import apiClient from "@/utils/apiClient";
 import { useAutoDM } from "./AutoDMContext";
 
 export function MediaSelector({ open, onOpenChange, onSelect }) {
@@ -18,17 +18,14 @@ export function MediaSelector({ open, onOpenChange, onSelect }) {
     if (!activeAccount?.id) return;
     setIsLoading(true);
     try {
-      const { data, error } = await autodmSupabase.functions.invoke("instagram-media", {
-        body: {
-          instagramAccountId: activeAccount.id,
-          limit: 30,
-        },
+      const response = await apiClient.get("/api/autodm/instagram-media", {
+        params: { limit: 30 },
       });
-      if (error) throw error;
-      setMedia(data?.media || []);
+      if (!response.data?.success) throw new Error(response.data?.error || "Failed to load media");
+      setMedia(response.data.media || []);
     } catch (error) {
       console.error("[AutoDM] Failed to load media:", error);
-      toast.error("Failed to load Instagram media");
+      toast.error(error.response?.data?.error || error.message || "Failed to load Instagram media");
       setMedia([]);
     } finally {
       setIsLoading(false);

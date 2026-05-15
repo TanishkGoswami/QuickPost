@@ -4,6 +4,7 @@ import {
   getAutoDMStatus,
   importInstagramAccountToAutoDM,
   signAutoDMBridgeToken,
+  fetchInstagramMediaForUser,
 } from '../services/autodm.js';
 
 const router = express.Router();
@@ -52,6 +53,20 @@ router.post('/import-instagram', authenticateUser, async (req, res) => {
     res.status(400).json({
       success: false,
       error: error.message || 'Failed to import Instagram account',
+    });
+  }
+});
+
+router.get('/instagram-media', authenticateUser, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 30;
+    const media = await fetchInstagramMediaForUser(req.user, limit);
+    res.json({ success: true, media });
+  } catch (error) {
+    console.error('[AUTODM] Instagram media error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch Instagram media',
     });
   }
 });
