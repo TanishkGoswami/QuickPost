@@ -160,7 +160,7 @@ async function uploadVideoToBlueskyService(accessJwt, did, videoBlob) {
     const authRes = await axios.get(`${BLUESKY_API_URL}/com.atproto.server.getServiceAuth`, {
       params: {
         aud: pdsDid,
-        lxm: 'com.atproto.repo.uploadBlob',
+        lxm: 'app.bsky.video.uploadVideo',
         exp: Math.floor(Date.now() / 1000) + 1800
       },
       headers: {

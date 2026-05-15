@@ -10,6 +10,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -19,16 +20,21 @@ function SSOPage() {
   const [message, setMessage] = useState('Signing you in from GetAiPilot…');
 
   useEffect(() => {
-    let cancelled = false;
+    const controller = new AbortController();
 
     const processSSO = async () => {
+      // If already logged in to Project B, skip SSO entirely
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate('/dashboard', { replace: true });
+        return;
+      }
+
       const token = new URLSearchParams(window.location.search).get('token');
 
       if (!token) {
-        if (!cancelled) {
-          setStatus('error');
-          setMessage('No SSO token found. Please try launching Social Pilot again from GetAiPilot.');
-        }
+        setStatus('error');
+        setMessage('No SSO token found. Please try launching Social Pilot again from GetAiPilot.');
         return;
       }
 
@@ -37,32 +43,33 @@ function SSOPage() {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ token }),
+          signal:  controller.signal,
         });
         const data = await res.json().catch(() => ({}));
 
-        if (cancelled) return;
+        if (controller.signal.aborted) return;
 
         if (!res.ok || !data.magic_link_url) {
+          const msg = data.error === 'SSO token already used'
+            ? 'This sign-in link has already been used. Please go back to GetAiPilot and click Launch Social Pilot again.'
+            : (data.error || 'Authentication failed. Please try again.');
           setStatus('error');
-          setMessage(data.error || 'Authentication failed. Please try again.');
+          setMessage(msg);
           return;
         }
 
         setMessage('Redirecting to your workspace…');
-        // Full navigation: Supabase processes the magic-link and redirects
-        // back to /auth/callback with session tokens in the URL hash.
         window.location.href = data.magic_link_url;
 
-      } catch {
-        if (!cancelled) {
-          setStatus('error');
-          setMessage('Network error. Please check your connection and try again.');
-        }
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        setStatus('error');
+        setMessage('Network error. Please check your connection and try again.');
       }
     };
 
     processSSO();
-    return () => { cancelled = true; };
+    return () => { controller.abort(); };
   }, []);
 
   return (

@@ -14,7 +14,7 @@ import {
   Lock,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
-import logo from "/logo.png";
+import logo from "/icons/logo.png";
 import InstagramBusinessSetupModal from "./InstagramBusinessSetupModal";
 import BlueskyConnectModal from "./BlueskyConnectModal";
 import PinterestConnectModal from "./PinterestConnectModal";
