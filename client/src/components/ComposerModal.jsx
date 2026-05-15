@@ -1675,9 +1675,25 @@ function ComposerModal({
         formData.append("youtubeThumbnail", youtubeThumbnail);
       }
 
+      formData.append("selectedAspectRatio", selectedRatio || "1:1");
+      formData.append(
+        "selectedPostSizePreset",
+        platformPresets[activePreviewPlatform] || ""
+      );
+
       // 2. Start broadcast via API
+      // We use a separate axios instance or override headers to avoid the default 'application/json' 
+      // from apiClient, which causes 400 Bad Request on the server when sending FormData.
       const res = await apiClient.post("/api/broadcast", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: {
+          "Content-Type": undefined,
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          console.log(`📤 Upload Progress: ${percentCompleted}%`);
+        },
       });
 
       // 3. Add to background manager
@@ -1703,6 +1719,10 @@ function ComposerModal({
       setSelectedChannels([]);
       setError(null);
     } catch (err) {
+      console.error("Broadcast submission error:", err);
+      if (err.response) {
+        console.error("Server response data:", err.response.data);
+      }
       setError(err.response?.data?.error || "Failed to start broadcast");
     } finally {
       setLoading(false);

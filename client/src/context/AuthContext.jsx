@@ -132,9 +132,10 @@ export function AuthProvider({ children }) {
 
         // Write back to hub_subscriptions if not already there
         if (!hubSub && sessionUser.email) {
-          await supabase
+          const { error: hubUpsertErr } = await supabase
             .from('hub_subscriptions')
             .upsert({ email: sessionUser.email, plan: resolvedPlan, subscription_status: resolvedStatus, updated_at: new Date().toISOString(), synced_at: new Date().toISOString() }, { onConflict: 'email' });
+          if (hubUpsertErr) console.warn('[AUTH] hub_subscriptions upsert skipped (table may not exist in this project):', hubUpsertErr.message);
         }
       }
 
