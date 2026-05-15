@@ -253,7 +253,7 @@ export async function fetchInstagramMediaForUser(user, limit = 30) {
     throw new Error('Instagram is not connected in Social Pilot.');
   }
 
-  const url = new URL(`https://graph.instagram.com/${token.instagram_business_id}/media`);
+  const url = new URL(`https://graph.facebook.com/v21.0/${token.instagram_business_id}/media`);
   url.searchParams.set('access_token', token.access_token);
   url.searchParams.set('fields', 'id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,like_count,comments_count');
   url.searchParams.set('limit', String(limit));
