@@ -130,11 +130,6 @@ export function AuthProvider({ children }) {
       if (resolvedPlan !== 'Free') {
         console.log('✅ [AUTH] Plan resolved:', resolvedPlan);
 
-        // Write back to local users table so future lookups are instant
-        await supabase
-          .from('users')
-          .upsert({ id: sessionUser.id, plan: resolvedPlan, subscription_status: resolvedStatus }, { onConflict: 'id' });
-
         // Write back to hub_subscriptions if not already there
         if (!hubSub && sessionUser.email) {
           const { error: hubUpsertErr } = await supabase
