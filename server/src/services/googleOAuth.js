@@ -18,8 +18,10 @@ function base64urlEncode(obj) {
 }
 
 class GoogleOAuthService {
-  constructor() {
-    this.oauth2Client = new google.auth.OAuth2(
+  constructor() {}
+
+  createClient() {
+    return new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
       process.env.GOOGLE_REDIRECT_URI ||
@@ -41,7 +43,8 @@ class GoogleOAuthService {
    * @param {string} state - Base64 encoded state object
    */
   getAuthorizationUrl(state) {
-    const authUrl = this.oauth2Client.generateAuthUrl({
+    const client = this.createClient();
+    const authUrl = client.generateAuthUrl({
       access_type: "offline", // Request refresh token
       scope: YOUTUBE_SCOPES,
       prompt: "consent", // Force consent screen to get refresh token
@@ -57,18 +60,19 @@ class GoogleOAuthService {
    */
   async exchangeCodeForTokens(code) {
     try {
+      const client = this.createClient();
       // Exchange code for tokens
-      const { tokens } = await this.oauth2Client.getToken(code);
-      this.oauth2Client.setCredentials(tokens);
+      const { tokens } = await client.getToken(code);
+      client.setCredentials(tokens);
 
       // Get user info
-      const oauth2 = google.oauth2({ version: "v2", auth: this.oauth2Client });
+      const oauth2 = google.oauth2({ version: "v2", auth: client });
       const { data: userInfo } = await oauth2.userinfo.get();
 
       // Get YouTube Channel info (to get the channel name/handle)
       const youtube = google.youtube({
         version: "v3",
-        auth: this.oauth2Client,
+        auth: client,
       });
       let channelTitle = userInfo.name; // Fallback to Google name
       try {
@@ -178,8 +182,9 @@ class GoogleOAuthService {
   async refreshAccessToken(refreshToken) {
     try {
       console.log("🔄 [GOOGLE_OAUTH] Refreshing access token...");
-      this.oauth2Client.setCredentials({ refresh_token: refreshToken });
-      const { credentials } = await this.oauth2Client.refreshAccessToken();
+      const client = this.createClient();
+      client.setCredentials({ refresh_token: refreshToken });
+      const { credentials } = await client.refreshAccessToken();
       console.log("✅ [GOOGLE_OAUTH] Access token refreshed");
 
       return {
@@ -188,7 +193,12 @@ class GoogleOAuthService {
       };
     } catch (error) {
       console.error("Error refreshing token:", error);
-      throw new Error("Failed to refresh access token");
+      // Detailed error for the user
+      const isInvalidGrant = error.response?.data?.error === 'invalid_grant' || error.message?.includes('invalid_grant');
+      const message = isInvalidGrant 
+        ? "YouTube connection expired. Please reconnect your YouTube account."
+        : `Failed to refresh YouTube access token: ${error.message}`;
+      throw new Error(message);
     }
   }
 
