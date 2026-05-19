@@ -10,7 +10,7 @@ import { DialogProvider } from './context/DialogContext';
 import { UploadJobProvider } from './context/UploadJobContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import UploadManagerPanel from './components/UploadManagerPanel';
-import CookieConsent from './components/CookieConsent';
+import ComplianceBanner from './components/ComplianceBanner';
 import ContentProtection from './components/ContentProtection';
 import { useAuth } from './context/AuthContext';
 
@@ -114,7 +114,7 @@ function App() {
                 <AppContent />
               </Suspense>
               <UploadManagerPanel />
-              <CookieConsent />
+              <ComplianceBanner />
               <ContentProtection />
             </BrowserRouter>
           </UploadJobProvider>

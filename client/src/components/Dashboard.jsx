@@ -47,6 +47,20 @@ const css = {
   r_pill: "var(--r-pill)",
 };
 
+const PLATFORM_COLORS = {
+  instagram: "#E4405F",
+  facebook: "#1877F2",
+  x: "#000000",
+  linkedin: "#0A66C2",
+  youtube: "#FF0000",
+  threads: "#000000",
+  pinterest: "#BD081C",
+  bluesky: "#0085FF",
+  mastodon: "#6364FF",
+  reddit: "#FF4500",
+  "google-business": "#4285F4",
+};
+
 /* ── Platform helpers ── */
 function getPlatformIcon(id) {
   const s = { width: 14, height: 14, objectFit: "contain" };

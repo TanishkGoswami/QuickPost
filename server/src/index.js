@@ -27,6 +27,10 @@ const allowedOrigins = [
   'http://127.0.0.1:5173',
   'https://social.getaipilot.in',
   'https://api.getaipilot.in',
+  'https://getaipilot.in',
+  'https://getaipilot.com',
+  'https://www.getaipilot.in',
+  'https://www.getaipilot.com',
   /https:\/\/.*\.ngrok-free\.dev$/
 ];
 

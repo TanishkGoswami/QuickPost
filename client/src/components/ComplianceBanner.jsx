@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const STORAGE_KEY = 'gap_cookie_consent';
+const STORAGE_KEY = 'gap_privacy_pref';
 
 /**
- * Professional GDPR-style cookie consent banner.
+ * Professional GDPR-style privacy banner.
  * Design: glass card, bottom of screen, with Accept / Decline / Manage options.
  * Stores preference in localStorage.
  */
-export default function CookieConsent() {
+export default function ComplianceBanner() {
   const [visible, setVisible] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
   const [prefs, setPrefs] = useState({ analytics: true, marketing: false });
@@ -80,27 +80,27 @@ export default function CookieConsent() {
               <div style={{ padding: '20px 22px' }}>
                 {/* Main row */}
                 <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-                  {/* Cookie icon */}
+                  {/* Icon */}
                   <div style={{
                     width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                     fontSize: 20, boxShadow: '0 2px 8px rgba(245,158,11,0.25)',
                   }}>
-                    🍪
+                    🛡️
                   </div>
 
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <h3 style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: 'var(--ink)', letterSpacing: '-0.02em', lineHeight: 1.3 }}>
-                      We use cookies
+                      Privacy Preferences
                     </h3>
                     <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--slate)', lineHeight: 1.55, fontWeight: 450 }}>
-                      We use cookies to personalise content, analyse traffic and improve your experience.
+                      We use technologies to personalise content, analyse traffic and improve your experience.
                       {' '}
                       <button
                         onClick={() => setShowDetails(d => !d)}
                         style={{ color: 'var(--link)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}
                       >
-                        {showDetails ? 'Hide details' : 'Cookie settings'}
+                        {showDetails ? 'Hide details' : 'Manage settings'}
                       </button>
                     </p>
                   </div>
@@ -122,21 +122,21 @@ export default function CookieConsent() {
                         display: 'flex', flexDirection: 'column', gap: 10,
                       }}>
                         {/* Essential — always on */}
-                        <CookieRow
+                        <PreferenceRow
                           label="Essential"
                           desc="Required for the site to function. Cannot be disabled."
                           checked={true}
                           disabled
                         />
                         {/* Analytics */}
-                        <CookieRow
+                        <PreferenceRow
                           label="Analytics"
                           desc="Helps us understand how visitors interact with our site."
                           checked={prefs.analytics}
                           onChange={v => setPrefs(p => ({ ...p, analytics: v }))}
                         />
                         {/* Marketing */}
-                        <CookieRow
+                        <PreferenceRow
                           label="Marketing"
                           desc="Used to deliver personalised ads and content."
                           checked={prefs.marketing}
@@ -224,7 +224,7 @@ export default function CookieConsent() {
   );
 }
 
-function CookieRow({ label, desc, checked, onChange, disabled }) {
+function PreferenceRow({ label, desc, checked, onChange, disabled }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -235,7 +235,7 @@ function CookieRow({ label, desc, checked, onChange, disabled }) {
       <button
         role="switch"
         aria-checked={checked}
-        aria-label={`Toggle ${label} cookies`}
+        aria-label={`Toggle ${label} preferences`}
         disabled={disabled}
         onClick={() => !disabled && onChange && onChange(!checked)}
         style={{
@@ -260,7 +260,7 @@ function CookieRow({ label, desc, checked, onChange, disabled }) {
 }
 
 /** Utility: check if user has given any consent */
-export function getCookieConsent() {
+export function getCompliancePreference() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     return stored ? JSON.parse(stored) : null;
