@@ -36,6 +36,9 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: apiTarget,
           changeOrigin: true,
+          secure: false, // Prevents issues with self-signed or proxy SSL certs
+          timeout: 300000, // 5 minutes
+          proxyTimeout: 300000,
           headers: {
             'ngrok-skip-browser-warning': 'true',
           },

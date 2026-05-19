@@ -6,11 +6,13 @@ import 'dotenv/config'; // Load variables before other imports
 
 import broadcastRouter from './routes/broadcast.js';
 import authRouter from './routes/auth.js';
+import ssoRouter from './routes/sso.js';
 import broadcastsRouter from './routes/broadcasts.js';
 import onboardingRouter from './routes/onboarding.js';
 import jobsRouter from './routes/jobs.js';
 import trendsRouter from './routes/trends.js';
 import aiRouter from './routes/ai.js';
+import autodmRouter from './routes/autodm.js';
 import { initScheduler } from './services/scheduler.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -61,12 +63,14 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/auth', authRouter);
+app.use('/api/auth', ssoRouter);
 app.use('/api', broadcastRouter);
 app.use('/api', broadcastsRouter);
 app.use('/api', onboardingRouter);
 app.use('/api', jobsRouter);
 app.use('/api', trendsRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/autodm', autodmRouter);
 
 // Root endpoint
 app.get('/', (req, res) => {

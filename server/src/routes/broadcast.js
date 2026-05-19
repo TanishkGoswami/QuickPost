@@ -23,6 +23,7 @@ import {
   isCloudinaryConfigured,
 } from "../services/cloudinary.js";
 import googleOAuth from "../services/googleOAuth.js";
+import blueskyAuth from "../services/blueskyAuth.js";
 import { createJob, updateJob, failJob, getJob } from "../services/jobQueue.js";
 import fs from "fs";
 import { resolveMentions } from "../services/mentions.js";
@@ -213,11 +214,27 @@ async function processBroadcastJob({
         // ✅ Detect resource type per-file from its actual MIME type
         const mime = uploadedFiles[i]?.mimetype || '';
         const fileResourceType = mime.startsWith('video/') ? 'video' : 'image';
-        return uploadToCloudinary(p, fileResourceType).then((r) => {
-          // Update progress incrementally as each file uploads
-          const perFileProgress = Math.floor(25 / filePaths.length);
+        
+        return uploadToCloudinary(p, fileResourceType, (prog) => {
+          const maxPhaseProgress = 25; // Phase 1 is roughly 5% -> 30%
+          const perFileWeight = maxPhaseProgress / filePaths.length;
+          
+          let currentProgress = 5 + (i * perFileWeight);
+          if (prog.phase === 'compressing') {
+            // Compression is part of the per-file work
+            currentProgress += (prog.percent / 100) * perFileWeight * 0.8;
+          }
+
           updateJob(jobId, {
-            progress: 5 + (i + 1) * perFileProgress,
+            progress: Math.floor(currentProgress),
+            step: prog.phase === 'compressing' 
+              ? `Compressing file ${i + 1} of ${filePaths.length} (${prog.percent}%)…`
+              : `Uploading file ${i + 1} of ${filePaths.length}…`,
+          });
+        }).then((r) => {
+          // Update progress incrementally as each file finishes
+          updateJob(jobId, {
+            progress: 5 + (i + 1) * Math.floor(25 / filePaths.length),
             step: `Uploading file ${i + 1} of ${filePaths.length}…`,
           });
           return r;
@@ -426,7 +443,42 @@ async function processBroadcastJob({
 
   // Bluesky
   if (channels.includes("bluesky") && tokens.bluesky?.did) {
-    const resolvedCaption = resolveMentions(caption, 'bluesky', tokens.bluesky);
+    const bskyTokens = { ...tokens.bluesky };
+    let canPostToBluesky = true;
+    // Refresh the Bluesky session — access tokens expire every ~2 hours
+    try {
+      const refreshed = await blueskyAuth.refreshSession(bskyTokens.refreshToken);
+      bskyTokens.accessToken = refreshed.accessJwt;
+      bskyTokens.refreshToken = refreshed.refreshJwt;
+      await blueskyAuth.storeCredentials(userId, {
+        accessJwt: refreshed.accessJwt,
+        refreshJwt: refreshed.refreshJwt,
+        did: bskyTokens.did,
+        handle: bskyTokens.handle,
+      });
+      console.log(`✅ [JOB:${jobId}] Bluesky token refreshed`);
+    } catch (refreshErr) {
+      console.warn(`⚠️ [JOB:${jobId}] Bluesky token refresh failed, using stored token:`, refreshErr.message);
+      const hasValidStoredSession = bskyTokens.accessToken
+        ? await blueskyAuth.verifyCredentials(bskyTokens.accessToken)
+        : false;
+
+      if (!hasValidStoredSession) {
+        canPostToBluesky = false;
+        platformPromises.push(
+          Promise.resolve(
+            onChannelComplete("Bluesky", {
+              success: false,
+              platform: "Bluesky",
+              error:
+                "Bluesky session expired. Please reconnect your Bluesky account.",
+            }),
+          ),
+        );
+      }
+    }
+
+    const resolvedCaption = resolveMentions(caption, 'bluesky', bskyTokens);
     const stats = filePaths.map((p) => {
       try {
         return fs.statSync(p).size;
@@ -435,7 +487,7 @@ async function processBroadcastJob({
       }
     });
     const totalSize = stats.reduce((a, b) => a + b, 0);
-    if (totalSize <= 30 * 1024 * 1024) {
+    if (canPostToBluesky && totalSize <= 30 * 1024 * 1024) {
       const blobs = filePaths
         .map((p) => {
           try {
@@ -447,13 +499,25 @@ async function processBroadcastJob({
         .filter(Boolean);
       platformPromises.push(
         postToBluesky(
-          tokens.bluesky.accessToken,
-          tokens.bluesky.did,
-          caption,
+          bskyTokens.accessToken,
+          bskyTokens.did,
+          resolvedCaption,
           mediaUrls,
           blobs,
           isVideo,
-        ).then((r) => onChannelComplete("Bluesky", r)),
+        )
+          .then((r) => onChannelComplete("Bluesky", r))
+          .catch((error) =>
+            onChannelComplete("Bluesky", {
+              success: false,
+              platform: "Bluesky",
+              error: error.message || "Failed to post to Bluesky",
+            }),
+          ),
+      );
+    } else if (!canPostToBluesky) {
+      console.warn(
+        `⚠️ [JOB:${jobId}] Bluesky skipped because the stored session is no longer valid.`,
       );
     } else {
       console.warn(`⚠️ [JOB:${jobId}] Media too large for Bluesky, skipping.`);
@@ -479,20 +543,39 @@ async function processBroadcastJob({
   ) {
     platformPromises.push(
       (async () => {
-        const validAccessToken = await googleOAuth.getValidAccessToken(userId);
-        const ytTokens = { ...tokens.youtube, accessToken: validAccessToken };
-        const resolvedCaption = resolveMentions(caption, 'youtube', ytTokens);
-        updateJob(jobId, { step: "Uploading video to YouTube…" });
-        const result = await postToYouTube(primaryVideoPath, resolvedCaption, ytTokens);
-        if (result.success && result.videoId && youtubeThumbnailPath) {
-          const thumbResult = await setVideoThumbnail(
-            result.videoId,
-            youtubeThumbnailPath,
-            ytTokens,
-          );
-          result.thumbnailSuccess = thumbResult.success;
+        try {
+          const validAccessToken = await googleOAuth.getValidAccessToken(userId);
+          const ytTokens = { ...tokens.youtube, accessToken: validAccessToken };
+          const resolvedCaption = resolveMentions(caption, 'youtube', ytTokens);
+          updateJob(jobId, { step: "Uploading video to YouTube…" });
+          const result = await postToYouTube(primaryVideoPath, resolvedCaption, ytTokens, (pct) => {
+            // Phase 3 spans from 30% to 85%
+            // If multiple platforms, each gets a slice of that 55%
+            const base = 30 + Math.floor((completedChannels / selectedChannelCount) * 55);
+            const slice = Math.floor((1 / selectedChannelCount) * 55);
+            const currentPct = base + Math.floor((pct / 100) * slice);
+            
+            updateJob(jobId, {
+              progress: Math.min(currentPct, 85),
+              step: `Uploading video to YouTube (${pct}%)…`,
+            });
+          });
+          if (result.success && result.videoId && youtubeThumbnailPath) {
+            const thumbResult = await setVideoThumbnail(
+              result.videoId,
+              youtubeThumbnailPath,
+              ytTokens,
+            );
+            result.thumbnailSuccess = thumbResult.success;
+          }
+          return onChannelComplete("YouTube", result);
+        } catch (error) {
+          return onChannelComplete("YouTube", {
+            success: false,
+            platform: "YouTube",
+            error: error.message || "Failed to upload to YouTube",
+          });
         }
-        return onChannelComplete("YouTube", result);
       })(),
     );
   }
@@ -549,18 +632,27 @@ async function processBroadcastJob({
   });
   const platformResults = await Promise.allSettled(platformPromises);
 
+  const failedPlatforms = [];
   for (const promiseResult of platformResults) {
     if (promiseResult.status === "fulfilled") {
       const { platform, result } = promiseResult.value;
       results[platform.toLowerCase()] = result;
+      if (result && result.success === false) {
+        failedPlatforms.push({ platform, error: result.error || "Unknown error" });
+        console.error(`❌ [JOB:${jobId}] ${platform} failed:`, result.error);
+      }
+    } else {
+      // Promise rejected — extract platform name from reason if possible
+      console.error(`❌ [JOB:${jobId}] Platform promise rejected:`, promiseResult.reason);
+      failedPlatforms.push({ platform: "Unknown", error: promiseResult.reason?.message || String(promiseResult.reason) });
     }
   }
 
   // ── Phase 4: Save to DB (85 → 95%) ────────────────────────────────────
   updateJob(jobId, { progress: 87, step: "Saving broadcast record…" });
   try {
-    await saveBroadcast(userId, caption, filenames, results, mediaType, { 
-      ...platData, 
+    await saveBroadcast(userId, caption, filenames, results, mediaType, {
+      ...platData,
       postType,
       selected_aspect_ratio: selectedAspectRatio,
       selected_post_size_preset: selectedPostSizePreset
@@ -574,13 +666,26 @@ async function processBroadcastJob({
   updateJob(jobId, { progress: 95, step: "Cleaning up…" });
   setTimeout(() => cleanupFiles(filePaths, thumbnailFile), 10000);
 
+  const successCount = platformPromises.length - failedPlatforms.length;
+  const anyFailed = failedPlatforms.length > 0;
+  const failedStr = failedPlatforms.map(f => `${f.platform}: ${f.error}`).join(" | ");
+
+  const finalStatus = anyFailed ? "failed" : "completed";
+  const finalStep = anyFailed ? "Some platforms failed." : "Broadcast complete!";
+  const finalError = anyFailed
+    ? (successCount > 0
+        ? `${successCount}/${platformPromises.length} posted. Failed — ${failedStr}`
+        : `Failed — ${failedStr}`)
+    : null;
+
   updateJob(jobId, {
-    status: "completed",
+    status: finalStatus,
     progress: 100,
-    step: "Broadcast complete!",
+    step: finalStep,
+    error: finalError,
     result: results,
   });
-  console.log(`🎉 [JOB:${jobId}] Broadcast job completed successfully.`);
+  console.log(`🎉 [JOB:${jobId}] Broadcast job finished. Success: ${successCount}/${platformPromises.length}${anyFailed ? ` | Errors: ${failedStr}` : ''}`);
 }
 
 function getJob_internal(jobId) {

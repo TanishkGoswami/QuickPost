@@ -34,19 +34,11 @@ function AuthCallback() {
         if (error) throw error;
 
         if (session) {
-          if (!cancelled) {
-            setStatus('success');
-            setMessage('Successfully signed in!');
-          }
-
           const destination = localStorage.getItem('qp_onboarding_done')
             ? '/dashboard'
             : '/onboarding';
 
-          // Short delay so the user sees the success state
-          setTimeout(() => {
-            if (!cancelled) navigate(destination, { replace: true });
-          }, 1200);
+          if (!cancelled) navigate(destination, { replace: true });
         } else {
           // No session found after 5s — treat as error
           const timeout = setTimeout(() => {

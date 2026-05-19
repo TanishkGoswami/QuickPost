@@ -15,6 +15,11 @@ const AuthContext = createContext(null);
 // Called after every successful sign-in on social.getaipilot.in.
 // Ensures the user exists in hub's auth.users + profiles tables.
 async function syncUserToHub(sessionUser) {
+  if (import.meta.env.DEV) {
+    console.info("[HUB-SYNC] Skipping browser-side hub sync in local dev");
+    return;
+  }
+
   const hubSyncUrl   = import.meta.env.VITE_HUB_SYNC_FUNCTION_URL;
   const syncSecret   = import.meta.env.VITE_SOCIAL_SYNC_SECRET;
   // Supabase gateway requires Authorization: Bearer <anon_key>
@@ -125,16 +130,12 @@ export function AuthProvider({ children }) {
       if (resolvedPlan !== 'Free') {
         console.log('✅ [AUTH] Plan resolved:', resolvedPlan);
 
-        // Write back to local users table so future lookups are instant
-        await supabase
-          .from('users')
-          .upsert({ id: sessionUser.id, plan: resolvedPlan, subscription_status: resolvedStatus }, { onConflict: 'id' });
-
         // Write back to hub_subscriptions if not already there
         if (!hubSub && sessionUser.email) {
-          await supabase
+          const { error: hubUpsertErr } = await supabase
             .from('hub_subscriptions')
             .upsert({ email: sessionUser.email, plan: resolvedPlan, subscription_status: resolvedStatus, updated_at: new Date().toISOString(), synced_at: new Date().toISOString() }, { onConflict: 'email' });
+          if (hubUpsertErr) console.warn('[AUTH] hub_subscriptions upsert skipped (table may not exist in this project):', hubUpsertErr.message);
         }
       }
 

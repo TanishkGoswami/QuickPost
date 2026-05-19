@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import logo from '/logo.png';
+import logo from '/icons/logo.png';
 import { Loader2, Mail, Lock, User, ArrowRight, Github } from 'lucide-react';
 
 function Login() {

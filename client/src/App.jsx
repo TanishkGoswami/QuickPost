@@ -5,6 +5,7 @@
 
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { DialogProvider } from './context/DialogContext';
 import { UploadJobProvider } from './context/UploadJobContext';
@@ -17,6 +18,7 @@ import { useAuth } from './context/AuthContext';
 // ── Synchronous imports (auth-critical path) ──
 import AuthPage from './components/AuthPage';
 import AuthCallback from './components/AuthCallback';
+import SSOPage from './pages/SSOPage';
 import DashboardLayout from './components/DashboardLayout';
 import { NotFoundPage } from './components/ui/404-page-not-found';
 
@@ -33,6 +35,17 @@ const AllTrendsPage  = lazy(() => import('./pages/trends/AllTrendsPage'));
 const Onboarding     = lazy(() => import('./components/Onboarding'));
 const BillingPage    = lazy(() => import('./pages/BillingPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
+const AutoDMModuleLayout = lazy(() => import('./features/autodm/AutoDMModuleLayout'));
+const AutomationsPage = lazy(() => import('./features/autodm/AutomationsPage'));
+const AutomationEditorPage = lazy(() => import('./features/autodm/AutomationEditorPage'));
+const ContactsPage = lazy(() => import('./features/autodm/ContactsPage'));
+const ProductsPage = lazy(() => import('./features/autodm/ProductsPage'));
+const OrdersPage = lazy(() => import('./features/autodm/OrdersPage'));
+const SettingsPage = lazy(() => import('./features/autodm/SettingsPage'));
+const LeadsDataPage = lazy(() => import('./features/autodm/LeadsDataPage'));
+const AutoDMConnectPage = lazy(() => import('./features/autodm/ConnectInstagramPage'));
+const AutoDMConnectSuccessPage = lazy(() => import('./features/autodm/ConnectSuccessPage'));
+const AutoDMProvider = lazy(() => import('./features/autodm/AutoDMContext').then((module) => ({ default: module.AutoDMProvider })));
 
 // ── Page loader ──
 const PageLoader = () => (
@@ -81,13 +94,26 @@ function AppContent() {
       />
 
       <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/social-sso"   element={<SSOPage />} />
+      <Route
+        path="/connect/success"
+        element={
+          isAuthenticated ? (
+            <AutoDMProvider>
+              <AutoDMConnectSuccessPage />
+            </AutoDMProvider>
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
       <Route
         path="/onboarding"
         element={isAuthenticated ? <Onboarding /> : <Navigate to="/login" replace />}
       />
 
       // Protected dashboard
-      <Route path="/dashboard" element={<DashboardLayout />}>
+        <Route path="/dashboard" element={<DashboardLayout />}>
         <Route index           element={<Dashboard />} />
         <Route path="compose"  element={<BroadcastForm />} />
         <Route path="history"  element={<History />} />
@@ -95,6 +121,26 @@ function AppContent() {
         <Route path="trends"   element={<AllTrendsPage />} />
         <Route path="billing"  element={<BillingPage />} />
         <Route path="payment-success" element={<PaymentSuccessPage />} />
+        <Route
+          path="auto-dm"
+          element={
+            <AutoDMProvider>
+              <AutoDMModuleLayout />
+            </AutoDMProvider>
+          }
+        >
+          <Route index element={<Navigate to="/dashboard/auto-dm/automations" replace />} />
+          <Route path="automations" element={<AutomationsPage />} />
+          <Route path="automations/new" element={<AutomationEditorPage />} />
+          <Route path="automations/:id" element={<AutomationEditorPage />} />
+          <Route path="automations/:id/leads" element={<LeadsDataPage />} />
+          <Route path="contacts" element={<ContactsPage />} />
+          <Route path="products" element={<ProductsPage />} />
+          <Route path="orders" element={<OrdersPage />} />
+          <Route path="connect" element={<AutoDMConnectPage />} />
+          <Route path="connect/success" element={<AutoDMConnectSuccessPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
       </Route>
 
       // 404
@@ -113,6 +159,7 @@ function App() {
               <Suspense fallback={<PageLoader />}>
                 <AppContent />
               </Suspense>
+              <Toaster position="top-right" />
               <UploadManagerPanel />
               <ComplianceBanner />
               <ContentProtection />
