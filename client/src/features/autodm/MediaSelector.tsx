@@ -40,7 +40,7 @@ export function MediaSelector({ open, onOpenChange, onSelect }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[80vh] max-w-3xl flex-col overflow-hidden">
+      <DialogContent className="flex max-h-[80vh] max-w-3xl flex-col overflow-hidden bg-white">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle>Select Post or Reel</DialogTitle>

@@ -1,4 +1,17 @@
-import { ArrowLeft, Image as ImageIcon, Instagram, Loader2, Play, Save, Zap } from "lucide-react";
+import {
+  ArrowLeft,
+  Image as ImageIcon,
+  Instagram,
+  Loader2,
+  MessageCircle,
+  MessageSquare,
+  Play,
+  Radio,
+  Save,
+  Share2,
+  Tv2,
+  Zap,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -19,12 +32,12 @@ import { MediaSelector } from "./MediaSelector";
 import { ResponseFlowBuilder } from "./ResponseFlowBuilder";
 
 const triggerTypes = [
-  { value: "comment_on_post", label: "User comments on your post", available: true },
-  { value: "comment_on_reel", label: "User comments on your reel", available: true },
-  { value: "dm_received", label: "User sends you a DM", available: true },
-  { value: "live_comment", label: "User comments on your live", available: true },
-  { value: "story_reply", label: "User replies to your story", available: true },
-  { value: "story_mention", label: "User mentions you in story", available: false },
+  { value: "comment_on_post", label: "User comments on your post", icon: MessageCircle, available: true },
+  { value: "comment_on_reel", label: "User comments on your reel", icon: Play, available: true },
+  { value: "dm_received", label: "User sends you a DM", icon: MessageSquare, available: true },
+  { value: "live_comment", label: "User comments on your live", icon: Radio, available: true },
+  { value: "story_reply", label: "User replies to your story", icon: Share2, available: true },
+  { value: "story_mention", label: "User mentions you in story", icon: Tv2, available: false },
 ];
 
 export default function AutomationEditorPage() {
@@ -87,172 +100,307 @@ export default function AutomationEditorPage() {
     })();
   }, [id, isNew, socialUser?.userId]);
 
+  const handleSave = async () => {
+    if (!keywords.length) {
+      toast.error("Add at least one keyword");
+      return;
+    }
+    if (!responseFlow.nodes.length) {
+      toast.error("Add at least one response");
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        user_id: socialUser.userId,
+        instagram_account_id: activeAccount.id,
+        name,
+        trigger_type: triggerType,
+        media_id: applyToAllMedia ? null : selectedMedia?.id || null,
+        media_url: applyToAllMedia ? null : selectedMedia?.media_url || null,
+        media_thumbnail: applyToAllMedia ? null : selectedMedia?.thumbnail_url || selectedMedia?.media_url || null,
+        keywords,
+        is_case_sensitive: isCaseSensitive,
+        comment_reply_enabled: commentReplyEnabled,
+        comment_reply_text: commentReplyEnabled ? commentReplyText : null,
+        response_flow: responseFlow,
+        is_active: isActive,
+      };
+      if (isNew) {
+        await createAutomation(payload);
+        toast.success("Automation created");
+      } else {
+        await updateAutomation(id, socialUser.userId, payload);
+        toast.success("Automation updated");
+      }
+      navigate("/dashboard/auto-dm/automations");
+    } catch (error) {
+      toast.error(error.message || "Failed to save automation");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <AutoDMConnectionGate>
       {!activeAccount ? (
         <div className="rounded-3xl border border-black/10 bg-white p-12 text-center shadow-sm">
-          <Instagram className="mx-auto h-10 w-10 text-slate-400" />
-          <p className="mt-4 font-medium text-slate-900">Connect an Instagram account first</p>
+          <Instagram className="mx-auto h-10 w-10 text-slate-300" />
+          <p className="mt-4 font-medium text-slate-900">
+            Connect an Instagram account first
+          </p>
         </div>
       ) : loading ? (
         <div className="flex h-64 items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard/auto-dm/automations")}>
-                <ArrowLeft className="h-5 w-5" />
+        <div className="space-y-5">
+          {/* Toolbar */}
+          <div className="flex items-center justify-between rounded-2xl border border-black/8 bg-white px-4 py-3 shadow-sm">
+            <div className="flex items-center gap-3 min-w-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 flex-shrink-0 rounded-xl text-slate-500 hover:bg-slate-100"
+                onClick={() => navigate("/dashboard/auto-dm/automations")}
+              >
+                <ArrowLeft className="h-4 w-4" />
               </Button>
-              <Input value={name} onChange={(event) => setName(event.target.value)} className="border-0 bg-transparent px-0 text-lg font-semibold focus-visible:ring-0" />
+              <div className="h-5 w-px bg-black/10" />
+              <Input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                className="h-auto min-w-0 max-w-xs border-0 bg-transparent px-0 text-base font-semibold text-slate-900 focus-visible:ring-0"
+              />
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               {!isNew && (
-                <Button variant="outline" onClick={() => toast.success("Re-trigger flow wired for existing automations")}>
-                  <Play className="mr-2 h-4 w-4" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl border-black/10 text-slate-600"
+                  onClick={() =>
+                    toast.success(
+                      "Re-trigger flow wired for existing automations",
+                    )
+                  }
+                >
+                  <Play className="mr-1.5 h-3.5 w-3.5" />
                   Re-Trigger
                 </Button>
               )}
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Status</span>
+                <span className="text-sm font-medium text-slate-500">
+                  {isActive ? "Active" : "Inactive"}
+                </span>
                 <Switch checked={isActive} onCheckedChange={setIsActive} />
               </div>
               <Button
-                onClick={async () => {
-                  if (!keywords.length) {
-                    toast.error("Add at least one keyword");
-                    return;
-                  }
-                  if (!responseFlow.nodes.length) {
-                    toast.error("Add at least one response");
-                    return;
-                  }
-                  setSaving(true);
-                  try {
-                    const payload = {
-                      user_id: socialUser.userId,
-                      instagram_account_id: activeAccount.id,
-                      name,
-                      trigger_type: triggerType,
-                      media_id: applyToAllMedia ? null : selectedMedia?.id || null,
-                      media_url: applyToAllMedia ? null : selectedMedia?.media_url || null,
-                      media_thumbnail: applyToAllMedia ? null : selectedMedia?.thumbnail_url || selectedMedia?.media_url || null,
-                      keywords,
-                      is_case_sensitive: isCaseSensitive,
-                      comment_reply_enabled: commentReplyEnabled,
-                      comment_reply_text: commentReplyEnabled ? commentReplyText : null,
-                      response_flow: responseFlow,
-                      is_active: isActive,
-                    };
-                    if (isNew) {
-                      await createAutomation(payload);
-                      toast.success("Automation created");
-                    } else {
-                      await updateAutomation(id, socialUser.userId, payload);
-                      toast.success("Automation updated");
-                    }
-                    navigate("/dashboard/auto-dm/automations");
-                  } catch (error) {
-                    toast.error(error.message || "Failed to save automation");
-                  } finally {
-                    setSaving(false);
-                  }
-                }}
+                onClick={handleSave}
                 disabled={saving}
+                className="rounded-xl gap-1.5"
               >
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
                 Save Changes
               </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-yellow-500" />
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            {/* Left column */}
+            <div className="space-y-4">
+              {/* Trigger */}
+              <Card className="overflow-hidden rounded-2xl border-black/8 shadow-sm">
+                <CardHeader className="border-b border-black/5 bg-slate-50/60 pb-3 pt-4">
+                  <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-100">
+                      <Zap className="h-3.5 w-3.5 text-amber-500" />
+                    </div>
                     Select a Trigger
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-4">
                   <Select value={triggerType} onValueChange={setTriggerType}>
-                    <SelectTrigger className="h-auto py-3">
+                    <SelectTrigger className="h-auto rounded-xl border-black/10 py-3">
+                      {(() => {
+                        const trigger = triggerTypes.find(
+                          (t) => t.value === triggerType,
+                        );
+                        const Icon = trigger?.icon || Zap;
+                        return (
+                          <Icon className="mr-1 h-4 w-4 flex-shrink-0 text-slate-500" />
+                        );
+                      })()}
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      {triggerTypes.map((trigger) => (
-                        <SelectItem key={trigger.value} value={trigger.value} disabled={!trigger.available}>
-                          <div className="flex items-center gap-3 py-1">
-                            <span>{trigger.label}</span>
-                            {!trigger.available ? <Badge variant="secondary">Coming soon</Badge> : null}
-                          </div>
-                        </SelectItem>
-                      ))}
+                    <SelectContent className="bg-white">
+                      {triggerTypes.map((trigger) => {
+                        const Icon = trigger.icon;
+                        return (
+                          <SelectItem
+                            key={trigger.value}
+                            value={trigger.value}
+                            disabled={!trigger.available}
+                            className="bg-white"
+                          >
+                            <div className="flex items-center gap-2.5 py-0.5">
+                              <Icon className="h-4 w-4 text-slate-500" />
+                              <span>{trigger.label}</span>
+                              {!trigger.available && (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px]"
+                                >
+                                  Coming soon
+                                </Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </CardContent>
               </Card>
 
+              {/* Media selection */}
               {["comment_on_post", "comment_on_reel"].includes(triggerType) && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Which post or reel should trigger this?</CardTitle>
+                <Card className="overflow-hidden rounded-2xl border-black/8 shadow-sm">
+                  <CardHeader className="border-b border-black/5 bg-slate-50/60 pb-3 pt-4">
+                    <CardTitle className="text-sm font-semibold text-slate-900">
+                      Which post or reel should trigger this?
+                    </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between rounded-lg border p-4">
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex items-center justify-between rounded-xl border border-black/8 bg-white px-4 py-3">
                       <div>
-                        <p className="font-medium">All posts and reels</p>
-                        <p className="text-sm text-muted-foreground">Use this automation on every post and reel.</p>
+                        <p className="text-sm font-medium text-slate-900">
+                          All posts and reels
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          Use this automation on every post and reel.
+                        </p>
                       </div>
-                      <Switch checked={applyToAllMedia} onCheckedChange={(checked) => { setApplyToAllMedia(checked); if (checked) setSelectedMedia(null); }} />
+                      <Switch
+                        checked={applyToAllMedia}
+                        onCheckedChange={(checked) => {
+                          setApplyToAllMedia(checked);
+                          if (checked) setSelectedMedia(null);
+                        }}
+                      />
                     </div>
-                    {!applyToAllMedia && (
-                      selectedMedia ? (
-                        <div className="space-y-3">
-                          <img src={selectedMedia.thumbnail_url || selectedMedia.media_url} alt="" className="h-56 w-full rounded-lg object-cover" />
-                          <Button variant="outline" onClick={() => setSelectedMedia(null)}>Change selection</Button>
+                    {!applyToAllMedia &&
+                      (selectedMedia ? (
+                        <div className="space-y-2">
+                          <div className="overflow-hidden rounded-xl">
+                            <img
+                              src={
+                                selectedMedia.thumbnail_url ||
+                                selectedMedia.media_url
+                              }
+                              alt=""
+                              className="h-48 w-full object-cover"
+                            />
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-xl border-black/10"
+                            onClick={() => setSelectedMedia(null)}
+                          >
+                            Change selection
+                          </Button>
                         </div>
                       ) : (
-                        <button className="w-full rounded-lg border-2 border-dashed p-8 text-center transition-colors hover:border-primary" onClick={() => setMediaDialogOpen(true)}>
-                          <ImageIcon className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-                          <p className="font-medium">Select Instagram media</p>
+                        <button
+                          className="group w-full rounded-xl border-2 border-dashed border-slate-200 p-8 text-center transition-all hover:border-primary/50 hover:bg-primary/5"
+                          onClick={() => setMediaDialogOpen(true)}
+                        >
+                          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 transition-colors group-hover:bg-primary/10">
+                            <ImageIcon className="h-5 w-5 text-slate-400 transition-colors group-hover:text-primary" />
+                          </div>
+                          <p className="text-sm font-medium text-slate-700 group-hover:text-primary">
+                            Select Instagram media
+                          </p>
+                          <p className="mt-1 text-xs text-slate-400">
+                            Choose a specific post or reel
+                          </p>
                         </button>
-                      )
-                    )}
+                      ))}
                   </CardContent>
                 </Card>
               )}
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Keywords</CardTitle>
+              {/* Keywords */}
+              <Card className="overflow-hidden rounded-2xl border-black/8 shadow-sm">
+                <CardHeader className="border-b border-black/5 bg-slate-50/60 pb-3 pt-4">
+                  <CardTitle className="text-sm font-semibold text-slate-900">
+                    Trigger Keywords
+                  </CardTitle>
+                  <p className="text-xs text-slate-400">
+                    The automation fires when a comment or DM contains one of
+                    these words.
+                  </p>
                 </CardHeader>
-                <CardContent>
-                  <KeywordInput keywords={keywords} onChange={setKeywords} caseSensitive={isCaseSensitive} onCaseSensitiveChange={setIsCaseSensitive} />
+                <CardContent className="p-4">
+                  <KeywordInput
+                    keywords={keywords}
+                    onChange={setKeywords}
+                    caseSensitive={isCaseSensitive}
+                    onCaseSensitiveChange={setIsCaseSensitive}
+                  />
                 </CardContent>
               </Card>
 
-              {["comment_on_post", "comment_on_reel", "live_comment"].includes(triggerType) && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Comment reply</CardTitle>
+              {/* Comment reply */}
+              {["comment_on_post", "comment_on_reel", "live_comment"].includes(
+                triggerType,
+              ) && (
+                <Card className="overflow-hidden rounded-2xl border-black/8 shadow-sm">
+                  <CardHeader className="border-b border-black/5 bg-slate-50/60 pb-3 pt-4">
+                    <CardTitle className="text-sm font-semibold text-slate-900">
+                      Comment Reply
+                    </CardTitle>
+                    <p className="text-xs text-slate-400">
+                      Optionally reply to the triggering comment publicly.
+                    </p>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3 p-4">
                     <div className="flex items-center justify-between">
-                      <Label>Enable comment reply</Label>
-                      <Switch checked={commentReplyEnabled} onCheckedChange={setCommentReplyEnabled} />
+                      <Label className="text-sm text-slate-700">
+                        Enable public comment reply
+                      </Label>
+                      <Switch
+                        checked={commentReplyEnabled}
+                        onCheckedChange={setCommentReplyEnabled}
+                      />
                     </div>
                     {commentReplyEnabled && (
-                      <Textarea value={commentReplyText} onChange={(event) => setCommentReplyText(event.target.value)} rows={3} placeholder="Check your DM" />
+                      <Textarea
+                        value={commentReplyText}
+                        onChange={(event) =>
+                          setCommentReplyText(event.target.value)
+                        }
+                        rows={3}
+                        placeholder="Check your DM!"
+                        className="resize-none rounded-xl border-black/10 text-sm"
+                      />
                     )}
                   </CardContent>
                 </Card>
               )}
             </div>
 
-            <ResponseFlowBuilder responseFlow={responseFlow} onChange={setResponseFlow} />
+            {/* Right column: Response Flow */}
+            <ResponseFlowBuilder
+              responseFlow={responseFlow}
+              onChange={setResponseFlow}
+            />
           </div>
 
           <MediaSelector

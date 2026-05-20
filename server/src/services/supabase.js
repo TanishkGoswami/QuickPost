@@ -6,10 +6,11 @@ dotenv.config();
 // ✅ Server-side should use SERVICE ROLE key (recommended)
 // Fallback to ANON for local dev only (may fail with RLS)
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_KEY ||
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.SUPABASE_ANON_KEY;
+let supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseKey || supabaseKey.startsWith('ROTATE_ME')) {
+  supabaseKey = process.env.SUPABASE_ANON_KEY;
+}
 
 if (!supabaseUrl || !supabaseKey) {
   throw new Error(
@@ -17,7 +18,7 @@ if (!supabaseUrl || !supabaseKey) {
   );
 }
 
-if (!process.env.SUPABASE_SERVICE_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+if ((!process.env.SUPABASE_SERVICE_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY) || (supabaseKey === process.env.SUPABASE_ANON_KEY)) {
   console.warn(
     '⚠️ You are using SUPABASE_ANON_KEY on the server. Some writes may fail due to RLS. Prefer SUPABASE_SERVICE_KEY.'
   );
