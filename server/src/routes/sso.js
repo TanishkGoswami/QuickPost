@@ -22,11 +22,15 @@ const router = express.Router();
 
 // ── Admin client (service role required for auth.admin + RLS bypass) ──────
 const SUPABASE_URL        = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY =
+let SUPABASE_SERVICE_KEY =
   process.env.SUPABASE_SERVICE_KEY ||
   process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+if (SUPABASE_SERVICE_KEY && SUPABASE_SERVICE_KEY.startsWith('ROTATE_ME')) {
+  SUPABASE_SERVICE_KEY = undefined;
+}
+
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
