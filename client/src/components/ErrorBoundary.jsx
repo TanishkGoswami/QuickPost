@@ -197,7 +197,7 @@ import { DialogProvider } from './context/DialogContext';
 import { UploadJobProvider } from './context/UploadJobContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import UploadManagerPanel from './components/UploadManagerPanel';
-import CookieConsent from './components/CookieConsent';
+import ComplianceBanner from './components/ComplianceBanner';
 import { useAuth } from './context/AuthContext';
 
 // ── Synchronous imports (auth-critical path) ──
@@ -296,7 +296,7 @@ function App() {
                 <AppContent />
               </Suspense>
               <UploadManagerPanel />
-              <CookieConsent />
+              <ComplianceBanner />
             </BrowserRouter>
           </UploadJobProvider>
         </DialogProvider>
