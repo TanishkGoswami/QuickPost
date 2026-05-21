@@ -7,7 +7,7 @@ import {
   User, Store, Building2, Briefcase, Megaphone, Heart,
 } from 'lucide-react';
 import apiClient from '../utils/apiClient';
-import logo from '/icons/logo.png';
+import logo from '/logo.png';
 
 /* ── Platform data ── */
 const PLATFORMS = [

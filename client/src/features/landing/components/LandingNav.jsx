@@ -7,7 +7,7 @@ import {
   useScroll,
   useMotionValueEvent,
 } from "framer-motion";
-import logo from "/icons/logo.png";
+import logo from "/logo.png";
 import InteractiveButton from "../../../components/ui/InteractiveButton.jsx";
 import { useAuth } from "../../../context/AuthContext";
 
