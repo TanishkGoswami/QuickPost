@@ -13,7 +13,7 @@ import {
   Info,
   AlertCircle
 } from 'lucide-react';
-import logo from '/icons/logo.png';
+import logo from '/logo.png';
 
 const SECTIONS = [
   { id: 'acceptance', title: '1. Acceptance', icon: <CheckCircle2 size={16} strokeWidth={2.5} /> },
