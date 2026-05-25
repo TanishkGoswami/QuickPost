@@ -44,24 +44,7 @@ const PLANS = [
     cta: 'Upgrade to Pro',
     highlighted: true,
     badge: 'Most popular',
-  },
-  {
-    name: 'Enterprise',
-    id: 'enterprise',
-    price: { 1: 2499, 3: 2199, 6: 1999, 12: 1799 },
-    description: 'Full access for teams and power users — includes All-in-One bundle.',
-    icon: <Building2 size={20} />,
-    features: [
-      'Unlimited connected accounts',
-      'Unlimited posts',
-      'All-in-One GetAIPilot bundle',
-      'Team collaboration',
-      'Advanced analytics',
-      'Dedicated support',
-    ],
-    cta: 'Upgrade to Enterprise',
-    highlighted: false,
-  },
+  }
 ];
 
 
