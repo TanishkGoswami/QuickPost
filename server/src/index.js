@@ -12,7 +12,6 @@ import onboardingRouter from './routes/onboarding.js';
 import jobsRouter from './routes/jobs.js';
 import trendsRouter from './routes/trends.js';
 import aiRouter from './routes/ai.js';
-import autodmRouter from './routes/autodm.js';
 import { initScheduler } from './services/scheduler.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -70,7 +69,6 @@ app.use('/api', onboardingRouter);
 app.use('/api', jobsRouter);
 app.use('/api', trendsRouter);
 app.use('/api/ai', aiRouter);
-app.use('/api/autodm', autodmRouter);
 
 // Root endpoint
 app.get('/', (req, res) => {
