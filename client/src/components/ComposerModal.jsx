@@ -52,6 +52,10 @@ import { useSmartSizes } from "./composer/hooks/useSmartSizes.js";
 import IntelligencePanel from "./composer/components/IntelligencePanel.jsx";
 import MediaUploader from "./composer/components/MediaUploader.jsx";
 import PreviewPanel from "./composer/components/PreviewPanel.jsx";
+import {
+  AutoDMComposerPanel,
+  defaultComposerAutoDMConfig,
+} from "../features/autodm/AutoDMComposerPanel";
 
 const QUICK_SUGGESTIONS = [
   "Building something special...",
@@ -1257,6 +1261,13 @@ function ComposerModal({
     reddit: { subreddit: "", title: "", flairId: "" },
     mastodon: { type: "post" },
   });
+  const [autoDMConfig, setAutoDMConfig] = useState(() => ({
+    ...defaultComposerAutoDMConfig,
+    responseFlow: {
+      ...defaultComposerAutoDMConfig.responseFlow,
+      nodes: [...defaultComposerAutoDMConfig.responseFlow.nodes],
+    },
+  }));
   const [youtubeThumbnail, setYoutubeThumbnail] = useState(null);
 
   const [loading, setLoading] = useState(false);
@@ -1424,6 +1435,12 @@ function ComposerModal({
     if (!selectedChannels.includes(activePreviewPlatform))
       setActivePreviewPlatform(selectedChannels[0]);
   }, [JSON.stringify(selectedChannels), activePreviewPlatform]);
+
+  useEffect(() => {
+    if (!selectedChannels.includes("instagram") && autoDMConfig.enabled) {
+      setAutoDMConfig((current) => ({ ...current, enabled: false }));
+    }
+  }, [JSON.stringify(selectedChannels), autoDMConfig.enabled]);
 
   /* ── Auto-select connected channels on open ── */
   useEffect(() => {
@@ -1635,6 +1652,16 @@ function ComposerModal({
         return false;
       }
     }
+    if (selectedChannels.includes("instagram") && autoDMConfig.enabled) {
+      if (!autoDMConfig.keywords?.length) {
+        setError("Add at least one Auto DM keyword or turn Auto DM off.");
+        return false;
+      }
+      if (!autoDMConfig.responseFlow?.nodes?.length) {
+        setError("Add at least one Auto DM response or turn Auto DM off.");
+        return false;
+      }
+    }
     return true;
   }, [
     selectedChannels,
@@ -1643,6 +1670,7 @@ function ComposerModal({
     platformData,
     isScheduled,
     scheduledAt,
+    autoDMConfig,
   ]);
 
   const handleSubmit = async () => {
@@ -1660,6 +1688,9 @@ function ComposerModal({
       formData.append("platformPresets", JSON.stringify(platformPresets));
       formData.append("userTimezone", userTimezone);
       formData.append("isScheduled", isScheduled ? "true" : "false");
+      if (selectedChannels.includes("instagram") && autoDMConfig.enabled) {
+        formData.append("autoDMConfig", JSON.stringify(autoDMConfig));
+      }
 
       if (isScheduled) {
         formData.append("scheduledAt", new Date(scheduledAt).toISOString());
@@ -1717,6 +1748,13 @@ function ComposerModal({
       setCaption("");
       setMediaFiles([]);
       setSelectedChannels([]);
+      setAutoDMConfig({
+        ...defaultComposerAutoDMConfig,
+        responseFlow: {
+          ...defaultComposerAutoDMConfig.responseFlow,
+          nodes: [...defaultComposerAutoDMConfig.responseFlow.nodes],
+        },
+      });
       setError(null);
     } catch (err) {
       console.error("Broadcast submission error:", err);
@@ -2771,6 +2809,16 @@ function ComposerModal({
                 />
 
                 {/* ── Smart Warnings ── */}
+                {selectedChannels.includes("instagram") && (
+                  <Section label="Instagram Auto DM" mb={20}>
+                    <AutoDMComposerPanel
+                      config={autoDMConfig}
+                      onChange={setAutoDMConfig}
+                      postType={postType}
+                    />
+                  </Section>
+                )}
+
                 <SmartWarnings
                   selectedChannels={selectedChannels}
                   platformData={platformData}

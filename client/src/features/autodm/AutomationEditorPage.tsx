@@ -114,7 +114,7 @@ export default function AutomationEditorPage() {
                   Re-Trigger
                 </Button>
               )}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3 rounded-full border border-black/10 bg-white px-3 py-2 shadow-sm">
                 <span className="text-sm text-muted-foreground">Status</span>
                 <Switch checked={isActive} onCheckedChange={setIsActive} />
               </div>

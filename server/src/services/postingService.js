@@ -13,6 +13,7 @@ import { postToReddit } from './reddit.js';
 import googleOAuth from './googleOAuth.js';
 import { updateBroadcastResults } from './broadcasts.js';
 import { resolveMentions } from './mentions.js';
+import { createOrUpdateComposerAutomation } from './autodm.js';
 
 /**
  * Core function to broadcast to platforms
@@ -186,6 +187,27 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
 
     // Update DB with results
     await updateBroadcastResults(broadcastId, results, 'sent');
+
+    if (platData?.autoDMConfig?.enabled && results.instagram?.success) {
+      try {
+        await createOrUpdateComposerAutomation({
+          user: { userId },
+          config: platData.autoDMConfig,
+          publication: {
+            success: true,
+            mediaId: results.instagram.mediaId,
+            permalink: results.instagram.url || results.instagram.permalink,
+            mediaUrl: primaryMediaUrl,
+            thumbnailUrl: results.thumbnailUrl || primaryMediaUrl,
+            mediaType,
+          },
+          sourceBroadcastId: broadcastId,
+          sourceJobId: broadcastId,
+        });
+      } catch (autoDMError) {
+        console.error(`⚠️ Auto DM binding failed for scheduled broadcast ${broadcastId}:`, autoDMError.message);
+      }
+    }
 
     // Cleanup files if needed (scheduler might handle this)
     return results;

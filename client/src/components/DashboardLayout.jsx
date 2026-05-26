@@ -12,6 +12,8 @@ const DashboardLayout = () => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const location = useLocation();
   const isTrendsPage = location.pathname.includes('/dashboard/trends');
+  const isAutoDMWorkspace = location.pathname.startsWith('/dashboard/auto-dm');
+  const showDashboardChrome = !isTrendsPage && !isAutoDMWorkspace;
 
   useEffect(() => {
     const onResize = () => {
@@ -85,7 +87,7 @@ const DashboardLayout = () => {
         Skip to main content
       </a>
       {/* Mobile overlay */}
-      {!isDesktop && sidebarOpen && (
+      {showDashboardChrome && !isDesktop && sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
           style={{
@@ -99,7 +101,7 @@ const DashboardLayout = () => {
       )}
 
       {/* Sidebar — hidden on Trends page, fixed on desktop, drawer on mobile */}
-      {!isTrendsPage && (
+      {showDashboardChrome && (
         <div
           style={{
             position: "fixed",
@@ -123,7 +125,7 @@ const DashboardLayout = () => {
       <div
         style={{
           flex: 1,
-          marginLeft: isDesktop && !isTrendsPage ? 240 : 0,
+          marginLeft: isDesktop && showDashboardChrome ? 240 : 0,
           display: "flex",
           flexDirection: "column",
           minWidth: 0,
@@ -132,12 +134,14 @@ const DashboardLayout = () => {
         }}
       >
         {/* Header — passes mobile toggle */}
-        <Header
-          onMenuClick={() => setSidebarOpen((o) => !o)}
-          sidebarOpen={sidebarOpen}
-          isDesktop={isDesktop}
-          isTrendsPage={isTrendsPage}
-        />
+        {!isAutoDMWorkspace && (
+          <Header
+            onMenuClick={() => setSidebarOpen((o) => !o)}
+            sidebarOpen={sidebarOpen}
+            isDesktop={isDesktop}
+            isTrendsPage={isTrendsPage}
+          />
+        )}
 
         {/* Page content below header */}
         <main
@@ -145,7 +149,7 @@ const DashboardLayout = () => {
           className="custom-scrollbar"
           style={{
             flex: 1,
-            marginTop: 56,
+            marginTop: isAutoDMWorkspace ? 0 : 56,
             overflowY: "auto",
             overflowX: "hidden",
             padding: 0,

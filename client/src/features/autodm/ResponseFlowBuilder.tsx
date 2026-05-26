@@ -33,16 +33,16 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
   };
 
   return (
-    <Card className="h-full">
+    <Card className="h-full min-h-[420px]">
       <CardHeader>
         <CardTitle>Response Flow</CardTitle>
-        <p className="text-sm text-muted-foreground">Build the message sequence sent when this automation triggers.</p>
+        <p className="text-sm text-[var(--slate)]">Build the message sequence sent when this automation triggers.</p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between rounded-lg bg-gray-50 p-4">
+        <div className="flex items-center justify-between gap-4 rounded-[14px] bg-black/[0.035] p-4">
           <div>
             <Label>Opening Message</Label>
-            <p className="text-xs text-muted-foreground">Send a welcome message before the main flow</p>
+            <p className="text-xs text-[var(--slate)]">Send a welcome message before the main flow</p>
           </div>
           <Switch
             checked={responseFlow.opening_message_enabled}
@@ -61,12 +61,12 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
 
         <div className="space-y-3">
           {responseFlow.nodes.map((node) => (
-            <div key={node.id} className="flex items-center gap-2 rounded-lg border bg-white p-3">
-              <button className="cursor-grab text-muted-foreground hover:text-foreground">
+            <div key={node.id} className="flex items-center gap-2 rounded-[14px] border border-black/10 bg-white p-3">
+              <button type="button" className="cursor-grab text-[var(--slate)] hover:text-[var(--ink)]">
                 <GripVertical className="h-4 w-4" />
               </button>
               <div className="flex flex-1 items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[var(--arc)]/10 text-[var(--arc)]">
                   {(() => {
                     const Icon = nodeTypes.find((item) => item.type === node.type)?.icon || Type;
                     return <Icon className="h-4 w-4" />;
@@ -74,11 +74,12 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium capitalize">{node.type}</p>
-                  <p className="truncate text-xs text-muted-foreground">{node.content || node.card_title || `${node.buttons?.length || node.form_fields?.length || 0} items`}</p>
+                  <p className="truncate text-xs text-[var(--slate)]">{node.content || node.card_title || `${node.buttons?.length || node.form_fields?.length || 0} items`}</p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
                 <Button
+                  type="button"
                   variant="ghost"
                   size="sm"
                   onClick={() => {
@@ -89,9 +90,10 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
                   Edit
                 </Button>
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
-                  className="text-destructive"
+                  className="text-red-600"
                   onClick={() => onChange({ ...responseFlow, nodes: responseFlow.nodes.filter((item) => item.id !== node.id) })}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -101,7 +103,7 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
           ))}
         </div>
 
-        <Button variant="outline" className="w-full border-dashed" onClick={() => setShowNodePicker(true)}>
+        <Button type="button" variant="outline" className="w-full border-dashed" onClick={() => setShowNodePicker(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Add Response
         </Button>
@@ -113,11 +115,12 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
             <DialogTitle>Add Response Element</DialogTitle>
             <DialogDescription>Choose what to send next in your automation flow.</DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-3 py-4">
+            <div className="grid grid-cols-1 gap-3 py-4 sm:grid-cols-2">
             {nodeTypes.map((nodeType) => (
               <button
+                type="button"
                 key={nodeType.type}
-                className="rounded-lg border p-4 text-center transition-colors hover:border-primary hover:bg-primary/5"
+                className="rounded-[14px] border border-black/10 bg-white p-4 text-center transition-colors hover:border-[var(--arc)] hover:bg-[var(--arc)]/5"
                 onClick={() => {
                   const newNode = {
                     id: generateId(),
@@ -133,9 +136,9 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
                   setEditDialogOpen(true);
                 }}
               >
-                <nodeType.icon className="mx-auto h-6 w-6 text-primary" />
+                <nodeType.icon className="mx-auto h-6 w-6 text-[var(--ink)]" />
                 <div className="mt-2 text-sm font-medium">{nodeType.label}</div>
-                <div className="mt-1 text-xs text-muted-foreground">{nodeType.description}</div>
+                <div className="mt-1 text-xs text-[var(--slate)]">{nodeType.description}</div>
               </button>
             ))}
           </div>
@@ -245,7 +248,7 @@ function ButtonEditor({ buttons, onChange }) {
               />
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => onChange(buttons.filter((item) => item.id !== button.id))}>
+          <Button variant="ghost" size="icon" className="text-red-600" onClick={() => onChange(buttons.filter((item) => item.id !== button.id))}>
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -283,7 +286,7 @@ function FormFieldEditor({ fields, onChange }) {
               Required
             </label>
           </div>
-          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => onChange(fields.filter((item) => item.id !== field.id))}>
+          <Button variant="ghost" size="icon" className="text-red-600" onClick={() => onChange(fields.filter((item) => item.id !== field.id))}>
             <X className="h-4 w-4" />
           </Button>
         </div>

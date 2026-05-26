@@ -44,7 +44,7 @@ export default function AutomationsPage() {
   return (
     <AutoDMConnectionGate>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">Automations</h2>
             <p className="mt-1 text-sm text-muted-foreground">Create and manage your Instagram Auto DM workflows.</p>
@@ -55,9 +55,47 @@ export default function AutomationsPage() {
           </Button>
         </div>
 
-        <Card>
+        {!loading && automations.length > 0 ? (
+          <div className="grid gap-3 md:hidden">
+            {automations.map((automation) => (
+              <div key={automation.id} className="rounded-[20px] border border-black/10 bg-white p-4 shadow-sm">
+                <div className="flex gap-3">
+                  {automation.media_thumbnail ? (
+                    <img src={automation.media_thumbnail} alt="" className="h-16 w-16 rounded-[14px] object-cover" />
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-[14px] bg-black/[0.04]">
+                      <ImageIcon className="h-6 w-6 text-slate-400" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-[var(--ink)]">{automation.name}</p>
+                        <p className="mt-1 text-xs capitalize text-[var(--slate)]">{automation.trigger_type.replaceAll("_", " ")}</p>
+                      </div>
+                      <Badge variant={automation.is_active ? "success" : "secondary"}>{automation.is_active ? "Active" : "Inactive"}</Badge>
+                    </div>
+                    <p className="mt-3 text-xs text-[var(--slate)]">Updated {formatRelativeTime(automation.updated_at)}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/dashboard/auto-dm/automations/${automation.id}`)}>
+                        <Pencil className="mr-1 h-4 w-4" />
+                        Edit
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => navigate(`/dashboard/auto-dm/automations/${automation.id}/leads`)}>
+                        <BarChart3 className="mr-1 h-4 w-4" />
+                        Leads
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        <Card className="overflow-hidden rounded-[22px] border-black/10 shadow-sm">
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            <div className={`overflow-x-auto ${!loading && automations.length > 0 ? "hidden md:block" : ""}`}>
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
