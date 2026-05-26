@@ -12,6 +12,8 @@ import onboardingRouter from './routes/onboarding.js';
 import jobsRouter from './routes/jobs.js';
 import trendsRouter from './routes/trends.js';
 import aiRouter from './routes/ai.js';
+import instapilotRouter from './routes/instapilot.js';
+import autodmRouter from './routes/autodm.js';
 import { initScheduler } from './services/scheduler.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -53,7 +55,14 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: '100mb' }));
+app.use(express.json({
+  limit: '100mb',
+  verify: (req, res, buf) => {
+    if (req.originalUrl?.includes('/webhooks/instagram')) {
+      req.rawBody = Buffer.from(buf);
+    }
+  },
+}));
 
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
@@ -69,6 +78,8 @@ app.use('/api', onboardingRouter);
 app.use('/api', jobsRouter);
 app.use('/api', trendsRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/instapilot', instapilotRouter);
+app.use('/api/autodm', autodmRouter);
 
 // Root endpoint
 app.get('/', (req, res) => {

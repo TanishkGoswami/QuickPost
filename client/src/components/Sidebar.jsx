@@ -13,6 +13,7 @@ import {
   Sparkles,
   Lock,
   MessageCircle,
+  Bot,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
 import logo from "/logo.png";
@@ -433,6 +434,11 @@ function Sidebar() {
               to: "/dashboard/trends",
               label: "All Trends",
               icon: <Flame size={16} />,
+            },
+            {
+              to: "/dashboard/instapilot",
+              label: "GAP InstaPilot",
+              icon: <Bot size={16} />,
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);
