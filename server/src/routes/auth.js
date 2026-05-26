@@ -209,7 +209,12 @@ router.get("/instagram/callback", async (req, res) => {
     res.redirect(`${CLIENT_URL}/dashboard?success=instagram_connected`);
   } catch (err) {
     console.error("❌ IG callback error:", err.message);
-    res.redirect(`${CLIENT_URL}/dashboard?error=instagram_connection_failed`);
+    const message = encodeURIComponent(
+      err?.message || "Failed to connect Instagram account",
+    );
+    res.redirect(
+      `${CLIENT_URL}/dashboard?error=instagram_connection_failed&message=${message}`,
+    );
   }
 });
 

@@ -1282,6 +1282,8 @@ function Dashboard() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get("error");
+    const oauthMessage = params.get("message") || params.get("details");
     
     const verifyPayment = async () => {
       const paymentLinkStatus = params.get("razorpay_payment_link_status");
@@ -1317,6 +1319,13 @@ function Dashboard() {
 
     if (params.get("payment") === "success") {
       verifyPayment();
+    }
+
+    if (oauthError) {
+      const readable =
+        oauthMessage || oauthError.replaceAll("_", " ");
+      alert(`Connection failed: ${readable}`);
+      window.history.replaceState({}, "", "/dashboard");
     }
 
     if (params.get("success")) {

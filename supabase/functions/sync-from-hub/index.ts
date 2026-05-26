@@ -14,10 +14,15 @@ function jsonRes(status: number, body: Record<string, unknown>): Response {
 }
 
 // Plans that include Social Pilot access
-function isSocialPlan(planId: string): boolean {
-  if (!planId) return false;
-  const p = planId.toLowerCase();
-  return p.startsWith("social_pilot") || p.startsWith("all_in_one");
+function isSocialPlan(planValue: string): boolean {
+  if (!planValue) return false;
+  const p = planValue.toLowerCase().trim();
+  return (
+    p.startsWith("social_pilot") ||
+    p.startsWith("all_in_one") ||
+    p === "social pilot" ||
+    p === "gap ultimate ecosystem"
+  );
 }
 
 Deno.serve(async (req: Request) => {
@@ -62,25 +67,42 @@ Deno.serve(async (req: Request) => {
       auth: { persistSession: false },
     });
 
-    const rawPlanId = plan_id || plan || "free";
+    const rawPlanId = plan_id || plan || "";
     // Store exact plan_label from hub if this is a social-relevant plan
     // plan_label comes in as e.g. "Social Pilot" or "GAP Ultimate Ecosystem"
     const planLabel = body.plan_label || null;
-    const hasSocial = isSocialPlan(rawPlanId);
-    const storedPlan = hasSocial
-      ? planLabel ||
-        (rawPlanId.startsWith("all_in_one")
+    const subscriptionStatus = body.subscription_status || "active";
+    const hasSocial = isSocialPlan(rawPlanId) || isSocialPlan(planLabel || "");
+
+    // If payload is incomplete (no plan_id/plan_label), do not downgrade existing paid users.
+    const { data: existingSub } = await supabase
+      .from("hub_subscriptions")
+      .select("plan, plan_id, subscription_status")
+      .eq("email", email)
+      .maybeSingle();
+
+    const existingPaid = isSocialPlan(existingSub?.plan_id || "") || isSocialPlan(existingSub?.plan || "");
+
+    let storedPlan = "Free";
+    if (hasSocial) {
+      storedPlan =
+        planLabel ||
+        (rawPlanId.toLowerCase().startsWith("all_in_one")
           ? "GAP Ultimate Ecosystem"
-          : "Social Pilot")
-      : "Free";
+          : "Social Pilot");
+    } else if (!rawPlanId && existingPaid) {
+      storedPlan = existingSub?.plan || "Social Pilot";
+    }
 
     // ── Upsert into hub_subscriptions (email as primary key) ──────────────
     // No auth user creation. No UUID conflicts. Simple and fast.
     const record: Record<string, unknown> = {
       email,
       plan: storedPlan,
-      plan_id: rawPlanId,
-      subscription_status: "active",
+      plan_id: rawPlanId || existingSub?.plan_id || null,
+      subscription_status: hasSocial
+        ? subscriptionStatus
+        : (!rawPlanId && existingPaid ? (existingSub?.subscription_status || "active") : "active"),
       updated_at: new Date().toISOString(),
       synced_at: new Date().toISOString(),
     };

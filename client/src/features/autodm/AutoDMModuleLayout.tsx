@@ -180,23 +180,17 @@ export default function AutoDMModuleLayout() {
                           {activeAccount ? `@${activeAccount.username}` : "Select account"}
                         </div>
                       </div>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-slate-500" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-72">
-                  <DropdownMenuLabel>Auto DM Accounts</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {accounts.length === 0 ? (
-                    <DropdownMenuItem disabled>No imported Auto DM accounts yet</DropdownMenuItem>
-                  ) : (
-                    accounts.map((account) => (
-                      <DropdownMenuItem key={account.id} onClick={() => setActiveAccountId(account.id)}>
-                        <Avatar className="mr-2 h-7 w-7">
-                          <AvatarImage src={account.profile_picture_url || ""} />
-                          <AvatarFallback>{account.username?.slice(0, 1).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <span>@{account.username}</span>
+                      <ChevronDown className="h-4 w-4 text-slate-400" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-72 rounded-xl p-1.5 shadow-lg">
+                    <DropdownMenuLabel className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                      Auto DM Accounts
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {accounts.length === 0 ? (
+                      <DropdownMenuItem disabled className="text-slate-400">
+                        No imported Auto DM accounts yet
                       </DropdownMenuItem>
                     ))
                   )}

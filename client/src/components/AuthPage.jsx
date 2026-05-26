@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { useAuth } from "../context/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
-import logo from "/icons/logo.png";
+import logo from "/logo.png";
 import {
   AppleIcon,
   Mail,

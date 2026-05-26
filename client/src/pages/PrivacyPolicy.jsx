@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { LandingNav } from '../features/landing';
-import logo from '/icons/logo.png';
+import logo from '/logo.png';
 import {
   Shield,
   Eye,

@@ -167,10 +167,11 @@ class InstagramOAuthService {
       );
 
       if (missing.length) {
-        throw new Error(
-          `Missing required permissions: ${missing.join(', ')}. ` +
-            `Fix: Remove app from Facebook -> Settings -> Apps and Websites AND Business Integrations, then login again. ` +
-            `During consent, select your Page + IG account and continue.`
+        // Some Meta app/account combinations do not always echo all granted
+        // permissions here even though downstream Graph calls still succeed.
+        // Keep the flow alive and validate with real Graph fetches below.
+        console.warn(
+          `⚠️ IG: Permission probe reports missing scopes: ${missing.join(', ')}. Continuing with page/account fetch validation.`
         );
       }
 
@@ -237,7 +238,7 @@ class InstagramOAuthService {
       console.log('\n📄 Pages Count:', pages.length);
       if (!pages.length) {
         throw new Error(
-          'No Facebook Pages found for this token. Make sure you selected your Page during consent and try again.'
+          'No Facebook Pages found for this account. In Meta consent, select at least one Facebook Page and its linked Instagram Business account, then retry.'
         );
       }
 
@@ -249,7 +250,7 @@ class InstagramOAuthService {
 
       if (!pageWithIG) {
         throw new Error(
-          'No Instagram Business account connected to your Page. Please connect Instagram to your Facebook Page (Business/Creator account).'
+          'No linked Instagram Business/Creator account found on selected Facebook Pages. Link IG to a Facebook Page in Meta Business settings, then reconnect.'
         );
       }
 

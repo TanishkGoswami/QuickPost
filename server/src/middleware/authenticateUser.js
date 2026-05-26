@@ -1,14 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 import { createOrUpdateUser } from '../services/supabase.js';
 
-// Use Supabase admin client to verify tokens correctly.
-// Supabase JWTs are signed with Supabase's own JWT secret, NOT process.env.JWT_SECRET.
-// The only safe way to verify them server-side is via supabase.auth.getUser().
+const supabaseUrl = process.env.SUPABASE_URL;
+let supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseKey || supabaseKey.startsWith('ROTATE_ME')) {
+  supabaseKey = process.env.SUPABASE_ANON_KEY;
+}
+
 const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY ||
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.SUPABASE_ANON_KEY,
+  supabaseUrl,
+  supabaseKey,
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
