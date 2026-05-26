@@ -431,11 +431,6 @@ function Sidebar() {
               label: "All Trends",
               icon: <Flame size={16} />,
             },
-            {
-              to: "/dashboard/auto-dm/automations",
-              label: "Auto DM",
-              icon: <MessageCircle size={16} />,
-            },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);
             const isLocked = isFree(user?.plan);
