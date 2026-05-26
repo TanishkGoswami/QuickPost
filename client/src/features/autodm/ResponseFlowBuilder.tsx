@@ -51,25 +51,16 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
   };
 
   return (
-    <Card className="flex h-full flex-col overflow-hidden rounded-2xl border-black/8 shadow-sm">
-      <CardHeader className="border-b border-black/5 bg-slate-50/60 pb-4">
-        <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900">
-          <Zap className="h-4 w-4 text-amber-500" />
-          Response Flow
-        </CardTitle>
-        <p className="text-sm text-slate-500">Build the message sequence sent when this automation triggers.</p>
+    <Card className="h-full min-h-[420px]">
+      <CardHeader>
+        <CardTitle>Response Flow</CardTitle>
+        <p className="text-sm text-[var(--slate)]">Build the message sequence sent when this automation triggers.</p>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-4 p-5">
-        {/* Opening message toggle */}
-        <div className="flex items-center justify-between rounded-xl border border-black/8 bg-white px-4 py-3.5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
-              <MessageSquare className="h-4 w-4 text-slate-500" />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-900">Opening Message</p>
-              <p className="text-xs text-slate-400">Send a welcome before the main flow</p>
-            </div>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between gap-4 rounded-[14px] bg-black/[0.035] p-4">
+          <div>
+            <Label>Opening Message</Label>
+            <p className="text-xs text-[var(--slate)]">Send a welcome message before the main flow</p>
           </div>
           <Switch
             checked={responseFlow.opening_message_enabled}
@@ -87,12 +78,45 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
           />
         )}
 
-        {/* Node list */}
-        <div className="flex flex-col gap-2.5">
-          {responseFlow.nodes.length === 0 && (
-            <div className="rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 py-8 text-center">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-                <MessageSquare className="h-5 w-5 text-slate-400" />
+        <div className="space-y-3">
+          {responseFlow.nodes.map((node) => (
+            <div key={node.id} className="flex items-center gap-2 rounded-[14px] border border-black/10 bg-white p-3">
+              <button type="button" className="cursor-grab text-[var(--slate)] hover:text-[var(--ink)]">
+                <GripVertical className="h-4 w-4" />
+              </button>
+              <div className="flex flex-1 items-center gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[var(--arc)]/10 text-[var(--arc)]">
+                  {(() => {
+                    const Icon = nodeTypes.find((item) => item.type === node.type)?.icon || Type;
+                    return <Icon className="h-4 w-4" />;
+                  })()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium capitalize">{node.type}</p>
+                  <p className="truncate text-xs text-[var(--slate)]">{node.content || node.card_title || `${node.buttons?.length || node.form_fields?.length || 0} items`}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setEditingNode({ ...node });
+                    setEditDialogOpen(true);
+                  }}
+                >
+                  Edit
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-red-600"
+                  onClick={() => onChange({ ...responseFlow, nodes: responseFlow.nodes.filter((item) => item.id !== node.id) })}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
               <p className="text-sm font-medium text-slate-700">No messages yet</p>
               <p className="mt-1 text-xs text-slate-400">Add your first response below</p>
@@ -154,11 +178,7 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
           })}
         </div>
 
-        <Button
-          variant="outline"
-          className="mt-auto w-full rounded-xl border-2 border-dashed border-slate-200 py-5 text-sm font-medium text-slate-500 hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
-          onClick={() => setShowNodePicker(true)}
-        >
+        <Button type="button" variant="outline" className="w-full border-dashed" onClick={() => setShowNodePicker(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Add Response
         </Button>
@@ -173,11 +193,12 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
               Choose what to send next in your automation flow.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-2.5 py-2">
+            <div className="grid grid-cols-1 gap-3 py-4 sm:grid-cols-2">
             {nodeTypes.map((nodeType) => (
               <button
+                type="button"
                 key={nodeType.type}
-                className={`group rounded-xl border border-black/8 p-4 text-left transition-all hover:border-transparent hover:shadow-md ${nodeType.lightBg}`}
+                className="rounded-[14px] border border-black/10 bg-white p-4 text-center transition-colors hover:border-[var(--arc)] hover:bg-[var(--arc)]/5"
                 onClick={() => {
                   const newNode = {
                     id: generateId(),
@@ -193,11 +214,9 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
                   setEditDialogOpen(true);
                 }}
               >
-                <div className={`mb-2.5 inline-flex h-9 w-9 items-center justify-center rounded-xl ${nodeType.color}`}>
-                  <nodeType.icon className="h-4.5 w-4.5 text-white" />
-                </div>
-                <div className="text-sm font-semibold text-slate-800">{nodeType.label}</div>
-                <div className="mt-0.5 text-xs text-slate-500">{nodeType.description}</div>
+                <nodeType.icon className="mx-auto h-6 w-6 text-[var(--ink)]" />
+                <div className="mt-2 text-sm font-medium">{nodeType.label}</div>
+                <div className="mt-1 text-xs text-[var(--slate)]">{nodeType.description}</div>
               </button>
             ))}
           </div>
@@ -382,12 +401,7 @@ function ButtonEditor({ buttons, onChange }) {
               />
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"
-            onClick={() => onChange(buttons.filter((item) => item.id !== button.id))}
-          >
+          <Button variant="ghost" size="icon" className="text-red-600" onClick={() => onChange(buttons.filter((item) => item.id !== button.id))}>
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -448,12 +462,7 @@ function FormFieldEditor({ fields, onChange }) {
               Required field
             </label>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"
-            onClick={() => onChange(fields.filter((item) => item.id !== field.id))}
-          >
+          <Button variant="ghost" size="icon" className="text-red-600" onClick={() => onChange(fields.filter((item) => item.id !== field.id))}>
             <X className="h-4 w-4" />
           </Button>
         </div>

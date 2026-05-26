@@ -78,39 +78,21 @@ export async function startAutoDMInstagramOAuth(frontendUrl) {
     );
   }
 
-  const { data, error } = await autodmSupabase.functions.invoke("oauth-start", {
-    body: {
+  try {
+    const response = await apiClient.post("/api/autodm/oauth-start", {
       frontendUrl,
-    },
-  });
+    });
 
-  if (error) {
-    const response = error?.context;
-    let message = error.message || "Failed to start Auto DM Instagram login";
-
-    if (response instanceof Response) {
-      try {
-        const text = await response.clone().text();
-        if (text) {
-          try {
-            const parsed = JSON.parse(text);
-            message = parsed.error || parsed.message || message;
-          } catch {
-            message = text;
-          }
-        }
-      } catch {
-        // ignore parse failure
-      }
+    if (!response.data?.success || !response.data?.redirectTo) {
+      throw new Error(response.data?.error || "AutoDM OAuth URL not returned by server");
     }
 
-    throw new Error(message);
+    return response.data.redirectTo;
+  } catch (error) {
+    throw new Error(
+      error.response?.data?.error ||
+        error.message ||
+        "Failed to start Auto DM Instagram login"
+    );
   }
-
-  const redirectTo = data?.redirectTo;
-  if (!redirectTo || typeof redirectTo !== "string") {
-    throw new Error("Auto DM OAuth URL not returned by server");
-  }
-
-  return redirectTo;
 }

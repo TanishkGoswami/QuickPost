@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { AnimatePresence } from "framer-motion";
 import Masonry from "react-masonry-css";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -61,6 +61,20 @@ const PLATFORM_COLORS = {
   "google-business": "#4285F4",
 };
 
+const DASHBOARD_MASONRY_COLS = {
+  default: 4,
+  1500: 4,
+  1280: 3,
+  900: 2,
+  560: 1,
+};
+
+const SKELETON_HEIGHTS = [
+  280, 190, 340, 230, 310, 255, 370, 210, 295, 330, 180, 245,
+];
+
+const LOAD_MORE_SKELETON_HEIGHTS = [260, 190, 315, 225, 285, 205, 335, 240];
+
 /* ── Platform helpers ── */
 function getPlatformIcon(id) {
   const s = { width: 14, height: 14, objectFit: "contain" };
@@ -117,6 +131,13 @@ function getPlatformIcon(id) {
     default:
       return <Share2 size={14} />;
   }
+}
+
+function getPostPreviewRatio(post) {
+  if (post.media_type === "image") return "4 / 5";
+  if (post.media_type === "video") return "9 / 16";
+  if (Array.isArray(post.media_urls) && post.media_urls.length > 1) return "1 / 1";
+  return "4 / 5";
 }
 
 function buildPlatforms(post) {
@@ -400,6 +421,7 @@ function PinterestCard({ post, onOpen, formatDate }) {
     /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || "");
   const displayUrl = post.thumbnail_url || (isImage ? post.media_url : null);
   const hasMedia = !!displayUrl;
+  const mediaRatio = getPostPreviewRatio(post);
   const allSuccess = platforms.length > 0 && platforms.every((p) => p.success);
 
   const ICON_MAP = {
@@ -437,12 +459,12 @@ function PinterestCard({ post, onOpen, formatDate }) {
         cursor: "pointer",
         background: hasMedia ? "transparent" : css.lifted,
         boxShadow: hovered
-          ? "0 24px 48px rgba(20,20,19,0.15), 0 4px 12px rgba(20,20,19,0.06)"
-          : "0 2px 12px rgba(20,20,19,0.06)",
-        transform: hovered ? "translateY(-5px) scale(1.01)" : "none",
+          ? "0 18px 42px rgba(20,20,19,0.13), 0 4px 12px rgba(20,20,19,0.06)"
+          : "0 1px 3px rgba(20,20,19,0.05), 0 10px 28px rgba(20,20,19,0.055)",
+        transform: hovered ? "translateY(-3px)" : "none",
         transition:
           "box-shadow 0.35s cubic-bezier(0.2,0.8,0.2,1), transform 0.35s cubic-bezier(0.2,0.8,0.2,1)",
-        border: "1px solid rgba(20,20,19,0.07)",
+        border: "1px solid rgba(20,20,19,0.075)",
         willChange: "transform",
       }}
     >
@@ -452,7 +474,9 @@ function PinterestCard({ post, onOpen, formatDate }) {
           style={{
             position: "relative",
             lineHeight: 0,
-            minHeight: imgLoaded ? 0 : 180,
+            aspectRatio: mediaRatio,
+            minHeight: 180,
+            background: "rgba(20,20,19,0.045)",
           }}
         >
           {/* Shimmer shown until image loads */}
@@ -473,8 +497,9 @@ function PinterestCard({ post, onOpen, formatDate }) {
             loading="lazy"
             style={{
               width: "100%",
-              height: "auto",
+              height: "100%",
               display: "block",
+              objectFit: "cover",
               opacity: imgLoaded ? 1 : 0,
               transition:
                 "opacity 0.5s ease, transform 0.55s cubic-bezier(0.2,0.8,0.2,1)",
@@ -1164,14 +1189,18 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
 }
 
 /* ── Skeleton card for loading state ── */
-const SKELETON_HEIGHTS = [
-  280, 180, 350, 220, 315, 260, 385, 200, 295, 340, 170, 235,
-];
-
 function SkeletonCard({ height }) {
   return (
-    <div className="masonry-card skeleton-card">
-      <div className="skeleton-shimmer" style={{ height }} />
+    <div
+      className="masonry-card skeleton-card"
+      style={{
+        borderRadius: 16,
+        overflow: "hidden",
+        border: "1px solid rgba(20,20,19,0.075)",
+        boxShadow: "0 1px 3px rgba(20,20,19,0.05), 0 10px 28px rgba(20,20,19,0.045)",
+      }}
+    >
+      <div className="skeleton-shimmer" style={{ height, minHeight: 170 }} />
       <div
         style={{
           padding: "12px 14px 14px",
@@ -1346,7 +1375,7 @@ function Dashboard() {
 
   const selectedPlatform = searchParams.get("platform") || "all";
 
-  const filtered = broadcasts.filter((b) => {
+  const filtered = useMemo(() => broadcasts.filter((b) => {
     const matchesSearch = (b.caption || "")
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
@@ -1355,10 +1384,25 @@ function Dashboard() {
       (p) => p.id === selectedPlatform,
     );
     return matchesSearch && matchesPlatform;
-  });
+  }), [broadcasts, searchTerm, selectedPlatform]);
 
-  const displayedItems = filtered.slice(0, displayCount);
+  const displayedItems = useMemo(
+    () => filtered.slice(0, displayCount),
+    [filtered, displayCount],
+  );
   const hasMore = displayCount < filtered.length;
+  const masonryItems = useMemo(() => {
+    const posts = displayedItems.map((post) => ({ type: "post", post }));
+    if (!isLoadingMore || viewMode !== "grid") return posts;
+    return [
+      ...posts,
+      ...LOAD_MORE_SKELETON_HEIGHTS.map((height, index) => ({
+        type: "skeleton",
+        height,
+        key: `load-more-${displayCount}-${index}`,
+      })),
+    ];
+  }, [displayedItems, displayCount, isLoadingMore, viewMode]);
 
   useEffect(() => {
     if (!hasMore || isLoadingMore) return;
@@ -1391,6 +1435,27 @@ function Dashboard() {
       }}
     >
       {/* ── Top header ── */}
+      <style>{`
+        .dashboard-masonry {
+          display: flex;
+          align-items: flex-start;
+          width: auto;
+          margin-left: -18px;
+        }
+        .dashboard-masonry_col {
+          padding-left: 18px;
+          background-clip: padding-box;
+        }
+        .dashboard-masonry_col > .masonry-card {
+          margin-bottom: 18px;
+          break-inside: avoid;
+        }
+        @media (max-width: 560px) {
+          .dashboard-masonry { margin-left: -12px; }
+          .dashboard-masonry_col { padding-left: 12px; }
+          .dashboard-masonry_col > .masonry-card { margin-bottom: 12px; }
+        }
+      `}</style>
       <div
         style={{
           background: css.lifted,
@@ -1707,15 +1772,9 @@ function Dashboard() {
       >
         {loading ? (
           <Masonry
-            breakpointCols={{
-              default: 4,
-              1400: 3,
-              1100: 3,
-              768: 2,
-              480: 1,
-            }}
-            className="masonry-grid"
-            columnClassName="masonry-grid_column"
+            breakpointCols={DASHBOARD_MASONRY_COLS}
+            className="dashboard-masonry"
+            columnClassName="dashboard-masonry_col"
           >
             {SKELETON_HEIGHTS.map((h, i) => (
               <SkeletonCard key={i} height={h} />
@@ -1728,24 +1787,22 @@ function Dashboard() {
           <>
             {viewMode === "grid" ? (
               <Masonry
-                breakpointCols={{
-                  default: 4,
-                  1400: 3,
-                  1100: 3,
-                  768: 2,
-                  480: 1,
-                }}
-                className="masonry-grid"
-                columnClassName="masonry-grid_column"
+                breakpointCols={DASHBOARD_MASONRY_COLS}
+                className="dashboard-masonry"
+                columnClassName="dashboard-masonry_col"
               >
-                {displayedItems.map((post) => (
-                  <PinterestCard
-                    key={post.id}
-                    post={post}
-                    onOpen={() => setSelectedPost(post)}
-                    formatDate={formatDate}
-                  />
-                ))}
+                {masonryItems.map((item) =>
+                  item.type === "skeleton" ? (
+                    <SkeletonCard key={item.key} height={item.height} />
+                  ) : (
+                    <PinterestCard
+                      key={item.post.id}
+                      post={item.post}
+                      onOpen={() => setSelectedPost(item.post)}
+                      formatDate={formatDate}
+                    />
+                  )
+                )}
               </Masonry>
             ) : (
               <div
@@ -1780,23 +1837,7 @@ function Dashboard() {
             {/* ── Infinite scroll sentinel + skeletons ── */}
             <div ref={loadMoreRef} style={{ marginTop: 8 }} />
 
-            {isLoadingMore && viewMode === "grid" && (
-              <Masonry
-                breakpointCols={{
-                  default: 4,
-                  1400: 3,
-                  1100: 3,
-                  768: 2,
-                  480: 1,
-                }}
-                className="masonry-grid"
-                columnClassName="masonry-grid_column"
-              >
-                {SKELETON_HEIGHTS.slice(0, 8).map((h, i) => (
-                  <SkeletonCard key={i} height={h} />
-                ))}
-              </Masonry>
-            )}
+            
             {isLoadingMore && viewMode === "list" && (
               <div
                 style={{

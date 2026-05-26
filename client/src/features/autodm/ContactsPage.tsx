@@ -57,12 +57,12 @@ export default function ContactsPage() {
           <p className="mt-1 text-sm text-muted-foreground">Everyone who has interacted with your Auto DM automations.</p>
         </div>
 
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative max-w-sm flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search contacts..." className="pl-10" />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm"><Filter className="mr-2 h-4 w-4" />Filter</Button>
             <Button
               variant="outline"
@@ -86,9 +86,62 @@ export default function ContactsPage() {
           </div>
         </div>
 
-        <Card>
+        {!loading && filteredContacts.length > 0 ? (
+          <div className="grid gap-3 md:hidden">
+            {filteredContacts.map((contact) => (
+              <div key={contact.id} className="rounded-[20px] border border-black/10 bg-white p-4 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={contact.profile_picture_url || ""} />
+                    <AvatarFallback>{(contact.username || "U").slice(0, 1).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-[var(--ink)]">{contact.full_name || contact.username}</p>
+                    <a href={`https://instagram.com/${contact.username}`} target="_blank" rel="noreferrer" className="mt-0.5 flex items-center gap-1 text-xs text-primary hover:underline">
+                      @{contact.username}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-[12px] bg-black/[0.04] p-2">
+                        <p className="text-[var(--slate)]">Received</p>
+                        <p className="font-semibold text-[var(--ink)]">{contact.total_messages_received || 0}</p>
+                      </div>
+                      <div className="rounded-[12px] bg-black/[0.04] p-2">
+                        <p className="text-[var(--slate)]">Sent</p>
+                        <p className="font-semibold text-[var(--ink)]">{contact.total_messages_sent || 0}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <span className="text-xs text-[var(--slate)]">{formatRelativeTime(contact.last_interaction_at)}</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          setSelectedContact(contact);
+                          setMessagesLoading(true);
+                          try {
+                            setMessages(await listMessagesForContact(contact.id, socialUser.userId));
+                          } catch (error) {
+                            toast.error(error.message || "Failed to load message history");
+                          } finally {
+                            setMessagesLoading(false);
+                          }
+                        }}
+                      >
+                        <MessageCircle className="mr-1 h-4 w-4" />
+                        History
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        <Card className="overflow-hidden rounded-[22px] border-black/10 shadow-sm">
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            <div className={`overflow-x-auto ${!loading && filteredContacts.length > 0 ? "hidden md:block" : ""}`}>
               <table className="w-full">
                 <thead>
                   <tr className="border-b bg-slate-50/70">

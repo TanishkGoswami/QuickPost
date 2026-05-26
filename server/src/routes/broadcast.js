@@ -27,6 +27,7 @@ import blueskyAuth from "../services/blueskyAuth.js";
 import { createJob, updateJob, failJob, getJob } from "../services/jobQueue.js";
 import fs from "fs";
 import { resolveMentions } from "../services/mentions.js";
+import { createOrUpdateComposerAutomation } from "../services/autodm.js";
 
 const router = express.Router();
 
@@ -72,6 +73,7 @@ router.post(
       selectedAspectRatio = '1:1',
       selectedPostSizePreset,
       postType = 'post',
+      autoDMConfig: autoDMConfigField,
     } = req.body;
     
     const userId = req.user.userId;
@@ -85,6 +87,10 @@ router.post(
           ? JSON.parse(platformData)
           : platformData;
       const isScheduled = isScheduledField === "true" || !!scheduledAt;
+      const autoDMConfig =
+        typeof autoDMConfigField === "string"
+          ? JSON.parse(autoDMConfigField)
+          : autoDMConfigField;
 
     // ── Validate scheduled time ───────────────────────────────────────────
     if (isScheduled && scheduledAt) {
@@ -126,6 +132,7 @@ router.post(
       scheduledAt,
       selectedAspectRatio,
       selectedPostSizePreset,
+      autoDMEnabled: Boolean(autoDMConfig?.enabled),
     });
 
     let platformVariants = {};
@@ -140,6 +147,7 @@ router.post(
     processBroadcastJob({
       jobId,
       userId,
+      user: req.user,
       caption,
       channels,
       platData,
@@ -157,7 +165,8 @@ router.post(
       selectedPostSizePreset,
       isScheduled,
       scheduledAt,
-      userTimezone
+      userTimezone,
+      autoDMConfig
     }).catch(err => {
       console.error(`❌ [BROADCAST_JOB] Unhandled error in job ${jobId}:`, err);
       failJob(jobId, err.message || 'Unknown error');
@@ -182,12 +191,12 @@ router.post(
  * Updates job progress as it advances through each phase.
  */
 async function processBroadcastJob({
-  jobId, userId, caption, channels, platData,
+  jobId, userId, user, caption, channels, platData,
   uploadedFiles, filePaths, filenames,
   thumbnailFile, isVideo, mediaType, postType, primaryVideoPath,
   platformVariants, generatedVariantPaths,
   selectedAspectRatio, selectedPostSizePreset,
-  isScheduled, scheduledAt, userTimezone
+  isScheduled, scheduledAt, userTimezone, autoDMConfig
 }) {
   console.log(
     `\n🚀 [JOB:${jobId}] Starting background broadcast for user: ${userId}`,
@@ -313,6 +322,7 @@ async function processBroadcastJob({
         { 
           ...platData, 
           postType,
+          autoDMConfig: autoDMConfig?.enabled ? autoDMConfig : null,
           selectedChannels: channels, 
           filePaths, 
           userTimezone: userTimezone || 'UTC',
@@ -651,12 +661,38 @@ async function processBroadcastJob({
   // ── Phase 4: Save to DB (85 → 95%) ────────────────────────────────────
   updateJob(jobId, { progress: 87, step: "Saving broadcast record…" });
   try {
-    await saveBroadcast(userId, caption, filenames, results, mediaType, {
+    const savedBroadcast = await saveBroadcast(userId, caption, filenames, results, mediaType, {
       ...platData,
       postType,
+      autoDMConfig: autoDMConfig?.enabled ? autoDMConfig : null,
       selected_aspect_ratio: selectedAspectRatio,
       selected_post_size_preset: selectedPostSizePreset
     }, 'sent');
+    if (autoDMConfig?.enabled && results.instagram?.success) {
+      try {
+        await createOrUpdateComposerAutomation({
+          user,
+          config: autoDMConfig,
+          publication: {
+            success: true,
+            mediaId: results.instagram.mediaId,
+            permalink: results.instagram.url || results.instagram.permalink,
+            mediaUrl: primaryMediaUrl,
+            thumbnailUrl: finalThumbnailUrl,
+            mediaType,
+          },
+          sourceBroadcastId: savedBroadcast?.id || null,
+          sourceJobId: jobId,
+        });
+        updateJob(jobId, { progress: 94, step: "Broadcast saved and Auto DM linked." });
+      } catch (autoDMError) {
+        console.error(`⚠️ [JOB:${jobId}] Auto DM binding failed:`, autoDMError.message);
+        updateJob(jobId, {
+          step: `Broadcast saved. Auto DM linking failed: ${autoDMError.message}`,
+          meta: { ...(getJob(jobId)?.meta || {}), autoDMError: autoDMError.message },
+        });
+      }
+    }
     console.log(`✅ [JOB:${jobId}] Broadcast saved to database`);
   } catch (dbErr) {
     console.error(`⚠️ [JOB:${jobId}] DB save failed:`, dbErr.message);

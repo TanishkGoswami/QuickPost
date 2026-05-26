@@ -21,14 +21,13 @@
 import React, {
   useState, useMemo, useCallback, useEffect, useRef, Suspense, lazy, memo,
 } from "react";
-import Masonry from "react-masonry-css";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Flame, Sparkles, TrendingUp, RefreshCw, Search,
   Bookmark, BookmarkCheck, Share2, ExternalLink, Play,
   Zap, Globe, Music, Activity, Cpu, BarChart2, Trophy,
   Tv2, Filter, ChevronDown, X, ArrowUpCircle, Hash,
-  CheckCircle2, Lightbulb,
+  CheckCircle2, Lightbulb, Youtube,
 } from "lucide-react";
 import { useAllTrends } from "./hooks/useAllTrends";
 
@@ -233,9 +232,9 @@ const NewsCard = memo(function NewsCard({ item, idx, onUse, saved, onSave }) {
     <motion.article
       initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: Math.min(idx * 0.03, 0.28), ease: [0.23, 1, 0.32, 1] }}
-      style={{ background: C.white, borderRadius: 20, overflow: "hidden", border: `1px solid ${C.border}`, boxShadow: "0 1px 8px rgba(20,20,19,0.05), 0 4px 20px rgba(20,20,19,0.04)", marginBottom: 18, display: "flex", flexDirection: "column", transition: "box-shadow 0.28s, transform 0.28s" }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 12px 40px rgba(20,20,19,0.12), 0 3px 12px rgba(20,20,19,0.06)"; e.currentTarget.style.transform = "translateY(-3px)"; }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 8px rgba(20,20,19,0.05), 0 4px 20px rgba(20,20,19,0.04)"; e.currentTarget.style.transform = "translateY(0)"; }}
+      style={{ background: C.white, borderRadius: 16, overflow: "hidden", border: "1px solid rgba(20,20,19,0.075)", boxShadow: "0 1px 2px rgba(20,20,19,0.04), 0 10px 28px rgba(20,20,19,0.055)", marginBottom: 18, display: "flex", flexDirection: "column", transition: "box-shadow 0.22s, transform 0.22s, border-color 0.22s" }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 18px 42px rgba(20,20,19,0.12), 0 4px 12px rgba(20,20,19,0.06)"; e.currentTarget.style.borderColor = "rgba(20,20,19,0.14)"; e.currentTarget.style.transform = "translateY(-3px)"; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 2px rgba(20,20,19,0.04), 0 10px 28px rgba(20,20,19,0.055)"; e.currentTarget.style.borderColor = "rgba(20,20,19,0.075)"; e.currentTarget.style.transform = "translateY(0)"; }}
     >
       {/* Hero image */}
       {item.image && (
@@ -246,18 +245,18 @@ const NewsCard = memo(function NewsCard({ item, idx, onUse, saved, onSave }) {
         </div>
       )}
 
-      <div style={{ padding: "15px 17px 16px" }}>
+      <div style={{ padding: "16px 17px 17px" }}>
         {/* Meta row */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
           {!item.image && <NicheBadge niche={niche} />}
-          <span style={{ marginLeft: "auto", fontSize: 10, color: C.dust, fontWeight: 600, whiteSpace: "nowrap" }}>
+          <span style={{ marginLeft: "auto", fontSize: 10, color: C.slate, opacity: 0.72, fontWeight: 650, whiteSpace: "nowrap" }}>
             {item.source} · {timeAgo(item.publishedAt)}
           </span>
           {!item.image && <Score n={score} />}
         </div>
 
         {/* Title */}
-        <h3 style={{ fontSize: 14, fontWeight: 720, color: C.ink, margin: "0 0 3px", lineHeight: 1.35, letterSpacing: "-0.014em", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+        <h3 style={{ fontSize: 15, fontWeight: 760, color: C.ink, margin: "0 0 4px", lineHeight: 1.36, letterSpacing: 0, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
           {item.title}
         </h3>
 
@@ -268,7 +267,7 @@ const NewsCard = memo(function NewsCard({ item, idx, onUse, saved, onSave }) {
         <div style={{ height: 1, background: C.muted, margin: "7px 0" }} />
 
         {/* Actions */}
-        <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           <Btn icon={<Sparkles size={12} />} label="Use Idea" onClick={() => handleUse(ideas[0])} color={C.arc} tiny />
           <Btn icon={saved ? <BookmarkCheck size={12} /> : <Bookmark size={12} />} label={saved ? "Saved" : "Save"} onClick={() => onSave(id)} active={saved} color={C.arc} tiny />
           <Btn icon={<Share2 size={12} />} label={shareLabel || "Share"} onClick={handleShare} tiny />
@@ -312,9 +311,9 @@ const MemeCard = memo(function MemeCard({ item, idx, onUse, saved, onSave }) {
     <motion.article
       initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: Math.min(idx * 0.03, 0.28), ease: [0.23, 1, 0.32, 1] }}
-      style={{ background: C.white, borderRadius: 20, overflow: "hidden", border: `1px solid ${C.border}`, boxShadow: "0 1px 8px rgba(20,20,19,0.05), 0 4px 20px rgba(20,20,19,0.04)", marginBottom: 18, display: "flex", flexDirection: "column", transition: "box-shadow 0.28s, transform 0.28s" }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 12px 40px rgba(20,20,19,0.12), 0 3px 12px rgba(20,20,19,0.06)"; e.currentTarget.style.transform = "translateY(-3px)"; }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 8px rgba(20,20,19,0.05), 0 4px 20px rgba(20,20,19,0.04)"; e.currentTarget.style.transform = "translateY(0)"; }}
+      style={{ background: C.white, borderRadius: 16, overflow: "hidden", border: "1px solid rgba(20,20,19,0.075)", boxShadow: "0 1px 2px rgba(20,20,19,0.04), 0 10px 28px rgba(20,20,19,0.055)", marginBottom: 18, display: "flex", flexDirection: "column", transition: "box-shadow 0.22s, transform 0.22s, border-color 0.22s" }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 18px 42px rgba(20,20,19,0.12), 0 4px 12px rgba(20,20,19,0.06)"; e.currentTarget.style.borderColor = "rgba(20,20,19,0.14)"; e.currentTarget.style.transform = "translateY(-3px)"; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 2px rgba(20,20,19,0.04), 0 10px 28px rgba(20,20,19,0.055)"; e.currentTarget.style.borderColor = "rgba(20,20,19,0.075)"; e.currentTarget.style.transform = "translateY(0)"; }}
     >
       {/* Media */}
       {(image || (isVideo && videoUrl)) && (
@@ -338,10 +337,10 @@ const MemeCard = memo(function MemeCard({ item, idx, onUse, saved, onSave }) {
         </div>
       )}
 
-      <div style={{ padding: "15px 17px 16px" }}>
+      <div style={{ padding: "16px 17px 17px" }}>
         {/* Subreddit + upvotes (if no image) */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9 }}>
-          <span style={{ padding: "2px 8px", background: "rgba(243,115,56,0.18)", border: "1px solid rgba(243,115,56,0.22)", borderRadius: 99, fontSize: 9, fontWeight: 800, color: C.arc, letterSpacing: "0.03em" }}>
+          <span style={{ padding: "3px 9px", background: "rgba(243,115,56,0.12)", border: "1px solid rgba(243,115,56,0.22)", borderRadius: 99, fontSize: 10, fontWeight: 800, color: C.arc, letterSpacing: 0 }}>
             r/{subreddit || "trending"}
           </span>
           {!image && !isVideo && (
@@ -352,7 +351,7 @@ const MemeCard = memo(function MemeCard({ item, idx, onUse, saved, onSave }) {
         </div>
 
         {/* Title */}
-        <h3 style={{ fontSize: 14, fontWeight: 620, color: C.ink, margin: "0 0 13px", lineHeight: 1.4, letterSpacing: "-0.012em", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+        <h3 style={{ fontSize: 15, fontWeight: 700, color: C.ink, margin: "0 0 14px", lineHeight: 1.4, letterSpacing: 0, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
           {title || "Check this out 🔥"}
         </h3>
 
@@ -388,12 +387,92 @@ const MemeCard = memo(function MemeCard({ item, idx, onUse, saved, onSave }) {
 });
 
 // ─── SKELETON CARDS ─────────────────────────────────────────────
+const VideoCard = memo(function VideoCard({ item, idx, onUse, saved, onSave }) {
+  const [shareLabel, setShareLabel] = useState(null);
+  const id = item.url || item.id || item.title || String(idx);
+  const niche = detectNiche(`${item.title} ${item.channel}`);
+  const score = hashScore(`${item.title}${item.channel}`, 78, 98);
+  const tags = ["#youtube", "#video", "#trending", `#${niche.id.replace(/\s/g, "")}`];
+
+  const handleShare = async () => {
+    const r = await doShare(item.title, item.url);
+    setShareLabel(r === "copied" ? "Copied!" : r === "shared" ? "Shared!" : null);
+    if (r) setTimeout(() => setShareLabel(null), 2200);
+  };
+
+  const handleUse = () => onUse({
+    caption: `${item.title}\n\n${tags.join(" ")}`,
+    hashtags: tags,
+    topic: niche.id,
+    images: item.thumbnail ? [item.thumbnail] : [],
+    memes: [],
+    videoUrls: item.url ? [item.url] : [],
+    source: item,
+  });
+
+  return (
+    <motion.article
+      initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay: Math.min(idx * 0.03, 0.28), ease: [0.23, 1, 0.32, 1] }}
+      style={{ background: C.white, borderRadius: 16, overflow: "hidden", border: "1px solid rgba(20,20,19,0.075)", boxShadow: "0 1px 2px rgba(20,20,19,0.04), 0 10px 28px rgba(20,20,19,0.055)", marginBottom: 18, display: "flex", flexDirection: "column", transition: "box-shadow 0.22s, transform 0.22s, border-color 0.22s" }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 18px 42px rgba(20,20,19,0.12), 0 4px 12px rgba(20,20,19,0.06)"; e.currentTarget.style.borderColor = "rgba(20,20,19,0.14)"; e.currentTarget.style.transform = "translateY(-3px)"; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 1px 2px rgba(20,20,19,0.04), 0 10px 28px rgba(20,20,19,0.055)"; e.currentTarget.style.borderColor = "rgba(20,20,19,0.075)"; e.currentTarget.style.transform = "translateY(0)"; }}
+    >
+      <div style={{ position: "relative", aspectRatio: "16 / 9", background: C.muted, overflow: "hidden" }}>
+        {item.thumbnail
+          ? <img src={item.thumbnail} alt={item.title} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          : <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(20,20,19,0.08), rgba(243,115,56,0.18))" }} />
+        }
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.18), transparent 42%, rgba(0,0,0,0.34))" }} />
+        <div style={{ position: "absolute", top: 9, left: 9 }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 9px", background: "rgba(255,255,255,0.92)", borderRadius: 99, fontSize: 9, fontWeight: 900, color: "#dc2626", textTransform: "uppercase", letterSpacing: "0.05em", boxShadow: "0 2px 8px rgba(0,0,0,0.12)" }}>
+            <Youtube size={11} fill="#dc2626" /> YouTube
+          </span>
+        </div>
+        <div style={{ position: "absolute", top: 9, right: 9 }}><Score n={score} /></div>
+        <div style={{ position: "absolute", left: 12, bottom: 10, width: 38, height: 38, borderRadius: "50%", background: "rgba(20,20,19,0.82)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", boxShadow: "0 6px 18px rgba(0,0,0,0.24)" }}>
+          <Play size={15} fill="#fff" />
+        </div>
+        {item.duration && (
+          <span style={{ position: "absolute", right: 10, bottom: 10, padding: "3px 7px", background: "rgba(20,20,19,0.84)", color: "#fff", borderRadius: 7, fontSize: 10, fontWeight: 800 }}>
+            {item.duration}
+          </span>
+        )}
+      </div>
+
+      <div style={{ padding: "15px 17px 17px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+          <span style={{ color: C.slate, fontSize: 11, fontWeight: 720, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.channel || "YouTube"}</span>
+          <span style={{ marginLeft: "auto", color: C.slate, opacity: 0.76, fontSize: 10, fontWeight: 650 }}>{item.views || timeAgo(item.publishedAt)}</span>
+        </div>
+        <h3 style={{ fontSize: 15, fontWeight: 760, color: C.ink, margin: "0 0 13px", lineHeight: 1.36, letterSpacing: 0, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+          {item.title}
+        </h3>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} onClick={handleUse}
+            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 0", background: C.ink, border: "none", borderRadius: 10, color: C.canvas, fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit" }}>
+            <Sparkles size={12} />Use This
+          </motion.button>
+          <Btn icon={saved ? <BookmarkCheck size={12} /> : <Bookmark size={12} />} label={saved ? "Saved" : "Save"} onClick={() => onSave(id)} active={saved} color={C.arc} tiny />
+          <Btn icon={<Share2 size={12} />} label={shareLabel || "Share"} onClick={handleShare} tiny />
+          {item.url && (
+            <a href={item.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} aria-label="Watch on YouTube"
+              style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", background: C.muted, border: `1px solid ${C.border}`, borderRadius: 10, color: C.slate }}>
+              <ExternalLink size={11} />
+            </a>
+          )}
+        </div>
+      </div>
+    </motion.article>
+  );
+});
+
 const Skeleton = memo(function Skeleton({ dark, imgH = 160 }) {
   const bg = C.white;
   const line = "rgba(20,20,19,0.06)";
   const shimmer = "linear-gradient(90deg,rgba(20,20,19,0.04) 25%,rgba(20,20,19,0.09) 50%,rgba(20,20,19,0.04) 75%)";
   return (
-    <div style={{ background: bg, borderRadius: 20, overflow: "hidden", marginBottom: 18, border: `1px solid ${C.border}` }}>
+    <div className="masonry-card" style={{ background: bg, borderRadius: 16, overflow: "hidden", marginBottom: 18, border: `1px solid ${C.border}`, boxShadow: "0 1px 2px rgba(20,20,19,0.04), 0 10px 28px rgba(20,20,19,0.045)" }}>
       <div style={{ height: imgH, background: shimmer, backgroundSize: "400% 100%", animation: "shimmer 1.5s ease-in-out infinite" }} />
       <div style={{ padding: "14px 16px" }}>
         {[88, 68, 50].map((w, i) => (
@@ -409,7 +488,7 @@ const SearchBar = memo(function SearchBar({ value, onChange, onClear }) {
   const ref = useRef(null);
   const [focused, setFocused] = useState(false);
   return (
-    <div style={{ position: "relative", flex: 1, minWidth: 200, maxWidth: 520 }}>
+    <div style={{ position: "relative", flex: "1 1 360px", minWidth: 220, maxWidth: 680 }}>
       <Search 
         size={16} 
         style={{ 
@@ -435,17 +514,17 @@ const SearchBar = memo(function SearchBar({ value, onChange, onClear }) {
         autoComplete="off"
         style={{ 
           width: "100%", 
-          padding: "13px 44px 13px 46px", 
+          padding: "14px 44px 14px 46px", 
           background: C.white, 
-          border: `1.5px solid ${focused ? C.arc : "rgba(20,20,19,0.06)"}`, 
-          borderRadius: 16, 
+          border: `1px solid ${focused ? "rgba(243,115,56,0.55)" : "rgba(20,20,19,0.09)"}`, 
+          borderRadius: 14, 
           fontSize: 14, 
-          fontWeight: 500, 
+          fontWeight: 560, 
           color: C.ink, 
           fontFamily: "inherit", 
           outline: "none", 
           transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)", 
-          boxShadow: focused ? `0 8px 24px ${C.arc}15, 0 0 0 3px ${C.arc}08` : "0 2px 4px rgba(0,0,0,0.02)" 
+          boxShadow: focused ? `0 10px 28px ${C.arc}14, 0 0 0 4px ${C.arc}08` : "0 6px 16px rgba(20,20,19,0.035)" 
         }} 
       />
       <AnimatePresence>
@@ -510,9 +589,9 @@ const FilterPills = memo(function FilterPills({ active, onChange }) {
       className="tpills"
       style={{ 
         display: "flex", 
-        gap: 8, 
+        gap: 7, 
         overflowX: "auto", 
-        padding: "8px 0 12px", 
+        padding: "6px 0 10px", 
         scrollbarWidth: "none", 
         WebkitOverflowScrolling: "touch" 
       }}
@@ -532,19 +611,19 @@ const FilterPills = memo(function FilterPills({ active, onChange }) {
               display: "flex", 
               alignItems: "center", 
               gap: 8, 
-              padding: "10px 20px", 
-              background: on ? "rgba(243, 115, 56, 0.08)" : C.white, 
-              border: on ? `1.5px solid ${C.arc}` : `1.5px solid rgba(20,20,19,0.08)`, 
-              borderRadius: 16, 
-              color: on ? C.arc : C.slate, 
+              padding: "9px 15px", 
+              background: on ? C.ink : "rgba(255,255,255,0.78)", 
+              border: on ? `1px solid ${C.ink}` : `1px solid rgba(20,20,19,0.085)`, 
+              borderRadius: 12, 
+              color: on ? C.canvas : C.slate, 
               fontSize: 13, 
-              fontWeight: on ? 800 : 600, 
+              fontWeight: on ? 760 : 640, 
               cursor: "pointer", 
               whiteSpace: "nowrap", 
               fontFamily: "inherit", 
               flexShrink: 0, 
               transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)", 
-              boxShadow: on ? `0 8px 20px rgba(243, 115, 56, 0.12)` : "0 2px 4px rgba(0,0,0,0.02)" 
+              boxShadow: on ? "0 8px 20px rgba(20,20,19,0.15)" : "0 4px 12px rgba(20,20,19,0.035)" 
             }}
           >
             <span style={{ 
@@ -553,7 +632,7 @@ const FilterPills = memo(function FilterPills({ active, onChange }) {
               display: "flex",
               alignItems: "center",
               transition: "transform 0.3s ease",
-              transform: on ? "scale(1.1) rotate(-5deg)" : "none"
+              transform: on ? "scale(1.05)" : "none"
             }}>
               {icon}
             </span>
@@ -567,12 +646,18 @@ const FilterPills = memo(function FilterPills({ active, onChange }) {
 
 // ─── SORT TOGGLE ────────────────────────────────────────────────
 const SORTS = [{ id: "score", label: "🔥 Trending" }, { id: "latest", label: "🕐 Latest" }, { id: "saved", label: "🔖 Saved" }];
+const ADVANCED_SORTS = [
+  { id: "score", label: "Trending", icon: <Flame size={13} /> },
+  { id: "latest", label: "Latest", icon: <Activity size={13} /> },
+  { id: "saved", label: "Saved", icon: <Bookmark size={13} /> },
+];
 const SortToggle = memo(function SortToggle({ value, onChange }) {
   return (
-    <div style={{ display: "flex", gap: 3, background: "rgba(20,20,19,0.045)", padding: 3, borderRadius: 11, flexShrink: 0 }}>
-      {SORTS.map(o => (
+    <div style={{ display: "flex", gap: 4, background: "rgba(20,20,19,0.055)", padding: 4, borderRadius: 12, flexShrink: 0, border: "1px solid rgba(20,20,19,0.06)" }}>
+      {ADVANCED_SORTS.map(o => (
         <button key={o.id} onClick={() => onChange(o.id)}
-          style={{ padding: "6px 11px", background: value === o.id ? C.white : "transparent", border: "none", borderRadius: 8, fontSize: 11, fontWeight: value === o.id ? 700 : 500, color: value === o.id ? C.ink : C.slate, cursor: "pointer", fontFamily: "inherit", transition: "all 0.14s", boxShadow: value === o.id ? "0 2px 8px rgba(20,20,19,0.09)" : "none", whiteSpace: "nowrap" }}>
+          style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 12px", minHeight: 34, background: value === o.id ? C.white : "transparent", border: "none", borderRadius: 9, fontSize: 12, fontWeight: value === o.id ? 760 : 620, color: value === o.id ? C.ink : C.slate, cursor: "pointer", fontFamily: "inherit", transition: "all 0.14s", boxShadow: value === o.id ? "0 3px 10px rgba(20,20,19,0.10)" : "none", whiteSpace: "nowrap" }}>
+          {o.icon}
           {o.label}
         </button>
       ))}
@@ -581,20 +666,22 @@ const SortToggle = memo(function SortToggle({ value, onChange }) {
 });
 
 // ─── STATS BAR ──────────────────────────────────────────────────
-const StatsBar = memo(function StatsBar({ news, memes, total, loading }) {
+const StatsBar = memo(function StatsBar({ news, memes, videos = 0, total, loading }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 14px", background: C.white, border: `1px solid ${C.border}`, borderRadius: 11, fontSize: 12, color: C.slate, fontWeight: 600, flexWrap: "wrap" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 13px", background: "rgba(255,255,255,0.82)", border: `1px solid ${C.border}`, borderRadius: 12, fontSize: 12, color: C.slate, fontWeight: 650, flexWrap: "wrap", boxShadow: "0 6px 16px rgba(20,20,19,0.035)" }}>
       {loading
         ? <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
             <div style={{ width: 12, height: 12, borderRadius: "50%", border: `2px solid ${C.arc}30`, borderTopColor: C.arc, animation: "spin 0.7s linear infinite" }} />
             Fetching live data…
           </span>
         : <>
-            <span><b style={{ color: C.ink }}>{total}</b> discoveries</span>
+            <span><b style={{ color: C.ink, fontWeight: 820 }}>{total}</b> discoveries</span>
             <div style={{ width: 1, height: 13, background: C.muted }} />
-            <span><b style={{ color: C.ink }}>{news}</b> news</span>
+            <span><b style={{ color: C.ink, fontWeight: 820 }}>{news}</b> news</span>
             <div style={{ width: 1, height: 13, background: C.muted }} />
-            <span><b style={{ color: C.ink }}>{memes}</b> community</span>
+            <span><b style={{ color: C.ink, fontWeight: 820 }}>{videos}</b> videos</span>
+            <div style={{ width: 1, height: 13, background: C.muted }} />
+            <span><b style={{ color: C.ink, fontWeight: 820 }}>{memes}</b> community</span>
             <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 5 }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, boxShadow: `0 0 7px ${C.green}90`, animation: "pulse 2s ease-in-out infinite" }} />
               <span style={{ fontSize: 9, fontWeight: 900, color: C.green, textTransform: "uppercase", letterSpacing: "0.05em" }}>Live</span>
@@ -633,7 +720,9 @@ const SavedPanel = memo(function SavedPanel({ open, onClose, savedIds, allItems,
                 </div>
               : items.map((x, i) => x._type === "meme"
                   ? <MemeCard key={x._sid} item={x} idx={i} onUse={onUse} saved={savedIds.has(x._sid)} onSave={onSave} />
-                  : <NewsCard key={x._sid} item={x} idx={i} onUse={onUse} saved={savedIds.has(x._sid)} onSave={onSave} />
+                  : x._type === "video"
+                    ? <VideoCard key={x._sid} item={x} idx={i} onUse={onUse} saved={savedIds.has(x._sid)} onSave={onSave} />
+                    : <NewsCard key={x._sid} item={x} idx={i} onUse={onUse} saved={savedIds.has(x._sid)} onSave={onSave} />
                 )
             }
           </div>
@@ -688,6 +777,104 @@ function Sentinel({ hasMore, loading, onMore, count }) {
 // ─── MASONRY CONFIG ─────────────────────────────────────────────
 const COLS = { default: 4, 1550: 4, 1380: 3, 1100: 2, 740: 2, 600: 1 };
 const SKH = [170, 130, 200, 150, 185, 140, 220, 155];
+const LOAD_MORE_SKH = [165, 125, 185, 145, 205, 135, 175, 150];
+
+function getColumnCount(breakpoints) {
+  if (typeof window === "undefined") return breakpoints.default || 4;
+  const width = window.innerWidth;
+  const matched = Object.entries(breakpoints)
+    .filter(([key]) => key !== "default")
+    .map(([key, value]) => [Number(key), value])
+    .sort((a, b) => a[0] - b[0])
+    .find(([maxWidth]) => width <= maxWidth);
+
+  return matched?.[1] || breakpoints.default || 4;
+}
+
+function useMasonryColumns(breakpoints) {
+  const [count, setCount] = useState(() => getColumnCount(breakpoints));
+
+  useEffect(() => {
+    const onResize = () => setCount(getColumnCount(breakpoints));
+    window.addEventListener("resize", onResize, { passive: true });
+    return () => window.removeEventListener("resize", onResize);
+  }, [breakpoints]);
+
+  return count;
+}
+
+function estimateTrendHeight(entry) {
+  if (entry.type === "skeleton" || entry.type === "filler") return (entry.height || 160) + 96;
+
+  const item = entry.item;
+  const titleLength = (item.title || "").length;
+  const titleLines = Math.min(3, Math.max(1, Math.ceil(titleLength / 42)));
+  const titleHeight = titleLines * 21;
+
+  if (item._type === "meme") {
+    const mediaHeight = item.isVideo ? 460 : item.image ? 360 : 0;
+    return mediaHeight + titleHeight + 92;
+  }
+
+  if (item._type === "video") {
+    return 250 + titleHeight + 102;
+  }
+
+  const mediaHeight = item.image ? 245 : 0;
+  return mediaHeight + titleHeight + 138;
+}
+
+function BalancedMasonry({ items, renderItem, estimateHeight = estimateTrendHeight, fillGaps = false }) {
+  const columnCount = useMasonryColumns(COLS);
+
+  const columns = useMemo(() => {
+    const next = Array.from({ length: columnCount }, () => ({ height: 0, items: [] }));
+
+    items.forEach((item) => {
+      let target = 0;
+      for (let i = 1; i < next.length; i++) {
+        if (next[i].height < next[target].height) target = i;
+      }
+
+      next[target].items.push(item);
+      next[target].height += estimateHeight(item) + 18;
+    });
+
+    if (fillGaps && items.length >= columnCount) {
+      const tallest = Math.max(...next.map(column => column.height));
+      const fillerPattern = [190, 250, 150, 220];
+
+      next.forEach((column, columnIndex) => {
+        let fillerIndex = 0;
+        while (tallest - column.height > 190 && fillerIndex < 3) {
+          const remaining = tallest - column.height - 18;
+          const height = Math.max(130, Math.min(fillerPattern[(columnIndex + fillerIndex) % fillerPattern.length], remaining - 76));
+          const filler = {
+            type: "filler",
+            height,
+            key: `gap-filler-${columnIndex}-${fillerIndex}-${items.length}`,
+          };
+
+          column.items.push(filler);
+          column.height += estimateHeight(filler) + 18;
+          fillerIndex += 1;
+        }
+      });
+    }
+
+    return next;
+  }, [items, columnCount, estimateHeight, fillGaps]);
+
+  return (
+    <div className="tmasonry">
+      {columns.map((column, columnIndex) => (
+        <div className="tmasonry_col" key={`col-${columnIndex}`}>
+          {column.items.map((item, index) => renderItem(item, index, columnIndex))}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // ─── MAIN PAGE ──────────────────────────────────────────────────
 export default function AllTrendsPage() {
@@ -721,49 +908,73 @@ export default function AllTrendsPage() {
   const { ids: savedIds, toggle: toggleSave } = useSaved();
 
   const {
-    trends: news, memes, loading, loadingMore,
+    trends: news, memes, videos, loading, loadingMore,
     error, hasMore, refetch, loadMore,
   } = useAllTrends(search, {
-    newsLimit: 24, memeLimit: 24,
+    newsLimit: 24, memeLimit: 24, videoLimit: 10,
     newsCategories: "technology,business,entertainment,sports,finance,science,world,health,politics",
   });
 
   // Attach stable IDs for saved-set lookups
-  const { newsItems, memeItems } = useMemo(() => {
+  const { newsItems, memeItems, videoItems } = useMemo(() => {
     return {
       newsItems: news.map((n, i) => ({ ...n, _type: "news", _sid: n.url || `n-${i}` })),
       memeItems: memes.map((m, i) => ({ ...m, _type: "meme", _sid: m.url || m.link || `m-${i}` })),
+      videoItems: videos.map((v, i) => ({ ...v, _type: "video", _sid: v.url || v.id || `v-${i}` })),
     };
-  }, [news, memes]);
+  }, [news, memes, videos]);
 
   // Merge + filter + sort
   const feed = useMemo(() => {
     let fn = niche === "All" ? newsItems : newsItems.filter(n => detectNiche(n.title).id === niche);
     let fm = niche === "All" ? memeItems : memeItems.filter(m => detectNiche(`${m.title} ${m.subreddit}`).id === niche);
+    let fv = niche === "All" ? videoItems : videoItems.filter(v => detectNiche(`${v.title} ${v.channel}`).id === niche);
 
     if (sort === "saved") {
       fn = fn.filter(n => savedIds.has(n._sid));
       fm = fm.filter(m => savedIds.has(m._sid));
+      fv = fv.filter(v => savedIds.has(v._sid));
     }
 
-    // Interleave 1:1
+    // Interleave 1:1 within each fetch batch. Re-interleaving the entire
+    // accumulated arrays would insert newly loaded memes/news between old
+    // cards when one source returns fewer items, which makes masonry reshuffle.
     const combined = [];
-    const len = Math.max(fn.length, fm.length);
-    for (let i = 0; i < len; i++) {
-      if (i < fn.length) combined.push(fn[i]);
-      if (i < fm.length) combined.push(fm[i]);
+    const batches = [...new Set([...fn, ...fm, ...fv].map(item => item._batch ?? 0))].sort((a, b) => a - b);
+
+    for (const batch of batches) {
+      const bn = fn.filter(item => (item._batch ?? 0) === batch);
+      const bm = fm.filter(item => (item._batch ?? 0) === batch);
+      const bv = fv.filter(item => (item._batch ?? 0) === batch);
+      const len = Math.max(bn.length, bm.length, bv.length);
+
+      for (let i = 0; i < len; i++) {
+        if (i < bn.length) combined.push(bn[i]);
+        if (i < bv.length) combined.push(bv[i]);
+        if (i < bm.length) combined.push(bm[i]);
+      }
     }
 
     // Note: We deliberately avoid sorting the full 'combined' array here
-    // (e.g., by hashScore) because changing the order of previously rendered
-    // items forces react-masonry-css to move elements between column divs,
-    // which unmounts and remounts them (causing the "page reload" glitch).
-    // The API already returns trending/latest items, so interleaving is enough.
+    // because changing the order of previously rendered items forces
+    // react-masonry-css to move elements between column divs.
 
     return combined;
-  }, [newsItems, memeItems, niche, sort, savedIds]);
+  }, [newsItems, memeItems, videoItems, niche, sort, savedIds]);
 
-  const allFlat = useMemo(() => [...newsItems, ...memeItems], [newsItems, memeItems]);
+  const allFlat = useMemo(() => [...newsItems, ...memeItems, ...videoItems], [newsItems, memeItems, videoItems]);
+  const masonryFeed = useMemo(() => {
+    const cards = feed.map((item) => ({ type: "item", item }));
+    if (!loadingMore) return cards;
+    return [
+      ...cards,
+      ...LOAD_MORE_SKH.map((height, index) => ({
+        type: "skeleton",
+        height,
+        key: `trend-load-${feed.length}-${index}`,
+      })),
+    ];
+  }, [feed, loadingMore]);
 
   const handleUse = useCallback((data) => {
     setInjected(data);
@@ -791,11 +1002,18 @@ export default function AllTrendsPage() {
         @keyframes spin { to{transform:rotate(360deg)} }
         @keyframes pulse { 0%,100%{opacity:1;box-shadow:0 0 8px rgba(5,150,105,0.5)}50%{opacity:0.7;box-shadow:0 0 14px rgba(5,150,105,0.85)} }
         .tpills::-webkit-scrollbar,.tmasonry::-webkit-scrollbar{display:none}
-        .tmasonry{display:flex;width:auto;margin-left:-16px}
-        .tmasonry_col{padding-left:16px;background-clip:padding-box}
+        .tmasonry{display:flex;align-items:flex-start;width:auto;margin-left:-16px}
+        .tmasonry_col{flex:1;min-width:0;padding-left:16px;background-clip:padding-box}
+        .tmasonry_col > article,.tmasonry_col > .masonry-card{break-inside:avoid}
         @media(max-width:640px){
+          .tmasonry{margin-left:-12px}
+          .tmasonry_col{padding-left:12px}
           .t-topbar{flex-direction:column !important}
           .t-statbar{width:100%}
+          .t-header-row{align-items:stretch !important}
+          .t-brand{width:100%}
+          .t-actions{width:100%;margin-left:0 !important}
+          .t-actions button{flex:1}
         }
       `}</style>
 
@@ -804,25 +1022,25 @@ export default function AllTrendsPage() {
         position: "sticky", 
         top: 0, 
         zIndex: 100, 
-        background: "rgba(242,240,237,0.88)", 
+        background: "rgba(242,240,237,0.94)", 
         backdropFilter: "blur(20px) saturate(1.8)", 
         WebkitBackdropFilter: "blur(20px) saturate(1.8)", 
         borderBottom: `1px solid ${C.border}`, 
-        padding: "11px 20px 9px",
+        padding: "12px 22px 10px",
         transform: headerVisible ? "translateY(0)" : "translateY(-100%)",
         transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
         willChange: "transform"
       }}>
         {/* Row 1 */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
+        <div className="t-header-row" style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
           {/* Brand */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+          <div className="t-brand" style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
             <div style={{ 
-              width: 40, 
-              height: 40, 
+              width: 42, 
+              height: 42, 
               background: C.white,
               border: `1.5px solid rgba(243, 115, 56, 0.15)`,
-              borderRadius: 12, 
+              borderRadius: 13, 
               display: "flex", 
               alignItems: "center", 
               justifyContent: "center", 
@@ -831,8 +1049,8 @@ export default function AllTrendsPage() {
               <Flame size={22} style={{ color: C.arc, filter: "none" }} aria-hidden />
             </div>
             <div>
-              <h1 style={{ fontSize: 20, fontWeight: 900, color: C.ink, margin: 0, letterSpacing: "-0.04em", lineHeight: 1 }}>Trend Intelligence</h1>
-              <p style={{ fontSize: 11, color: C.slate, margin: "2px 0 0", fontWeight: 600, letterSpacing: "-0.01em" }}>What's happening right now</p>
+              <h1 style={{ fontSize: 21, fontWeight: 820, color: C.ink, margin: 0, letterSpacing: 0, lineHeight: 1 }}>Trend Intelligence</h1>
+              <p style={{ fontSize: 12, color: C.slate, margin: "3px 0 0", fontWeight: 620, letterSpacing: 0 }}>Live discovery desk</p>
             </div>
           </div>
 
@@ -840,16 +1058,16 @@ export default function AllTrendsPage() {
           <SearchBar value={search} onChange={setSearch} onClear={() => setSearch("")} />
 
           {/* Right buttons */}
-          <div style={{ display: "flex", gap: 7, flexShrink: 0, marginLeft: "auto" }}>
+          <div className="t-actions" style={{ display: "flex", gap: 8, flexShrink: 0, marginLeft: "auto" }}>
             <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }} onClick={() => setSavedPanel(true)}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", background: savedIds.size > 0 ? C.ink : C.white, border: `1.5px solid ${savedIds.size > 0 ? C.ink : C.border}`, borderRadius: 11, color: savedIds.size > 0 ? C.canvas : C.slate, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "all 0.18s" }}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 14px", minHeight: 40, background: savedIds.size > 0 ? C.ink : C.white, border: `1px solid ${savedIds.size > 0 ? C.ink : C.border}`, borderRadius: 12, color: savedIds.size > 0 ? C.canvas : C.slate, fontSize: 12, fontWeight: 760, cursor: "pointer", fontFamily: "inherit", transition: "all 0.18s", boxShadow: "0 6px 16px rgba(20,20,19,0.04)" }}
               aria-label={`Saved (${savedIds.size})`}>
               <BookmarkCheck size={13} />
               {savedIds.size > 0 ? savedIds.size : "Saved"}
             </motion.button>
 
             <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.95 }} onClick={refetch} disabled={loading}
-              style={{ width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 11, color: C.slate, cursor: "pointer", transition: "all 0.18s" }}
+              style={{ width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, color: C.slate, cursor: "pointer", transition: "all 0.18s", boxShadow: "0 6px 16px rgba(20,20,19,0.04)" }}
               aria-label="Refresh trends">
               <RefreshCw size={14} style={{ animation: loading ? "spin 0.85s linear infinite" : "none" }} />
             </motion.button>
@@ -861,10 +1079,10 @@ export default function AllTrendsPage() {
       </div>
 
       {/* ── MAIN CONTENT ── */}
-      <div style={{ padding: "18px 20px 80px", maxWidth: 1820, margin: "0 auto" }}>
+      <div style={{ padding: "20px 22px 80px", maxWidth: 1780, margin: "0 auto" }}>
         {/* Toolbar */}
         <div className="t-topbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 18, flexWrap: "wrap" }}>
-          <div className="t-statbar"><StatsBar news={newsItems.length} memes={memeItems.length} total={feed.length} loading={loading} /></div>
+          <div className="t-statbar"><StatsBar news={newsItems.length} memes={memeItems.length} videos={videoItems.length} total={feed.length} loading={loading} /></div>
           <SortToggle value={sort} onChange={setSort} />
         </div>
 
@@ -882,9 +1100,12 @@ export default function AllTrendsPage() {
 
         {/* Loading skeletons */}
         {loading && feed.length === 0 && (
-          <Masonry breakpointCols={COLS} className="tmasonry" columnClassName="tmasonry_col">
-            {SKH.map((h, i) => <Skeleton key={i} dark={i % 3 === 1} imgH={h} />)}
-          </Masonry>
+          <BalancedMasonry
+            items={SKH.map((height, index) => ({ type: "skeleton", height, key: `initial-${index}` }))}
+            renderItem={(entry, index, columnIndex) => (
+              <Skeleton key={entry.key} dark={(index + columnIndex) % 3 === 1} imgH={entry.height} />
+            )}
+          />
         )}
 
         {/* Empty state */}
@@ -892,20 +1113,19 @@ export default function AllTrendsPage() {
 
         {/* Main feed */}
         {feed.length > 0 && (
-          <Masonry breakpointCols={COLS} className="tmasonry" columnClassName="tmasonry_col">
-            {feed.map((item, i) =>
-              item._type === "meme"
-                ? <MemeCard key={item._sid} item={item} idx={i} onUse={handleUse} saved={savedIds.has(item._sid)} onSave={handleSave} />
-                : <NewsCard key={item._sid} item={item} idx={i} onUse={handleUse} saved={savedIds.has(item._sid)} onSave={handleSave} />
-            )}
-          </Masonry>
-        )}
-
-        {/* Load more skeletons */}
-        {loadingMore && (
-          <Masonry breakpointCols={COLS} className="tmasonry" columnClassName="tmasonry_col">
-            {[150, 120, 170, 130].map((h, i) => <Skeleton key={`lm-${i}`} dark={i % 2 === 1} imgH={h} />)}
-          </Masonry>
+          <BalancedMasonry
+            items={masonryFeed}
+            fillGaps
+            renderItem={(entry, index, columnIndex) =>
+              entry.type === "skeleton" || entry.type === "filler"
+                ? <Skeleton key={entry.key} imgH={entry.height} dark={(index + columnIndex) % 2 === 1} />
+                : entry.item._type === "meme"
+                  ? <MemeCard key={entry.item._sid} item={entry.item} idx={index} onUse={handleUse} saved={savedIds.has(entry.item._sid)} onSave={handleSave} />
+                  : entry.item._type === "video"
+                    ? <VideoCard key={entry.item._sid} item={entry.item} idx={index} onUse={handleUse} saved={savedIds.has(entry.item._sid)} onSave={handleSave} />
+                    : <NewsCard key={entry.item._sid} item={entry.item} idx={index} onUse={handleUse} saved={savedIds.has(entry.item._sid)} onSave={handleSave} />
+            }
+          />
         )}
 
         {/* Infinite scroll */}

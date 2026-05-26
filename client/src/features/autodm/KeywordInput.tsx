@@ -40,7 +40,7 @@ export function KeywordInput({
           placeholder="Enter a keyword..."
           className="flex-1"
         />
-        <Button onClick={addKeyword} disabled={!inputValue.trim()}>
+        <Button type="button" onClick={addKeyword} disabled={!inputValue.trim()}>
           <Plus className="mr-1 h-4 w-4" />
           Add
         </Button>
@@ -60,7 +60,7 @@ export function KeywordInput({
       )}
 
       <div>
-        <p className="mb-2 text-sm text-muted-foreground">Suggested keywords:</p>
+        <p className="mb-2 text-sm text-[var(--slate)]">Suggested keywords:</p>
         <div className="flex flex-wrap gap-2">
           {suggestedKeywords
             .filter((keyword) => !keywords.includes(keyword))
@@ -68,8 +68,9 @@ export function KeywordInput({
             .map((keyword) => (
               <button
                 key={keyword}
+                type="button"
                 onClick={() => onChange([...keywords, keyword])}
-                className="rounded-full border border-dashed px-3 py-1 text-sm transition-colors hover:border-primary hover:text-primary"
+                className="rounded-full border border-dashed border-black/15 bg-white px-3 py-1 text-sm transition-colors hover:border-[var(--arc)] hover:text-[var(--arc)]"
               >
                 + {keyword}
               </button>
@@ -77,13 +78,13 @@ export function KeywordInput({
         </div>
       </div>
 
-      <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
+      <div className="flex items-center justify-between gap-4 rounded-[14px] bg-black/[0.035] p-3">
         <div className="flex items-center gap-2">
           <Label htmlFor="case-sensitive" className="text-sm font-normal">
             Case sensitive matching
           </Label>
           <div className="group relative">
-            <Info className="h-4 w-4 cursor-help text-muted-foreground" />
+            <Info className="h-4 w-4 cursor-help text-[var(--slate)]" />
             <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-gray-900 px-3 py-2 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100">
               When off, "LINK" and "link" are treated the same
             </div>

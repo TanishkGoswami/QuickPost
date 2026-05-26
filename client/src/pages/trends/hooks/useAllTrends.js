@@ -28,11 +28,24 @@ function dedup(existing, incoming, key = "url") {
   return incoming.filter(x => !x[key] || !seen.has(x[key]));
 }
 
+function withBatch(items, batch) {
+  return items.map(item => ({ ...item, _batch: batch }));
+}
+
 // ─── API FUNCTIONS ────────────────────────────────────────────────
 async function loadNews({ limit, offset, categories, query }, signal) {
   const p = new URLSearchParams({ limit, offset, categories, ...(query && { q: query }) });
   const data = await safeFetch(`${BASE}/api/trends/news?${p}`, signal);
   return data.articles || [];
+}
+
+async function loadVideos({ limit, query }, signal) {
+  const p = new URLSearchParams({
+    limit: String(limit),
+    q: query || "trending videos India",
+  });
+  const data = await safeFetch(`${BASE}/api/trends/youtube?${p}`, signal);
+  return data.videos || [];
 }
 
 // ─── REDDIT: direct browser fetch (no backend needed) ────────────
@@ -107,6 +120,7 @@ const DEFAULTS = {
   newsCategories: "technology,business,entertainment,sports,finance,science,world,health,politics",
   newsLimit: 24,
   memeLimit: 24,
+  videoLimit: 10,
 };
 
 // ─── HOOK ─────────────────────────────────────────────────────────
@@ -116,6 +130,7 @@ export function useAllTrends(rawQuery = "", options = {}) {
 
   const [trends, setTrends]       = useState([]);
   const [memes, setMemes]         = useState([]);
+  const [videos, setVideos]       = useState([]);
   const [loading, setLoading]     = useState(true);
   const [loadingMore, setLM]      = useState(false);
   const [error, setError]         = useState(null);
@@ -124,7 +139,7 @@ export function useAllTrends(rawQuery = "", options = {}) {
   const abortRef   = useRef(null);
   const loadingRef = useRef(false);   // guards loadMore from double-firing
   const mounted    = useRef(true);
-  const pagination = useRef({ newsOffset: 0, redditAfters: {} });
+  const pagination = useRef({ newsOffset: 0, redditAfters: {}, batch: 0 });
 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
@@ -137,7 +152,7 @@ export function useAllTrends(rawQuery = "", options = {}) {
     abortRef.current = ctrl;
 
     if (isInitial) {
-      pagination.current = { newsOffset: 0, redditAfters: {} };
+      pagination.current = { newsOffset: 0, redditAfters: {}, batch: 0 };
       if (mounted.current) { setLoading(true); setError(null); }
     } else {
       loadingRef.current = true;
@@ -145,35 +160,43 @@ export function useAllTrends(rawQuery = "", options = {}) {
     }
 
     const { newsOffset, redditAfters } = pagination.current;
+    const batch = isInitial ? 0 : pagination.current.batch + 1;
     const subs = pickSubs(4);
     const limitPerSub = Math.ceil(opts.memeLimit / 4);
 
     try {
-      const [nRes, rRes] = await Promise.allSettled([
+      const [nRes, rRes, yRes] = await Promise.allSettled([
         loadNews({ limit: opts.newsLimit, offset: newsOffset, categories: opts.newsCategories, query }, ctrl.signal),
         loadReddit({ subreddits: subs, limitPerSub, afters: redditAfters }, ctrl.signal),
+        isInitial ? loadVideos({ limit: opts.videoLimit, query }, ctrl.signal) : Promise.resolve([]),
       ]);
 
       if (!mounted.current || ctrl.signal.aborted) return;
 
       const newNews  = nRes.status === "fulfilled" ? nRes.value : [];
       const newMemes = rRes.status === "fulfilled" ? rRes.value.posts : [];
+      const newVideos = yRes.status === "fulfilled" ? yRes.value : [];
       const newAfts  = rRes.status === "fulfilled" ? rRes.value.newAfters : redditAfters;
 
       // Update pagination
       pagination.current.newsOffset += opts.newsLimit;
       pagination.current.redditAfters = newAfts;
+      pagination.current.batch = batch;
 
       // Shuffle memes for variety
       const shuffled = [...newMemes].sort(() => Math.random() - 0.5);
+      const batchedNews = withBatch(newNews, batch);
+      const batchedMemes = withBatch(shuffled, batch);
+      const batchedVideos = withBatch(newVideos, batch);
 
-      setTrends(prev => isInitial ? newNews : [...prev, ...dedup(prev, newNews)]);
-      setMemes(prev => isInitial ? shuffled : [...prev, ...shuffled]);
+      setTrends(prev => isInitial ? batchedNews : [...prev, ...dedup(prev, batchedNews)]);
+      setMemes(prev => isInitial ? batchedMemes : [...prev, ...dedup(prev, batchedMemes)]);
+      setVideos(prev => isInitial ? batchedVideos : prev);
       setHasMore(newNews.length > 0 || newMemes.length > 0);
 
       // Partial errors — show non-blocking warning
-      if (nRes.status === "rejected" || rRes.status === "rejected") {
-        const errMsg = [nRes, rRes].filter(r => r.status === "rejected").map(r => r.reason?.message).join("; ");
+      if (nRes.status === "rejected" || rRes.status === "rejected" || yRes.status === "rejected") {
+        const errMsg = [nRes, rRes, yRes].filter(r => r.status === "rejected").map(r => r.reason?.message).join("; ");
         if (mounted.current) setError(errMsg || "Some data failed to load");
       } else {
         if (mounted.current) setError(null);
@@ -188,7 +211,7 @@ export function useAllTrends(rawQuery = "", options = {}) {
         loadingRef.current = false;
       }
     }
-  }, [query, opts.newsCategories, opts.newsLimit, opts.memeLimit]);
+  }, [query, opts.newsCategories, opts.newsLimit, opts.memeLimit, opts.videoLimit]);
 
   // Initial load + reload on query change
   useEffect(() => {
@@ -202,5 +225,5 @@ export function useAllTrends(rawQuery = "", options = {}) {
 
   const refetch = useCallback(() => load(true), [load]);
 
-  return { trends, memes, images: [], loading, loadingMore, error, hasMore, refetch, loadMore };
+  return { trends, memes, videos, images: [], loading, loadingMore, error, hasMore, refetch, loadMore };
 }

@@ -21,6 +21,7 @@ const NEWSAPI_KEY    = process.env.NEWSAPI_KEY    || 'aa9d598f3ce24d77ab5a6447d4
 const GUARDIAN_KEY   = process.env.GUARDIAN_KEY   || '519170c1-21a1-4482-ba55-2a965fdf0258';
 const UNSPLASH_KEY   = process.env.UNSPLASH_ACCESS_KEY || 'lTnkFzPeRbzgETGx5INHt0C-AArQernuA1SlTNMOoi0';
 const PEXELS_KEY     = process.env.PEXELS_KEY || 'NjsUMYPtdooRLygU6RCQyBLQopdjpVBw7vD9UOqd8hwJslb3aZjFtBir';
+const SERPAPI_KEY    = process.env.SERPAPI_KEY || '';
 
 // Browser-like User-Agent — Reddit blocks bot UAs since 2023
 const REDDIT_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -58,6 +59,9 @@ router.get('/trends/news', async (req, res) => {
     if (cached) return res.json(cached);
 
     let articles = [];
+    if (!articles.length) articles = await fetchSerpApiNewsLight(categories, limit, offset, query);
+    if (!articles.length) articles = await fetchSerpApiNews(categories, limit, offset, query);
+    if (!articles.length) articles = await fetchSerpApiBingNews(categories, limit, offset, query);
 
     // 1. Guardian — completely free, no localhost restriction, high quality
     if (!articles.length) articles = await fetchGuardian(categories, limit, offset, query);
@@ -89,6 +93,148 @@ router.get('/trends/news', async (req, res) => {
     res.json({ success: true, articles: [], error: err.message });
   }
 });
+
+/* ─── SerpApi Google News Fetcher ─── */
+function buildSerpNewsQuery(categories, query = '') {
+  if (query) return query;
+
+  const categoryTerms = categories
+    .split(',')
+    .map(c => c.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+
+  if (!categoryTerms.length) return 'latest trending news';
+  return `${categoryTerms.join(' OR ')} latest trending news`;
+}
+
+function parseSerpApiDate(value) {
+  if (!value) return null;
+
+  const direct = new Date(value);
+  if (!Number.isNaN(direct.getTime())) return direct.toISOString();
+
+  const compact = String(value).toLowerCase().match(/^(\d+)\s*(m|h|d|w)$/);
+  if (compact) {
+    const unitMap = { m: 'minute', h: 'hour', d: 'day', w: 'week' };
+    value = `${compact[1]} ${unitMap[compact[2]]} ago`;
+  }
+
+  const match = String(value).toLowerCase().match(/(\d+)\s+(minute|hour|day|week|month|year)s?\s+ago/);
+  if (!match) return null;
+
+  const amount = Number(match[1]);
+  const units = {
+    minute: 60 * 1000,
+    hour: 60 * 60 * 1000,
+    day: 24 * 60 * 60 * 1000,
+    week: 7 * 24 * 60 * 60 * 1000,
+    month: 30 * 24 * 60 * 60 * 1000,
+    year: 365 * 24 * 60 * 60 * 1000,
+  };
+
+  return new Date(Date.now() - amount * units[match[2]]).toISOString();
+}
+
+function normalizeSerpNewsResult(a, fallbackSource, category) {
+  return {
+    title:       a.title,
+    description: a.snippet || a.description || '',
+    url:         a.link || a.url,
+    source:      a.source?.name || a.source || fallbackSource,
+    publishedAt: parseSerpApiDate(a.date || a.published_date),
+    image:       pickSerpThumbnail(a.thumbnail) || a.image || null,
+    category,
+  };
+}
+
+function pickSerpThumbnail(thumbnail) {
+  if (!thumbnail) return null;
+  if (typeof thumbnail === 'string') return thumbnail;
+  return thumbnail.static || thumbnail.rich || thumbnail.url || null;
+}
+
+async function fetchSerpApiNewsLight(categories, limit, offset, query = '') {
+  if (!SERPAPI_KEY) return [];
+  if (offset > 0) return [];
+
+  try {
+    const r = await axios.get('https://serpapi.com/search.json', {
+      params: {
+        engine: 'google_news_light',
+        q: buildSerpNewsQuery(categories, query),
+        gl: 'in',
+        hl: 'en',
+        api_key: SERPAPI_KEY,
+      },
+      timeout: 8000,
+    });
+
+    return (r.data?.news_results || [])
+      .slice(0, limit)
+      .map(a => normalizeSerpNewsResult(a, 'Google News Light', 'Google News Light'))
+      .filter(a => a.title && a.url);
+  } catch (e) {
+    console.warn('[SerpApi Google News Light] Failed:', e.response?.data?.error || e.message);
+    return [];
+  }
+}
+
+async function fetchSerpApiNews(categories, limit, offset, query = '') {
+  if (!SERPAPI_KEY) return [];
+
+  // Use SerpApi for the best realtime first page; paginated fallbacks continue infinite scroll.
+  if (offset > 0) return [];
+
+  try {
+    const r = await axios.get('https://serpapi.com/search.json', {
+      params: {
+        engine: 'google_news',
+        q: buildSerpNewsQuery(categories, query),
+        gl: 'in',
+        hl: 'en',
+        api_key: SERPAPI_KEY,
+      },
+      timeout: 8000,
+    });
+
+    return (r.data?.news_results || [])
+      .slice(0, limit)
+      .map(a => normalizeSerpNewsResult(a, 'Google News', 'Google News'))
+      .filter(a => a.title && a.url);
+  } catch (e) {
+    console.warn('[SerpApi] Failed:', e.response?.data?.error || e.message);
+    return [];
+  }
+}
+
+async function fetchSerpApiBingNews(categories, limit, offset, query = '') {
+  if (!SERPAPI_KEY) return [];
+
+  try {
+    const r = await axios.get('https://serpapi.com/search.json', {
+      params: {
+        engine: 'bing_news',
+        q: buildSerpNewsQuery(categories, query),
+        mkt: 'en-IN',
+        first: offset + 1,
+        count: Math.min(limit, 50),
+        qft: 'sortbydate="1"',
+        safeSearch: 'Moderate',
+        api_key: SERPAPI_KEY,
+      },
+      timeout: 8000,
+    });
+
+    return (r.data?.organic_results || [])
+      .slice(0, limit)
+      .map(a => normalizeSerpNewsResult(a, 'Bing News', 'Bing News'))
+      .filter(a => a.title && a.url);
+  } catch (e) {
+    console.warn('[SerpApi Bing News] Failed:', e.response?.data?.error || e.message);
+    return [];
+  }
+}
 
 /* ─── The Guardian Fetcher (free, unlimited, works in production) ─── */
 async function fetchGuardian(categories, limit, offset, query = '') {
@@ -317,6 +463,91 @@ router.get('/trends/images', async (req, res) => {
 });
 
 /* ─── Unsplash helper ─── */
+router.get('/trends/youtube', async (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 10, 25);
+  const query = req.query.q || req.query.query || 'trending videos India';
+  const cacheKey = `youtube:${query}:${limit}`;
+
+  try {
+    const refresh = req.query.refresh === 'true';
+    const cached = refresh ? null : getCached(cacheKey);
+    if (cached) return res.json(cached);
+
+    if (!SERPAPI_KEY) {
+      return res.json({ success: true, videos: [], error: 'SERPAPI_KEY is not configured' });
+    }
+
+    const r = await axios.get('https://serpapi.com/search.json', {
+      params: {
+        engine: 'youtube',
+        search_query: query,
+        gl: 'IN',
+        hl: 'en',
+        api_key: SERPAPI_KEY,
+      },
+      timeout: 9000,
+    });
+
+    const videos = (r.data?.video_results || [])
+      .slice(0, limit)
+      .map(v => ({
+        id: v.video_id || v.link,
+        title: v.title,
+        url: v.link,
+        thumbnail: pickSerpThumbnail(v.thumbnail),
+        channel: v.channel?.name || v.channel || 'YouTube',
+        channelUrl: v.channel?.link || null,
+        views: v.views || v.watching || '',
+        publishedAt: parseSerpApiDate(v.published_date || v.date),
+        duration: v.length || '',
+        description: v.description || '',
+        source: 'YouTube',
+      }))
+      .filter(v => v.title && v.url);
+
+    const result = { success: true, videos };
+    setCached(cacheKey, result);
+    res.json(result);
+  } catch (err) {
+    console.error('[Trends/youtube] Error:', err.response?.data?.error || err.message);
+    res.json({ success: true, videos: [], error: err.response?.data?.error || err.message });
+  }
+});
+
+router.get('/trends/instagram/profile', async (req, res) => {
+  const profileId = String(req.query.profile_id || req.query.username || '').replace(/^@/, '').trim();
+  const cacheKey = `instagram-profile:${profileId}`;
+
+  if (!profileId) return res.status(400).json({ success: false, error: 'profile_id is required' });
+
+  try {
+    const refresh = req.query.refresh === 'true';
+    const cached = refresh ? null : getCached(cacheKey);
+    if (cached) return res.json(cached);
+
+    if (!SERPAPI_KEY) {
+      return res.json({ success: true, profile: null, error: 'SERPAPI_KEY is not configured' });
+    }
+
+    const r = await axios.get('https://serpapi.com/search.json', {
+      params: {
+        engine: 'instagram_profile',
+        profile_id: profileId,
+        api_key: SERPAPI_KEY,
+      },
+      timeout: 9000,
+    });
+
+    const profile = r.data?.profile_results || null;
+    const result = { success: true, profile };
+    setCached(cacheKey, result);
+    res.json(result);
+  } catch (err) {
+    console.error('[Trends/instagram/profile] Error:', err.response?.data?.error || err.message);
+    res.json({ success: true, profile: null, error: err.response?.data?.error || err.message });
+  }
+});
+
 async function fetchUnsplash(q, limit) {
   try {
     const r = await axios.get('https://api.unsplash.com/search/photos', {

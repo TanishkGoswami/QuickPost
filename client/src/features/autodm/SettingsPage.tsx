@@ -42,10 +42,10 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="general">
-        <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0">
-          <TabsTrigger value="general" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent">General</TabsTrigger>
-          <TabsTrigger value="instagram" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent">Instagram</TabsTrigger>
-          <TabsTrigger value="billing" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent">Billing</TabsTrigger>
+        <TabsList className="w-full justify-start overflow-x-auto rounded-[16px] border border-black/10 bg-white p-1 shadow-sm sm:w-auto">
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="instagram">Instagram</TabsTrigger>
+          <TabsTrigger value="billing">Billing</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="mt-6">

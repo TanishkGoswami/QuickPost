@@ -1,53 +1,37 @@
-import { autodmSupabase } from "./supabaseClient";
+import apiClient from "@/utils/apiClient";
 
-export async function listAutomations({ instagramAccountId, userId }) {
-  let query = autodmSupabase
-    .from("automations")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-
-  if (instagramAccountId) {
-    query = query.eq("instagram_account_id", instagramAccountId);
+function unwrap(response, key) {
+  if (!response.data?.success) {
+    throw new Error(response.data?.error || "Auto DM request failed");
   }
-
-  const { data, error } = await query;
-  if (error) throw error;
-  return data || [];
+  return response.data[key];
 }
 
-export async function getAutomationById(id, userId) {
-  const { data, error } = await autodmSupabase
-    .from("automations")
-    .select("*")
-    .eq("id", id)
-    .eq("user_id", userId)
-    .maybeSingle();
+export async function listAutomations({ instagramAccountId }) {
+  const response = await apiClient.get("/api/autodm/automations", {
+    params: instagramAccountId ? { instagramAccountId } : {},
+  });
+  return unwrap(response, "automations") || [];
+}
 
-  if (error) throw error;
-  return data;
+export async function getAutomationById(id) {
+  const response = await apiClient.get(`/api/autodm/automations/${id}`);
+  return unwrap(response, "automation");
 }
 
 export async function createAutomation(payload) {
-  const { data, error } = await autodmSupabase.from("automations").insert(payload).select().single();
-  if (error) throw error;
-  return data;
+  const response = await apiClient.post("/api/autodm/automations", payload);
+  return unwrap(response, "automation");
 }
 
-export async function updateAutomation(id, userId, payload) {
-  const { data, error } = await autodmSupabase
-    .from("automations")
-    .update(payload)
-    .eq("id", id)
-    .eq("user_id", userId)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+export async function updateAutomation(id, _userId, payload) {
+  const response = await apiClient.patch(`/api/autodm/automations/${id}`, payload);
+  return unwrap(response, "automation");
 }
 
-export async function deleteAutomation(id, userId) {
-  const { error } = await autodmSupabase.from("automations").delete().eq("id", id).eq("user_id", userId);
-  if (error) throw error;
+export async function deleteAutomation(id) {
+  const response = await apiClient.delete(`/api/autodm/automations/${id}`);
+  if (!response.data?.success) {
+    throw new Error(response.data?.error || "Failed to delete Auto DM automation");
+  }
 }

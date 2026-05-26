@@ -338,7 +338,10 @@ function Sidebar() {
     },
   ];
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) =>
+    path === "/dashboard/auto-dm/automations"
+      ? location.pathname.startsWith("/dashboard/auto-dm")
+      : location.pathname === path;
 
   return (
     <aside
