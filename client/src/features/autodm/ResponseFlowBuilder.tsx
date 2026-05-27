@@ -80,7 +80,7 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
 
         <div className="space-y-3">
           {responseFlow.nodes.length === 0 && (
-            <div className="rounded-[14px] border border-dashed border-black/10 bg-white p-4 text-center">
+            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center">
               <p className="text-sm font-medium text-slate-700">No messages yet</p>
               <p className="mt-1 text-xs text-slate-400">Add your first response below</p>
             </div>
