@@ -132,9 +132,7 @@ export default function AutoDMHomePage() {
         </div>
         <h1 style={{ fontSize: 26, fontWeight: 700, color: '#1a1a1a', marginBottom: 8 }}>Set Up GAP AutoDM</h1>
         <p style={{ color: '#6b7280', marginBottom: 28, lineHeight: 1.6 }}>
-          {hasSocialInstagramConnection
-            ? 'Your Instagram account is connected to Social Pilot. Import it now to start building automations.'
-            : 'Connect your Instagram account in Social Pilot first, then come back to import it here.'}
+          Link your professional account to start automations.
         </p>
 
         {importError && (
@@ -144,32 +142,17 @@ export default function AutoDMHomePage() {
           </div>
         )}
 
-        {hasSocialInstagramConnection ? (
-          <button
-            onClick={handleImport}
-            disabled={importing}
-            style={{
-              padding: '12px 28px', borderRadius: 10, border: 'none',
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff',
-              fontSize: 15, fontWeight: 600, cursor: importing ? 'not-allowed' : 'pointer',
-              opacity: importing ? 0.7 : 1, display: 'inline-flex', alignItems: 'center', gap: 8,
-            }}
-          >
-            {importing ? 'Importing...' : <><LinkIcon size={16} /> Import Instagram Account</>}
-          </button>
-        ) : (
-          <button
-            onClick={() => navigate('/dashboard')}
-            style={{
-              padding: '12px 28px', borderRadius: 10, border: 'none',
-              background: '#1a1a1a', color: '#fff',
-              fontSize: 15, fontWeight: 600, cursor: 'pointer',
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-            }}
-          >
-            Go connect Instagram <ArrowRight size={16} />
-          </button>
-        )}
+        <button
+          onClick={() => navigate('/connect')}
+          style={{
+            padding: '12px 28px', borderRadius: 10, border: 'none',
+            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff',
+            fontSize: 15, fontWeight: 600, cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+          }}
+        >
+          Go connect Instagram <ArrowRight size={16} />
+        </button>
       </div>
     );
   }
