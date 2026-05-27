@@ -10,6 +10,7 @@ create table if not exists instagram_accounts (
   page_name text,
   instagram_business_account_id text not null,
   instagram_username text,
+  profile_picture_url text,
   access_token_encrypted text not null,
   token_expires_at timestamptz,
   permissions jsonb not null default '[]'::jsonb,
@@ -20,6 +21,8 @@ create table if not exists instagram_accounts (
   updated_at timestamptz not null default now(),
   unique (user_id, instagram_business_account_id)
 );
+
+alter table instagram_accounts add column if not exists profile_picture_url text;
 
 create table if not exists instagram_bots (
   id uuid primary key default gen_random_uuid(),
@@ -55,8 +58,11 @@ create table if not exists knowledge_sources (
   original_file_url text,
   status text not null default 'pending' check (status in ('pending','processing','ready','failed')),
   error_message text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+
+alter table knowledge_sources add column if not exists updated_at timestamptz not null default now();
 
 create table if not exists knowledge_chunks (
   id uuid primary key default gen_random_uuid(),

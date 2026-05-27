@@ -3,6 +3,8 @@ import { authenticateUser } from '../middleware/authenticateUser.js';
 import {
   addKnowledgeSource,
   createBot,
+  deleteBot,
+  deleteKnowledgeSource,
   disconnectAccount,
   getAnalytics,
   getConversation,
@@ -13,9 +15,11 @@ import {
   listKnowledge,
   manualReply,
   processInstagramWebhook,
+  subscribeAccountToWebhooks,
   testReply,
   updateBot,
   updateConversation,
+  updateKnowledgeSource,
   verifyMetaSignature,
 } from '../services/instapilot.js';
 
@@ -48,6 +52,11 @@ router.delete('/accounts/:id', authenticateUser, asyncHandler(async (req, res) =
   res.json({ success: true });
 }));
 
+router.post('/accounts/:id/subscribe-webhooks', authenticateUser, asyncHandler(async (req, res) => {
+  const result = await subscribeAccountToWebhooks(req.user.userId, req.params.id);
+  res.json({ success: true, result });
+}));
+
 router.get('/bots', authenticateUser, asyncHandler(async (req, res) => {
   const bots = await listBots(req.user.userId);
   res.json({ success: true, bots });
@@ -63,6 +72,11 @@ router.patch('/bots/:id', authenticateUser, asyncHandler(async (req, res) => {
   res.json({ success: true, bot });
 }));
 
+router.delete('/bots/:id', authenticateUser, asyncHandler(async (req, res) => {
+  await deleteBot(req.user.userId, req.params.id);
+  res.json({ success: true });
+}));
+
 router.get('/bots/:id/knowledge', authenticateUser, asyncHandler(async (req, res) => {
   const sources = await listKnowledge(req.user.userId, req.params.id);
   res.json({ success: true, sources });
@@ -71,6 +85,16 @@ router.get('/bots/:id/knowledge', authenticateUser, asyncHandler(async (req, res
 router.post('/knowledge', authenticateUser, asyncHandler(async (req, res) => {
   const source = await addKnowledgeSource(req.user.userId, req.body || {});
   res.status(201).json({ success: true, source });
+}));
+
+router.patch('/knowledge/:id', authenticateUser, asyncHandler(async (req, res) => {
+  const source = await updateKnowledgeSource(req.user.userId, req.params.id, req.body || {});
+  res.json({ success: true, source });
+}));
+
+router.delete('/knowledge/:id', authenticateUser, asyncHandler(async (req, res) => {
+  await deleteKnowledgeSource(req.user.userId, req.params.id);
+  res.json({ success: true });
 }));
 
 router.post('/bots/:id/test-reply', authenticateUser, asyncHandler(async (req, res) => {

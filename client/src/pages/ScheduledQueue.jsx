@@ -21,6 +21,7 @@ import {
 import apiClient from "../utils/apiClient";
 import ComposerModal from "../components/ComposerModal";
 import { Skeleton } from "boneyard-js/react";
+import { useDialog } from "../context/DialogContext";
 
 // ─── Platform icon helper ────────────────────────────────────────────────────
 function getPlatformIcon(id) {
@@ -140,6 +141,7 @@ function QueueThumb({ post }) {
 
 // ─── Queue Card ───────────────────────────────────────────────────────────────
 function QueueCard({ post, onCancel, onRetry, onRefresh }) {
+  const { confirm, alert } = useDialog();
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [newCaption, setNewCaption] = useState(post.caption || "");
@@ -169,15 +171,23 @@ function QueueCard({ post, onCancel, onRetry, onRefresh }) {
       setEditing(false);
       onRefresh();
     } catch (err) {
-      alert(err.response?.data?.error || "Failed to update post.");
+      alert("Update failed", err.response?.data?.error || "Failed to update post.", { intent: "danger" });
     } finally {
       setSaving(false);
     }
   };
 
   const handleCancel = async () => {
-    if (!window.confirm("Cancel this scheduled post? This cannot be undone."))
-      return;
+    const confirmed = await confirm(
+      "Cancel scheduled post?",
+      "This scheduled post will be removed from the queue. This cannot be undone.",
+      {
+        intent: "danger",
+        confirmText: "Cancel post",
+        cancelText: "Keep scheduled",
+      },
+    );
+    if (!confirmed) return;
     setActionLoading("cancel");
     try {
       await onCancel(post.id);

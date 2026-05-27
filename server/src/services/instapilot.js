@@ -78,12 +78,25 @@ export async function importConnectedInstagram(user) {
 
   const permissions = await fetchTokenPermissions(socialToken.access_token).catch(() => []);
   const profile = socialToken.profile_data || {};
+  const liveProfile = await fetchInstagramProfile({
+    accessToken: socialToken.access_token,
+    instagramBusinessId: socialToken.instagram_business_id,
+  }).catch(() => null);
+  const profilePictureUrl =
+    liveProfile?.profile_picture_url ||
+    liveProfile?.profilePicture ||
+    profile.profile_picture_url ||
+    profile.profilePicture ||
+    profile.picture?.data?.url ||
+    profile.picture ||
+    null;
   const accountPayload = {
     user_id: user.userId,
     page_id: socialToken.page_id,
-    page_name: profile.page_name || profile.name || null,
+    page_name: profile.page_name || liveProfile?.name || profile.name || null,
     instagram_business_account_id: socialToken.instagram_business_id,
-    instagram_username: socialToken.username || profile.username || null,
+    instagram_username: liveProfile?.username || socialToken.username || profile.username || null,
+    profile_picture_url: profilePictureUrl,
     access_token_encrypted: encryptToken({ pageAccessToken: socialToken.access_token }),
     token_expires_at: socialToken.token_expiry || null,
     permissions,
@@ -108,6 +121,16 @@ async function fetchTokenPermissions(accessToken) {
     params: { access_token: accessToken },
   });
   return data?.data || [];
+}
+
+async function fetchInstagramProfile({ accessToken, instagramBusinessId }) {
+  const { data } = await axios.get(`${GRAPH_BASE}/${instagramBusinessId}`, {
+    params: {
+      access_token: accessToken,
+      fields: 'id,username,name,profile_picture_url',
+    },
+  });
+  return data || null;
 }
 
 async function getOwnedAccount(userId, accountId) {
@@ -136,6 +159,39 @@ export async function disconnectAccount(userId, accountId) {
   if (error) throw error;
   await audit(userId, 'disconnect', 'instagram_account', account.id);
   return true;
+}
+
+export async function subscribeAccountToWebhooks(userId, accountId) {
+  const account = await getOwnedAccount(userId, accountId);
+  const accessToken = await getPageTokenForAccount(account);
+  const subscribedFields = process.env.INSTAPILOT_SUBSCRIBED_FIELDS || 'messages,messaging_postbacks';
+
+  const { data } = await axios.post(
+    `${GRAPH_BASE}/${account.page_id}/subscribed_apps`,
+    null,
+    {
+      params: {
+        access_token: accessToken,
+        subscribed_fields: subscribedFields,
+      },
+    }
+  );
+
+  await supabase
+    .from('instagram_accounts')
+    .update({
+      webhook_status: 'active',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', account.id)
+    .eq('user_id', userId);
+
+  await audit(userId, 'subscribe_webhooks', 'instagram_account', account.id, {
+    subscribed_fields: subscribedFields,
+    response: data,
+  });
+
+  return data;
 }
 
 export async function listBots(userId) {
@@ -176,6 +232,9 @@ export async function createBot(userId, payload) {
     throw new Error('Instagram account, bot name, and business name are required.');
   }
   await getOwnedAccount(userId, payload.instagram_account_id);
+  if (payload.is_active) {
+    await deactivateOtherBots(userId, payload.instagram_account_id);
+  }
   const { data, error } = await supabase
     .from('instagram_bots')
     .insert(cleanBotPayload(payload, userId))
@@ -187,7 +246,14 @@ export async function createBot(userId, payload) {
 }
 
 export async function updateBot(userId, botId, payload) {
-  const { user_id, id, created_at, updated_at, ...clean } = cleanBotPayload(payload, userId);
+  const existing = await getOwnedBot(userId, botId);
+  const targetAccountId = payload.instagram_account_id || existing.instagram_account_id;
+  const mergedPayload = { ...existing, ...payload, instagram_account_id: targetAccountId };
+  await getOwnedAccount(userId, targetAccountId);
+  if (mergedPayload.is_active) {
+    await deactivateOtherBots(userId, targetAccountId, botId);
+  }
+  const { user_id, id, created_at, updated_at, ...clean } = cleanBotPayload(mergedPayload, userId);
   const { data, error } = await supabase
     .from('instagram_bots')
     .update({ ...clean, updated_at: new Date().toISOString() })
@@ -200,6 +266,30 @@ export async function updateBot(userId, botId, payload) {
   return data;
 }
 
+export async function deleteBot(userId, botId) {
+  await getOwnedBot(userId, botId);
+  const { error } = await supabase
+    .from('instagram_bots')
+    .delete()
+    .eq('id', botId)
+    .eq('user_id', userId);
+  if (error) throw error;
+  await audit(userId, 'delete', 'instagram_bot', botId);
+  return true;
+}
+
+async function deactivateOtherBots(userId, instagramAccountId, exceptBotId = null) {
+  let query = supabase
+    .from('instagram_bots')
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('instagram_account_id', instagramAccountId)
+    .eq('is_active', true);
+  if (exceptBotId) query = query.neq('id', exceptBotId);
+  const { error } = await query;
+  if (error) throw error;
+}
+
 export async function addKnowledgeSource(userId, payload) {
   const bot = await getOwnedBot(userId, payload.bot_id);
   const sourcePayload = {
@@ -207,6 +297,7 @@ export async function addKnowledgeSource(userId, payload) {
     bot_id: bot.id,
     source_type: payload.source_type || 'manual',
     title: payload.title || 'Knowledge source',
+    original_file_url: payload.url || null,
     status: 'processing',
   };
   const { data: source, error } = await supabase
@@ -242,6 +333,74 @@ export async function addKnowledgeSource(userId, payload) {
       .eq('id', source.id);
     throw err;
   }
+}
+
+export async function updateKnowledgeSource(userId, sourceId, payload) {
+  const source = await getOwnedKnowledgeSource(userId, sourceId);
+  await getOwnedBot(userId, source.bot_id);
+
+  await supabase
+    .from('knowledge_sources')
+    .update({
+      source_type: payload.source_type || source.source_type,
+      title: payload.title || source.title,
+      original_file_url: payload.url || source.original_file_url || null,
+      status: 'processing',
+      error_message: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', source.id)
+    .eq('user_id', userId);
+
+  try {
+    await supabase.from('knowledge_chunks').delete().eq('source_id', source.id);
+    const text = await resolveKnowledgeText(payload);
+    const chunks = chunkText(text).map((chunk, index) => ({
+      source_id: source.id,
+      bot_id: source.bot_id,
+      chunk_text: chunk,
+      metadata: { index, source_type: payload.source_type || source.source_type },
+    }));
+    if (chunks.length) {
+      const embeddings = await embedChunks(chunks.map((c) => c.chunk_text)).catch(() => null);
+      const rows = chunks.map((chunk, index) => ({
+        ...chunk,
+        embedding: embeddings?.[index] || null,
+      }));
+      const { error: chunkError } = await supabase.from('knowledge_chunks').insert(rows);
+      if (chunkError) throw chunkError;
+    }
+    const { data, error } = await supabase
+      .from('knowledge_sources')
+      .update({ status: 'ready', updated_at: new Date().toISOString() })
+      .eq('id', source.id)
+      .eq('user_id', userId)
+      .select('*, knowledge_chunks(id,chunk_text)')
+      .single();
+    if (error) throw error;
+    await audit(userId, 'update', 'knowledge_source', source.id);
+    return data;
+  } catch (err) {
+    await supabase
+      .from('knowledge_sources')
+      .update({ status: 'failed', error_message: err.message, updated_at: new Date().toISOString() })
+      .eq('id', source.id)
+      .eq('user_id', userId);
+    throw err;
+  }
+}
+
+export async function deleteKnowledgeSource(userId, sourceId) {
+  const source = await getOwnedKnowledgeSource(userId, sourceId);
+  await supabase.from('knowledge_chunks').delete().eq('source_id', source.id);
+  const { error } = await supabase
+    .from('knowledge_sources')
+    .delete()
+    .eq('id', source.id)
+    .eq('user_id', userId);
+  if (error) throw error;
+  await audit(userId, 'delete', 'knowledge_source', source.id);
+  return true;
 }
 
 async function resolveKnowledgeText(payload) {
@@ -286,11 +445,23 @@ async function getOwnedBot(userId, botId) {
   return data;
 }
 
+async function getOwnedKnowledgeSource(userId, sourceId) {
+  const { data, error } = await supabase
+    .from('knowledge_sources')
+    .select('*')
+    .eq('id', sourceId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error('Knowledge source not found');
+  return data;
+}
+
 export async function listKnowledge(userId, botId) {
   await getOwnedBot(userId, botId);
   const { data, error } = await supabase
     .from('knowledge_sources')
-    .select('*, knowledge_chunks(id)')
+    .select('*, knowledge_chunks(id,chunk_text)')
     .eq('bot_id', botId)
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
@@ -409,11 +580,20 @@ async function findAccountByRecipient(recipientId) {
 }
 
 async function upsertConversation(account, bot, senderId) {
+  const profile = await fetchInstagramScopedUserProfile(account, senderId).catch(() => null);
   const payload = {
     user_id: account.user_id,
     bot_id: bot?.id || null,
     instagram_account_id: account.id,
     instagram_user_id: senderId,
+    instagram_username: profile?.username || null,
+    instagram_name: profile?.name || null,
+    profile_pic_url: profile?.profile_pic || null,
+    follower_count: Number.isFinite(profile?.follower_count) ? profile.follower_count : null,
+    is_user_follow_business:
+      typeof profile?.is_user_follow_business === 'boolean' ? profile.is_user_follow_business : null,
+    is_business_follow_user:
+      typeof profile?.is_business_follow_user === 'boolean' ? profile.is_business_follow_user : null,
     last_message_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -424,6 +604,17 @@ async function upsertConversation(account, bot, senderId) {
     .single();
   if (error) throw error;
   return data;
+}
+
+async function fetchInstagramScopedUserProfile(account, senderId) {
+  const accessToken = await getPageTokenForAccount(account);
+  const { data } = await axios.get(`https://graph.instagram.com/${GRAPH_VERSION}/${senderId}`, {
+    params: {
+      access_token: accessToken,
+      fields: 'name,username,profile_pic,follower_count,is_user_follow_business,is_business_follow_user',
+    },
+  });
+  return data || null;
 }
 
 export async function processInstagramWebhook(payload) {
@@ -603,7 +794,7 @@ export async function manualReply(userId, conversationId, text) {
 }
 
 export async function updateConversation(userId, conversationId, payload) {
-  const allowed = ['status', 'assigned_to', 'bot_paused', 'labels', 'notes', 'lead_data'];
+  const allowed = ['status', 'assigned_to', 'bot_paused', 'failure_count', 'labels', 'notes', 'lead_data'];
   const updates = Object.fromEntries(Object.entries(payload || {}).filter(([key]) => allowed.includes(key)));
   const { data, error } = await supabase
     .from('instagram_conversations')

@@ -10,6 +10,7 @@ create table if not exists instagram_accounts (
   page_name text,
   instagram_business_account_id text not null,
   instagram_username text,
+  profile_picture_url text,
   access_token_encrypted text not null,
   token_expires_at timestamptz,
   permissions jsonb not null default '[]'::jsonb,
@@ -20,6 +21,8 @@ create table if not exists instagram_accounts (
   updated_at timestamptz not null default now(),
   unique (user_id, instagram_business_account_id)
 );
+
+alter table instagram_accounts add column if not exists profile_picture_url text;
 
 create table if not exists instagram_bots (
   id uuid primary key default gen_random_uuid(),
@@ -46,6 +49,10 @@ create table if not exists instagram_bots (
   updated_at timestamptz not null default now()
 );
 
+create unique index if not exists one_active_instagram_bot_per_account
+  on instagram_bots(user_id, instagram_account_id)
+  where is_active = true;
+
 create table if not exists knowledge_sources (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references users(id) on delete cascade,
@@ -55,8 +62,11 @@ create table if not exists knowledge_sources (
   original_file_url text,
   status text not null default 'pending' check (status in ('pending','processing','ready','failed')),
   error_message text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+
+alter table knowledge_sources add column if not exists updated_at timestamptz not null default now();
 
 create table if not exists knowledge_chunks (
   id uuid primary key default gen_random_uuid(),
@@ -75,6 +85,11 @@ create table if not exists instagram_conversations (
   instagram_account_id uuid not null references instagram_accounts(id) on delete cascade,
   instagram_user_id text not null,
   instagram_username text,
+  instagram_name text,
+  profile_pic_url text,
+  follower_count integer,
+  is_user_follow_business boolean,
+  is_business_follow_user boolean,
   status text not null default 'bot_active' check (status in ('bot_active','human_needed','human_active','closed')),
   assigned_to uuid references users(id) on delete set null,
   bot_paused boolean not null default false,
@@ -87,6 +102,12 @@ create table if not exists instagram_conversations (
   updated_at timestamptz not null default now(),
   unique (instagram_account_id, instagram_user_id)
 );
+
+alter table instagram_conversations add column if not exists instagram_name text;
+alter table instagram_conversations add column if not exists profile_pic_url text;
+alter table instagram_conversations add column if not exists follower_count integer;
+alter table instagram_conversations add column if not exists is_user_follow_business boolean;
+alter table instagram_conversations add column if not exists is_business_follow_user boolean;
 
 create table if not exists instagram_messages (
   id uuid primary key default gen_random_uuid(),
