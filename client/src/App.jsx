@@ -35,6 +35,9 @@ const AllTrendsPage  = lazy(() => import('./pages/trends/AllTrendsPage'));
 const Onboarding     = lazy(() => import('./components/Onboarding'));
 const BillingPage    = lazy(() => import('./pages/BillingPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
+const InstagramBots = lazy(() => import('./pages/InstagramBots'));
+const InstagramConnect = lazy(() => import('./pages/InstagramConnect'));
+const InstagramInbox = lazy(() => import('./pages/InstagramInbox'));
 
 // ── Page loader ──
 const PageLoader = () => (
@@ -98,6 +101,9 @@ function AppContent() {
         <Route path="trends"   element={<AllTrendsPage />} />
         <Route path="billing"  element={<BillingPage />} />
         <Route path="payment-success" element={<PaymentSuccessPage />} />
+        <Route path="instapilot" element={<InstagramBots />} />
+        <Route path="instapilot/connect" element={<InstagramConnect />} />
+        <Route path="instapilot/inbox" element={<InstagramInbox />} />
       </Route>
 
       // 404

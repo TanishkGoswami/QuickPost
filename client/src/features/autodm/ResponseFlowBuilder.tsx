@@ -156,7 +156,7 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
               Choose what to send next in your automation flow.
             </DialogDescription>
           </DialogHeader>
-            <div className="grid grid-cols-1 gap-3 py-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 py-4 sm:grid-cols-2">
             {nodeTypes.map((nodeType) => (
               <button
                 type="button"

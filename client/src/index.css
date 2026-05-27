@@ -87,6 +87,24 @@ body {
 .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
 
+.instapilot-input {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid rgba(20, 20, 19, 0.12);
+  background: #fff;
+  padding: 10px 12px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.instapilot-input:focus {
+  border-color: var(--arc);
+  box-shadow: 0 0 0 3px rgba(243, 115, 56, 0.14);
+}
+
 /* ── Fly-1 Animation for Publish Button ── */
 @keyframes fly-1 {
   from { transform: translateY(0.1em); }

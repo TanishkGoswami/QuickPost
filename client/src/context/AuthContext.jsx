@@ -175,6 +175,8 @@ export function AuthProvider({ children }) {
         localStorage.setItem("quickpost_token", session.access_token);
         fetchConnectedAccounts();
         fetchUserProfile(session.user);
+      } else {
+        localStorage.removeItem("quickpost_token");
       }
       setLoading(false);
     });
