@@ -39,6 +39,15 @@ const InstagramBots = lazy(() => import('./pages/InstagramBots'));
 const InstagramConnect = lazy(() => import('./pages/InstagramConnect'));
 const InstagramInbox = lazy(() => import('./pages/InstagramInbox'));
 
+// ── AutoDM workspace ──
+const AutoDMLayout             = lazy(() => import('./pages/auto-dm/AutoDMLayout'));
+const AutoDMHomePage           = lazy(() => import('./pages/auto-dm/AutoDMHomePage'));
+const AutoDMAutomationsPage    = lazy(() => import('./pages/auto-dm/AutoDMAutomationsPage'));
+const AutomationEditorPage     = lazy(() => import('./pages/auto-dm/AutomationEditorPage'));
+const AutoDMContactsPage       = lazy(() => import('./pages/auto-dm/AutoDMContactsPage'));
+const AutoDMInstagramProfilePage = lazy(() => import('./pages/auto-dm/AutoDMInstagramProfilePage'));
+const AutoDMSettingsPage       = lazy(() => import('./pages/auto-dm/AutoDMSettingsPage'));
+
 // ── Page loader ──
 const PageLoader = () => (
   <div
@@ -104,6 +113,17 @@ function AppContent() {
         <Route path="instapilot" element={<InstagramBots />} />
         <Route path="instapilot/connect" element={<InstagramConnect />} />
         <Route path="instapilot/inbox" element={<InstagramInbox />} />
+
+        {/* AutoDM workspace — has its own full-screen layout */}
+        <Route path="auto-dm" element={<AutoDMLayout />}>
+          <Route index                       element={<AutoDMHomePage />} />
+          <Route path="automations"          element={<AutoDMAutomationsPage />} />
+          <Route path="automations/new"      element={<AutomationEditorPage />} />
+          <Route path="automations/:id"      element={<AutomationEditorPage />} />
+          <Route path="contacts"             element={<AutoDMContactsPage />} />
+          <Route path="instagram-profile"    element={<AutoDMInstagramProfilePage />} />
+          <Route path="settings"             element={<AutoDMSettingsPage />} />
+        </Route>
       </Route>
 
       // 404

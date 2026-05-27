@@ -339,7 +339,7 @@ function Sidebar() {
   ];
 
   const isActive = (path) =>
-    path === "/dashboard/auto-dm/automations"
+    path === "/dashboard/auto-dm"
       ? location.pathname.startsWith("/dashboard/auto-dm")
       : location.pathname === path;
 
@@ -438,6 +438,11 @@ function Sidebar() {
               to: "/dashboard/instapilot",
               label: "GAP InstaPilot",
               icon: <Bot size={16} />,
+            },
+            {
+              to: "/dashboard/auto-dm",
+              label: "GAP AutoDM",
+              icon: <MessageCircle size={16} />,
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);
