@@ -2,28 +2,12 @@ import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import supabase from './supabase.js';
 
-const autodmUrl = process.env.AUTODM_SUPABASE_URL;
-const autodmServiceKey =
-  process.env.AUTODM_SUPABASE_SERVICE_KEY ||
-  process.env.AUTODM_SUPABASE_SERVICE_ROLE_KEY;
-const autodmJwtSecret = process.env.AUTODM_SUPABASE_JWT_SECRET;
 const autodmTokenEncryptionKey = process.env.AUTODM_TOKEN_ENCRYPTION_KEY_BASE64;
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v21.0';
 const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 
 const getAutoDMSupabaseAdmin = () => {
-  if (!autodmUrl || !autodmServiceKey) {
-    throw new Error(
-      'Missing AutoDM admin credentials. Required: AUTODM_SUPABASE_URL and AUTODM_SUPABASE_SERVICE_KEY.'
-    );
-  }
-
-  return createClient(autodmUrl, autodmServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
+  return supabase;
 };
 
 const base64Url = (value) =>
@@ -45,64 +29,27 @@ const getTokenEncryptionKey = () => {
 };
 
 export function signAutoDMBridgeToken(user) {
-  if (!autodmJwtSecret) {
-    throw new Error('Missing AUTODM_SUPABASE_JWT_SECRET.');
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    aud: 'authenticated',
-    exp: now + 60 * 30,
-    iat: now,
-    iss: 'supabase',
-    role: 'authenticated',
-    sub: user.userId,
-    email: user.email,
-    user_metadata: {
-      full_name: user.name || user.email?.split('@')[0] || 'User',
-      avatar_url: user.profilePicture || null,
-      bridged_from: 'social.getaipilot.in',
-    },
-    app_metadata: {
-      provider: 'social-bridge',
-    },
-  };
-
-  const header = { alg: 'HS256', typ: 'JWT' };
-  const encodedHeader = base64Url(JSON.stringify(header));
-  const encodedPayload = base64Url(JSON.stringify(payload));
-  const signature = crypto
-    .createHmac('sha256', autodmJwtSecret)
-    .update(`${encodedHeader}.${encodedPayload}`)
-    .digest('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/g, '');
-
   return {
-    token: `${encodedHeader}.${encodedPayload}.${signature}`,
-    expiresAt: payload.exp,
+    token: 'dummy',
+    expiresAt: Math.floor(Date.now() / 1000) + 3600,
   };
 }
 
-export async function startAutoDMInstagramOAuth(user, frontendUrl) {
-  if (!autodmUrl || !autodmServiceKey) {
-    throw new Error(
-      'Missing AutoDM admin credentials. Required: AUTODM_SUPABASE_URL and AUTODM_SUPABASE_SERVICE_KEY.'
-    );
+export async function startAutoDMInstagramOAuth(user, frontendUrl, authHeader) {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  if (!supabaseUrl) {
+    throw new Error('Missing SUPABASE_URL in env.');
   }
 
-  // Ensure the user exists in AutoDM's auth.users so that the edge function can verify the bridge token
-  await ensureAutoDMUser(user);
+  // Ensure we pass the active user auth token
+  const token = authHeader || `Bearer ${process.env.SUPABASE_ANON_KEY}`;
 
-  const { token } = signAutoDMBridgeToken(user);
-  const response = await fetch(`${autodmUrl}/functions/v1/oauth-start`, {
+  console.log(`🔗 [AUTODM-OAUTH] Invoking oauth-start Edge Function on Social Pilot Supabase: ${supabaseUrl}`);
+  const response = await fetch(`${supabaseUrl}/functions/v1/oauth-start`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-      apikey: autodmServiceKey,
-      'x-jwt-secret': autodmJwtSecret,
+      Authorization: token,
     },
     body: JSON.stringify({ frontendUrl }),
   });
@@ -142,40 +89,7 @@ export async function encryptAutoDMTokenBundle(bundle) {
 }
 
 async function ensureAutoDMUser(user) {
-  if (!user?.email) {
-    return;
-  }
-
-  try {
-    const res = await fetch(`${autodmUrl}/auth/v1/admin/users`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${autodmServiceKey}`,
-        apikey: autodmServiceKey,
-      },
-      body: JSON.stringify({
-        id: user.userId,
-        email: user.email,
-        email_confirm: true,
-        user_metadata: {
-          full_name: user.name || user.email?.split('@')[0] || 'User',
-          avatar_url: user.profilePicture || null,
-          bridged_from: 'social.getaipilot.in',
-        },
-      }),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      // 422 = already registered — fine, ignore
-      if (res.status !== 422) {
-        console.warn('[AUTODM] ensureAutoDMUser warning:', err.msg || err.message);
-      }
-    }
-  } catch (e) {
-    console.warn('[AUTODM] ensureAutoDMUser error:', e.message);
-  }
+  return;
 }
 
 export async function importInstagramAccountToAutoDM(user) {

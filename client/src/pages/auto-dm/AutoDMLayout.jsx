@@ -149,7 +149,6 @@ function AutoDMSidebarInner({ onClose }) {
         </div>
       )}
 
-      {/* Nav */}
       <nav style={{ flex: 1, overflowY: 'auto', padding: '12px 10px' }}>
         {NAV.map(({ to, label, icon: Icon, exact }) => (
           <NavLink
@@ -232,6 +231,29 @@ function AutoDMLayoutInner() {
       </main>
 
       <style>{`
+        .autodm-nav-link {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 9px 12px;
+          border-radius: 9px;
+          margin-bottom: 2px;
+          text-decoration: none;
+          color: #374151;
+          font-weight: 500;
+          font-size: 14px;
+          transition: all 0.15s;
+          background: transparent;
+        }
+        .autodm-nav-link:hover {
+          background: #f3f4f6;
+          color: #374151;
+        }
+        .autodm-nav-link.active {
+          background: #6366f1 !important;
+          color: #fff !important;
+          font-weight: 600;
+        }
         @media (max-width: 1023px) {
           .autodm-sidebar { transform: translateX(-100%); }
           .autodm-sidebar.open { transform: translateX(0); }
