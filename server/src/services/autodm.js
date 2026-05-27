@@ -100,6 +100,7 @@ export async function startAutoDMInstagramOAuth(user, frontendUrl) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
       apikey: autodmServiceKey,
+      'x-jwt-secret': autodmJwtSecret,
     },
     body: JSON.stringify({ frontendUrl }),
   });
