@@ -579,3 +579,214 @@ export async function createOrUpdateComposerAutomation({
 
   throw new Error(`Failed to create Auto DM automation: ${error.message}`);
 }
+
+export async function listContactsForUser(user, { instagramAccountId } = {}) {
+  const autoDMSupabase = getAutoDMSupabaseAdmin();
+  let query = autoDMSupabase
+    .from('contacts')
+    .select('*')
+    .eq('user_id', user.userId)
+    .order('last_interaction_at', { ascending: false });
+
+  if (instagramAccountId) {
+    query = query.eq('instagram_account_id', instagramAccountId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(`Failed to load contacts: ${error.message}`);
+  return data || [];
+}
+
+export async function listMessagesForContact(user, contactId) {
+  const autoDMSupabase = getAutoDMSupabaseAdmin();
+  const { data, error } = await autoDMSupabase
+    .from('messages')
+    .select('*')
+    .eq('contact_id', contactId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw new Error(`Failed to load messages: ${error.message}`);
+  return data || [];
+}
+
+export async function getDailyMetrics(user, { instagramAccountId, startDate } = {}) {
+  const autoDMSupabase = getAutoDMSupabaseAdmin();
+  let query = autoDMSupabase
+    .from('daily_metrics')
+    .select('*')
+    .eq('user_id', user.userId)
+    .order('date', { ascending: false });
+
+  if (instagramAccountId) {
+    query = query.eq('instagram_account_id', instagramAccountId);
+  }
+  if (startDate) {
+    query = query.gte('date', startDate);
+  }
+
+  const { data, error } = await query;
+  if (error) throw new Error(`Failed to load daily metrics: ${error.message}`);
+  return data || [];
+}
+
+export async function getAutomationAnalytics(user, automationId) {
+  const autoDMSupabase = getAutoDMSupabaseAdmin();
+
+  // Verify ownership
+  const { data: automation, error: automationError } = await autoDMSupabase
+    .from('automations')
+    .select('*')
+    .eq('id', automationId)
+    .eq('user_id', user.userId)
+    .maybeSingle();
+
+  if (automationError) throw new Error(`Failed to verify automation: ${automationError.message}`);
+  if (!automation) throw new Error('Automation not found');
+
+  const [
+    { data: messageRows },
+    { data: sessionRows },
+    { data: webhookRows },
+  ] = await Promise.all([
+    autoDMSupabase
+      .from('messages')
+      .select('direction, status, message_type, contact_id, created_at')
+      .eq('instagram_account_id', automation.instagram_account_id)
+      .eq('automation_id', automationId)
+      .order('created_at', { ascending: false }),
+    autoDMSupabase
+      .from('automation_sessions')
+      .select('status, created_at, updated_at')
+      .eq('instagram_account_id', automation.instagram_account_id)
+      .eq('automation_id', automationId),
+    automation.media_id
+      ? autoDMSupabase
+          .from('webhook_logs')
+          .select('payload, processing_error, created_at')
+          .eq('event_type', 'comments')
+          .order('created_at', { ascending: false })
+          .limit(300)
+      : { data: [] },
+  ]);
+
+  const contactIds = [...new Set((messageRows || []).map((r) => r.contact_id).filter(Boolean))];
+  const { data: contactRows } =
+    contactIds.length > 0
+      ? await autoDMSupabase
+          .from('contacts')
+          .select('id, username, full_name, total_messages_sent, total_messages_received')
+          .in('id', contactIds)
+          .order('updated_at', { ascending: false })
+          .limit(8)
+      : { data: [] };
+
+  let webhookCommentCount = 0;
+  const recentErrors = [];
+  for (const row of webhookRows || []) {
+    if (row.payload?.value?.media?.id === automation.media_id) {
+      webhookCommentCount += 1;
+      if (row.processing_error) recentErrors.push(String(row.processing_error));
+    }
+  }
+
+  const outbound = (messageRows || []).filter((r) => r.direction === 'outbound');
+  const inbound = (messageRows || []).filter((r) => r.direction === 'inbound');
+  const successful = outbound.filter((r) => ['sent', 'delivered', 'seen'].includes(String(r.status || 'sent'))).length;
+  const failed = outbound.filter((r) => r.status === 'failed').length;
+  const dmsSent = outbound.length;
+  const comments = Math.max(inbound.length, webhookCommentCount);
+
+  return {
+    automation,
+    comments,
+    dmsSent,
+    inboundMessages: inbound.length,
+    uniqueContacts: contactIds.length,
+    successfulMessages: successful,
+    failedMessages: failed,
+    successRate: dmsSent > 0 ? Math.round((successful / dmsSent) * 100) : 0,
+    lastUsedAt: (messageRows || [])[0]?.created_at ?? null,
+    pendingSessions: (sessionRows || []).filter((r) => r.status === 'pending').length,
+    completedSessions: (sessionRows || []).filter((r) => r.status === 'completed').length,
+    expiredSessions: (sessionRows || []).filter((r) => r.status === 'expired').length,
+    recentContacts: contactRows || [],
+    recentErrors: [...new Set(recentErrors)].slice(0, 4),
+    followersBefore: automation.follower_count_at_create ?? null,
+    followersNow: automation.latest_followers_count ?? null,
+    followerGrowth:
+      automation.follower_count_at_create != null && automation.latest_followers_count != null
+        ? automation.latest_followers_count - automation.follower_count_at_create
+        : null,
+    postLikes: automation.media_like_count ?? null,
+    postComments: automation.media_comments_count ?? null,
+    postViews: automation.media_view_count ?? null,
+    postCaption: automation.media_caption ?? null,
+    postPermalink: automation.media_permalink ?? null,
+    insightsSyncedAt: automation.media_insights_synced_at ?? null,
+  };
+}
+
+export async function syncAutomationInsights(user, automationId) {
+  const autoDMSupabase = getAutoDMSupabaseAdmin();
+
+  const { data: automation, error: automationError } = await autoDMSupabase
+    .from('automations')
+    .select('*')
+    .eq('id', automationId)
+    .eq('user_id', user.userId)
+    .maybeSingle();
+
+  if (automationError) throw new Error(`Failed to verify automation: ${automationError.message}`);
+  if (!automation) throw new Error('Automation not found');
+
+  const { data: token } = await supabase
+    .from('social_tokens')
+    .select('access_token, instagram_business_id')
+    .eq('user_id', user.userId)
+    .eq('provider', 'instagram')
+    .maybeSingle();
+
+  if (!token?.access_token || !token?.instagram_business_id) {
+    throw new Error('Instagram not connected in Social Pilot');
+  }
+
+  // Fetch account followers
+  const accountUrl = new URL(`https://graph.facebook.com/v21.0/${token.instagram_business_id}`);
+  accountUrl.searchParams.set('access_token', token.access_token);
+  accountUrl.searchParams.set('fields', 'followers_count');
+  const accountRes = await fetch(accountUrl.toString());
+  const accountJson = await accountRes.json();
+  const followersNow = accountJson.followers_count ?? null;
+
+  let matchedMedia = null;
+  if (automation.media_id) {
+    const mediaUrl = new URL(`https://graph.facebook.com/v21.0/${automation.media_id}`);
+    mediaUrl.searchParams.set('access_token', token.access_token);
+    mediaUrl.searchParams.set('fields', 'like_count,comments_count,permalink,caption');
+    const mediaRes = await fetch(mediaUrl.toString());
+    if (mediaRes.ok) matchedMedia = await mediaRes.json();
+  }
+
+  const updates = {
+    ...(automation.follower_count_at_create == null && followersNow != null
+      ? { follower_count_at_create: followersNow }
+      : {}),
+    latest_followers_count: followersNow,
+    media_like_count: matchedMedia?.like_count ?? automation.media_like_count ?? null,
+    media_comments_count: matchedMedia?.comments_count ?? automation.media_comments_count ?? null,
+    media_caption: matchedMedia?.caption ?? automation.media_caption ?? null,
+    media_permalink: matchedMedia?.permalink ?? automation.media_permalink ?? null,
+    media_insights_synced_at: new Date().toISOString(),
+  };
+
+  const { data: updated, error: updateError } = await autoDMSupabase
+    .from('automations')
+    .update(updates)
+    .eq('id', automationId)
+    .eq('user_id', user.userId)
+    .select('*')
+    .single();
+
+  if (updateError) throw new Error(`Failed to update automation: ${updateError.message}`);
+  return { automation: updated };
+}
