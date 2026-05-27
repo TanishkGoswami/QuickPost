@@ -90,6 +90,9 @@ export async function startAutoDMInstagramOAuth(user, frontendUrl) {
     );
   }
 
+  // Ensure the user exists in AutoDM's auth.users so that the edge function can verify the bridge token
+  await ensureAutoDMUser(user);
+
   const { token } = signAutoDMBridgeToken(user);
   const response = await fetch(`${autodmUrl}/functions/v1/oauth-start`, {
     method: 'POST',
