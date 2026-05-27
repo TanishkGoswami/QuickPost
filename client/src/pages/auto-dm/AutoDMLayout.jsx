@@ -46,10 +46,11 @@ function AutoDMSidebarInner({ onClose }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
             width: 36, height: 36, borderRadius: 10,
-            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+            background: '#fff7f2',
+            border: '1px solid rgba(243,115,56,0.22)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <Send size={16} color="white" />
+            <Send size={16} color="var(--arc)" />
           </div>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: '#1a1a1a', lineHeight: 1.2 }}>GAP AutoDM</div>
@@ -97,7 +98,7 @@ function AutoDMSidebarInner({ onClose }) {
               {activeAccount?.profile_picture_url ? (
                 <img src={activeAccount.profile_picture_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
-                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#6366f1' }}>
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--arc)' }}>
                   {activeAccount?.username?.[0]?.toUpperCase() || 'I'}
                 </div>
               )}
@@ -133,7 +134,7 @@ function AutoDMSidebarInner({ onClose }) {
                     )}
                   </div>
                   <span style={{ fontSize: 12, fontWeight: 500, color: '#1a1a1a' }}>@{acc.username}</span>
-                  {acc.id === activeAccount?.id && <span style={{ marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%', background: '#6366f1' }} />}
+                  {acc.id === activeAccount?.id && <span style={{ marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%', background: 'var(--arc)' }} />}
                 </button>
               ))}
             </div>
@@ -158,13 +159,14 @@ function AutoDMSidebarInner({ onClose }) {
             style={({ isActive }) => ({
               display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
               borderRadius: 9, marginBottom: 2, textDecoration: 'none',
-              background: isActive ? '#6366f1' : 'transparent',
-              color: isActive ? '#fff' : '#374151',
+              background: isActive ? '#fff7f2' : 'transparent',
+              color: isActive ? 'var(--ink)' : '#374151',
+              border: `1px solid ${isActive ? 'rgba(243,115,56,0.24)' : 'transparent'}`,
               fontWeight: isActive ? 600 : 500, fontSize: 14,
               transition: 'all 0.15s',
             })}
-            onMouseEnter={e => { if (!e.currentTarget.style.background.includes('6366f1')) { e.currentTarget.style.background = '#f3f4f6'; } }}
-            onMouseLeave={e => { if (!e.currentTarget.style.background.includes('6366f1')) { e.currentTarget.style.background = 'transparent'; } }}
+            onMouseEnter={e => { if (!e.currentTarget.style.background.includes('255, 247, 242')) { e.currentTarget.style.background = '#f7f5f2'; } }}
+            onMouseLeave={e => { if (!e.currentTarget.style.background.includes('255, 247, 242')) { e.currentTarget.style.background = 'transparent'; } }}
           >
             <Icon size={16} />
             {label}
@@ -188,7 +190,7 @@ function AutoDMLayoutInner() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f7f8fa', fontFamily: 'var(--font, Inter, sans-serif)' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--canvas)', fontFamily: 'var(--font, Inter, sans-serif)' }}>
       {/* Mobile toggle */}
       <button
         onClick={() => setMobileOpen(!mobileOpen)}

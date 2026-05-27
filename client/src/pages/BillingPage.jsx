@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Check, Zap, Building2, Sparkles, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
+import ConnectedPlatformsPanel from '../components/platforms/ConnectedPlatformsPanel';
 
 // Returns true if user has any paid plan (from hub or social)
 function hasPaidPlan(plan) {
@@ -132,6 +133,10 @@ export default function BillingPage() {
         )}
       </div>
 
+      <div style={{ marginBottom: 36 }}>
+        <ConnectedPlatformsPanel compact showBillingSummary />
+      </div>
+
       {/* Billing toggle */}
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
         <div style={{
@@ -189,11 +194,11 @@ export default function BillingPage() {
               transition={{ duration: 0.5, delay: i * 0.1 }}
               style={{
                 borderRadius: 'var(--r-hero)',
-                border: plan.highlighted ? 'none' : '1px solid rgba(20,20,19,0.08)',
-                background: plan.highlighted ? 'var(--ink)' : 'var(--canvas-lifted)',
+                border: `1px solid ${plan.highlighted ? 'rgba(243,115,56,0.35)' : 'rgba(20,20,19,0.08)'}`,
+                background: plan.highlighted ? '#fff7f2' : 'var(--canvas-lifted)',
                 padding: 'clamp(28px, 4vw, 36px)',
                 position: 'relative',
-                boxShadow: plan.highlighted ? '0 32px 64px -16px rgba(20,20,19,0.22)' : 'none',
+                boxShadow: plan.highlighted ? '0 24px 48px rgba(243,115,56,0.12)' : 'none',
                 transform: plan.highlighted ? 'scale(1.02)' : 'scale(1)',
               }}
             >
@@ -222,8 +227,8 @@ export default function BillingPage() {
               {/* Icon */}
               <div style={{
                 width: 44, height: 44, borderRadius: '50%',
-                background: plan.highlighted ? 'rgba(243,115,56,0.18)' : 'var(--ink)',
-                color: plan.highlighted ? 'var(--arc)' : 'var(--canvas)',
+                background: plan.highlighted ? 'rgba(243,115,56,0.18)' : 'rgba(20,20,19,0.06)',
+                color: plan.highlighted ? 'var(--arc)' : 'var(--ink)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 marginBottom: 20,
               }}>
@@ -232,10 +237,10 @@ export default function BillingPage() {
 
               {/* Plan name + description */}
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 18, fontWeight: 600, color: plan.highlighted ? 'var(--canvas)' : 'var(--ink)', letterSpacing: '-0.02em', marginBottom: 6 }}>
+                <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.02em', marginBottom: 6 }}>
                   {plan.name}
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 450, color: plan.highlighted ? 'rgba(243,240,238,0.6)' : 'var(--slate)', lineHeight: 1.5 }}>
+                <div style={{ fontSize: 13, fontWeight: 450, color: 'var(--slate)', lineHeight: 1.5 }}>
                   {plan.description}
                 </div>
               </div>
@@ -243,10 +248,10 @@ export default function BillingPage() {
               {/* Price */}
               <div style={{ marginBottom: 24 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
-                  <span style={{ fontSize: 'clamp(40px, 5vw, 52px)', fontWeight: 600, color: plan.highlighted ? 'var(--canvas)' : 'var(--ink)', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                  <span style={{ fontSize: 'clamp(40px, 5vw, 52px)', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.04em', lineHeight: 1 }}>
                     ₹{plan.price[billing]}
                   </span>
-                  <span style={{ fontSize: 14, fontWeight: 450, color: plan.highlighted ? 'rgba(243,240,238,0.5)' : 'var(--slate)', marginBottom: 6 }}>
+                  <span style={{ fontSize: 14, fontWeight: 450, color: 'var(--slate)', marginBottom: 6 }}>
                     {plan.price[billing] === 0 ? 'forever' : `/ mo`}
                   </span>
                 </div>
@@ -264,8 +269,8 @@ export default function BillingPage() {
                 style={{
                   width: '100%', padding: '13px 20px',
                   borderRadius: 'var(--r-btn)', border: plan.highlighted ? 'none' : '1px solid rgba(20,20,19,0.12)',
-                  background: isCurrentPlan ? 'transparent' : (plan.highlighted ? 'var(--canvas)' : 'var(--ink)'),
-                  color: isCurrentPlan ? (plan.highlighted ? 'var(--canvas)' : 'var(--slate)') : (plan.highlighted ? 'var(--ink)' : 'var(--canvas)'),
+                  background: isCurrentPlan ? 'transparent' : 'var(--ink)',
+                  color: isCurrentPlan ? 'var(--slate)' : 'var(--canvas)',
                   fontFamily: 'var(--font)', fontSize: 14, fontWeight: 600,
                   letterSpacing: '-0.01em', cursor: isCurrentPlan ? 'default' : 'pointer',
                   transition: 'all 0.2s', marginBottom: 28,
@@ -276,7 +281,7 @@ export default function BillingPage() {
               </button>
 
               {/* Divider */}
-              <div style={{ borderTop: `1px solid ${plan.highlighted ? 'rgba(243,240,238,0.1)' : 'rgba(20,20,19,0.07)'}`, marginBottom: 24 }} />
+              <div style={{ borderTop: '1px solid rgba(20,20,19,0.07)', marginBottom: 24 }} />
 
               {/* Features */}
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -290,7 +295,7 @@ export default function BillingPage() {
                     }}>
                       <Check size={11} color={plan.highlighted ? 'var(--arc)' : 'var(--ink)'} strokeWidth={2.5} />
                     </span>
-                    <span style={{ fontSize: 13.5, fontWeight: 450, color: plan.highlighted ? 'rgba(243,240,238,0.75)' : 'var(--slate)', lineHeight: 1.45 }}>
+                    <span style={{ fontSize: 13.5, fontWeight: 450, color: 'var(--slate)', lineHeight: 1.45 }}>
                       {f}
                     </span>
                   </li>

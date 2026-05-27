@@ -232,6 +232,18 @@ export async function createBot(userId, payload) {
     throw new Error('Instagram account, bot name, and business name are required.');
   }
   await getOwnedAccount(userId, payload.instagram_account_id);
+  const { data: existingBot, error: existingError } = await supabase
+    .from('instagram_bots')
+    .select('id, bot_name')
+    .eq('user_id', userId)
+    .limit(1)
+    .maybeSingle();
+  if (existingError) throw existingError;
+  if (existingBot?.id) {
+    const err = new Error('Only one InstaPilot bot is allowed. Please edit the existing bot instead.');
+    err.status = 409;
+    throw err;
+  }
   if (payload.is_active) {
     await deactivateOtherBots(userId, payload.instagram_account_id);
   }

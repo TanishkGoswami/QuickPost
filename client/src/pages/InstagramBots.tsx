@@ -36,6 +36,7 @@ export default function InstagramBots() {
   const connectedAccount = accounts.find((account) => account.is_connected);
   const activeBots = bots.filter((bot) => bot.is_active).length;
   const currentStep = !connectedAccount ? 0 : !selectedBot?.id ? 1 : 2;
+  const hasBot = bots.length > 0;
 
   const removeBot = async (bot: any) => {
     const ok = await confirm(
@@ -91,7 +92,7 @@ export default function InstagramBots() {
                 </div>
               </div>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--slate)]">
-                Follow the steps below. Connect once, add business answers, test replies, then activate when everything feels right.
+                Follow the steps below. Connect once, add business answers, test replies, then activate when everything feels right. One workspace can have one InstaPilot bot, so edits happen inside the existing bot.
               </p>
             </div>
             <div className="flex flex-wrap gap-2 lg:justify-end">
@@ -181,12 +182,26 @@ export default function InstagramBots() {
                 <div>
                   <p className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--arc)]">
                     Workspace
-                    <Info className="h-3.5 w-3.5 normal-case tracking-normal text-[var(--slate)]" title="Create multiple drafts, but only one bot can be live for an Instagram account at a time." />
+                    <Info className="h-3.5 w-3.5 normal-case tracking-normal text-[var(--slate)]" title="Only one InstaPilot bot is allowed. Use Edit Existing Bot to update it." />
                   </p>
                   <h2 className="mt-1 text-lg font-semibold text-[var(--ink)]">Bots</h2>
                 </div>
-                <Button type="button" variant="outline" size="icon" aria-label="Create bot" title="Create bot" onClick={() => setSelectedBotId(undefined)}>
-                  <Plus className="h-4 w-4" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label={hasBot ? "Edit existing bot" : "Create bot"}
+                  title={hasBot ? "Edit Existing Bot" : "Create bot"}
+                  onClick={() => {
+                    if (bots[0]?.id) {
+                      setSelectedBotId(bots[0].id);
+                      toast("Only one InstaPilot bot is allowed. Edit the existing bot.", { icon: "i" });
+                      return;
+                    }
+                    setSelectedBotId(undefined);
+                  }}
+                >
+                  {hasBot ? <Bot className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                 </Button>
               </div>
               <div className="mt-4 space-y-2">
@@ -240,7 +255,7 @@ export default function InstagramBots() {
                 ))}
                 {!loading && bots.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-black/20 bg-[#f8f6f3] p-5 text-sm leading-6 text-[var(--slate)]">
-                    Your first bot will appear here after you save it.
+                    You can create one InstaPilot bot for this workspace. After saving, use the same bot card to edit settings, knowledge, and activation.
                   </div>
                 ) : null}
               </div>

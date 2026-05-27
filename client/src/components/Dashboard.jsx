@@ -25,6 +25,7 @@ import {
   Eye,
   X,
   Lock,
+  ShieldCheck,
 } from "lucide-react";
 import apiClient from "../utils/apiClient";
 import ComposerModal from "./ComposerModal";
@@ -1493,6 +1494,24 @@ function Dashboard() {
             >
               Analytics
             </h1>
+            <div
+              style={{
+                marginTop: 8,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 7,
+                padding: "6px 11px",
+                borderRadius: css.r_pill,
+                border: "1px solid rgba(5,150,105,0.2)",
+                background: "#eefdf5",
+                color: "#065f46",
+                fontSize: 11,
+                fontWeight: 700,
+              }}
+            >
+              <ShieldCheck size={13} />
+              Official Meta Partner
+            </div>
           </div>
           {selectedPlatform !== "all" && (
             <div
