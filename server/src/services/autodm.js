@@ -52,7 +52,7 @@ export function signAutoDMBridgeToken(user) {
     aud: 'authenticated',
     exp: now + 60 * 30,
     iat: now,
-    iss: 'gap-social-pilot-autodm-bridge',
+    iss: 'supabase',
     role: 'authenticated',
     sub: user.userId,
     email: user.email,
