@@ -55,6 +55,10 @@ const DashboardLayout = () => {
     return <Navigate to="/login" replace />;
   }
 
+  if (!localStorage.getItem("qp_onboarding_done")) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   return (
     <div
       style={{

@@ -71,7 +71,7 @@ router.post('/import-instagram', authenticateUser, async (req, res) => {
 
 router.post('/oauth-start', authenticateUser, async (req, res) => {
   try {
-    const redirectTo = await startAutoDMInstagramOAuth(req.user, req.body?.frontendUrl);
+    const redirectTo = await startAutoDMInstagramOAuth(req.user, req.body?.frontendUrl, req.headers.authorization);
     res.json({
       success: true,
       redirectTo,
