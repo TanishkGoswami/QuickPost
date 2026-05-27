@@ -1,6 +1,7 @@
 import axios from 'axios';
 import crypto from 'crypto';
 import supabase from './supabase.js';
+import { importInstagramAccountToAutoDM } from './autodm.js';
 
 const GRAPH_VERSION = 'v21.0';
 
@@ -322,6 +323,23 @@ class InstagramOAuthService {
         .select();
 
       if (error) throw error;
+
+      // Automatically sync connected Instagram account to AutoDM
+      try {
+        console.log(`🔄 [AUTODM-SYNC] Automatically syncing Instagram connection to AutoDM for user ${userId}...`);
+        const { data: userRow } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+        const user = {
+          userId,
+          email: userRow?.email,
+          name: userRow?.name,
+          profilePicture: userRow?.profile_picture
+        };
+        await importInstagramAccountToAutoDM(user);
+        console.log(`✅ [AUTODM-SYNC] AutoDM sync successful for user ${userId}`);
+      } catch (syncErr) {
+        console.warn(`⚠️ [AUTODM-SYNC] AutoDM automatic sync failed (non-fatal):`, syncErr.message);
+      }
+
       return data;
     } catch (error) {
       console.error('❌ Error storing IG tokens:', error);
@@ -381,6 +399,22 @@ class InstagramOAuthService {
         })
         .eq('user_id', userId)
         .eq('provider', 'instagram');
+
+      // Automatically sync refreshed Instagram token to AutoDM
+      try {
+        console.log(`🔄 [AUTODM-SYNC] Automatically syncing refreshed Instagram token to AutoDM for user ${userId}...`);
+        const { data: userRow } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+        const user = {
+          userId,
+          email: userRow?.email,
+          name: userRow?.name,
+          profilePicture: userRow?.profile_picture
+        };
+        await importInstagramAccountToAutoDM(user);
+        console.log(`✅ [AUTODM-SYNC] AutoDM refresh sync successful for user ${userId}`);
+      } catch (syncErr) {
+        console.warn(`⚠️ [AUTODM-SYNC] AutoDM automatic refresh sync failed (non-fatal):`, syncErr.message);
+      }
 
       return {
         accessToken: refreshed.accessToken,
