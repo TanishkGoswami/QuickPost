@@ -24,8 +24,6 @@ import LinkedInConnectModal from "./LinkedInConnectModal";
 import MastodonConnectModal from "./MastodonConnectModal";
 import apiClient from "../utils/apiClient";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "";
-
 // User has paid access if plan is anything other than Free
 function isFree(plan) {
   if (!plan) return true;
@@ -67,6 +65,7 @@ function Sidebar() {
   const [showLinkedInModal, setShowLinkedInModal] = useState(false);
   const [showMastodonModal, setShowMastodonModal] = useState(false);
   const [connectingPlatform, setConnectingPlatform] = useState(null);
+  const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
   const [connectedOpen, setConnectedOpen] = useState(true);
   const [imgError, setImgError] = useState(false);
 
