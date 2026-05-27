@@ -167,7 +167,7 @@ export async function importInstagramAccountToAutoDM(user) {
 export async function getAutoDMStatus(user) {
   const autoDMSupabase = getAutoDMSupabaseAdmin();
 
-  const [{ data: accounts, error: accountsError }, { data: socialInstagram, error: socialError }] =
+  let [{ data: accounts, error: accountsError }, { data: socialInstagram, error: socialError }] =
     await Promise.all([
       autoDMSupabase
         .from('instagram_accounts')
@@ -177,7 +177,7 @@ export async function getAutoDMStatus(user) {
         .order('created_at', { ascending: false }),
       supabase
         .from('social_tokens')
-        .select('provider, username, instagram_business_id, page_id')
+        .select('access_token, token_expiry, instagram_business_id, page_id, username, profile_data')
         .eq('user_id', user.userId)
         .eq('provider', 'instagram')
         .maybeSingle(),
@@ -191,11 +191,36 @@ export async function getAutoDMStatus(user) {
     throw new Error(`Failed to load Social Pilot Instagram state: ${socialError.message}`);
   }
 
+  const hasSocialInstagramConnection = Boolean(
+    socialInstagram?.instagram_business_id || socialInstagram?.page_id
+  );
+
+  // Auto-sync existing Social Pilot Instagram connection to AutoDM if not already imported
+  if ((!accounts || accounts.length === 0) && hasSocialInstagramConnection && socialInstagram?.access_token) {
+    try {
+      console.log(`🔄 [AUTODM-AUTO-SYNC] Auto-importing connected Instagram account for user ${user.userId} on status check...`);
+      await importInstagramAccountToAutoDM(user);
+      
+      // Fetch accounts again to include the newly imported account
+      const { data: refreshedAccounts, error: refreshError } = await autoDMSupabase
+        .from('instagram_accounts')
+        .select('*')
+        .eq('user_id', user.userId)
+        .eq('is_connected', true)
+        .order('created_at', { ascending: false });
+        
+      if (!refreshError && refreshedAccounts) {
+        accounts = refreshedAccounts;
+        console.log(`✅ [AUTODM-AUTO-SYNC] Automatically synced and loaded ${refreshedAccounts.length} Instagram account(s)`);
+      }
+    } catch (syncErr) {
+      console.warn(`⚠️ [AUTODM-AUTO-SYNC] On-the-fly AutoDM sync failed:`, syncErr.message);
+    }
+  }
+
   return {
     autodmAccounts: accounts || [],
-    hasSocialInstagramConnection: Boolean(
-      socialInstagram?.instagram_business_id || socialInstagram?.page_id
-    ),
+    hasSocialInstagramConnection,
     socialInstagram: socialInstagram || null,
   };
 }
