@@ -8,6 +8,8 @@ const autodmServiceKey =
   process.env.AUTODM_SUPABASE_SERVICE_ROLE_KEY;
 const autodmJwtSecret = process.env.AUTODM_SUPABASE_JWT_SECRET;
 const autodmTokenEncryptionKey = process.env.AUTODM_TOKEN_ENCRYPTION_KEY_BASE64;
+const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v21.0';
+const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 
 const getAutoDMSupabaseAdmin = () => {
   if (!autodmUrl || !autodmServiceKey) {
@@ -198,6 +200,13 @@ export async function importInstagramAccountToAutoDM(user) {
   }
 
   const profile = socialInstagram.profile_data || {};
+  const liveProfile = await fetchInstagramBusinessProfile({
+    accessToken: socialInstagram.access_token,
+    instagramBusinessId: socialInstagram.instagram_business_id,
+  }).catch((error) => {
+    console.warn('[AUTODM] Live Instagram profile fetch failed:', error.message);
+    return null;
+  });
   const encryptedTokenBundle = await encryptAutoDMTokenBundle({
     pageAccessToken: socialInstagram.access_token,
     userAccessToken: socialInstagram.access_token,
@@ -206,16 +215,22 @@ export async function importInstagramAccountToAutoDM(user) {
   const upsertPayload = {
     user_id: user.userId,
     instagram_user_id: socialInstagram.instagram_business_id,
-    username: socialInstagram.username || profile.username || `ig_${socialInstagram.instagram_business_id}`,
-    full_name: profile.name || profile.full_name || null,
-    profile_picture_url: profile.profile_picture_url || profile.picture || null,
+    username: liveProfile?.username || socialInstagram.username || profile.username || `ig_${socialInstagram.instagram_business_id}`,
+    full_name: liveProfile?.name || profile.name || profile.full_name || null,
+    profile_picture_url:
+      liveProfile?.profile_picture_url ||
+      profile.profile_picture_url ||
+      profile.profilePicture ||
+      profile.picture?.data?.url ||
+      profile.picture ||
+      null,
     account_type: 'BUSINESS',
     access_token_encrypted: encryptedTokenBundle,
     token_expires_at:
       socialInstagram.token_expiry || new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
     is_connected: true,
-    followers_count: profile.followers_count || null,
-    media_count: profile.media_count || null,
+    followers_count: liveProfile?.followers_count || profile.followers_count || null,
+    media_count: liveProfile?.media_count || profile.media_count || null,
     page_id: socialInstagram.page_id || null,
     updated_at: new Date().toISOString(),
   };
@@ -250,39 +265,61 @@ export async function importInstagramAccountToAutoDM(user) {
   return data;
 }
 
-export async function getAutoDMStatus(user) {
-  const autoDMSupabase = getAutoDMSupabaseAdmin();
-
-  const [{ data: accounts, error: accountsError }, { data: socialInstagram, error: socialError }] =
-    await Promise.all([
-      autoDMSupabase
-        .from('instagram_accounts')
-        .select('*')
-        .eq('user_id', user.userId)
-        .eq('is_connected', true)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('social_tokens')
-        .select('provider, username, instagram_business_id, page_id')
-        .eq('user_id', user.userId)
-        .eq('provider', 'instagram')
-        .maybeSingle(),
-    ]);
-
-  if (accountsError) {
-    throw new Error(`Failed to load AutoDM accounts: ${accountsError.message}`);
+async function fetchInstagramBusinessProfile({ accessToken, instagramBusinessId }) {
+  const response = await fetch(
+    `${GRAPH_BASE}/${instagramBusinessId}?fields=id,username,name,profile_picture_url,followers_count,media_count&access_token=${encodeURIComponent(accessToken)}`
+  );
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error?.message || payload.message || `Graph profile fetch failed with ${response.status}`);
   }
+  return payload || null;
+}
+
+export async function getAutoDMStatus(user) {
+  const { data: socialInstagram, error: socialError } = await supabase
+    .from('social_tokens')
+    .select('provider, username, instagram_business_id, page_id, profile_data')
+    .eq('user_id', user.userId)
+    .eq('provider', 'instagram')
+    .maybeSingle();
 
   if (socialError) {
     throw new Error(`Failed to load Social Pilot Instagram state: ${socialError.message}`);
   }
 
+  let accounts = [];
+  let autoDMStorageError = null;
+
+  try {
+    const autoDMSupabase = getAutoDMSupabaseAdmin();
+    const { data, error: accountsError } = await autoDMSupabase
+      .from('instagram_accounts')
+      .select('*')
+      .eq('user_id', user.userId)
+      .eq('is_connected', true)
+      .order('created_at', { ascending: false });
+
+    if (accountsError) {
+      throw accountsError;
+    }
+    accounts = data || [];
+  } catch (error) {
+    autoDMStorageError =
+      error.message === 'Invalid API key'
+        ? 'AutoDM Supabase service key is invalid. Update AUTODM_SUPABASE_SERVICE_KEY in server/.env.'
+        : error.message || 'Failed to load AutoDM accounts.';
+    console.warn('[AUTODM] Account storage unavailable:', autoDMStorageError);
+  }
+
   return {
-    autodmAccounts: accounts || [],
+    autodmAccounts: accounts,
     hasSocialInstagramConnection: Boolean(
       socialInstagram?.instagram_business_id || socialInstagram?.page_id
     ),
     socialInstagram: socialInstagram || null,
+    autoDMStorageReady: !autoDMStorageError,
+    autoDMStorageError,
   };
 }
 

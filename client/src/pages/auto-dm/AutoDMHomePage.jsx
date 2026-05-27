@@ -68,7 +68,7 @@ export default function AutoDMHomePage() {
   const { user } = useAuth();
   const {
     activeAccount, autodmAccounts, loading: statusLoading,
-    hasSocialInstagramConnection, importInstagram,
+    hasSocialInstagramConnection, autoDMStorageReady, autoDMStorageError, importInstagram,
     fetchDailyMetrics, loadAutomations, automations, automationsLoading,
   } = useAutoDM();
 
@@ -141,17 +141,29 @@ export default function AutoDMHomePage() {
             <p style={{ fontSize: 13, color: '#991b1b', margin: 0 }}>{importError}</p>
           </div>
         )}
+        {autoDMStorageError && (
+          <div style={{ padding: '10px 14px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, marginBottom: 16, display: 'flex', gap: 8, textAlign: 'left' }}>
+            <AlertCircle size={16} color="#ea580c" style={{ flexShrink: 0, marginTop: 2 }} />
+            <p style={{ fontSize: 13, color: '#9a3412', margin: 0 }}>{autoDMStorageError}</p>
+          </div>
+        )}
 
         <button
-          onClick={() => navigate('/connect')}
+          onClick={hasSocialInstagramConnection ? handleImport : () => navigate('/dashboard')}
+          disabled={importing || (hasSocialInstagramConnection && !autoDMStorageReady)}
           style={{
             padding: '12px 28px', borderRadius: 10, border: 'none',
             background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff',
-            fontSize: 15, fontWeight: 600, cursor: 'pointer',
+            fontSize: 15, fontWeight: 600, cursor: importing ? 'not-allowed' : 'pointer',
             display: 'inline-flex', alignItems: 'center', gap: 8,
+            opacity: importing ? 0.7 : 1,
           }}
         >
-          Go connect Instagram <ArrowRight size={16} />
+          {importing
+            ? 'Syncing Instagram...'
+            : hasSocialInstagramConnection
+              ? 'Sync Instagram from Social Pilot'
+              : 'Connect Instagram in Social Pilot'} <ArrowRight size={16} />
         </button>
       </div>
     );
