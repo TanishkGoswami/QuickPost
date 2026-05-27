@@ -14,6 +14,16 @@ const supabaseAdmin = createClient(
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
 
+function isUsableBearerToken(token) {
+  return (
+    typeof token === 'string' &&
+    token.trim() &&
+    token !== 'null' &&
+    token !== 'undefined' &&
+    token.split('.').length === 3
+  );
+}
+
 /**
  * Authentication middleware
  * Verifies Supabase JWT via supabase.auth.getUser() — this is the ONLY correct approach.
@@ -31,7 +41,14 @@ export async function authenticateUser(req, res, next) {
       });
     }
 
-    const token = authHeader.substring(7);
+    const token = authHeader.substring(7).trim();
+    if (!isUsableBearerToken(token)) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized',
+        message: 'No valid authentication token provided'
+      });
+    }
 
     // ✅ Verify token via Supabase — works regardless of which JWT secret Supabase uses
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);

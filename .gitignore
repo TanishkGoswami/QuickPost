@@ -4,6 +4,7 @@ dist/
 .env
 *.log
 .DS_Store
+supabase/.temp/
 uploads/*.mp4
 uploads/*.mov
 uploads/*.avi

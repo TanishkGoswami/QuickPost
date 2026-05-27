@@ -79,45 +79,8 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
         )}
 
         <div className="space-y-3">
-          {responseFlow.nodes.map((node) => (
-            <div key={node.id} className="flex items-center gap-2 rounded-[14px] border border-black/10 bg-white p-3">
-              <button type="button" className="cursor-grab text-[var(--slate)] hover:text-[var(--ink)]">
-                <GripVertical className="h-4 w-4" />
-              </button>
-              <div className="flex flex-1 items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[var(--arc)]/10 text-[var(--arc)]">
-                  {(() => {
-                    const Icon = nodeTypes.find((item) => item.type === node.type)?.icon || Type;
-                    return <Icon className="h-4 w-4" />;
-                  })()}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium capitalize">{node.type}</p>
-                  <p className="truncate text-xs text-[var(--slate)]">{node.content || node.card_title || `${node.buttons?.length || node.form_fields?.length || 0} items`}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setEditingNode({ ...node });
-                    setEditDialogOpen(true);
-                  }}
-                >
-                  Edit
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="text-red-600"
-                  onClick={() => onChange({ ...responseFlow, nodes: responseFlow.nodes.filter((item) => item.id !== node.id) })}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+          {responseFlow.nodes.length === 0 && (
+            <div className="rounded-[14px] border border-dashed border-black/10 bg-white p-4 text-center">
               <p className="text-sm font-medium text-slate-700">No messages yet</p>
               <p className="mt-1 text-xs text-slate-400">Add your first response below</p>
             </div>
@@ -193,7 +156,7 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
               Choose what to send next in your automation flow.
             </DialogDescription>
           </DialogHeader>
-            <div className="grid grid-cols-1 gap-3 py-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 py-4 sm:grid-cols-2">
             {nodeTypes.map((nodeType) => (
               <button
                 type="button"

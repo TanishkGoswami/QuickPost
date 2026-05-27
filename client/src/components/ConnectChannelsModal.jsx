@@ -14,15 +14,12 @@ const SESSION_KEY = "qp_channels_skipped";
 const platforms = [
   { id: "instagram",  name: "Instagram",       icon: "/icons/ig-instagram-icon.svg",              type: "oauth-instagram" },
   { id: "facebook",   name: "Facebook",         icon: "/icons/facebook-round-color-icon.svg",      type: "oauth" },
-  { id: "x",          name: "X",                icon: "/icons/x-social-media-round-icon.svg",      type: "coming-soon" },
   { id: "linkedin",   name: "LinkedIn",         icon: "/icons/linkedin-icon.svg",                  type: "modal-linkedin" },
   { id: "youtube",    name: "YouTube",          icon: "/icons/youtube-color-icon.svg",             type: "oauth" },
-  { id: "pinterest",  name: "Pinterest",        icon: "/icons/pinterest-round-color-icon.svg",     type: "coming-soon" },
   { id: "threads",    name: "Threads",          icon: "/icons/threads-icon.svg",                   type: "oauth" },
   { id: "mastodon",   name: "Mastodon",         icon: "/icons/mastodon-round-icon.svg",            type: "modal-mastodon" },
   { id: "bluesky",    name: "Bluesky",          icon: "/icons/bluesky-circle-color-icon.svg",      type: "modal-bluesky" },
   { id: "googleBusiness", name: "Google Business", icon: "/icons/google-icon.svg",               type: "coming-soon" },
-  { id: "reddit",     name: "Reddit",           icon: "/icons/reddit-icon.svg",                    type: "coming-soon" },
 ];
 
 export default function ConnectChannelsModal() {
@@ -116,14 +113,13 @@ export default function ConnectChannelsModal() {
                 background: "rgba(255, 255, 255, 0.95)",
                 backdropFilter: "blur(20px)",
                 borderRadius: 32,
-                boxShadow: "0 32px 100px rgba(20,20,19,0.25), 0 4px 16px rgba(20,20,19,0.08)",
+                boxShadow: "0 36px 110px rgba(20,20,19,0.32), 0 10px 34px rgba(20,20,19,0.12)",
                 overflow: "hidden",
-                border: "1px solid rgba(255, 255, 255, 0.5)",
               }}
             >
               {/* Header gradient strip */}
               <div style={{
-                backgroundImage: 'url("/download (2).jpg")',
+                backgroundImage: 'linear-gradient(90deg, rgba(0,0,0,0.58) 0%, rgba(0,0,0,0.32) 42%, rgba(0,0,0,0.48) 100%), linear-gradient(180deg, rgba(0,0,0,0.04), rgba(0,0,0,0.18)), url("/download (2).jpg")',
                 backgroundSize: 'cover',
                 backgroundPosition: '20% 50%',
                 padding: "32px 28px 28px",
@@ -138,9 +134,9 @@ export default function ConnectChannelsModal() {
                     width: 32,
                     height: 32,
                     borderRadius: "50%",
-                    background: "rgba(255,255,255,0.2)",
-                    backdropFilter: "blur(4px)",
-                    border: "1px solid rgba(255,255,255,0.3)",
+                    background: "rgba(255,255,255,0.18)",
+                    backdropFilter: "blur(10px)",
+                    border: "none",
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
@@ -155,28 +151,16 @@ export default function ConnectChannelsModal() {
                 </button>
 
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                  <div style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 12,
-                    background: "rgba(255,255,255,0.25)",
-                    backdropFilter: "blur(8px)",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}>
-                    <Sparkles size={18} color="#fff" fill="rgba(255,255,255,0.5)" />
-                  </div>
-                  <span style={{ color: "rgba(255,255,255,0.95)", fontSize: 12, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase" }}>
+                  
+                  <span style={{ color: "#fff", fontSize: 12, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", textShadow: "0 1px 12px rgba(0,0,0,0.45)" }}>
                     Onboarding
                   </span>
                 </div>
 
-                <h2 style={{ color: "#fff", fontSize: 26, fontWeight: 700, margin: 0, lineHeight: 1.2, letterSpacing: "-0.02em" }}>
+                <h2 style={{ color: "#fff", fontSize: 26, fontWeight: 800, margin: 0, lineHeight: 1.2, letterSpacing: "-0.02em", textShadow: "0 2px 18px rgba(0,0,0,0.45)" }}>
                   Connect your social channels
                 </h2>
-                <p style={{ color: "rgba(255,255,255,0.9)", fontSize: 14, margin: "8px 0 0", lineHeight: 1.5, fontWeight: 500 }}>
+                <p style={{ color: "rgba(255,255,255,0.96)", fontSize: 14, margin: "8px 0 0", lineHeight: 1.5, fontWeight: 650, maxWidth: 420, textShadow: "0 1px 14px rgba(0,0,0,0.48)" }}>
                   Post to all your networks from one place. Connect at least one channel to unlock your dashboard.
                 </p>
               </div>
@@ -238,17 +222,18 @@ export default function ConnectChannelsModal() {
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    backgroundImage: 'url("/download (2).jpg")',
+                    backgroundImage: 'linear-gradient(90deg, rgba(0,0,0,0.64), rgba(0,0,0,0.26)), url("/download (2).jpg")',
                     backgroundSize: 'cover',
                     backgroundPosition: '20% 50%',
                     color: "#fff",
-                    border: "1px solid rgba(255, 255, 255, 0.3)",
+                    border: "none",
                     borderRadius: 14,
                     padding: "12px 24px",
                     fontSize: 14,
                     fontWeight: 700,
                     cursor: "pointer",
-                    boxShadow: "0 0 20px rgba(255, 255, 255, 0.1), 0 10px 30px rgba(0, 0, 0, 0.2)",
+                    boxShadow: "0 10px 28px rgba(0, 0, 0, 0.24)",
+                    textShadow: "0 1px 10px rgba(0,0,0,0.5)",
                     transition: "transform 0.2s, brightness 0.2s",
                   }}
                   onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.filter = "brightness(1.1)"; }}
@@ -320,12 +305,12 @@ function PlatformTile({ platform, onClick }) {
         gap: 8,
         padding: "16px 10px",
         borderRadius: 20,
-        border: hovered ? "1px solid var(--arc)" : "1px solid rgba(20,20,19,0.06)",
-        background: hovered ? "rgba(243, 115, 56, 0.04)" : "var(--canvas-lifted)",
+        border: "none",
+        background: hovered ? "rgba(243, 115, 56, 0.06)" : "rgba(255,255,255,0.92)",
         cursor: "pointer",
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         transform: hovered ? "translateY(-4px)" : "none",
-        boxShadow: hovered ? "0 12px 24px rgba(243, 115, 56, 0.12)" : "none",
+        boxShadow: hovered ? "0 14px 26px rgba(243, 115, 56, 0.14)" : "0 8px 24px rgba(20,20,19,0.06)",
       }}
     >
       <div style={{

@@ -13,12 +13,20 @@ const apiClient = axios.create({
   },
 });
 
+const isUsableAuthToken = (token) => {
+  if (!token) return false;
+  const trimmed = token.trim();
+  return trimmed !== 'null' && trimmed !== 'undefined' && trimmed.split('.').length === 3;
+};
+
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('quickpost_token');
-    if (token) {
+    if (isUsableAuthToken(token)) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      delete config.headers.Authorization;
     }
     return config;
   },
