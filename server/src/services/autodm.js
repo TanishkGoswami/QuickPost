@@ -192,7 +192,7 @@ export async function getAutoDMStatus(user) {
         .order('created_at', { ascending: false }),
       supabase
         .from('social_tokens')
-        .select('access_token, token_expiry, instagram_business_id, page_id, username, profile_data')
+        .select('access_token, token_expiry, instagram_business_id, page_id, username, profile_data, provider')
         .eq('user_id', user.userId)
         .eq('provider', 'instagram')
         .maybeSingle(),
@@ -201,17 +201,6 @@ export async function getAutoDMStatus(user) {
   if (accountsError) {
     throw new Error(`Failed to load AutoDM accounts: ${accountsError.message}`);
   }
-  return payload || null;
-}
-
-export async function getAutoDMStatus(user) {
-  const { data: socialInstagram, error: socialError } = await supabase
-    .from('social_tokens')
-    .select('provider, username, instagram_business_id, page_id, profile_data')
-    .eq('user_id', user.userId)
-    .eq('provider', 'instagram')
-    .maybeSingle();
-
   if (socialError) {
     throw new Error(`Failed to load Social Pilot Instagram state: ${socialError.message}`);
   }
@@ -247,8 +236,8 @@ export async function getAutoDMStatus(user) {
     autodmAccounts: accounts || [],
     hasSocialInstagramConnection,
     socialInstagram: socialInstagram || null,
-    autoDMStorageReady: !autoDMStorageError,
-    autoDMStorageError,
+    autoDMStorageReady: true,
+    autoDMStorageError: null,
   };
 }
 
