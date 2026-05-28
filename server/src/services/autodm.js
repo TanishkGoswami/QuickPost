@@ -277,7 +277,7 @@ function cleanAutomationPayload(payload = {}, user) {
 
   return {
     ...rest,
-    user_id: user.userId,
+    user_id: user.authUserId || user.userId,
     updated_at: new Date().toISOString(),
   };
 }
@@ -287,7 +287,7 @@ export async function listAutomationsForUser(user, { instagramAccountId } = {}) 
   let query = autoDMSupabase
     .from('automations')
     .select('*')
-    .eq('user_id', user.userId)
+    .eq('user_id', user.authUserId || user.userId)
     .order('created_at', { ascending: false });
 
   if (instagramAccountId) {
@@ -305,7 +305,7 @@ export async function getAutomationForUser(user, automationId) {
     .from('automations')
     .select('*')
     .eq('id', automationId)
-    .eq('user_id', user.userId)
+    .eq('user_id', user.authUserId || user.userId)
     .maybeSingle();
 
   if (error) throw new Error(`Failed to load Auto DM automation: ${error.message}`);
@@ -334,7 +334,7 @@ export async function updateAutomationForUser(user, automationId, payload) {
     .from('automations')
     .update(cleanPayload)
     .eq('id', automationId)
-    .eq('user_id', user.userId)
+    .eq('user_id', user.authUserId || user.userId)
     .select('*')
     .single();
 
@@ -348,7 +348,7 @@ export async function deleteAutomationForUser(user, automationId) {
     .from('automations')
     .delete()
     .eq('id', automationId)
-    .eq('user_id', user.userId);
+    .eq('user_id', user.authUserId || user.userId);
 
   if (error) throw new Error(`Failed to delete Auto DM automation: ${error.message}`);
   return true;
@@ -392,7 +392,7 @@ function buildComposerAutomationPayload({ user, account, config, publication, so
     (publication?.mediaType === 'video' ? 'comment_on_reel' : 'comment_on_post');
 
   return {
-    user_id: user.userId,
+    user_id: user.authUserId || user.userId,
     instagram_account_id: account.id,
     name: config.name || `Auto DM for ${publication?.mediaId || 'Instagram post'}`,
     trigger_type: triggerType,
@@ -479,7 +479,7 @@ export async function createOrUpdateComposerAutomation({
     const { data: existing, error: findError } = await autoDMSupabase
       .from('automations')
       .select('id')
-      .eq('user_id', user.userId)
+      .eq('user_id', user.authUserId || user.userId)
       .eq('source_broadcast_id', sourceBroadcastId)
       .maybeSingle();
 
@@ -498,7 +498,7 @@ export async function createOrUpdateComposerAutomation({
         .from('automations')
         .update(payload)
         .eq('id', existing.id)
-        .eq('user_id', user.userId)
+        .eq('user_id', user.authUserId || user.userId)
         .select('*')
         .single();
 
@@ -537,7 +537,7 @@ export async function createOrUpdateComposerAutomation({
     const { data: existing, error: existingError } = await autoDMSupabase
       .from('automations')
       .select('id')
-      .eq('user_id', user.userId)
+      .eq('user_id', user.authUserId || user.userId)
       .eq('source_broadcast_id', sourceBroadcastId)
       .maybeSingle();
 
@@ -549,7 +549,7 @@ export async function createOrUpdateComposerAutomation({
       .from('automations')
       .update(payload)
       .eq('id', existing.id)
-      .eq('user_id', user.userId)
+      .eq('user_id', user.authUserId || user.userId)
       .select('*')
       .single();
 
@@ -617,7 +617,7 @@ export async function getAutomationAnalytics(user, automationId) {
     .from('automations')
     .select('*')
     .eq('id', automationId)
-    .eq('user_id', user.userId)
+    .eq('user_id', user.authUserId || user.userId)
     .maybeSingle();
 
   if (automationError) throw new Error(`Failed to verify automation: ${automationError.message}`);
@@ -713,7 +713,7 @@ export async function syncAutomationInsights(user, automationId) {
     .from('automations')
     .select('*')
     .eq('id', automationId)
-    .eq('user_id', user.userId)
+    .eq('user_id', user.authUserId || user.userId)
     .maybeSingle();
 
   if (automationError) throw new Error(`Failed to verify automation: ${automationError.message}`);
@@ -763,7 +763,7 @@ export async function syncAutomationInsights(user, automationId) {
     .from('automations')
     .update(updates)
     .eq('id', automationId)
-    .eq('user_id', user.userId)
+    .eq('user_id', user.authUserId || user.userId)
     .select('*')
     .single();
 
