@@ -89,7 +89,7 @@ export default function AutoDMInstagramProfilePage() {
                   <img src={activeAccount.profile_picture_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f58529, #dd2a7b)', color: '#fff', fontSize: 26, fontWeight: 700 }}>
-                    {activeAccount.username?.[0]?.toUpperCase()}
+                    {(activeAccount.username || activeAccount.instagram_username)?.[0]?.toUpperCase()}
                   </div>
                 )}
               </div>
@@ -99,8 +99,8 @@ export default function AutoDMInstagramProfilePage() {
           {/* Info */}
           <div style={{ flex: 1, minWidth: 200 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: '#1a1a1a', margin: 0 }}>@{activeAccount.username}</h2>
-              <a href={`https://instagram.com/${activeAccount.username}`} target="_blank" rel="noopener noreferrer" style={{ color: '#9ca3af' }}>
+              <h2 style={{ fontSize: 20, fontWeight: 700, color: '#1a1a1a', margin: 0 }}>@{activeAccount.username || activeAccount.instagram_username}</h2>
+              <a href={`https://instagram.com/${activeAccount.username || activeAccount.instagram_username}`} target="_blank" rel="noopener noreferrer" style={{ color: '#9ca3af' }}>
                 <ExternalLink size={14} />
               </a>
             </div>
@@ -143,7 +143,7 @@ export default function AutoDMInstagramProfilePage() {
                   <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#e5e7eb', overflow: 'hidden' }}>
                     {acc.profile_picture_url ? <img src={acc.profile_picture_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
                   </div>
-                  @{acc.username}
+                  @{acc.username || acc.instagram_username}
                 </button>
               ))}
             </div>

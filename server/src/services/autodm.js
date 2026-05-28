@@ -92,6 +92,27 @@ async function ensureAutoDMUser(user) {
   return;
 }
 
+async function fetchInstagramBusinessProfile({ accessToken, instagramBusinessId }) {
+  const url = new URL(`${GRAPH_BASE}/${instagramBusinessId}`);
+  url.searchParams.set('access_token', accessToken);
+  url.searchParams.set('fields', 'username,name,profile_picture_url,followers_count,media_count');
+
+  const res = await fetch(url.toString());
+  const json = await res.json();
+
+  if (!res.ok) {
+    throw new Error(json?.error?.message || 'Instagram Graph API error fetching business profile');
+  }
+
+  return {
+    username: json.username,
+    name: json.name,
+    profile_picture_url: json.profile_picture_url,
+    followers_count: json.followers_count,
+    media_count: json.media_count,
+  };
+}
+
 export async function importInstagramAccountToAutoDM(user) {
   const autoDMSupabase = getAutoDMSupabaseAdmin();
 
