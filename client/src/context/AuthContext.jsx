@@ -11,54 +11,13 @@ import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
 
-// ── Fire-and-forget sync to getaipilot.in hub ──────────────────────────────
-// Called after every successful sign-in on social.getaipilot.in.
-// Ensures the user exists in hub's auth.users + profiles tables.
+// ── Secure Server-Side Sync ──────────────────────────────────────────────────
+// Disabling browser-side sync to prevent CORS errors and protect sensitive env vars
+// (VITE_SOCIAL_SYNC_SECRET) from being exposed in production.
+// The Express backend server already handles this securely on the server-to-server layer.
 async function syncUserToHub(sessionUser) {
-  if (import.meta.env.DEV) {
-    console.info("[HUB-SYNC] Skipping browser-side hub sync in local dev");
-    return;
-  }
-
-  const hubSyncUrl   = import.meta.env.VITE_HUB_SYNC_FUNCTION_URL;
-  const syncSecret   = import.meta.env.VITE_SOCIAL_SYNC_SECRET;
-  // Supabase gateway requires Authorization: Bearer <anon_key>
-  // otherwise returns 401 before the function even runs
-  const hubAnonKey   = import.meta.env.VITE_HUB_SUPABASE_ANON_KEY;
-
-  if (!hubSyncUrl || !syncSecret || !hubAnonKey) {
-    console.warn("[HUB-SYNC] Missing env vars, skipping sync");
-    return;
-  }
-
-  try {
-    const payload = {
-      email:           sessionUser.email,
-      name:            sessionUser.user_metadata?.full_name || sessionUser.email?.split("@")[0],
-      google_id:       sessionUser.identities?.find(i => i.provider === "google")?.identity_data?.sub || undefined,
-      profile_picture: sessionUser.user_metadata?.avatar_url || sessionUser.user_metadata?.picture || undefined,
-      social_user_id:  sessionUser.id,
-    };
-
-    const res = await fetch(hubSyncUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${hubAnonKey}`,  // required by Supabase gateway
-        "x-sync-secret": syncSecret,               // our own auth layer
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await res.json().catch(() => ({}));
-    if (res.ok) {
-      console.log("✅ [HUB-SYNC] User synced to hub:", data.hub_user_id);
-    } else {
-      console.warn("⚠️ [HUB-SYNC] Sync returned", res.status, data);
-    }
-  } catch (err) {
-    console.warn("⚠️ [HUB-SYNC] Sync failed (non-fatal):", err.message);
-  }
+  console.info("[HUB-SYNC] Skipping browser-side hub sync (handled securely by backend)");
+  return;
 }
 
 
@@ -157,6 +116,26 @@ export function AuthProvider({ children }) {
 
 
   useEffect(() => {
+    // ── Stale Session Prevention ─────────────────────────────────────────────
+    // If the Supabase URL has changed (e.g. unified to a new instance), clear 
+    // old local storage auth keys to prevent "Invalid Refresh Token" loops.
+    const currentSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const storedSupabaseUrl = localStorage.getItem("last_supabase_url");
+    
+    if (storedSupabaseUrl && storedSupabaseUrl !== currentSupabaseUrl) {
+      console.warn("🔄 [AUTH] Supabase URL changed. Clearing stale session tokens...");
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith("sb-") || key.includes("supabase") || key.includes("token")) {
+          localStorage.removeItem(key);
+        }
+      });
+      localStorage.setItem("last_supabase_url", currentSupabaseUrl);
+      window.location.reload();
+      return;
+    } else if (!storedSupabaseUrl) {
+      localStorage.setItem("last_supabase_url", currentSupabaseUrl);
+    }
+
     // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
