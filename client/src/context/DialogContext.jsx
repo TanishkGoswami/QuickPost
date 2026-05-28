@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, AlertTriangle, Info, Power, Trash2 } from "lucide-react";
+import { X, AlertTriangle, CheckCircle2, Info, Power, Trash2 } from "lucide-react";
 
 const DialogContext = createContext(null);
 
@@ -45,6 +45,21 @@ export function DialogProvider({ children }) {
     [showDialog],
   );
 
+  useEffect(() => {
+    const nativeAlert = window.alert;
+    window.alert = (...args) => {
+      const [first, second, options] = args;
+      if (typeof second === "string") {
+        alert(String(first || "Notice"), second, options || {});
+      } else {
+        alert("Notice", String(first || ""), { intent: "primary" });
+      }
+    };
+    return () => {
+      window.alert = nativeAlert;
+    };
+  }, [alert]);
+
   const handleClose = useCallback(
     (value) => {
       if (dialog?.resolve) {
@@ -73,7 +88,6 @@ export function useDialog() {
   return context;
 }
 
-// Internal visual component
 function CustomDialog({
   type,
   title,
@@ -87,43 +101,33 @@ function CustomDialog({
     switch (intent) {
       case "danger":
         return {
-          icon: <Trash2 size={24} className="text-[#dc2626]" />,
-          iconBg: "bg-[#dc2626]/10",
-          buttonBg: "bg-[#dc2626] hover:bg-[#b91c1c] shadow-[0_8px_24px_rgba(220,38,38,0.25)]",
-          buttonStyle: {},
-          ringColor: "focus:ring-red-500",
-          accentColor: "bg-[#dc2626]"
+          icon: <Trash2 className="h-5 w-5" />,
+          iconClass: "bg-red-50 text-red-600",
+          confirmClass: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
         };
       case "warning":
         return {
-          icon: <AlertTriangle size={24} className="text-[#d97706]" />,
-          iconBg: "bg-[#d97706]/10",
-          buttonBg: "bg-[#d97706] hover:bg-[#b45309] shadow-[0_8px_24px_rgba(217,119,6,0.25)]",
-          buttonStyle: {},
-          ringColor: "focus:ring-amber-500",
-          accentColor: "bg-[#d97706]"
+          icon: <AlertTriangle className="h-5 w-5" />,
+          iconClass: "bg-amber-50 text-amber-600",
+          confirmClass: "bg-amber-600 text-white hover:bg-amber-700 focus:ring-amber-500",
         };
       case "logout":
         return {
-          icon: <Power size={24} className="text-[#f37338]" />,
-          iconBg: "bg-[#f37338]/10",
-          buttonBg: "bg-[#141413] hover:bg-[#1a1a18]",
-          buttonStyle: {
-            background: "linear-gradient(135deg, #141413 0%, #2d2d2b 100%)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-            boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05)",
-          },
-          ringColor: "focus:ring-[#f37338]",
-          accentColor: "bg-[#f37338]"
+          icon: <Power className="h-5 w-5" />,
+          iconClass: "bg-blue-50 text-blue-700",
+          confirmClass: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
+        };
+      case "success":
+        return {
+          icon: <CheckCircle2 className="h-5 w-5" />,
+          iconClass: "bg-emerald-50 text-emerald-600",
+          confirmClass: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
         };
       default:
         return {
-          icon: <Info size={24} className="text-[#141413]" />,
-          iconBg: "bg-[#141413]/5",
-          buttonBg: "bg-[#141413] hover:bg-[#2d2d2b] shadow-[0_8px_24px_rgba(20,20,19,0.2)]",
-          buttonStyle: {},
-          ringColor: "focus:ring-[#141413]",
-          accentColor: "bg-[#141413]"
+          icon: <Info className="h-5 w-5" />,
+          iconClass: "bg-blue-50 text-blue-700",
+          confirmClass: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
         };
     }
   };
@@ -135,88 +139,66 @@ function CustomDialog({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-[#141413]/55 backdrop-blur-[8px]"
+      className="fixed inset-0 z-[11000] flex items-center justify-center bg-black/35 p-4 backdrop-blur-md"
       onClick={() => onClose(false)}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="app-dialog-title"
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        transition={{ type: "spring", damping: 25, stiffness: 350 }}
-        className="bg-white rounded-[32px] w-full max-w-[400px] overflow-hidden relative border border-[#141413]/10 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.2)]"
+        exit={{ opacity: 0, scale: 0.98, y: 8 }}
+        transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+        className="relative w-full max-w-[440px] overflow-hidden rounded-2xl border border-black/10 bg-white text-[var(--ink)] shadow-[0_28px_80px_rgba(20,20,19,0.28)]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Decorative elements */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#f37338]/20 to-transparent" />
-        
-        {/* Orbital Decoration */}
-        <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-[#f37338]/8 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-[#f37338]/8 blur-3xl pointer-events-none" />
-
-        {/* Close Button */}
-        <button 
+        <button
+          type="button"
           onClick={() => onClose(false)}
-          className="absolute top-6 right-6 p-2.5 text-[#696969]/60 hover:text-[#141413] hover:bg-[#141413]/5 rounded-full transition-all z-10"
+          className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-[var(--slate)] transition hover:bg-black/[0.04] hover:text-[var(--ink)]"
+          aria-label="Close dialog"
         >
-          <X size={18} />
+          <X className="h-4 w-4" />
         </button>
 
-        <div className="px-6 py-10 pt-12">
-          <div className="flex flex-col items-center text-center">
-            {/* Icon Container */}
-            <motion.div 
-              initial={{ scale: 0.5, opacity: 0, rotate: -15 }}
-              animate={{ scale: 1, opacity: 1, rotate: 0 }}
-              transition={{ delay: 0.1, type: "spring", stiffness: 400 }}
-              className={`w-16 h-16 flex items-center justify-center ${config.iconBg} rounded-[22px] mb-8 relative`}
-            >
+        <div className="p-6">
+          <div className="flex items-start gap-4 pr-8">
+            <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${config.iconClass}`}>
               {config.icon}
-              {/* Subtle orbital ring */}
-              <div className="absolute inset-0 border border-[#f37338]/20 rounded-[22px] scale-110" />
-            </motion.div>
-
-            <h3 className="text-[24px] font-[800] text-[#141413] mb-3 leading-tight tracking-tight font-display">
-              {title}
-            </h3>
-            <p className="text-[#696969] font-[500] leading-relaxed text-[15px]">
-              {message}
-            </p>
+            </div>
+            <div className="min-w-0">
+              <h3 id="app-dialog-title" className="text-lg font-semibold leading-7 tracking-[-0.02em] text-[var(--ink)]">
+                {title}
+              </h3>
+              {message ? (
+                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-[var(--slate)]">
+                  {message}
+                </p>
+              ) : null}
+            </div>
           </div>
 
-          <div className="flex items-center gap-3 mt-10">
+          <div className="mt-7 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             {type === "confirm" && (
               <button
+                type="button"
                 onClick={() => onClose(false)}
-                className="flex-1 py-4 px-2 bg-[#f4f3f1] text-[#696969] font-[700] rounded-[20px] hover:bg-[#e9e7e2] hover:text-[#141413] transition-all border-none text-[13px] whitespace-nowrap"
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-black/10 bg-white px-4 text-sm font-semibold text-[var(--ink)] shadow-sm transition hover:bg-black/[0.04] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 {cancelText}
               </button>
             )}
 
-            <motion.button
-              whileHover={{ scale: 1.02, y: -2 }}
-              whileTap={{ scale: 0.98 }}
+            <button
+              type="button"
               onClick={() => onClose(true)}
-              style={config.buttonStyle}
-              className={`flex-1 py-4 px-2 text-white font-[700] rounded-[20px] focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all ${config.buttonBg} ${config.ringColor} tracking-tight text-[13px] whitespace-nowrap overflow-hidden relative group shadow-lg`}
+              className={`inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${config.confirmClass}`}
             >
-              <span className="relative z-10">{confirmText}</span>
-              
-              {/* Intent-specific effects */}
-              {intent === "logout" && (
-                <div className="absolute inset-0 bg-gradient-to-tr from-[#f37338]/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              )}
-              
-              {/* Subtle glass overlay for buttons with custom background styles */}
-              {config.buttonStyle.background && (
-                <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              )}
-            </motion.button>
+              {confirmText}
+            </button>
           </div>
         </div>
-
-        {/* Brand Accent */}
-        <div className={`h-1.5 w-1/3 mx-auto rounded-t-full ${config.accentColor} opacity-20`} />
       </motion.div>
     </motion.div>
   );

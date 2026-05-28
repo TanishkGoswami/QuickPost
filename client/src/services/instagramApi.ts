@@ -14,6 +14,11 @@ export async function disconnectInstagramAccount(accountId: string) {
   await apiClient.delete(`/api/instapilot/accounts/${accountId}`);
 }
 
+export async function subscribeInstagramWebhook(accountId: string) {
+  const { data } = await apiClient.post(`/api/instapilot/accounts/${accountId}/subscribe-webhooks`);
+  return data.result;
+}
+
 export async function fetchInstagramBots() {
   const { data } = await apiClient.get("/api/instapilot/bots");
   return data.bots || [];
@@ -29,6 +34,10 @@ export async function updateInstagramBot(botId: string, payload: Record<string, 
   return data.bot;
 }
 
+export async function deleteInstagramBot(botId: string) {
+  await apiClient.delete(`/api/instapilot/bots/${botId}`);
+}
+
 export async function fetchKnowledgeSources(botId: string) {
   const { data } = await apiClient.get(`/api/instapilot/bots/${botId}/knowledge`);
   return data.sources || [];
@@ -37,6 +46,15 @@ export async function fetchKnowledgeSources(botId: string) {
 export async function addKnowledgeSource(payload: Record<string, unknown>) {
   const { data } = await apiClient.post("/api/instapilot/knowledge", payload);
   return data.source;
+}
+
+export async function updateKnowledgeSource(sourceId: string, payload: Record<string, unknown>) {
+  const { data } = await apiClient.patch(`/api/instapilot/knowledge/${sourceId}`, payload);
+  return data.source;
+}
+
+export async function deleteKnowledgeSource(sourceId: string) {
+  await apiClient.delete(`/api/instapilot/knowledge/${sourceId}`);
 }
 
 export async function testInstagramBotReply(botId: string, message: string) {
