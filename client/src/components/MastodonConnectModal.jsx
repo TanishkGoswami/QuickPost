@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Globe, AlertCircle } from 'lucide-react';
-import axios from 'axios';
+import apiClient from '../utils/apiClient';
 
 function MastodonConnectModal({ isOpen, onClose }) {
   const [instanceUrl, setInstanceUrl] = useState('mastodon.social');
@@ -19,13 +19,9 @@ function MastodonConnectModal({ isOpen, onClose }) {
     setError(null);
 
     try {
-      const token = localStorage.getItem('quickpost_token');
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      
-      const response = await axios.post(
-        `${apiUrl}/api/auth/mastodon/init`, 
-        { instanceUrl },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await apiClient.post(
+        '/api/auth/mastodon/init', 
+        { instanceUrl }
       );
 
       if (response.data.success && response.data.authUrl) {
