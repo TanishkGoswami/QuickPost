@@ -99,13 +99,13 @@ function AutoDMSidebarInner({ onClose }) {
                 <img src={activeAccount.profile_picture_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               ) : (
                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--arc)' }}>
-                  {activeAccount?.username?.[0]?.toUpperCase() || 'I'}
+                  {(activeAccount?.username || activeAccount?.instagram_username)?.[0]?.toUpperCase() || 'I'}
                 </div>
               )}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                @{activeAccount?.username || 'Select account'}
+                @{activeAccount?.username || activeAccount?.instagram_username || 'Select account'}
               </div>
               <div style={{ fontSize: 10, color: '#22c55e', fontWeight: 600 }}>● Connected</div>
             </div>
@@ -129,11 +129,11 @@ function AutoDMSidebarInner({ onClose }) {
                       <img src={acc.profile_picture_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#6366f1' }}>
-                        {acc.username?.[0]?.toUpperCase() || 'I'}
+                        {(acc.username || acc.instagram_username)?.[0]?.toUpperCase() || 'I'}
                       </div>
                     )}
                   </div>
-                  <span style={{ fontSize: 12, fontWeight: 500, color: '#1a1a1a' }}>@{acc.username}</span>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: '#1a1a1a' }}>@{acc.username || acc.instagram_username}</span>
                   {acc.id === activeAccount?.id && <span style={{ marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%', background: 'var(--arc)' }} />}
                 </button>
               ))}

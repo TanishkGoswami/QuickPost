@@ -37,20 +37,6 @@ apiClient.interceptors.request.use(
         if (isUsableAuthToken(localToken)) {
           config.headers.Authorization = `Bearer ${localToken}`;
         } else {
-          // Token is completely missing.
-          // For protected routes, if we are not on a public page, redirect to login
-          const isPublicPage = window.location.pathname === '/login' || 
-                               window.location.pathname === '/register' || 
-                               window.location.pathname === '/' ||
-                               window.location.pathname.startsWith('/auth/callback');
-          
-          if (!isPublicPage) {
-            console.warn('[apiClient] No session token found. Redirecting to /login.');
-            localStorage.removeItem('quickpost_token');
-            // Safely redirect to login to avoid loops
-            window.location.href = '/login';
-          }
-          
           delete config.headers.Authorization;
         }
       }
@@ -67,9 +53,9 @@ apiClient.interceptors.request.use(
 // Response interceptor to handle errors
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
-      console.warn('[apiClient] 401 Unauthorized:', error.config?.url);
+      console.warn('[apiClient] 401 Unauthorized received:', error.config?.url);
       
       const isPublicPage = window.location.pathname === '/login' || 
                            window.location.pathname === '/register' || 
@@ -77,9 +63,13 @@ apiClient.interceptors.response.use(
                            window.location.pathname.startsWith('/auth/callback');
       
       if (!isPublicPage) {
-        console.warn('[apiClient] 401 received on protected route. Redirecting to /login.');
+        console.warn('[apiClient] 401 received on protected route. Logging out...');
+        // Clear local storage token
         localStorage.removeItem('quickpost_token');
-        window.location.href = '/login';
+        // Sign out from Supabase safely to let the React router handle redirect cleanly
+        await supabase.auth.signOut().catch((err) => {
+          console.warn('[apiClient] Supabase signOut failed:', err);
+        });
       }
     }
     return Promise.reject(error);

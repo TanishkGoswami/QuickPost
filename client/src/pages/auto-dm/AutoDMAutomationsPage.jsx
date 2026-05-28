@@ -315,7 +315,7 @@ export default function AutoDMAutomationsPage() {
           <h1 style={{ fontSize: 26, fontWeight: 700, color: '#1a1a1a', margin: 0 }}>Automations</h1>
           <p style={{ color: '#6b7280', margin: '4px 0 0', fontSize: 14 }}>
             {automations.length} automation{automations.length !== 1 ? 's' : ''}
-            {activeAccount && ` · @${activeAccount.username}`}
+            {activeAccount && ` · @${activeAccount.username || activeAccount.instagram_username}`}
           </p>
         </div>
         <button
