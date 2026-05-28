@@ -67,6 +67,7 @@ export async function authenticateUser(req, res, next) {
     // Build user info from Supabase user object
     const userInfo = {
       userId: user.id,
+      authUserId: user.id,
       email: user.email,
       name: user.user_metadata?.full_name || user.email?.split('@')[0],
       profilePicture: user.user_metadata?.avatar_url || null
