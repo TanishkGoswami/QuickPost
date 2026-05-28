@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import apiClient from '../utils/apiClient';
+import { useAuth } from './AuthContext';
 
 const AutoDMContext = createContext(null);
 
 export function AutoDMProvider({ children }) {
+  const { connectedAccounts } = useAuth();
   const [status, setStatus] = useState(null); // { autodmAccounts, hasSocialInstagramConnection, socialInstagram }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -13,15 +15,50 @@ export function AutoDMProvider({ children }) {
   const [contacts, setContacts] = useState([]);
   const [contactsLoading, setContactsLoading] = useState(false);
   const loadedRef = useRef(false);
+  const autoSyncAttemptedRef = useRef(false);
+  const hasPostingInstagram = Boolean(connectedAccounts?.instagram?.connected);
 
   const loadStatus = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const res = await apiClient.get('/api/autodm/status');
-      const data = res.data;
+      let data = res.data;
+      let accounts = data.autodmAccounts || [];
+      const socialReady = Boolean(data.hasSocialInstagramConnection || hasPostingInstagram);
+      data = {
+        ...data,
+        hasSocialInstagramConnection: socialReady,
+        socialInstagram: data.socialInstagram || connectedAccounts?.instagram || null,
+      };
+      if (data.autoDMStorageError) {
+        setError(data.autoDMStorageError);
+      }
+
+      if (
+        accounts.length === 0 &&
+        socialReady &&
+        data.autoDMStorageReady === true &&
+        !autoSyncAttemptedRef.current
+      ) {
+        autoSyncAttemptedRef.current = true;
+        try {
+          await apiClient.post('/api/autodm/import-instagram');
+          const refreshed = await apiClient.get('/api/autodm/status');
+          data = refreshed.data;
+          accounts = data.autodmAccounts || [];
+          data = {
+            ...data,
+            hasSocialInstagramConnection: Boolean(data.hasSocialInstagramConnection || hasPostingInstagram),
+            socialInstagram: data.socialInstagram || connectedAccounts?.instagram || null,
+          };
+        } catch (syncError) {
+          console.warn('[AutoDM] Instagram auto-sync failed:', syncError);
+          setError(syncError.response?.data?.error || syncError.message || 'Failed to sync Instagram into AutoDM');
+        }
+      }
+
       setStatus(data);
-      const accounts = data.autodmAccounts || [];
       setActiveAccount((prev) => {
         if (prev) {
           const still = accounts.find((a) => a.id === prev.id);
@@ -35,7 +72,7 @@ export function AutoDMProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [connectedAccounts?.instagram, hasPostingInstagram]);
 
   useEffect(() => {
     if (!loadedRef.current) {
@@ -44,11 +81,20 @@ export function AutoDMProvider({ children }) {
     }
   }, [loadStatus]);
 
+  useEffect(() => {
+    if (loadedRef.current && hasPostingInstagram && !autoSyncAttemptedRef.current) {
+      loadStatus();
+    }
+  }, [hasPostingInstagram, loadStatus]);
+
   const importInstagram = useCallback(async () => {
+    if (status?.autoDMStorageReady === false) {
+      throw new Error(status.autoDMStorageError || 'AutoDM storage is not ready.');
+    }
     const res = await apiClient.post('/api/autodm/import-instagram');
     await loadStatus();
     return res.data.account;
-  }, [loadStatus]);
+  }, [loadStatus, status?.autoDMStorageError, status?.autoDMStorageReady]);
 
   const startOAuth = useCallback(async () => {
     const res = await apiClient.post('/api/autodm/oauth-start', {
@@ -142,6 +188,8 @@ export function AutoDMProvider({ children }) {
   const autodmAccounts = status?.autodmAccounts || [];
   const hasSocialInstagramConnection = status?.hasSocialInstagramConnection || false;
   const socialInstagram = status?.socialInstagram || null;
+  const autoDMStorageReady = status?.autoDMStorageReady !== false;
+  const autoDMStorageError = status?.autoDMStorageError || null;
 
   return (
     <AutoDMContext.Provider
@@ -154,6 +202,8 @@ export function AutoDMProvider({ children }) {
         setActiveAccount,
         hasSocialInstagramConnection,
         socialInstagram,
+        autoDMStorageReady,
+        autoDMStorageError,
         automations,
         setAutomations,
         automationsLoading,

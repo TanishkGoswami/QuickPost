@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import supabase from './supabase.js';
 
 const autodmTokenEncryptionKey = process.env.AUTODM_TOKEN_ENCRYPTION_KEY_BASE64;
+const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v21.0';
+const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 
 const getAutoDMSupabaseAdmin = () => {
   return supabase;
@@ -112,6 +114,13 @@ export async function importInstagramAccountToAutoDM(user) {
   }
 
   const profile = socialInstagram.profile_data || {};
+  const liveProfile = await fetchInstagramBusinessProfile({
+    accessToken: socialInstagram.access_token,
+    instagramBusinessId: socialInstagram.instagram_business_id,
+  }).catch((error) => {
+    console.warn('[AUTODM] Live Instagram profile fetch failed:', error.message);
+    return null;
+  });
   const encryptedTokenBundle = await encryptAutoDMTokenBundle({
     pageAccessToken: socialInstagram.access_token,
     userAccessToken: socialInstagram.access_token,
@@ -120,16 +129,22 @@ export async function importInstagramAccountToAutoDM(user) {
   const upsertPayload = {
     user_id: user.userId,
     instagram_user_id: socialInstagram.instagram_business_id,
-    username: socialInstagram.username || profile.username || `ig_${socialInstagram.instagram_business_id}`,
-    full_name: profile.name || profile.full_name || null,
-    profile_picture_url: profile.profile_picture_url || profile.picture || null,
+    username: liveProfile?.username || socialInstagram.username || profile.username || `ig_${socialInstagram.instagram_business_id}`,
+    full_name: liveProfile?.name || profile.name || profile.full_name || null,
+    profile_picture_url:
+      liveProfile?.profile_picture_url ||
+      profile.profile_picture_url ||
+      profile.profilePicture ||
+      profile.picture?.data?.url ||
+      profile.picture ||
+      null,
     account_type: 'BUSINESS',
     access_token_encrypted: encryptedTokenBundle,
     token_expires_at:
       socialInstagram.token_expiry || new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
     is_connected: true,
-    followers_count: profile.followers_count || null,
-    media_count: profile.media_count || null,
+    followers_count: liveProfile?.followers_count || profile.followers_count || null,
+    media_count: liveProfile?.media_count || profile.media_count || null,
     page_id: socialInstagram.page_id || null,
     updated_at: new Date().toISOString(),
   };
@@ -186,6 +201,16 @@ export async function getAutoDMStatus(user) {
   if (accountsError) {
     throw new Error(`Failed to load AutoDM accounts: ${accountsError.message}`);
   }
+  return payload || null;
+}
+
+export async function getAutoDMStatus(user) {
+  const { data: socialInstagram, error: socialError } = await supabase
+    .from('social_tokens')
+    .select('provider, username, instagram_business_id, page_id, profile_data')
+    .eq('user_id', user.userId)
+    .eq('provider', 'instagram')
+    .maybeSingle();
 
   if (socialError) {
     throw new Error(`Failed to load Social Pilot Instagram state: ${socialError.message}`);
@@ -222,6 +247,8 @@ export async function getAutoDMStatus(user) {
     autodmAccounts: accounts || [],
     hasSocialInstagramConnection,
     socialInstagram: socialInstagram || null,
+    autoDMStorageReady: !autoDMStorageError,
+    autoDMStorageError,
   };
 }
 

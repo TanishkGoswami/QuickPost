@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
   Send, Eye, MousePointer, Users, Plus, Calendar,
   ChevronDown, MessageSquare, TrendingUp, Reply, Zap,
-  ArrowRight, AlertCircle, Link as LinkIcon,
+  ArrowRight, AlertCircle, Link as LinkIcon, ShieldCheck,
 } from 'lucide-react';
 
 const QUICK_ACTIONS = [
@@ -68,7 +68,7 @@ export default function AutoDMHomePage() {
   const { user } = useAuth();
   const {
     activeAccount, autodmAccounts, loading: statusLoading,
-    hasSocialInstagramConnection, importInstagram,
+    hasSocialInstagramConnection, autoDMStorageReady, autoDMStorageError, importInstagram,
     fetchDailyMetrics, loadAutomations, automations, automationsLoading,
   } = useAutoDM();
 
@@ -126,13 +126,13 @@ export default function AutoDMHomePage() {
   // Not connected state
   if (!statusLoading && autodmAccounts.length === 0) {
     return (
-      <div style={{ maxWidth: 600, margin: '60px auto', textAlign: 'center' }}>
-        <div style={{ width: 72, height: 72, borderRadius: 20, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-          <Send size={32} color="white" />
+      <div style={{ maxWidth: 720, margin: '56px auto', textAlign: 'center', background: 'var(--canvas-lifted)', border: '1px solid rgba(20,20,19,0.08)', borderRadius: 28, padding: '44px 28px', boxShadow: '0 18px 42px rgba(20,20,19,0.06)' }}>
+        <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#fff7f2', border: '1px solid rgba(243,115,56,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+          <Send size={32} color="var(--arc)" />
         </div>
         <h1 style={{ fontSize: 26, fontWeight: 700, color: '#1a1a1a', marginBottom: 8 }}>Set Up GAP AutoDM</h1>
         <p style={{ color: '#6b7280', marginBottom: 28, lineHeight: 1.6 }}>
-          Link your professional account to start automations.
+          Link Instagram once from Social Pilot. The same official connection powers AutoDM, autoposting, and InstaPilot.
         </p>
 
         {importError && (
@@ -141,18 +141,36 @@ export default function AutoDMHomePage() {
             <p style={{ fontSize: 13, color: '#991b1b', margin: 0 }}>{importError}</p>
           </div>
         )}
+        {autoDMStorageError && (
+          <div style={{ padding: '10px 14px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, marginBottom: 16, display: 'flex', gap: 8, textAlign: 'left' }}>
+            <AlertCircle size={16} color="#ea580c" style={{ flexShrink: 0, marginTop: 2 }} />
+            <p style={{ fontSize: 13, color: '#9a3412', margin: 0 }}>{autoDMStorageError}</p>
+          </div>
+        )}
 
         <button
-          onClick={() => navigate('/connect')}
+          onClick={hasSocialInstagramConnection ? handleImport : () => navigate('/dashboard')}
+          disabled={importing || (hasSocialInstagramConnection && !autoDMStorageReady)}
           style={{
-            padding: '12px 28px', borderRadius: 10, border: 'none',
-            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff',
-            fontSize: 15, fontWeight: 600, cursor: 'pointer',
+            padding: '12px 28px', borderRadius: 999, border: '1px solid rgba(20,20,19,0.12)',
+            background: '#141413', color: 'var(--canvas)',
+            fontSize: 15, fontWeight: 600, cursor: importing ? 'not-allowed' : 'pointer',
             display: 'inline-flex', alignItems: 'center', gap: 8,
+            opacity: importing ? 0.7 : 1,
           }}
         >
-          Go connect Instagram <ArrowRight size={16} />
+          {importing
+            ? 'Syncing Instagram...'
+            : hasSocialInstagramConnection
+              ? 'Sync Instagram from Social Pilot'
+              : 'Connect Instagram in Social Pilot'} <ArrowRight size={16} />
         </button>
+        <div style={{ margin: '22px auto 0', maxWidth: 520, display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left', padding: 14, borderRadius: 18, background: '#eefdf5', border: '1px solid rgba(5,150,105,0.18)', color: '#064e3b' }}>
+          <ShieldCheck size={18} style={{ flexShrink: 0, marginTop: 2 }} />
+          <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55 }}>
+            Official Meta Partner workflow: Meta OAuth, Graph API and approved permissions only. No password login or scraping.
+          </p>
+        </div>
       </div>
     );
   }
@@ -162,15 +180,19 @@ export default function AutoDMHomePage() {
       {/* Header */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
-          <p style={{ fontSize: 12, fontWeight: 700, color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 4px' }}>Dashboard</p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--arc)', textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 4px' }}>Dashboard</p>
           <h1 style={{ fontSize: 28, fontWeight: 700, color: '#1a1a1a', margin: 0 }}>Welcome back, {firstName} 👋</h1>
           <p style={{ color: '#6b7280', margin: '6px 0 0', fontSize: 14 }}>Here's what's happening with your Instagram automation</p>
+          <div style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 8, border: '1px solid rgba(5,150,105,0.2)', background: '#eefdf5', color: '#065f46', borderRadius: 999, padding: '7px 12px', fontSize: 12, fontWeight: 700 }}>
+            <ShieldCheck size={14} />
+            Official Meta Partner
+          </div>
         </div>
         <button
           onClick={() => navigate('/dashboard/auto-dm/automations/new')}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px',
-            borderRadius: 10, border: 'none', background: '#6366f1', color: '#fff',
+            borderRadius: 999, border: '1px solid rgba(20,20,19,0.12)', background: '#141413', color: 'var(--canvas)',
             fontWeight: 600, fontSize: 14, cursor: 'pointer',
           }}
         >

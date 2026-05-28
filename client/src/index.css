@@ -92,17 +92,22 @@ body {
   border-radius: 8px;
   border: 1px solid rgba(20, 20, 19, 0.12);
   background: #fff;
-  padding: 10px 12px;
+  padding: 11px 12px;
   color: var(--ink);
   font-size: 14px;
   line-height: 1.5;
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
 }
 
 .instapilot-input:focus {
   border-color: var(--arc);
   box-shadow: 0 0 0 3px rgba(243, 115, 56, 0.14);
+}
+
+.instapilot-input::placeholder {
+  color: rgba(105,105,105,0.62);
 }
 
 /* ── Fly-1 Animation for Publish Button ── */
