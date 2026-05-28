@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, AlertCircle, Info, CheckCircle2, ExternalLink, Eye, EyeOff } from 'lucide-react';
-import axios from 'axios';
+import apiClient from '../utils/apiClient';
 
 function BlueskyConnectModal({ isOpen, onClose, onSuccess }) {
   const [handle, setHandle] = useState('');
@@ -17,15 +17,12 @@ function BlueskyConnectModal({ isOpen, onClose, onSuccess }) {
     setIsLoading(true);
 
     try {
-      const token = localStorage.getItem('quickpost_token');
       // Remove @ symbol if user included it
       const cleanHandle = handle.trim().replace(/^@/, '');
       
-      const apiUrl = import.meta.env.VITE_API_URL || '';
-      const response = await axios.post(
-        `${apiUrl}/api/auth/bluesky/connect`,
-        { handle: cleanHandle, appPassword },
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await apiClient.post(
+        '/api/auth/bluesky/connect',
+        { handle: cleanHandle, appPassword }
       );
 
       if (response.data.success) {
