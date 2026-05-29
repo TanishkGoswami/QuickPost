@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, AlertTriangle, CheckCircle2, Info, Power, Trash2 } from "lucide-react";
 
 const DialogContext = createContext(null);
 
@@ -22,7 +24,7 @@ export function DialogProvider({ children }) {
         message,
         confirmText: options.confirmText || "Confirm",
         cancelText: options.cancelText || "Cancel",
-        intent: options.intent || "danger", // danger, warning, primary
+        intent: options.intent || "danger", // danger, warning, primary, logout
         ...options,
       });
     },
@@ -43,6 +45,21 @@ export function DialogProvider({ children }) {
     [showDialog],
   );
 
+  useEffect(() => {
+    const nativeAlert = window.alert;
+    window.alert = (...args) => {
+      const [first, second, options] = args;
+      if (typeof second === "string") {
+        alert(String(first || "Notice"), second, options || {});
+      } else {
+        alert("Notice", String(first || ""), { intent: "primary" });
+      }
+    };
+    return () => {
+      window.alert = nativeAlert;
+    };
+  }, [alert]);
+
   const handleClose = useCallback(
     (value) => {
       if (dialog?.resolve) {
@@ -56,7 +73,9 @@ export function DialogProvider({ children }) {
   return (
     <DialogContext.Provider value={{ confirm, alert }}>
       {children}
-      {dialog && <CustomDialog {...dialog} onClose={handleClose} />}
+      <AnimatePresence>
+        {dialog && <CustomDialog key="custom-dialog" {...dialog} onClose={handleClose} />}
+      </AnimatePresence>
     </DialogContext.Provider>
   );
 }
@@ -69,9 +88,6 @@ export function useDialog() {
   return context;
 }
 
-// Internal visual component
-import { X, AlertTriangle, Info, LogOut, Trash2 } from "lucide-react";
-
 function CustomDialog({
   type,
   title,
@@ -81,63 +97,109 @@ function CustomDialog({
   intent,
   onClose,
 }) {
-  const getIntentIcon = () => {
+  const getIntentConfig = () => {
     switch (intent) {
       case "danger":
-        return <Trash2 className="w-10 h-10 text-red-500" />;
+        return {
+          icon: <Trash2 className="h-5 w-5" />,
+          iconClass: "bg-red-50 text-red-600",
+          confirmClass: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
+        };
       case "warning":
-        return <AlertTriangle className="w-10 h-10 text-yellow-500" />;
+        return {
+          icon: <AlertTriangle className="h-5 w-5" />,
+          iconClass: "bg-amber-50 text-amber-600",
+          confirmClass: "bg-amber-600 text-white hover:bg-amber-700 focus:ring-amber-500",
+        };
       case "logout":
-        return <LogOut className="w-10 h-10 text-blue-500" />;
+        return {
+          icon: <Power className="h-5 w-5" />,
+          iconClass: "bg-blue-50 text-blue-700",
+          confirmClass: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
+        };
+      case "success":
+        return {
+          icon: <CheckCircle2 className="h-5 w-5" />,
+          iconClass: "bg-emerald-50 text-emerald-600",
+          confirmClass: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
+        };
       default:
-        return <Info className="w-10 h-10 text-blue-500" />;
+        return {
+          icon: <Info className="h-5 w-5" />,
+          iconClass: "bg-blue-50 text-blue-700",
+          confirmClass: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
+        };
     }
   };
 
-  const getButtonClass = () => {
-    switch (intent) {
-      case "danger":
-        return "bg-red-600 hover:bg-red-700 focus:ring-red-500";
-      case "warning":
-        return "bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500";
-      default:
-        return "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500";
-    }
-  };
+  const config = getIntentConfig();
 
   return (
-    <div className="fixed inset-0 z-[11000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in"
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[11000] flex items-center justify-center bg-black/35 p-4 backdrop-blur-md"
+      onClick={() => onClose(false)}
+    >
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="app-dialog-title"
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.98, y: 8 }}
+        transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+        className="relative w-full max-w-[440px] overflow-hidden rounded-2xl border border-black/10 bg-white text-[var(--ink)] shadow-[0_28px_80px_rgba(20,20,19,0.28)]"
         onClick={(e) => e.stopPropagation()}
       >
+        <button
+          type="button"
+          onClick={() => onClose(false)}
+          className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-[var(--slate)] transition hover:bg-black/[0.04] hover:text-[var(--ink)]"
+          aria-label="Close dialog"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
         <div className="p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="p-3 bg-gray-50 rounded-xl">{getIntentIcon()}</div>
-            <div>
-              <h3 className="text-xl font-bold text-gray-900">{title}</h3>
-              <p className="text-gray-500 mt-1">{message}</p>
+          <div className="flex items-start gap-4 pr-8">
+            <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${config.iconClass}`}>
+              {config.icon}
+            </div>
+            <div className="min-w-0">
+              <h3 id="app-dialog-title" className="text-lg font-semibold leading-7 tracking-[-0.02em] text-[var(--ink)]">
+                {title}
+              </h3>
+              {message ? (
+                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-[var(--slate)]">
+                  {message}
+                </p>
+              ) : null}
             </div>
           </div>
 
-          <div className="flex gap-3 mt-8">
+          <div className="mt-7 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             {type === "confirm" && (
               <button
+                type="button"
                 onClick={() => onClose(false)}
-                className="flex-1 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-black/10 bg-white px-4 text-sm font-semibold text-[var(--ink)] shadow-sm transition hover:bg-black/[0.04] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 {cancelText}
               </button>
             )}
+
             <button
+              type="button"
               onClick={() => onClose(true)}
-              className={`flex-1 px-4 py-2.5 text-white font-semibold rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all shadow-md active:scale-[0.98] ${getButtonClass()}`}
+              className={`inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${config.confirmClass}`}
             >
               {confirmText}
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import crypto from 'crypto';
 import supabase from './supabase.js';
+import { importInstagramAccountToAutoDM } from './autodm.js';
 
 const GRAPH_VERSION = 'v21.0';
 
@@ -10,7 +11,9 @@ const INSTAGRAM_SCOPES = [
   'pages_show_list',
   'pages_read_engagement',
   'pages_manage_metadata',
+  'pages_messaging',
   'instagram_basic',
+  'instagram_manage_messages',
   'instagram_manage_insights',
   'instagram_content_publish'
 ];
@@ -158,7 +161,9 @@ class InstagramOAuthService {
       const mustHave = [
         'pages_show_list',
         'pages_read_engagement',
+        'pages_messaging',
         'instagram_basic',
+        'instagram_manage_messages',
         'instagram_content_publish'
       ];
 
@@ -167,10 +172,11 @@ class InstagramOAuthService {
       );
 
       if (missing.length) {
-        throw new Error(
-          `Missing required permissions: ${missing.join(', ')}. ` +
-            `Fix: Remove app from Facebook -> Settings -> Apps and Websites AND Business Integrations, then login again. ` +
-            `During consent, select your Page + IG account and continue.`
+        // Some Meta app/account combinations do not always echo all granted
+        // permissions here even though downstream Graph calls still succeed.
+        // Keep the flow alive and validate with real Graph fetches below.
+        console.warn(
+          `⚠️ IG: Permission probe reports missing scopes: ${missing.join(', ')}. Continuing with page/account fetch validation.`
         );
       }
 
@@ -237,7 +243,7 @@ class InstagramOAuthService {
       console.log('\n📄 Pages Count:', pages.length);
       if (!pages.length) {
         throw new Error(
-          'No Facebook Pages found for this token. Make sure you selected your Page during consent and try again.'
+          'No Facebook Pages found for this account. In Meta consent, select at least one Facebook Page and its linked Instagram Business account, then retry.'
         );
       }
 
@@ -249,7 +255,7 @@ class InstagramOAuthService {
 
       if (!pageWithIG) {
         throw new Error(
-          'No Instagram Business account connected to your Page. Please connect Instagram to your Facebook Page (Business/Creator account).'
+          'No linked Instagram Business/Creator account found on selected Facebook Pages. Link IG to a Facebook Page in Meta Business settings, then reconnect.'
         );
       }
 
@@ -307,6 +313,7 @@ class InstagramOAuthService {
         page_id: tokenData.pageId,
         account_id: tokenData.instagramBusinessId,
         username: tokenData.userInfo?.username,
+        profile_data: tokenData.userInfo,
         updated_at: new Date().toISOString()
       };
 
@@ -316,6 +323,23 @@ class InstagramOAuthService {
         .select();
 
       if (error) throw error;
+
+      // Automatically sync connected Instagram account to AutoDM
+      try {
+        console.log(`🔄 [AUTODM-SYNC] Automatically syncing Instagram connection to AutoDM for user ${userId}...`);
+        const { data: userRow } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+        const user = {
+          userId,
+          email: userRow?.email,
+          name: userRow?.name,
+          profilePicture: userRow?.profile_picture
+        };
+        await importInstagramAccountToAutoDM(user);
+        console.log(`✅ [AUTODM-SYNC] AutoDM sync successful for user ${userId}`);
+      } catch (syncErr) {
+        console.warn(`⚠️ [AUTODM-SYNC] AutoDM automatic sync failed (non-fatal):`, syncErr.message);
+      }
+
       return data;
     } catch (error) {
       console.error('❌ Error storing IG tokens:', error);
@@ -375,6 +399,22 @@ class InstagramOAuthService {
         })
         .eq('user_id', userId)
         .eq('provider', 'instagram');
+
+      // Automatically sync refreshed Instagram token to AutoDM
+      try {
+        console.log(`🔄 [AUTODM-SYNC] Automatically syncing refreshed Instagram token to AutoDM for user ${userId}...`);
+        const { data: userRow } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+        const user = {
+          userId,
+          email: userRow?.email,
+          name: userRow?.name,
+          profilePicture: userRow?.profile_picture
+        };
+        await importInstagramAccountToAutoDM(user);
+        console.log(`✅ [AUTODM-SYNC] AutoDM refresh sync successful for user ${userId}`);
+      } catch (syncErr) {
+        console.warn(`⚠️ [AUTODM-SYNC] AutoDM automatic refresh sync failed (non-fatal):`, syncErr.message);
+      }
 
       return {
         accessToken: refreshed.accessToken,

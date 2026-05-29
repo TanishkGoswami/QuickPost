@@ -121,6 +121,7 @@ class ThreadsOAuth {
         token_expiry: expiryDate.toISOString(),
         account_id: tokenData.threadsUserId,
         username: tokenData.userInfo?.username,
+        profile_data: tokenData.userInfo,
         updated_at: new Date().toISOString()
       };
 

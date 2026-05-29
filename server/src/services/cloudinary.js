@@ -27,7 +27,7 @@ const COMPRESS_THRESHOLD = 95 * 1024 * 1024;
  * Targets H.264 video at 4 Mbps + AAC audio at 128 kbps.
  * Returns the path to the compressed file (caller must delete it).
  */
-async function compressVideo(inputPath) {
+async function compressVideo(inputPath, onProgress) {
   const tmpOutput = path.join(os.tmpdir(), `qp_compressed_${Date.now()}.mp4`);
   console.log(`🗜️  Compressing video: ${inputPath} → ${tmpOutput}`);
 
@@ -45,7 +45,11 @@ async function compressVideo(inputPath) {
       .output(tmpOutput)
       .on('start', (cmd) => console.log(`🎬 FFmpeg started`))
       .on('progress', (p) => {
-        if (p.percent) process.stdout.write(`\r   ↳ Compressing… ${Math.round(p.percent)}%`);
+        if (p.percent) {
+          const pct = Math.round(p.percent);
+          if (onProgress) onProgress(pct);
+          process.stdout.write(`\r   ↳ Compressing… ${pct}%`);
+        }
       })
       .on('end', () => {
         process.stdout.write('\n');
@@ -69,7 +73,7 @@ async function compressVideo(inputPath) {
  * @param {string} resourceType - 'image' or 'video'
  * @returns {Promise<Object>} Cloudinary upload result with secure_url
  */
-export async function uploadToCloudinary(filePath, resourceType = 'auto') {
+export async function uploadToCloudinary(filePath, resourceType = 'auto', onProgress) {
   let uploadPath = filePath;
   let compressedTmp = null;
 
@@ -84,7 +88,9 @@ export async function uploadToCloudinary(filePath, resourceType = 'auto') {
 
       if (fileSizeBytes > COMPRESS_THRESHOLD) {
         console.log(`⚠️  File exceeds ${COMPRESS_THRESHOLD / 1024 / 1024} MB — compressing before upload...`);
-        compressedTmp = await compressVideo(filePath);
+        compressedTmp = await compressVideo(filePath, (pct) => {
+          if (onProgress) onProgress({ phase: 'compressing', percent: pct });
+        });
 
         const compressedSize = fs.statSync(compressedTmp).size;
         if (compressedSize > CLOUDINARY_MAX_BYTES) {

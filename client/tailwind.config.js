@@ -16,13 +16,42 @@ export default {
         signal:  '#CF4500',
         arc:     '#F37338',
         link:    '#3860BE',
+        background: '#FFFFFF',
+        foreground: '#141413',
+        popover: '#FFFFFF',
+        'popover-foreground': '#141413',
+        card: '#FFFFFF',
+        'card-foreground': '#141413',
+        primary: {
+          DEFAULT: '#141413',
+          foreground: '#F3F0EE',
+        },
+        secondary: {
+          DEFAULT: 'rgba(20,20,19,0.06)',
+          foreground: '#141413',
+        },
+        destructive: {
+          DEFAULT: '#dc2626',
+          foreground: '#ffffff',
+        },
+        muted: {
+          DEFAULT: 'rgba(20,20,19,0.06)',
+          foreground: '#696969',
+        },
+        input: 'rgba(20,20,19,0.12)',
+        ring: '#F37338',
         // Kept for semantic utility classes
         accent: {
+          DEFAULT: 'rgba(20,20,19,0.05)',
+          foreground: '#141413',
           success: '#22c55e',
           warning: '#F59E0B',
           error: '#EF4444',
           info: '#3860BE',
         },
+      },
+      fontFamily: {
+        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
       },
       animation: {
         'gradient': 'gradient 8s linear infinite',

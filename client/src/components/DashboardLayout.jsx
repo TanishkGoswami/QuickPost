@@ -12,6 +12,8 @@ const DashboardLayout = () => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const location = useLocation();
   const isTrendsPage = location.pathname.includes('/dashboard/trends');
+  const isAutoDMWorkspace = location.pathname.startsWith('/dashboard/auto-dm');
+  const showDashboardChrome = !isTrendsPage;
 
   useEffect(() => {
     const onResize = () => {
@@ -53,6 +55,10 @@ const DashboardLayout = () => {
     return <Navigate to="/login" replace />;
   }
 
+  if (!localStorage.getItem("qp_onboarding_done")) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   return (
     <div
       style={{
@@ -85,7 +91,7 @@ const DashboardLayout = () => {
         Skip to main content
       </a>
       {/* Mobile overlay */}
-      {!isDesktop && sidebarOpen && (
+      {showDashboardChrome && !isDesktop && sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
           style={{
@@ -99,7 +105,7 @@ const DashboardLayout = () => {
       )}
 
       {/* Sidebar — hidden on Trends page, fixed on desktop, drawer on mobile */}
-      {!isTrendsPage && (
+      {showDashboardChrome && (
         <div
           style={{
             position: "fixed",
@@ -123,7 +129,7 @@ const DashboardLayout = () => {
       <div
         style={{
           flex: 1,
-          marginLeft: isDesktop && !isTrendsPage ? 240 : 0,
+          marginLeft: isDesktop && showDashboardChrome ? 240 : 0,
           display: "flex",
           flexDirection: "column",
           minWidth: 0,

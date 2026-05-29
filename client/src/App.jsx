@@ -5,18 +5,20 @@
 
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { DialogProvider } from './context/DialogContext';
 import { UploadJobProvider } from './context/UploadJobContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import UploadManagerPanel from './components/UploadManagerPanel';
-import CookieConsent from './components/CookieConsent';
+import ComplianceBanner from './components/ComplianceBanner';
 import ContentProtection from './components/ContentProtection';
 import { useAuth } from './context/AuthContext';
 
 // ── Synchronous imports (auth-critical path) ──
 import AuthPage from './components/AuthPage';
 import AuthCallback from './components/AuthCallback';
+import SSOPage from './pages/SSOPage';
 import DashboardLayout from './components/DashboardLayout';
 import { NotFoundPage } from './components/ui/404-page-not-found';
 
@@ -31,6 +33,22 @@ const History        = lazy(() => import('./pages/History'));
 const ScheduledQueue = lazy(() => import('./pages/ScheduledQueue'));
 const AllTrendsPage  = lazy(() => import('./pages/trends/AllTrendsPage'));
 const Onboarding     = lazy(() => import('./components/Onboarding'));
+const BillingPage    = lazy(() => import('./pages/BillingPage'));
+const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
+const InstagramBots = lazy(() => import('./pages/InstagramBots'));
+const InstagramConnect = lazy(() => import('./pages/InstagramConnect'));
+const InstagramInbox = lazy(() => import('./pages/InstagramInbox'));
+
+// ── AutoDM workspace ──
+const AutoDMLayout             = lazy(() => import('./pages/auto-dm/AutoDMLayout'));
+const AutoDMHomePage           = lazy(() => import('./pages/auto-dm/AutoDMHomePage'));
+const AutoDMAutomationsPage    = lazy(() => import('./pages/auto-dm/AutoDMAutomationsPage'));
+const AutomationEditorPage     = lazy(() => import('./pages/auto-dm/AutomationEditorPage'));
+const AutoDMContactsPage       = lazy(() => import('./pages/auto-dm/AutoDMContactsPage'));
+const AutoDMInstagramProfilePage = lazy(() => import('./pages/auto-dm/AutoDMInstagramProfilePage'));
+const AutoDMSettingsPage       = lazy(() => import('./pages/auto-dm/AutoDMSettingsPage'));
+const ConnectInstagramPage     = lazy(() => import('./pages/connect/ConnectInstagramPage'));
+const ConnectSuccessPage       = lazy(() => import('./pages/connect/ConnectSuccessPage'));
 
 // ── Page loader ──
 const PageLoader = () => (
@@ -79,18 +97,37 @@ function AppContent() {
       />
 
       <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/social-sso"   element={<SSOPage />} />
       <Route
         path="/onboarding"
         element={isAuthenticated ? <Onboarding /> : <Navigate to="/login" replace />}
       />
+      <Route path="/connect" element={isAuthenticated ? <ConnectInstagramPage /> : <Navigate to="/login" replace />} />
+      <Route path="/connect/success" element={isAuthenticated ? <ConnectSuccessPage /> : <Navigate to="/login" replace />} />
 
       // Protected dashboard
-      <Route path="/dashboard" element={<DashboardLayout />}>
+        <Route path="/dashboard" element={<DashboardLayout />}>
         <Route index           element={<Dashboard />} />
         <Route path="compose"  element={<BroadcastForm />} />
         <Route path="history"  element={<History />} />
         <Route path="queue"    element={<ScheduledQueue />} />
         <Route path="trends"   element={<AllTrendsPage />} />
+        <Route path="billing"  element={<BillingPage />} />
+        <Route path="payment-success" element={<PaymentSuccessPage />} />
+        <Route path="instapilot" element={<InstagramBots />} />
+        <Route path="instapilot/connect" element={<InstagramConnect />} />
+        <Route path="instapilot/inbox" element={<InstagramInbox />} />
+
+        {/* AutoDM workspace — has its own full-screen layout */}
+        <Route path="auto-dm" element={<AutoDMLayout />}>
+          <Route index                       element={<AutoDMHomePage />} />
+          <Route path="automations"          element={<AutoDMAutomationsPage />} />
+          <Route path="automations/new"      element={<AutomationEditorPage />} />
+          <Route path="automations/:id"      element={<AutomationEditorPage />} />
+          <Route path="contacts"             element={<AutoDMContactsPage />} />
+          <Route path="instagram-profile"    element={<AutoDMInstagramProfilePage />} />
+          <Route path="settings"             element={<AutoDMSettingsPage />} />
+        </Route>
       </Route>
 
       // 404
@@ -109,8 +146,9 @@ function App() {
               <Suspense fallback={<PageLoader />}>
                 <AppContent />
               </Suspense>
+              <Toaster position="top-right" />
               <UploadManagerPanel />
-              <CookieConsent />
+              <ComplianceBanner />
               <ContentProtection />
             </BrowserRouter>
           </UploadJobProvider>

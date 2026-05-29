@@ -61,7 +61,12 @@ export default function AboutSection() {
               customVariants={revealVariants}
               style={{ marginBottom: 24 }}
             >
-              <div className="eyebrow" style={{ color: 'var(--arc)', justifyContent: 'flex-start' }}>Our Vision</div>
+              <div
+                className="eyebrow"
+                style={{ color: "var(--arc)", justifyContent: "flex-start" }}
+              >
+                Our Vision
+              </div>
             </TimelineContent>
 
             <TimelineContent

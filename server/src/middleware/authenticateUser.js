@@ -1,16 +1,28 @@
 import { createClient } from '@supabase/supabase-js';
 import { createOrUpdateUser } from '../services/supabase.js';
 
-// Use Supabase admin client to verify tokens correctly.
-// Supabase JWTs are signed with Supabase's own JWT secret, NOT process.env.JWT_SECRET.
-// The only safe way to verify them server-side is via supabase.auth.getUser().
+const supabaseUrl = process.env.SUPABASE_URL;
+let supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseKey || supabaseKey.startsWith('ROTATE_ME')) {
+  supabaseKey = process.env.SUPABASE_ANON_KEY;
+}
+
 const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY ||
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.SUPABASE_ANON_KEY,
+  supabaseUrl,
+  supabaseKey,
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
+
+function isUsableBearerToken(token) {
+  return (
+    typeof token === 'string' &&
+    token.trim() &&
+    token !== 'null' &&
+    token !== 'undefined' &&
+    token.split('.').length === 3
+  );
+}
 
 /**
  * Authentication middleware
@@ -29,7 +41,14 @@ export async function authenticateUser(req, res, next) {
       });
     }
 
-    const token = authHeader.substring(7);
+    const token = authHeader.substring(7).trim();
+    if (!isUsableBearerToken(token)) {
+      return res.status(401).json({
+        success: false,
+        error: 'Unauthorized',
+        message: 'No valid authentication token provided'
+      });
+    }
 
     // ✅ Verify token via Supabase — works regardless of which JWT secret Supabase uses
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
@@ -48,6 +67,7 @@ export async function authenticateUser(req, res, next) {
     // Build user info from Supabase user object
     const userInfo = {
       userId: user.id,
+      authUserId: user.id,
       email: user.email,
       name: user.user_metadata?.full_name || user.email?.split('@')[0],
       profilePicture: user.user_metadata?.avatar_url || null

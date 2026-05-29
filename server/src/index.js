@@ -6,10 +6,14 @@ import 'dotenv/config'; // Load variables before other imports
 
 import broadcastRouter from './routes/broadcast.js';
 import authRouter from './routes/auth.js';
+import ssoRouter from './routes/sso.js';
 import broadcastsRouter from './routes/broadcasts.js';
 import onboardingRouter from './routes/onboarding.js';
 import jobsRouter from './routes/jobs.js';
 import trendsRouter from './routes/trends.js';
+import aiRouter from './routes/ai.js';
+import instapilotRouter from './routes/instapilot.js';
+import autodmRouter from './routes/autodm.js';
 import { initScheduler } from './services/scheduler.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,6 +30,10 @@ const allowedOrigins = [
   'http://127.0.0.1:5173',
   'https://social.getaipilot.in',
   'https://api.getaipilot.in',
+  'https://getaipilot.in',
+  'https://getaipilot.com',
+  'https://www.getaipilot.in',
+  'https://www.getaipilot.com',
   /https:\/\/.*\.ngrok-free\.dev$/
 ];
 
@@ -47,7 +55,14 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: '100mb' }));
+app.use(express.json({
+  limit: '100mb',
+  verify: (req, res, buf) => {
+    if (req.originalUrl?.includes('/webhooks/instagram')) {
+      req.rawBody = Buffer.from(buf);
+    }
+  },
+}));
 
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
@@ -56,11 +71,15 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/auth', authRouter);
+app.use('/api/auth', ssoRouter);
 app.use('/api', broadcastRouter);
 app.use('/api', broadcastsRouter);
 app.use('/api', onboardingRouter);
 app.use('/api', jobsRouter);
 app.use('/api', trendsRouter);
+app.use('/api/ai', aiRouter);
+app.use('/api/instapilot', instapilotRouter);
+app.use('/api/autodm', autodmRouter);
 
 // Root endpoint
 app.get('/', (req, res) => {

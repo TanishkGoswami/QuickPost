@@ -1,0 +1,401 @@
+import { useEffect, useMemo, useState } from "react";
+import { Bot, Check, ChevronDown, Info, Instagram, Languages, MessageCircle, Power, Save, SlidersHorizontal, Store } from "lucide-react";
+import toast from "react-hot-toast";
+import { Button } from "@/components/ui/button";
+import { createInstagramBot, updateInstagramBot } from "@/services/instagramApi";
+
+const tones = ["friendly", "professional", "casual", "luxury", "sales-focused"];
+const languages = ["auto-detect", "English", "Hindi", "Hinglish"];
+const goals = ["support", "sales", "course info", "booking", "product FAQ"];
+
+const defaultForm = {
+  bot_name: "InstaPilot Assistant",
+  business_name: "",
+  tone: "friendly",
+  language: "auto-detect",
+  bot_goal: "support",
+  fallback_message: "I am not fully sure about that. Our team will help you shortly.",
+  welcome_message: "Hi! Welcome to {{business_name}}. How can I help you today?",
+  quick_replies: ["Pricing", "Services", "Book a Call", "Talk to Human"],
+  handoff_keywords: ["human", "agent", "call me", "support"],
+  lead_fields: ["name", "phone", "email", "requirement"],
+  confidence_threshold: 0.68,
+  daily_reply_limit: 250,
+  is_active: false,
+  human_handoff_enabled: true,
+};
+
+export default function BotBuilderForm({
+  accounts,
+  selectedBot,
+  onSaved,
+}: {
+  accounts: any[];
+  selectedBot?: any;
+  onSaved: (bot?: any) => void;
+}) {
+  const [form, setForm] = useState<any>(() => selectedBot || { ...defaultForm, instagram_account_id: accounts[0]?.id || "" });
+  const [saving, setSaving] = useState(false);
+
+  const activeAccountOptions = useMemo(() => accounts.filter((account) => account.is_connected), [accounts]);
+
+  const setField = (key: string, value: unknown) => setForm((current: any) => ({ ...current, [key]: value }));
+
+  useEffect(() => {
+    if (!form.id && !form.instagram_account_id && activeAccountOptions[0]?.id) {
+      setField("instagram_account_id", activeAccountOptions[0].id);
+    }
+  }, [activeAccountOptions, form.id, form.instagram_account_id]);
+
+  const save = async () => {
+    if (!form.instagram_account_id) {
+      toast.error("Instagram account is syncing. Please wait a moment or connect Instagram.");
+      return;
+    }
+    if (!form.business_name?.trim()) {
+      toast.error("Add your business name first.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const savedBot = form.id
+        ? await updateInstagramBot(form.id, form)
+        : await createInstagramBot(form);
+      toast.success("Bot saved. Knowledge base is unlocked.");
+      onSaved(savedBot);
+      if (!form.id && savedBot) setForm(savedBot);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || err.message || "Failed to save bot");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className="overflow-hidden rounded-lg border border-black/10 bg-white shadow-sm">
+      <div className="border-b border-black/10 bg-[#fffaf7] p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-[var(--arc)]">
+              <Bot className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--arc)]">Bot Builder</p>
+              <h2 className="mt-1 text-2xl font-semibold tracking-[-0.02em] text-[var(--ink)]">
+                {form.id ? "Edit AI bot" : "Create AI bot"}
+              </h2>
+              <p className="mt-1 text-sm text-[var(--slate)]">Configure identity, response behavior, lead capture, and safety defaults.</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`rounded-md px-3 py-2 text-xs font-black uppercase tracking-[0.14em] ${form.is_active ? "bg-emerald-100 text-emerald-800" : "bg-black/5 text-[var(--slate)]"}`}>
+              {form.is_active ? "Active" : "Draft"}
+            </span>
+            <Button
+              type="button"
+              onClick={save}
+              disabled={saving || !activeAccountOptions.length}
+              className="gap-2 bg-[var(--arc)] text-white hover:bg-[#d95f27]"
+            >
+              <Save className="h-4 w-4" />
+              {saving ? "Saving..." : form.id ? "Save Bot" : "Save & Unlock Knowledge"}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {!activeAccountOptions.length ? (
+        <div className="m-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          Connect and import an Instagram Professional account before saving a bot.
+        </div>
+      ) : null}
+
+      <div className="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-6">
+          <div>
+            <SectionTitle icon={<Store className="h-4 w-4" />} title="Business Identity" />
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <Field label="Instagram account">
+                <AccountSelect
+                  accounts={activeAccountOptions}
+                  value={form.instagram_account_id || ""}
+                  onChange={(value) => setField("instagram_account_id", value)}
+                />
+              </Field>
+              <Field label="Bot name">
+                <input value={form.bot_name || ""} onChange={(e) => setField("bot_name", e.target.value)} className="instapilot-input" />
+              </Field>
+              <Field label="Business name">
+                <input value={form.business_name || ""} onChange={(e) => setField("business_name", e.target.value)} className="instapilot-input" placeholder="Your brand or store" />
+              </Field>
+              <Field label="Bot purpose">
+                <Segmented options={goals} value={form.bot_goal} onChange={(value) => setField("bot_goal", value)} />
+              </Field>
+            </div>
+          </div>
+
+          <div>
+            <SectionTitle icon={<Languages className="h-4 w-4" />} title="Conversation Style" />
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              <Field label="Tone">
+                <Segmented options={tones} value={form.tone} onChange={(value) => setField("tone", value)} />
+              </Field>
+              <Field label="Language">
+                <Segmented options={languages} value={form.language} onChange={(value) => setField("language", value)} />
+              </Field>
+              <Field label="Welcome message">
+                <textarea value={form.welcome_message || ""} onChange={(e) => setField("welcome_message", e.target.value)} rows={4} className="instapilot-input" />
+              </Field>
+              <Field label="Fallback message">
+                <textarea value={form.fallback_message || ""} onChange={(e) => setField("fallback_message", e.target.value)} rows={4} className="instapilot-input" />
+              </Field>
+            </div>
+          </div>
+
+          <div>
+            <SectionTitle icon={<MessageCircle className="h-4 w-4" />} title="Automation Rules" />
+            <div className="mt-4 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+              <Field label="Quick replies">
+                <TagInput value={form.quick_replies || []} onChange={(value) => setField("quick_replies", value)} />
+              </Field>
+              <Field label="Human handoff keywords">
+                <TagInput value={form.handoff_keywords || []} onChange={(value) => setField("handoff_keywords", value)} />
+              </Field>
+              <Field label="Lead fields">
+                <TagInput value={form.lead_fields || []} onChange={(value) => setField("lead_fields", value)} />
+              </Field>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3 rounded-lg border border-black/10 bg-[#fbfaf8] p-4">
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--arc)]">Safety Controls</p>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-1">
+            <ToggleRow
+              icon={<Power className="h-4 w-4" />}
+              title="Bot active"
+              description="Allow automatic replies for inbound DMs. Only one bot can be active per Instagram account."
+              help="When you activate this bot, any other live bot on the same Instagram account is automatically moved to draft."
+              checked={Boolean(form.is_active)}
+              onChange={(value) => setField("is_active", value)}
+            />
+            <ToggleRow
+              icon={<Check className="h-4 w-4" />}
+              title="Human handoff"
+              description="Pause automation for risky or low-confidence chats."
+              help="Keeps the user safe when payment, refund, complaint, legal, or uncertain questions need a person."
+              checked={form.human_handoff_enabled !== false}
+              onChange={(value) => setField("human_handoff_enabled", value)}
+            />
+          </div>
+          <div className="rounded-lg border border-black/10 bg-white p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]">
+              <SlidersHorizontal className="h-4 w-4" />
+              Confidence threshold
+              <InfoHint text="Higher value means the bot hands off to a human more often. Lower value means it replies more often." />
+            </div>
+            <div className="mt-3 flex items-center gap-3">
+              <input type="range" min="0.3" max="0.95" step="0.01" value={form.confidence_threshold || 0.68} onChange={(e) => setField("confidence_threshold", Number(e.target.value))} className="flex-1 accent-[var(--arc)]" />
+              <input type="number" min="0.3" max="0.95" step="0.01" value={form.confidence_threshold || 0.68} onChange={(e) => setField("confidence_threshold", Number(e.target.value))} className="w-20 rounded-md border border-black/10 px-2 py-2 text-sm" />
+            </div>
+          </div>
+          <div className="rounded-lg border border-black/10 bg-white p-4 text-sm leading-6 text-[var(--slate)]">
+            Replies stay short, use only your knowledge base, and move to human support when the answer is uncertain.
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-[11px] font-black uppercase tracking-[0.08em] text-[var(--slate)]">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function AccountSelect({
+  accounts,
+  value,
+  onChange,
+}: {
+  accounts: any[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = accounts.find((account) => account.id === value);
+
+  if (!accounts.length) {
+    return (
+      <div className="flex min-h-[52px] items-center gap-3 rounded-lg border border-dashed border-black/20 bg-[#f8f6f3] px-4 text-sm text-[var(--slate)]">
+        <Instagram className="h-4 w-4 text-[var(--arc)]" />
+        Auto-syncing from Social Pilot...
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        onBlur={() => window.setTimeout(() => setOpen(false), 140)}
+        className="flex min-h-[52px] w-full items-center justify-between gap-3 rounded-lg border border-black/10 bg-white px-4 text-left text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition hover:border-black/20 focus:border-[var(--arc)] focus:outline-none focus:ring-4 focus:ring-orange-500/10"
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <AccountAvatar account={selected} selected />
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-[var(--ink)]">
+              {selected ? `@${selected.instagram_username || selected.instagram_business_account_id}` : "Select account"}
+            </span>
+            <span className="block truncate text-xs text-[var(--slate)]">
+              {selected?.page_name || "Instagram Professional account"}
+            </span>
+          </span>
+        </span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-[var(--slate)] transition ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open ? (
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-40 overflow-hidden rounded-lg border border-black/10 bg-white p-1 shadow-xl">
+          {accounts.map((account) => {
+            const isSelected = account.id === value;
+            return (
+              <button
+                type="button"
+                key={account.id}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  onChange(account.id);
+                  setOpen(false);
+                }}
+                className={`flex w-full items-center gap-3 rounded-md px-3 py-3 text-left text-sm transition ${
+                  isSelected ? "bg-orange-50 text-[var(--ink)]" : "text-[var(--ink)] hover:bg-[#f8f6f3]"
+                }`}
+              >
+                <AccountAvatar account={account} selected={isSelected} />
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold">
+                    @{account.instagram_username || account.instagram_business_account_id}
+                  </span>
+                  <span className="block truncate text-xs text-[var(--slate)]">
+                    {account.page_name || account.page_id || "Connected via Social Pilot"}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function AccountAvatar({ account, selected = false }: { account?: any; selected?: boolean }) {
+  const [failed, setFailed] = useState(false);
+  const src = account?.profile_picture_url;
+
+  return (
+    <span
+      className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full ${
+        selected ? "bg-orange-50 text-[var(--arc)]" : "bg-[#f1eee9] text-[var(--arc)]"
+      }`}
+    >
+      {src && !failed ? (
+        <img
+          src={src}
+          alt=""
+          className="h-full w-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <Instagram className="h-4 w-4" />
+      )}
+    </span>
+  );
+}
+
+function SectionTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
+  return (
+    <div className="flex items-center gap-2 border-b border-black/10 pb-3 text-sm font-semibold text-[var(--ink)]">
+      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#f1eee9] text-[var(--arc)]">{icon}</span>
+      {title}
+    </div>
+  );
+}
+
+function Segmented({ options, value, onChange }: { options: string[]; value: string; onChange: (value: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((option) => (
+        <button
+          type="button"
+          key={option}
+          onClick={() => onChange(option)}
+          className={`rounded-md border px-3 py-2 text-sm font-semibold transition ${
+            value === option ? "border-orange-300 bg-orange-50 text-[var(--ink)] shadow-sm" : "border-black/10 bg-[#f8f6f3] text-[var(--slate)] hover:border-black/20 hover:bg-white hover:text-[var(--ink)]"
+          }`}
+        >
+          {option}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ToggleRow({
+  icon,
+  title,
+  description,
+  help,
+  checked,
+  onChange,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  help?: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-start justify-between gap-3 rounded-lg border border-black/10 bg-white p-4">
+      <span className="flex gap-3">
+        <span className="mt-0.5 text-[var(--arc)]">{icon}</span>
+        <span>
+          <span className="flex items-center gap-1.5 text-sm font-semibold text-[var(--ink)]">
+            {title}
+            {help ? <InfoHint text={help} /> : null}
+          </span>
+          <span className="mt-1 block text-xs leading-5 text-[var(--slate)]">{description}</span>
+        </span>
+      </span>
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="mt-1 h-4 w-4 accent-[var(--arc)]" />
+    </label>
+  );
+}
+
+function InfoHint({ text }: { text: string }) {
+  return (
+    <Info
+      className="h-3.5 w-3.5 shrink-0 cursor-help text-[var(--slate)]"
+      aria-label={text}
+      title={text}
+    />
+  );
+}
+
+function TagInput({ value, onChange }: { value: string[]; onChange: (value: string[]) => void }) {
+  return (
+    <input
+      value={value.join(", ")}
+      onChange={(event) => onChange(event.target.value.split(",").map((item) => item.trim()).filter(Boolean))}
+      className="instapilot-input"
+      placeholder="Comma separated"
+    />
+  );
+}

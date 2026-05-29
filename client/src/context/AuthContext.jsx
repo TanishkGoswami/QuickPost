@@ -11,6 +11,16 @@ import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
 
+// ── Secure Server-Side Sync ──────────────────────────────────────────────────
+// Disabling browser-side sync to prevent CORS errors and protect sensitive env vars
+// (VITE_SOCIAL_SYNC_SECRET) from being exposed in production.
+// The Express backend server already handles this securely on the server-to-server layer.
+async function syncUserToHub(sessionUser) {
+  console.info("[HUB-SYNC] Skipping browser-side hub sync (handled securely by backend)");
+  return;
+}
+
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
@@ -46,20 +56,106 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const fetchUserProfile = useCallback(async (sessionUser) => {
+    try {
+      // Step 1: Check local users table
+      const { data: localUser } = await supabase
+        .from('users')
+        .select('plan, subscription_status')
+        .eq('id', sessionUser.id)
+        .maybeSingle();
+
+      // Step 2: Check hub_subscriptions by EMAIL (hub purchases + social purchases after verify-subscription)
+      const { data: hubSub } = await supabase
+        .from('hub_subscriptions')
+        .select('plan, plan_id, subscription_status')
+        .eq('email', sessionUser.email)
+        .maybeSingle();
+
+      // Priority: hub_subscriptions > local users table > auth user_metadata
+      let resolvedPlan   = hubSub?.plan
+        || localUser?.plan
+        || sessionUser.user_metadata?.plan   // ← set by verify-subscription immediately after payment
+        || 'Free';
+      let resolvedStatus = hubSub?.subscription_status
+        || localUser?.subscription_status
+        || sessionUser.user_metadata?.subscription_status
+        || 'active';
+
+      // Normalise — if somehow "Pro"/"Enterprise" slipped through from old code, map to new names
+      if (resolvedPlan === 'Pro' || resolvedPlan === 'pro') resolvedPlan = 'Social Pilot';
+      if (resolvedPlan === 'Enterprise' || resolvedPlan === 'enterprise') resolvedPlan = 'GAP Ultimate Ecosystem';
+
+      if (resolvedPlan !== 'Free') {
+        console.log('✅ [AUTH] Plan resolved:', resolvedPlan);
+
+        // Write back to hub_subscriptions if not already there
+        if (!hubSub && sessionUser.email) {
+          const { error: hubUpsertErr } = await supabase
+            .from('hub_subscriptions')
+            .upsert({ email: sessionUser.email, plan: resolvedPlan, subscription_status: resolvedStatus, updated_at: new Date().toISOString(), synced_at: new Date().toISOString() }, { onConflict: 'email' });
+          if (hubUpsertErr) console.warn('[AUTH] hub_subscriptions upsert skipped (table may not exist in this project):', hubUpsertErr.message);
+        }
+      }
+
+      setUser(prev => prev ? {
+        ...prev,
+        plan: resolvedPlan,
+        subscription_status: resolvedStatus,
+      } : null);
+
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      setUser(prev => prev ? {
+        ...prev,
+        plan: 'Free',
+        subscription_status: 'active',
+      } : null);
+    }
+  }, []);
+
+
   useEffect(() => {
+    // ── Stale Session Prevention ─────────────────────────────────────────────
+    // If the Supabase URL has changed (e.g. unified to a new instance), clear 
+    // old local storage auth keys to prevent "Invalid Refresh Token" loops.
+    const currentSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const storedSupabaseUrl = localStorage.getItem("last_supabase_url");
+    
+    if (storedSupabaseUrl && storedSupabaseUrl !== currentSupabaseUrl) {
+      console.warn("🔄 [AUTH] Supabase URL changed. Clearing stale session tokens...");
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith("sb-") || key.includes("supabase") || key.includes("token")) {
+          localStorage.removeItem(key);
+        }
+      });
+      localStorage.setItem("last_supabase_url", currentSupabaseUrl);
+      window.location.reload();
+      return;
+    } else if (!storedSupabaseUrl) {
+      localStorage.setItem("last_supabase_url", currentSupabaseUrl);
+    }
+
     // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
-        setUser({
+        const userData = {
           userId: session.user.id,
           email: session.user.email,
           name:
             session.user.user_metadata?.full_name ||
             session.user.email?.split("@")[0],
-        });
+          plan: session.user.user_metadata?.plan || 'Free',
+          subscription_status: session.user.user_metadata?.subscription_status || 'active',
+          picture: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
+        };
+        setUser(userData);
         localStorage.setItem("quickpost_token", session.access_token);
         fetchConnectedAccounts();
+        fetchUserProfile(session.user);
+      } else {
+        localStorage.removeItem("quickpost_token");
       }
       setLoading(false);
     });
@@ -70,15 +166,25 @@ export function AuthProvider({ children }) {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) {
-        setUser({
+        const userData = {
           userId: session.user.id,
           email: session.user.email,
           name:
             session.user.user_metadata?.full_name ||
             session.user.email?.split("@")[0],
-        });
+          plan: session.user.user_metadata?.plan || 'Free',
+          subscription_status: session.user.user_metadata?.subscription_status || 'active',
+          picture: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
+        };
+        setUser(userData);
         localStorage.setItem("quickpost_token", session.access_token);
         fetchConnectedAccounts();
+        fetchUserProfile(session.user);
+
+        // Sync to hub — only on SIGNED_IN event to avoid spamming on every token refresh
+        if (_event === "SIGNED_IN" || _event === "USER_UPDATED") {
+          syncUserToHub(session.user);
+        }
       } else {
         setUser(null);
         localStorage.removeItem("quickpost_token");
@@ -100,7 +206,7 @@ export function AuthProvider({ children }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchConnectedAccounts]);
+  }, [fetchConnectedAccounts, fetchUserProfile]);
 
   const login = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -129,7 +235,7 @@ export function AuthProvider({ children }) {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: window.location.origin + "/login",
       },
     });
     if (error) throw error;
@@ -144,6 +250,19 @@ export function AuthProvider({ children }) {
     await fetchConnectedAccounts();
   }, [fetchConnectedAccounts]);
 
+  // Call this after payment to immediately reflect new plan in UI
+  const refreshProfile = useCallback(async () => {
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    if (currentSession?.user) {
+      // Force refresh the session to get latest user_metadata
+      await supabase.auth.refreshSession();
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      if (freshSession?.user) {
+        await fetchUserProfile(freshSession.user);
+      }
+    }
+  }, [fetchUserProfile]);
+
   const value = useMemo(
     () => ({
       user,
@@ -155,9 +274,10 @@ export function AuthProvider({ children }) {
       googleSignIn,
       logout,
       refreshAccounts,
+      refreshProfile,
       isAuthenticated: !!user,
     }),
-    [user, session, connectedAccounts, loading, refreshAccounts],
+    [user, session, connectedAccounts, loading, refreshAccounts, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

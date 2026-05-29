@@ -25,7 +25,7 @@ const LazyImage = memo(function LazyImage({ src, alt = "", style = {} }) {
       {!ok && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,rgba(255,255,255,0.04) 25%,rgba(255,255,255,0.09) 50%,rgba(255,255,255,0.04) 75%)", backgroundSize: "400% 100%", animation: "shimmer 1.5s ease-in-out infinite" }} />}
       <img src={err ? fb : src} alt={alt} loading="lazy" decoding="async"
         onLoad={() => setOk(true)} onError={() => { setErr(true); setOk(true); }}
-        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", opacity: ok ? 1 : 0, transform: ok ? "scale(1)" : "scale(1.05)", transition: "opacity 0.4s ease, transform 0.5s ease" }} />
+        style={{ width: "100%", height: "auto", display: "block", opacity: ok ? 1 : 0, transform: ok ? "scale(1)" : "scale(1.05)", transition: "opacity 0.4s ease, transform 0.5s ease" }} />
       <style>{`@keyframes shimmer{0%{background-position:100% 50%}100%{background-position:-100% 50%}}`}</style>
     </div>
   );
@@ -84,7 +84,7 @@ const MemeCard = memo(function MemeCard({ meme, index, onUseIdea, saved = false,
         <div style={{ position: "relative" }}>
           {isVideo && videoUrl
             ? <video src={videoUrl} poster={image} autoPlay muted loop playsInline style={{ width: "100%", display: "block", maxHeight: 320, objectFit: "cover" }} />
-            : <LazyImage src={image} alt={title || "Trending"} style={{ height: "auto", minHeight: 140, maxHeight: 360, width: "100%" }} />
+            : <LazyImage src={image} alt={title || "Trending"} style={{ height: "auto", minHeight: 140, width: "100%" }} />
           }
           <div style={{ position: "absolute", top: 10, left: 10 }}>
             <span style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", background: "rgba(20,20,19,0.72)", backdropFilter: "blur(8px)", borderRadius: 99, fontSize: 9, fontWeight: 900, color: "#f37338", textTransform: "uppercase", letterSpacing: "0.06em" }}>

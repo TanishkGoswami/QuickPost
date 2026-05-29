@@ -19,8 +19,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const apiTarget = env.VITE_API_URL || 'http://localhost:5000';
   const isDev = mode === 'development';
+  const apiTarget = isDev
+    ? (env.VITE_DEV_API_URL || 'http://localhost:5000')
+    : (env.VITE_API_URL || 'http://localhost:5000');
 
   return {
     plugins: [react()],
@@ -36,6 +38,9 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: apiTarget,
           changeOrigin: true,
+          secure: false, // Prevents issues with self-signed or proxy SSL certs
+          timeout: 300000, // 5 minutes
+          proxyTimeout: 300000,
           headers: {
             'ngrok-skip-browser-warning': 'true',
           },

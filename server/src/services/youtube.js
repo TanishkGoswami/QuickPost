@@ -11,7 +11,15 @@ dotenv.config();
  * @param {Object} tokens - YouTube tokens object
  * @returns {Object} Result with video ID and URL
  */
-export async function postToYouTube(videoPath, caption, tokens) {
+/**
+ * Post video to YouTube Shorts
+ * @param {string} videoPath - Local path to video file
+ * @param {string} caption - Video title/description
+ * @param {Object} tokens - YouTube tokens object
+ * @param {Function} onProgress - Optional callback for upload progress (0-100)
+ * @returns {Object} Result with video ID and URL
+ */
+export async function postToYouTube(videoPath, caption, tokens, onProgress) {
   try {
     if (!tokens || !tokens.accessToken) {
       throw new Error('Missing YouTube credentials');
@@ -43,6 +51,9 @@ export async function postToYouTube(videoPath, caption, tokens) {
 
     console.log('Uploading video to YouTube...');
 
+    // Get file size for progress tracking
+    const fileSize = fs.statSync(videoPath).size;
+
     // Upload video
     const response = await youtube.videos.insert({
       part: ['snippet', 'status'],
@@ -60,6 +71,14 @@ export async function postToYouTube(videoPath, caption, tokens) {
       },
       media: {
         body: fs.createReadStream(videoPath)
+      }
+    }, {
+      // Axios-style progress tracking provided by googleapis
+      onUploadProgress: (evt) => {
+        if (onProgress && fileSize > 0) {
+          const percent = Math.round((evt.bytesRead / fileSize) * 100);
+          onProgress(percent);
+        }
       }
     });
 

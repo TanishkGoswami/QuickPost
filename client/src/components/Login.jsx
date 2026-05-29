@@ -66,9 +66,12 @@ function Login() {
           left: '50%',
           transform: 'translateX(-50%)',
           whiteSpace: 'nowrap',
-          fontSize: 'clamp(72px, 10vw, 140px)',
+          fontFamily: 'var(--font-logo)',
+          letterSpacing: '-0.04em',
+          fontWeight: 800,
           userSelect: 'none',
           pointerEvents: 'none',
+          opacity: 0.04
         }}
       >
         GAP Social‑pilot

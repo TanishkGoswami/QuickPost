@@ -128,6 +128,8 @@ class PinterestOAuth {
           access_token: tokenData.accessToken,
           refresh_token: tokenData.refreshToken,
           pinterest_board_id: tokenData.boardId,
+          username: tokenData.userInfo?.username,
+          profile_data: tokenData.userInfo,
           expires_at: null, // Pinterest tokens don't expire
           updated_at: new Date().toISOString()
         }, {

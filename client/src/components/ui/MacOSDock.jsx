@@ -23,7 +23,7 @@ const MacOSDock = ({
   // Responsive size calculations based on viewport
   const getResponsiveConfig = useCallback(() => {
     if (typeof window === 'undefined') {
-      return { baseIconSize: 64, maxScale: 1.6, effectWidth: 240 };
+      return { baseIconSize: 64, maxScale: 1.6, effectWidth: 240, isMobile: false };
     }
 
     const smallerDimension = Math.min(window.innerWidth, window.innerHeight);
@@ -32,31 +32,35 @@ const MacOSDock = ({
       return {
         baseIconSize: Math.max(36, smallerDimension * 0.08),
         maxScale: 1.4,
-        effectWidth: smallerDimension * 0.4
+        effectWidth: smallerDimension * 0.4,
+        isMobile: true
       };
     } else if (smallerDimension < 768) {
       return {
         baseIconSize: Math.max(42, smallerDimension * 0.07),
         maxScale: 1.5,
-        effectWidth: smallerDimension * 0.35
+        effectWidth: smallerDimension * 0.35,
+        isMobile: true
       };
     } else if (smallerDimension < 1024) {
       return {
         baseIconSize: Math.max(48, smallerDimension * 0.06),
         maxScale: 1.6,
-        effectWidth: smallerDimension * 0.3
+        effectWidth: smallerDimension * 0.3,
+        isMobile: false
       };
     } else {
       return {
         baseIconSize: 52, // Increased base size
         maxScale: 1.8,
-        effectWidth: 360  // More width for the effect
+        effectWidth: 360,  // More width for the effect
+        isMobile: false
       };
     }
   }, []);
 
   const [config, setConfig] = useState(getResponsiveConfig);
-  const { baseIconSize, maxScale, effectWidth } = config;
+  const { baseIconSize, maxScale, effectWidth, isMobile } = config;
   const minScale = 1.0;
   const baseSpacing = 14; // Increased gap between icons
 
@@ -67,7 +71,7 @@ const MacOSDock = ({
   }, [getResponsiveConfig]);
 
   const calculateTargetMagnification = useCallback((mousePosition) => {
-    if (mousePosition === null) return apps.map(() => minScale);
+    if (mousePosition === null || isMobile) return apps.map(() => minScale);
 
     return apps.map((_, index) => {
       const normalIconCenter = (index * (baseIconSize + baseSpacing)) + (baseIconSize / 2);
@@ -82,7 +86,7 @@ const MacOSDock = ({
       
       return minScale + (scaleFactor * (maxScale - minScale));
     });
-  }, [apps, baseIconSize, baseSpacing, effectWidth, maxScale, minScale]);
+  }, [apps, baseIconSize, baseSpacing, effectWidth, maxScale, minScale, isMobile]);
 
   const calculatePositions = useCallback((scales) => {
     let currentX = 0;
@@ -132,7 +136,37 @@ const MacOSDock = ({
     };
   }, [animateToTarget]);
 
+  // Mobile auto-scroll logic
+  const [isInteracting, setIsInteracting] = useState(false);
+  const scrollDirectionRef = useRef(1);
+
+  useEffect(() => {
+    if (!isMobile || !dockRef.current) return;
+    
+    let animationId;
+    
+    const autoScroll = () => {
+      const container = dockRef.current;
+      if (container && !isInteracting) {
+        container.scrollLeft += scrollDirectionRef.current * 0.6; // Speed adjustment
+        
+        // Reverse direction at bounds
+        if (container.scrollLeft >= container.scrollWidth - container.clientWidth - 1) {
+          scrollDirectionRef.current = -1;
+        } else if (container.scrollLeft <= 0) {
+          scrollDirectionRef.current = 1;
+        }
+      }
+      animationId = requestAnimationFrame(autoScroll);
+    };
+    
+    animationId = requestAnimationFrame(autoScroll);
+    
+    return () => cancelAnimationFrame(animationId);
+  }, [isMobile, isInteracting]);
+
   const handleMouseMove = useCallback((e) => {
+    if (isMobile) return;
     const now = performance.now();
     if (now - lastMouseMoveTime.current < 16) return;
     lastMouseMoveTime.current = now;
@@ -142,9 +176,12 @@ const MacOSDock = ({
       const padding = Math.max(8, baseIconSize * 0.12);
       setMouseX(e.clientX - rect.left - padding);
     }
-  }, [baseIconSize]);
+  }, [baseIconSize, isMobile]);
 
-  const handleMouseLeave = useCallback(() => setMouseX(null), []);
+  const handleMouseLeave = useCallback(() => {
+    if (isMobile) return;
+    setMouseX(null);
+  }, [isMobile]);
 
   const handleAppClick = (appId, index) => {
     if (iconRefs.current[index]) {
@@ -166,27 +203,32 @@ const MacOSDock = ({
   return (
     <div 
       ref={dockRef}
-      className={`backdrop-blur-xl ${className}`}
+      className={`backdrop-blur-xl hide-scrollbar ${className}`}
       style={{
-        width: `${contentWidth + padding * 2}px`,
+        width: isMobile ? '100%' : `${contentWidth + padding * 2}px`,
+        maxWidth: `${contentWidth + padding * 2}px`,
+        overflowX: isMobile ? 'auto' : 'visible',
         background: 'rgba(255, 255, 255, 0.08)',
         borderRadius: `${Math.max(16, baseIconSize * 0.5)}px`,
         border: '1px solid rgba(255, 255, 255, 0.1)',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.1)',
         padding: `${padding}px`,
         display: 'flex',
-        justifyContent: 'center',
+        justifyContent: isMobile ? 'flex-start' : 'center',
         margin: '0 auto',
         transition: 'background 0.3s'
       }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
+      onTouchStart={() => setIsInteracting(true)}
+      onTouchEnd={() => setIsInteracting(false)}
     >
       <div 
         className="relative"
         style={{
           height: `${baseIconSize}px`,
-          width: `${contentWidth}px`
+          width: `${contentWidth}px`,
+          flexShrink: 0
         }}
       >
         {apps.map((app, index) => {
