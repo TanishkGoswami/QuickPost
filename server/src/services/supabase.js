@@ -219,6 +219,35 @@ export async function getUserByEmail(email) {
 }
 
 /**
+ * Get user by ID (UUID).
+ * Returns a user object compatible with createOrUpdateComposerAutomation.
+ * @param {string} userId
+ * @returns {{ userId, authUserId, email, name, profilePicture } | null}
+ */
+export async function getUserById(userId) {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, email, name, profile_picture')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) {
+    console.warn(`⚠️ [SUPABASE] getUserById(${userId}) failed:`, error.message);
+    return null;
+  }
+
+  if (!data) return null;
+
+  return {
+    userId: data.id,
+    authUserId: data.id,
+    email: data.email || null,
+    name: data.name || null,
+    profilePicture: data.profile_picture || null,
+  };
+}
+
+/**
  * Create or update user
  * @param {string} email
  * @param {string} name

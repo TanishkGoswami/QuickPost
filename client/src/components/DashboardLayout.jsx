@@ -138,14 +138,12 @@ const DashboardLayout = () => {
         }}
       >
         {/* Header — passes mobile toggle */}
-        {!isTrendsPage && (
-          <Header
-            onMenuClick={() => setSidebarOpen((o) => !o)}
-            sidebarOpen={sidebarOpen}
-            isDesktop={isDesktop}
-            isTrendsPage={isTrendsPage}
-          />
-        )}
+        <Header
+          onMenuClick={() => setSidebarOpen((o) => !o)}
+          sidebarOpen={sidebarOpen}
+          isDesktop={isDesktop}
+          isTrendsPage={isTrendsPage}
+        />
 
         {/* Page content below header */}
         <main
@@ -153,7 +151,7 @@ const DashboardLayout = () => {
           className="custom-scrollbar"
           style={{
             flex: 1,
-            marginTop: isTrendsPage ? 0 : 56,
+            marginTop: 56,
             overflowY: "auto",
             overflowX: "hidden",
             padding: 0,
