@@ -323,7 +323,7 @@ export default function AutoDMAutomationsPage() {
       </div>
 
       {/* Table Card */}
-      <div className="card-shadow" style={{ overflow: 'hidden' }}>
+      <div className="card-shadow" style={{ overflow: 'visible' }}>
         {automationsLoading ? (
           <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[1,2,3].map(i => <div key={i} className="skeleton-shimmer" style={{ height: 64 }} />)}
@@ -343,7 +343,7 @@ export default function AutoDMAutomationsPage() {
         ) : (
           <>
             {/* Table header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 120px 100px 40px', gap: 12, padding: '14px 20px', borderBottom: '1px solid rgba(20, 20, 19, 0.08)', background: 'var(--canvas)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 120px 100px 40px', gap: 12, padding: '14px 20px', borderBottom: '1px solid rgba(20, 20, 19, 0.08)', background: 'var(--canvas)', borderTopLeftRadius: 'var(--r-card)', borderTopRightRadius: 'var(--r-card)' }}>
               {['AUTOMATION', 'TRIGGER', 'STATUS', 'ACTIVE', ''].map(h => (
                 <span key={h} style={{ fontSize: 10, fontWeight: 700, color: 'var(--slate)', letterSpacing: '0.08em' }}>{h}</span>
               ))}
