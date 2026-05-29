@@ -1,15 +1,30 @@
 import React, { useState } from "react";
-import { Menu, ArrowLeft, Settings, LogOut, X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Menu, ArrowLeft, Unplug, LogOut, X } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useAuth } from "../context/AuthContext";
 import { useDialog } from "../context/DialogContext";
 import apiClient from "../utils/apiClient";
 
+const PLATFORM_ICONS = {
+  instagram: "/icons/ig-instagram-icon.svg",
+  facebook: "/icons/facebook-round-color-icon.svg",
+  youtube: "/icons/youtube-color-icon.svg",
+  linkedin: "/icons/linkedin-icon.svg",
+  threads: "/icons/threads-icon.svg",
+  mastodon: "/icons/mastodon-round-icon.svg",
+  bluesky: "/icons/bluesky-circle-color-icon.svg",
+  reddit: "/icons/reddit-icon.svg",
+  x: "/icons/x-social-media-round-icon.svg",
+  pinterest: "/icons/pinterest-round-color-icon.svg",
+  googleBusiness: "/icons/google-icon.svg",
+};
+
 function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
   const { user, logout, connectedAccounts, refreshAccounts } = useAuth();
   const { confirm, alert } = useDialog();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showSettings, setShowSettings] = useState(false);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
   const [imgError, setImgError] = useState(false);
@@ -55,6 +70,14 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
     } finally {
       setDisconnectingPlatform(null);
     }
+  };
+
+  const handleSettingsClick = () => {
+    if (location.pathname.startsWith("/dashboard/auto-dm")) {
+      navigate("/dashboard/auto-dm/settings");
+      return;
+    }
+    setShowSettings(true);
   };
 
   const initials = user.name
@@ -140,8 +163,8 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <div style={{ display: "flex", gap: 6 }}>
           <button
-            onClick={() => setShowSettings(true)}
-            title="Settings"
+            onClick={handleSettingsClick}
+            title="Connections"
             style={{
               width: 36,
               height: 36,
@@ -158,7 +181,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
             onMouseEnter={e => { e.currentTarget.style.background = "rgba(20,20,19,0.05)"; e.currentTarget.style.color = "var(--ink)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--slate)"; }}
           >
-            <Settings size={18} />
+            <Unplug size={18} />
           </button>
           <button
             onClick={handleLogout}
@@ -251,7 +274,20 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {Object.entries(connectedAccounts || {}).filter(([_, data]) => data?.connected).map(([id, data]) => (
                   <div key={id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: "var(--r-btn)", background: "var(--canvas)", border: "1px solid rgba(20,20,19,0.08)" }}>
-                    <div style={{ flex: 1 }}>
+                    <div style={{ width: 34, height: 34, borderRadius: "var(--r-sm)", background: "var(--white)", border: "1px solid rgba(20,20,19,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {PLATFORM_ICONS[id] ? (
+                        <img
+                          src={PLATFORM_ICONS[id]}
+                          alt={`${id} logo`}
+                          style={{ width: 22, height: 22, objectFit: "contain" }}
+                        />
+                      ) : (
+                        <span style={{ fontSize: 12, fontWeight: 800, color: "var(--slate)", textTransform: "uppercase" }}>
+                          {id.slice(0, 1)}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", margin: 0, textTransform: 'capitalize' }}>{id}</p>
                       <p style={{ fontSize: 12, color: 'var(--slate)', margin: 0 }}>{data.username || 'Connected'}</p>
                     </div>

@@ -1,14 +1,141 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  AlertCircle,
+  BarChart3,
+  Camera,
+  ExternalLink,
+  Film,
+  Grid3X3,
+  Heart,
+  Image as ImageIcon,
+  Instagram,
+  MessageCircle,
+  RefreshCw,
+  TrendingUp,
+  UserRound,
+  Users,
+} from 'lucide-react';
 import { useAutoDM } from '../../context/AutoDMContext';
-import { Instagram, Users, Image, Heart, MessageCircle, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
+
+function compactNumber(value) {
+  if (value == null) return '-';
+  return new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+}
+
+function fullNumber(value) {
+  if (value == null) return '-';
+  return new Intl.NumberFormat('en').format(value);
+}
+
+function isReel(item) {
+  return item.media_type === 'VIDEO' || item.media_type === 'REELS';
+}
+
+function StatCard({ icon: Icon, label, value, detail }) {
+  return (
+    <article className="autodm-analytics-card">
+      <div>
+        <strong>{value}</strong>
+        <p>{label}</p>
+        <small>{detail}</small>
+      </div>
+      <span>
+        <Icon size={18} />
+      </span>
+    </article>
+  );
+}
+
+function MiniStat({ label, value }) {
+  return (
+    <div className="autodm-mini-stat">
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function MediaGrid({ items, loading, emptyLabel }) {
+  if (loading) {
+    return (
+      <div className="autodm-media-grid">
+        {Array.from({ length: 10 }).map((_, index) => (
+          <div key={index} className="skeleton-shimmer autodm-media-skeleton" />
+        ))}
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="autodm-empty autodm-media-empty">
+        <ImageIcon size={38} />
+        <p>{emptyLabel}</p>
+        <span>Refresh after posting content on Instagram.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="autodm-media-grid">
+      {items.map((item) => (
+        <a
+          key={item.id}
+          className="autodm-media-tile"
+          href={item.permalink || '#'}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Open Instagram media"
+        >
+          <img src={item.thumbnail_url || item.media_url} alt={item.caption || 'Instagram media'} />
+          {isReel(item) ? <Film className="autodm-media-type" size={16} /> : null}
+          {item.media_type === 'CAROUSEL_ALBUM' ? <Grid3X3 className="autodm-media-type" size={16} /> : null}
+          <div className="autodm-media-overlay">
+            <span>
+              <Heart size={14} />
+              {fullNumber(item.like_count || 0)}
+            </span>
+            <span>
+              <MessageCircle size={14} />
+              {fullNumber(item.comments_count || 0)}
+            </span>
+          </div>
+        </a>
+      ))}
+    </div>
+  );
+}
 
 export default function AutoDMInstagramProfilePage() {
-  const { activeAccount, autodmAccounts, setActiveAccount, hasSocialInstagramConnection, importInstagram } = useAutoDM();
+  const {
+    activeAccount,
+    autodmAccounts,
+    setActiveAccount,
+    hasSocialInstagramConnection,
+    importInstagram,
+    fetchInstagramMedia,
+  } = useAutoDM();
+
   const [media, setMedia] = useState([]);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState(null);
-  const { fetchInstagramMedia } = useAutoDM();
+  const [activeTab, setActiveTab] = useState('posts');
+
+  const username = activeAccount?.username || activeAccount?.instagram_username || '';
+  const displayName = activeAccount?.full_name || username;
+
+  const posts = useMemo(() => media.filter((item) => !isReel(item)), [media]);
+  const reels = useMemo(() => media.filter((item) => isReel(item)), [media]);
+  const totals = useMemo(() => {
+    const likes = media.reduce((sum, item) => sum + (item.like_count || 0), 0);
+    const comments = media.reduce((sum, item) => sum + (item.comments_count || 0), 0);
+    const topPost = [...media].sort(
+      (a, b) => (b.like_count || 0) + (b.comments_count || 0) - ((a.like_count || 0) + (a.comments_count || 0))
+    )[0];
+
+    return { likes, comments, engagement: likes + comments, topPost };
+  }, [media]);
 
   useEffect(() => {
     if (activeAccount?.id) loadMedia();
@@ -17,10 +144,11 @@ export default function AutoDMInstagramProfilePage() {
   const loadMedia = async () => {
     setMediaLoading(true);
     try {
-      const data = await fetchInstagramMedia(24);
+      const data = await fetchInstagramMedia(60);
       setMedia(data);
-    } catch (e) {
-      console.error(e);
+    } catch (error) {
+      console.error('[AutoDM] Instagram media load error:', error);
+      setMedia([]);
     } finally {
       setMediaLoading(false);
     }
@@ -31,8 +159,8 @@ export default function AutoDMInstagramProfilePage() {
     setImportError(null);
     try {
       await importInstagram();
-    } catch (e) {
-      setImportError(e.response?.data?.error || e.message);
+    } catch (error) {
+      setImportError(error.response?.data?.error || error.message || 'Unable to import Instagram account');
     } finally {
       setImporting(false);
     }
@@ -40,165 +168,175 @@ export default function AutoDMInstagramProfilePage() {
 
   if (!activeAccount) {
     return (
-      <div style={{ maxWidth: 640, margin: '56px auto', textAlign: 'center', background: 'var(--canvas-lifted)', border: '1px solid rgba(20,20,19,0.08)', borderRadius: 'var(--r-card)', padding: '44px 28px', boxShadow: 'var(--shadow-premium)' }}>
-        <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--color-arc-050)', border: '1px solid var(--color-arc-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-          <Instagram size={28} color="var(--arc)" />
-        </div>
-        <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', margin: '0 0 8px', fontFamily: 'var(--font-display)' }}>No Instagram Account</h2>
-        <p style={{ color: 'var(--slate)', margin: '0 0 20px', fontSize: 14 }}>
-          {hasSocialInstagramConnection
-            ? 'Import your Instagram account to see your profile here.'
-            : 'Connect Instagram in Social Pilot, then import it here.'}
-        </p>
-        {importError && (
-          <div style={{ padding: '10px 14px', background: 'var(--danger-bg)', border: '1px solid var(--danger-border)', borderRadius: 'var(--r-btn)', marginBottom: 16, display: 'flex', gap: 8 }}>
-            <AlertCircle size={14} color="var(--danger)" style={{ flexShrink: 0, marginTop: 2 }} />
-            <p style={{ fontSize: 13, color: 'var(--danger)', margin: 0, fontWeight: 500 }}>{importError}</p>
-          </div>
-        )}
-        {hasSocialInstagramConnection && (
-          <button onClick={handleImport} disabled={importing} className="btn-arc" style={{ padding: '10px 24px', cursor: importing ? 'not-allowed' : 'pointer', opacity: importing ? 0.7 : 1 }}>
-            {importing ? 'Importing...' : 'Import Instagram Account'}
-          </button>
-        )}
+      <div className="autodm-page">
+        <section className="card-shadow autodm-connect-state">
+          <span className="autodm-connect-icon">
+            <Instagram size={28} />
+          </span>
+          <h1>No Instagram Account</h1>
+          <p>
+            {hasSocialInstagramConnection
+              ? 'Import your Instagram account to see profile, posts, and reels here.'
+              : 'Connect Instagram in Social Pilot, then import it here.'}
+          </p>
+          {importError ? (
+            <div className="autodm-inline-error">
+              <AlertCircle size={15} />
+              {importError}
+            </div>
+          ) : null}
+          {hasSocialInstagramConnection ? (
+            <button type="button" className="btn-arc" onClick={handleImport} disabled={importing}>
+              {importing ? 'Importing...' : 'Import Instagram Account'}
+            </button>
+          ) : null}
+        </section>
       </div>
     );
   }
 
+  const profileUrl = `https://instagram.com/${username}`;
+  const activeMedia = activeTab === 'reels' ? reels : activeTab === 'all' ? media : posts;
+
   return (
-    <div style={{ fontFamily: 'var(--font-body)' }}>
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <p className="eyebrow" style={{ margin: '0 0 6px' }}>GAP AutoDM</p>
-        <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--ink)', margin: 0, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>Instagram Profile</h1>
-      </div>
-
-      {/* Profile Card */}
-      <div className="card-shadow" style={{ padding: 28, marginBottom: 20 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-          {/* Avatar */}
-          <div style={{ position: 'relative' }}>
-            <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg, var(--arc) 0%, var(--signal) 100%)', padding: 3 }}>
-              <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', background: 'var(--white)' }}>
-                {activeAccount.profile_picture_url ? (
-                  <img src={activeAccount.profile_picture_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, var(--arc) 0%, var(--signal) 100%)', color: 'var(--white)', fontSize: 26, fontWeight: 700 }}>
-                    {(activeAccount.username || activeAccount.instagram_username)?.[0]?.toUpperCase()}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Info */}
-          <div style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', margin: 0, fontFamily: 'var(--font-display)' }}>@{activeAccount.username || activeAccount.instagram_username}</h2>
-              <a href={`https://instagram.com/${activeAccount.username || activeAccount.instagram_username}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--slate)', display: 'inline-flex', transition: 'color 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.color = 'var(--arc)'}
-                onMouseLeave={e => e.currentTarget.style.color = 'var(--slate)'}>
-                <ExternalLink size={14} />
-              </a>
-            </div>
-            {activeAccount.full_name && <p style={{ color: 'var(--slate)', margin: '0 0 8px', fontSize: 14, fontWeight: 500 }}>{activeAccount.full_name}</p>}
-            <span className="badge badge-arc">
-              {activeAccount.account_type || 'BUSINESS'}
-            </span>
-          </div>
-
-          {/* Stats */}
-          <div style={{ display: 'flex', gap: 24 }}>
-            {[
-              { label: 'Followers', value: activeAccount.followers_count, icon: Users, color: 'var(--arc)' },
-              { label: 'Media', value: activeAccount.media_count, icon: Image, color: 'var(--signal)' },
-            ].map(({ label, value, icon: Icon, color }) => (
-              <div key={label} style={{ textAlign: 'center' }}>
-                <Icon size={18} color={color} style={{ marginBottom: 4 }} />
-                <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--ink)', margin: 0, fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>
-                  {value != null ? value.toLocaleString() : '—'}
-                </p>
-                <p style={{ fontSize: 11, color: 'var(--slate)', fontWeight: 600, margin: 0 }}>{label}</p>
-              </div>
-            ))}
-          </div>
+    <div className="autodm-page">
+      <section className="card-shadow autodm-profile-hero">
+        <div className="autodm-profile-avatar">
+          {activeAccount.profile_picture_url ? (
+            <img src={activeAccount.profile_picture_url} alt="" />
+          ) : (
+            <span>{username?.[0]?.toUpperCase() || 'I'}</span>
+          )}
         </div>
 
-        {/* Account selector if multiple */}
-        {autodmAccounts.length > 1 && (
-          <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(20,20,19,0.08)' }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--slate)', letterSpacing: '0.04em', margin: '0 0 10px' }}>CONNECTED ACCOUNTS</p>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              {autodmAccounts.map(acc => {
-                const isActive = acc.id === activeAccount.id;
-                return (
-                  <button key={acc.id} onClick={() => setActiveAccount(acc)} style={{
-                    display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px',
-                    borderRadius: 'var(--r-btn)', border: `1.5px solid ${isActive ? 'var(--arc)' : 'rgba(20,20,19,0.12)'}`,
-                    background: isActive ? 'var(--color-arc-050)' : 'transparent',
-                    cursor: 'pointer', fontSize: 13, fontWeight: 600,
-                    color: isActive ? 'var(--arc)' : 'var(--slate)',
-                    transition: 'all 0.15s',
-                  }}
-                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(20,20,19,0.03)'; }}
-                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--canvas)', overflow: 'hidden' }}>
-                      {acc.profile_picture_url ? <img src={acc.profile_picture_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : null}
-                    </div>
-                    @{acc.username || acc.instagram_username}
-                  </button>
-                );
-              })}
-            </div>
+        <div className="autodm-profile-copy">
+          <p className="eyebrow">Instagram Profile</p>
+          <div className="autodm-profile-title">
+            <h1>@{username}</h1>
+            <span className="badge badge-arc">{activeAccount.account_type || 'BUSINESS'}</span>
           </div>
-        )}
-      </div>
+          <p>{displayName}</p>
+          <small>Profile data is synced from your connected Instagram professional account.</small>
+        </div>
 
-      {/* Media Grid */}
-      <div className="card" style={{ padding: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', margin: 0, fontFamily: 'var(--font-display)' }}>Recent Posts</h3>
-          <button onClick={loadMedia} disabled={mediaLoading} className="btn-ghost" style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-          }}>
-            <RefreshCw size={12} style={{ animation: mediaLoading ? 'spin 1s linear infinite' : 'none' }} />
+        <div className="autodm-profile-actions">
+          <button type="button" className="btn-ghost" onClick={() => window.open(profileUrl, '_blank')}>
+            <ExternalLink size={15} />
+            Open Instagram
+          </button>
+          <button type="button" className="btn-arc" onClick={loadMedia} disabled={mediaLoading}>
+            <RefreshCw size={15} className={mediaLoading ? 'is-spinning' : ''} />
             Refresh
           </button>
         </div>
+      </section>
 
-        {mediaLoading ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
-            {[1,2,3,4,5,6,7,8].map(i => <div key={i} className="skeleton-shimmer" style={{ aspectRatio: '1' }} />)}
+      {autodmAccounts.length > 1 ? (
+        <section className="card autodm-account-strip">
+          <p className="eyebrow">Connected Accounts</p>
+          <div>
+            {autodmAccounts.map((account) => {
+              const accountUsername = account.username || account.instagram_username;
+              const isActive = account.id === activeAccount.id;
+              return (
+                <button
+                  key={account.id}
+                  type="button"
+                  className={isActive ? 'is-active' : ''}
+                  onClick={() => setActiveAccount(account)}
+                >
+                  <span className="autodm-avatar">
+                    {account.profile_picture_url ? <img src={account.profile_picture_url} alt="" /> : accountUsername?.[0]?.toUpperCase()}
+                  </span>
+                  @{accountUsername}
+                </button>
+              );
+            })}
           </div>
-        ) : media.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--slate)' }}>
-            <Image size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
-            <p style={{ fontSize: 14, margin: 0, fontWeight: 500 }}>No posts found</p>
+        </section>
+      ) : null}
+
+      <section className="autodm-section">
+        <div className="autodm-section-heading">
+          <div>
+            <p className="eyebrow">Growth Dashboard</p>
+            <h2>Professional insights</h2>
           </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
-            {media.map(item => (
-              <a key={item.id} href={item.permalink} target="_blank" rel="noopener noreferrer"
-                style={{ position: 'relative', borderRadius: 'var(--r-sm)', overflow: 'hidden', display: 'block', aspectRatio: '1', textDecoration: 'none' }}>
-                <img
-                  src={item.thumbnail_url || item.media_url}
-                  alt={item.caption || ''}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
-                {/* Hover overlay */}
-                <div style={{ position: 'absolute', inset: 0, background: 'rgba(20,20,19,0)', transition: 'background 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(20,20,19,0.6)'; e.currentTarget.querySelectorAll('span').forEach(s => s.style.opacity = '1'); }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(20,20,19,0)'; e.currentTarget.querySelectorAll('span').forEach(s => s.style.opacity = '0'); }}>
-                  {item.like_count != null && <span style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#fff', fontSize: 12, fontWeight: 700, opacity: 0, transition: 'opacity 0.2s' }}><Heart size={12} /> {item.like_count}</span>}
-                  {item.comments_count != null && <span style={{ display: 'flex', alignItems: 'center', gap: 3, color: '#fff', fontSize: 12, fontWeight: 700, opacity: 0, transition: 'opacity 0.2s' }}><MessageCircle size={12} /> {item.comments_count}</span>}
+        </div>
+
+        <div className="autodm-analytics-grid">
+          <StatCard icon={TrendingUp} label="Reach" value="-" detail="No Meta insight yet" />
+          <StatCard icon={BarChart3} label="Views" value="-" detail="No Meta insight yet" />
+          <StatCard icon={Heart} label="Engagement" value={compactNumber(totals.engagement)} detail={`${fullNumber(totals.likes)} likes, ${fullNumber(totals.comments)} comments`} />
+          <StatCard icon={Users} label="Followers" value={compactNumber(activeAccount.followers_count)} detail={`${fullNumber(activeAccount.media_count ?? media.length)} synced posts`} />
+        </div>
+
+        <div className="autodm-profile-panels">
+          <article className="card autodm-profile-panel">
+            <header>
+              <div>
+                <h3>Account overview</h3>
+                <p>Profile and content totals</p>
+              </div>
+              <BarChart3 size={18} />
+            </header>
+            <div className="autodm-mini-grid">
+              <MiniStat label="Posts" value={fullNumber(activeAccount.media_count ?? media.length)} />
+              <MiniStat label="Followers" value={compactNumber(activeAccount.followers_count)} />
+              <MiniStat label="Following" value="-" />
+            </div>
+          </article>
+
+          <article className="card autodm-profile-panel">
+            <header>
+              <div>
+                <h3>Top content</h3>
+                <p>Based on likes and comments</p>
+              </div>
+              <MessageCircle size={18} />
+            </header>
+            {totals.topPost ? (
+              <div className="autodm-top-post">
+                <img src={totals.topPost.thumbnail_url || totals.topPost.media_url} alt={totals.topPost.caption || 'Top Instagram media'} />
+                <div>
+                  <strong>{totals.topPost.caption || 'Recent Instagram post'}</strong>
+                  <p>
+                    {fullNumber(totals.topPost.like_count || 0)} likes · {fullNumber(totals.topPost.comments_count || 0)} comments
+                  </p>
                 </div>
-              </a>
-            ))}
-          </div>
-        )}
-      </div>
+              </div>
+            ) : (
+              <p className="autodm-muted">No top post available yet.</p>
+            )}
+          </article>
+        </div>
+      </section>
 
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+      <section className="card autodm-media-card">
+        <div className="autodm-media-tabs" role="tablist" aria-label="Instagram media">
+          {[
+            { id: 'posts', label: 'Posts', icon: Grid3X3 },
+            { id: 'reels', label: 'Reels', icon: Film },
+            { id: 'all', label: 'All', icon: Camera },
+          ].map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              className={activeTab === id ? 'is-active' : ''}
+              onClick={() => setActiveTab(id)}
+            >
+              <Icon size={15} />
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <MediaGrid
+          items={activeMedia}
+          loading={mediaLoading}
+          emptyLabel={activeTab === 'reels' ? 'No reels found' : activeTab === 'all' ? 'No media found' : 'No posts found'}
+        />
+      </section>
     </div>
   );
 }
