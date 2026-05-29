@@ -2,11 +2,7 @@ import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import supabase from './supabase.js';
 
-// Must match TOKEN_ENCRYPTION_KEY_BASE64 used by the Supabase Edge Function (tokenService.ts).
-// AUTODM_TOKEN_ENCRYPTION_KEY_BASE64 is kept as a legacy fallback.
-const autodmTokenEncryptionKey =
-  process.env.TOKEN_ENCRYPTION_KEY_BASE64 ||
-  process.env.AUTODM_TOKEN_ENCRYPTION_KEY_BASE64;
+const autodmTokenEncryptionKey = process.env.AUTODM_TOKEN_ENCRYPTION_KEY_BASE64;
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v21.0';
 const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 
@@ -21,15 +17,12 @@ const bytesToBase64 = (buffer) => Buffer.from(buffer).toString('base64');
 
 const getTokenEncryptionKey = () => {
   if (!autodmTokenEncryptionKey) {
-    throw new Error(
-      'Missing TOKEN_ENCRYPTION_KEY_BASE64 (or legacy AUTODM_TOKEN_ENCRYPTION_KEY_BASE64). ' +
-      'This must match the TOKEN_ENCRYPTION_KEY_BASE64 Supabase secret set on the Edge Functions.'
-    );
+    throw new Error('Missing AUTODM_TOKEN_ENCRYPTION_KEY_BASE64.');
   }
 
   const key = Buffer.from(autodmTokenEncryptionKey, 'base64');
   if (key.length !== 32) {
-    throw new Error('TOKEN_ENCRYPTION_KEY_BASE64 must decode to exactly 32 bytes.');
+    throw new Error('AUTODM_TOKEN_ENCRYPTION_KEY_BASE64 must decode to 32 bytes.');
   }
 
   return key;

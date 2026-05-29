@@ -14,7 +14,6 @@ import googleOAuth from './googleOAuth.js';
 import { updateBroadcastResults } from './broadcasts.js';
 import { resolveMentions } from './mentions.js';
 import { createOrUpdateComposerAutomation } from './autodm.js';
-import { getUserById } from './supabase.js';
 
 /**
  * Core function to broadcast to platforms
@@ -191,14 +190,8 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
 
     if (platData?.autoDMConfig?.enabled && results.instagram?.success) {
       try {
-        // Resolve the full user object — the scheduler only has userId,
-        // but createOrUpdateComposerAutomation needs email/name/profilePicture
-        // for importInstagramAccountToAutoDM profile sync.
-        const fullUser = await getUserById(userId).catch(() => null);
-        const user = fullUser || { userId, authUserId: userId };
-
         await createOrUpdateComposerAutomation({
-          user,
+          user: { userId },
           config: platData.autoDMConfig,
           publication: {
             success: true,
