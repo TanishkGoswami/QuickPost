@@ -13,7 +13,7 @@ const DashboardLayout = () => {
   const location = useLocation();
   const isTrendsPage = location.pathname.includes('/dashboard/trends');
   const isAutoDMWorkspace = location.pathname.startsWith('/dashboard/auto-dm');
-  const showDashboardChrome = !isTrendsPage && !isAutoDMWorkspace;
+  const showDashboardChrome = !isTrendsPage;
 
   useEffect(() => {
     const onResize = () => {
@@ -138,7 +138,7 @@ const DashboardLayout = () => {
         }}
       >
         {/* Header — passes mobile toggle */}
-        {!isAutoDMWorkspace && (
+        {!isTrendsPage && (
           <Header
             onMenuClick={() => setSidebarOpen((o) => !o)}
             sidebarOpen={sidebarOpen}
@@ -153,7 +153,7 @@ const DashboardLayout = () => {
           className="custom-scrollbar"
           style={{
             flex: 1,
-            marginTop: isAutoDMWorkspace ? 0 : 56,
+            marginTop: isTrendsPage ? 0 : 56,
             overflowY: "auto",
             overflowX: "hidden",
             padding: 0,

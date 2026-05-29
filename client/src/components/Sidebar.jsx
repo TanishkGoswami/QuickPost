@@ -5,6 +5,10 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   CalendarClock,
+  Zap,
+  Users,
+  Instagram,
+  Settings,
   Plus,
   Share2,
   ChevronDown,
@@ -66,7 +70,12 @@ function Sidebar() {
   const [showMastodonModal, setShowMastodonModal] = useState(false);
   const [connectingPlatform, setConnectingPlatform] = useState(null);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
-  const [connectedOpen, setConnectedOpen] = useState(true);
+  const [connectedOpen, setConnectedOpen] = useState(
+    !location.pathname.startsWith("/dashboard/auto-dm"),
+  );
+  const [autoDMOpen, setAutoDMOpen] = useState(
+    location.pathname.startsWith("/dashboard/auto-dm"),
+  );
   const [imgError, setImgError] = useState(false);
 
   const handleConnectInstagram = () => setShowBusinessSetupModal(true);
@@ -343,6 +352,13 @@ function Sidebar() {
       ? location.pathname.startsWith("/dashboard/auto-dm")
       : location.pathname === path;
 
+  const autoDMSubnav = [
+    { to: "/dashboard/auto-dm/automations", label: "Automations", icon: <Zap size={14} /> },
+    { to: "/dashboard/auto-dm/contacts", label: "Contacts", icon: <Users size={14} /> },
+    { to: "/dashboard/auto-dm/instagram-profile", label: "Profile", icon: <Instagram size={14} /> },
+    { to: "/dashboard/auto-dm/settings", label: "Settings", icon: <Settings size={14} /> },
+  ];
+
   return (
     <aside
       className="flex flex-col custom-scrollbar"
@@ -447,6 +463,7 @@ function Sidebar() {
           ].map(({ to, label, icon }) => {
             const active = isActive(to);
             const isLocked = isFree(user?.plan);
+            const isAutoDM = to === "/dashboard/auto-dm";
 
             const content = (
               <>
@@ -507,25 +524,99 @@ function Sidebar() {
             }
 
             return (
-              <Link
-                key={to}
-                to={to}
-                style={style}
-                onMouseEnter={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.background = "rgba(20,20,19,0.05)";
-                    e.currentTarget.style.color = "var(--ink)";
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!active) {
-                    e.currentTarget.style.background = "transparent";
-                    e.currentTarget.style.color = "var(--slate)";
-                  }
-                }}
-              >
-                {content}
-              </Link>
+              <React.Fragment key={to}>
+                {isAutoDM ? (
+                  <div
+                    style={{
+                      ...style,
+                      padding: 0,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <Link
+                      to={to}
+                      onClick={() => {
+                        setAutoDMOpen(true);
+                        setConnectedOpen(false);
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        minWidth: 0,
+                        flex: 1,
+                        padding: "9px 0 9px 12px",
+                        color: "inherit",
+                        textDecoration: "none",
+                      }}
+                    >
+                      {content}
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setAutoDMOpen((open) => {
+                          const nextOpen = !open;
+                          if (nextOpen) setConnectedOpen(false);
+                          return nextOpen;
+                        });
+                      }}
+                      aria-label={autoDMOpen ? "Collapse GAP AutoDM menu" : "Expand GAP AutoDM menu"}
+                      aria-expanded={autoDMOpen}
+                      className="sidebar-parent-toggle"
+                    >
+                      <ChevronDown
+                        size={14}
+                        style={{
+                          transform: autoDMOpen ? "rotate(180deg)" : "rotate(0deg)",
+                        }}
+                      />
+                    </button>
+                  </div>
+                ) : (
+                  <Link
+                    to={to}
+                    style={style}
+                    onMouseEnter={(e) => {
+                      if (!active) {
+                        e.currentTarget.style.background = "rgba(20,20,19,0.05)";
+                        e.currentTarget.style.color = "var(--ink)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active) {
+                        e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.color = "var(--slate)";
+                      }
+                    }}
+                  >
+                    {content}
+                  </Link>
+                )}
+
+                {isAutoDM && autoDMOpen && (
+                  <div className="sidebar-subnav">
+                    {autoDMSubnav.map((item) => {
+                      const itemActive = item.exact
+                        ? location.pathname === item.to
+                        : location.pathname.startsWith(item.to);
+
+                      return (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          className={`sidebar-subnav-link${itemActive ? " active" : ""}`}
+                        >
+                          {item.icon}
+                          <span>{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </React.Fragment>
             );
           })}
         </div>
@@ -546,7 +637,11 @@ function Sidebar() {
                     );
                     return;
                   }
-                  setConnectedOpen(!connectedOpen);
+                  setConnectedOpen((open) => {
+                    const nextOpen = !open;
+                    if (nextOpen) setAutoDMOpen(false);
+                    return nextOpen;
+                  });
                 }}
                 style={{
                   width: "100%",
