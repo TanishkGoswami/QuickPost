@@ -8,7 +8,7 @@ class PinterestOAuth {
     this.clientId = process.env.PINTEREST_APP_ID;
     this.clientSecret = process.env.PINTEREST_APP_SECRET;
     this.redirectUri = process.env.PINTEREST_REDIRECT_URI || 'http://localhost:5000/auth/pinterest/callback';
-    this.scopes = 'boards:read,pins:read,pins:write';
+    this.scopes = 'boards:read,pins:read,pins:write,user_accounts:read';
   }
 
   /**

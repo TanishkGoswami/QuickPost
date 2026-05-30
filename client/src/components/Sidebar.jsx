@@ -26,6 +26,7 @@ import BlueskyConnectModal from "./BlueskyConnectModal";
 import PinterestConnectModal from "./PinterestConnectModal";
 import LinkedInConnectModal from "./LinkedInConnectModal";
 import MastodonConnectModal from "./MastodonConnectModal";
+import FacebookSetupModal from "./FacebookSetupModal";
 import apiClient from "../utils/apiClient";
 
 // User has paid access if plan is anything other than Free
@@ -68,6 +69,7 @@ function Sidebar() {
   const [showPinterestModal, setShowPinterestModal] = useState(false);
   const [showLinkedInModal, setShowLinkedInModal] = useState(false);
   const [showMastodonModal, setShowMastodonModal] = useState(false);
+  const [showFacebookModal, setShowFacebookModal] = useState(false);
   const [connectingPlatform, setConnectingPlatform] = useState(null);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
   const [connectedOpen, setConnectedOpen] = useState(
@@ -99,8 +101,7 @@ function Sidebar() {
       });
       return;
     }
-    const apiUrl = import.meta.env.VITE_API_URL || "";
-    window.location.href = `${apiUrl}/api/auth/facebook?token=${token}`;
+    setShowFacebookModal(true);
   };
   const handleConnectThreads = () => {
     const token = localStorage.getItem("quickpost_token");
@@ -147,6 +148,17 @@ function Sidebar() {
     }
     const apiUrl = import.meta.env.VITE_API_URL || "";
     window.location.href = `${apiUrl}/api/auth/youtube?token=${token}`;
+  };
+  const handleConnectGoogleBusiness = () => {
+    const token = localStorage.getItem("quickpost_token");
+    if (!token) {
+      alert("Error", "Authentication token missing. Please log in again.", {
+        intent: "danger",
+      });
+      return;
+    }
+    const apiUrl = import.meta.env.VITE_API_URL || "";
+    window.location.href = `${apiUrl}/api/auth/googleBusiness?token=${token}`;
   };
   const handleDisconnect = async (platform) => {
     const confirmed = await confirm(
@@ -322,11 +334,10 @@ function Sidebar() {
         />
       ),
       onConnect: () =>
-        alert(
-          "Coming Soon",
-          "Google Business Profile integration coming soon!",
-          { intent: "warning" },
-        ),
+        alert("Coming Soon", "Google Business integration coming soon!", {
+          intent: "warning",
+        }),
+      disabled: true,
     },
     {
       id: "reddit",
@@ -1101,6 +1112,17 @@ function Sidebar() {
             isOpen={showMastodonModal}
             onClose={() => setShowMastodonModal(false)}
             onSuccess={refreshAccounts}
+          />
+          <FacebookSetupModal
+            isOpen={showFacebookModal}
+            onClose={() => setShowFacebookModal(false)}
+            onProceed={() => {
+              setShowFacebookModal(false);
+              const token = localStorage.getItem("quickpost_token");
+              if (!token) return;
+              const apiUrl = import.meta.env.VITE_API_URL || "";
+              window.location.href = `${apiUrl}/api/auth/facebook?token=${token}`;
+            }}
           />
         </>,
         document.body,

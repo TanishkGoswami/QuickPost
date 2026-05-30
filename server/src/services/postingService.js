@@ -10,7 +10,9 @@ import mastodon from './mastodon.js';
 import { postToThreads } from './threads.js';
 import { broadcastToX } from './x.js';
 import { postToReddit } from './reddit.js';
+import { postToGoogleBusiness } from './googleBusiness.js';
 import googleOAuth from './googleOAuth.js';
+import googleBusinessOAuth from './googleBusinessOAuth.js';
 import { updateBroadcastResults } from './broadcasts.js';
 import { resolveMentions } from './mentions.js';
 import { createOrUpdateComposerAutomation } from './autodm.js';
@@ -154,6 +156,24 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
       );
     }
     
+    // Google Business Profile
+    if (channels.includes('googleBusiness') && tokens.googleBusiness) {
+      const resolvedCaption = resolveMentions(caption, 'googleBusiness', tokens.googleBusiness);
+      platformPromises.push(
+        (async () => {
+          let gbpTokens = tokens.googleBusiness;
+          try {
+            const freshAccessToken = await googleBusinessOAuth.getValidAccessToken(userId);
+            gbpTokens = { ...tokens.googleBusiness, accessToken: freshAccessToken };
+          } catch (tokenErr) {
+            console.warn(`⚠️ [postingService] Could not refresh GBP token: ${tokenErr.message}. Using stored token.`);
+          }
+          return postToGoogleBusiness(resolvedCaption, mediaUrls, gbpTokens, platData?.googleBusiness)
+            .then(result => ({ platform: 'googleBusiness', result }));
+        })()
+      );
+    }
+
     // Threads — supports single image, single video, and carousel (mixed images+videos)
     if (channels.includes('threads') && tokens.threads) {
       const resolvedCaption = resolveMentions(caption, 'threads', tokens.threads);

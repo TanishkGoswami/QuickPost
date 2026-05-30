@@ -51,6 +51,13 @@ const PLATFORMS = [
     comingSoon: true,
   },
   {
+    id: 'googleBusiness',
+    name: 'Google Business',
+    icon: <img src="/icons/google-icon.svg" className="w-5 h-5 object-contain" alt="Google Business" />,
+    borderColor: 'border-blue-500',
+    comingSoon: true,
+  },
+  {
     id: 'snapchat',
     name: 'Snapchat',
     icon: <img src="/icons/snapchat-square-color-icon.svg" className="w-5 h-5 object-contain" alt="Snapchat" />,
