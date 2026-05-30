@@ -277,7 +277,11 @@ function Sidebar() {
           alt=""
         />
       ),
-      onConnect: () => setShowPinterestModal(true),
+      onConnect: () =>
+        alert("Coming Soon", "Pinterest integration coming soon!", {
+          intent: "warning",
+        }),
+      disabled: true,
     },
     {
       id: "threads",
@@ -329,7 +333,11 @@ function Sidebar() {
           alt=""
         />
       ),
-      onConnect: handleConnectGoogleBusiness,
+      onConnect: () =>
+        alert("Coming Soon", "Google Business integration coming soon!", {
+          intent: "warning",
+        }),
+      disabled: true,
     },
     {
       id: "reddit",
