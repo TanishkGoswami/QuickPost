@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 
 import googleOAuth from "../services/googleOAuth.js";
+import googleBusinessOAuth from "../services/googleBusinessOAuth.js";
 import instagramOAuth from "../services/instagramOAuth.js";
 import pinterestOAuth from "../services/pinterestOAuth.js";
 import facebookOAuth from "../services/facebookOAuth.js";
@@ -138,6 +139,77 @@ router.get("/google/callback", async (req, res) => {
   } catch (err) {
     console.error("Google callback error:", err);
     res.redirect(`${CLIENT_URL}/login?error=authentication_failed`);
+  }
+});
+
+/* ---------------- GOOGLE BUSINESS PROFILE ---------------- */
+
+router.get("/googleBusiness", async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token)
+      return res.redirect(`${CLIENT_URL}/dashboard?error=missing_token`);
+
+    let userId;
+    try {
+      console.log(
+        `\n🔵 [AUTH] Google Business init for token: ${token?.substring(0, 20)}...`,
+      );
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser(token);
+      if (error || !user) throw error || new Error("User not found");
+
+      // Sync user and get consistent ID
+      const dbUser = await createOrUpdateUser(
+        user.email,
+        user.user_metadata?.full_name || user.email?.split("@")[0],
+        user.id,
+        user.user_metadata?.avatar_url,
+      );
+      userId = dbUser.id;
+
+      console.log(`✅ [AUTH] Token verified and synced for user: ${userId}`);
+    } catch (e) {
+      console.error("❌ [AUTH] Token verification failed:", e.message);
+      return res.redirect(
+        `${CLIENT_URL}/dashboard?error=invalid_token&details=${encodeURIComponent(e.message)}`,
+      );
+    }
+
+    const state = googleBusinessOAuth.makeState(userId);
+    const authUrl = googleBusinessOAuth.getAuthorizationUrl(state);
+    res.redirect(authUrl);
+  } catch (error) {
+    console.error("Google Business OAuth init error:", error);
+    res.redirect(`${CLIENT_URL}/dashboard?error=googleBusiness_oauth_failed`);
+  }
+});
+
+router.get("/googleBusiness/callback", async (req, res) => {
+  const { code, error, state } = req.query;
+
+  if (error) return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied`);
+  if (!code) return res.redirect(`${CLIENT_URL}/dashboard?error=no_code`);
+
+  try {
+    const decodedState = decodeState(state);
+    const tokenData = await googleBusinessOAuth.exchangeCodeForTokens(code);
+
+    if (decodedState && decodedState.userId) {
+      console.log(
+        "🔗 [AUTH] Connecting Google Business account for user:",
+        decodedState.userId,
+      );
+      await googleBusinessOAuth.storeTokens(decodedState.userId, tokenData);
+      return res.redirect(`${CLIENT_URL}/dashboard?success=googleBusiness_connected`);
+    }
+
+    res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
+  } catch (err) {
+    console.error("Google Business callback error:", err);
+    res.redirect(`${CLIENT_URL}/dashboard?error=googleBusiness_connection_failed`);
   }
 });
 

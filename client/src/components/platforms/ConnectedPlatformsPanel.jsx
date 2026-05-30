@@ -12,6 +12,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useDialog } from "../../context/DialogContext";
 import apiClient from "../../utils/apiClient";
+import FacebookSetupModal from "../FacebookSetupModal";
 
 const PLATFORM_META = [
   {
@@ -111,6 +112,7 @@ export default function ConnectedPlatformsPanel({
   const { connectedAccounts, refreshAccounts, user } = useAuth();
   const { confirm, alert } = useDialog();
   const [busy, setBusy] = useState(null);
+  const [showFacebookModal, setShowFacebookModal] = useState(false);
 
   const connectedCount = useMemo(
     () => PLATFORM_META.filter((platform) => connectedAccounts?.[platform.id]?.connected).length,
@@ -122,6 +124,10 @@ export default function ConnectedPlatformsPanel({
     if (platform.oauth) {
       if (!token) {
         await alert("Login required", "Please login again, then connect the platform.", { intent: "warning" });
+        return;
+      }
+      if (platform.id === "facebook") {
+        setShowFacebookModal(true);
         return;
       }
       window.location.href = `/api/auth/${platform.id}?token=${token}`;
@@ -296,6 +302,17 @@ export default function ConnectedPlatformsPanel({
           );
         })}
       </div>
+      {showFacebookModal && (
+        <FacebookSetupModal
+          isOpen={showFacebookModal}
+          onClose={() => setShowFacebookModal(false)}
+          onProceed={() => {
+            setShowFacebookModal(false);
+            const token = localStorage.getItem("quickpost_token");
+            if (token) window.location.href = `/api/auth/facebook?token=${token}`;
+          }}
+        />
+      )}
     </section>
   );
 }

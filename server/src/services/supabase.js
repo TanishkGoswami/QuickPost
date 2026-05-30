@@ -94,8 +94,8 @@ export async function getTokensForUser(userId) {
       bluesky: null,
       linkedin: null,
       mastodon: null,
-
-      x: null
+      x: null,
+      googleBusiness: null
     };
 
     for (const row of data) {
@@ -191,6 +191,16 @@ export async function getTokensForUser(userId) {
           refreshToken: row.refresh_token,
           tokenExpiry: row.token_expiry,
           accountId: row.account_id,
+          username: row.username
+        };
+      }
+
+      if (row.provider === 'googleBusiness') {
+        tokens.googleBusiness = {
+          accessToken: row.access_token,
+          refreshToken: row.refresh_token,
+          tokenExpiry: row.token_expiry,
+          profile_data: row.profile_data,
           username: row.username
         };
       }

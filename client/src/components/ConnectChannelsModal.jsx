@@ -8,18 +8,20 @@ import PinterestConnectModal from "./PinterestConnectModal";
 import LinkedInConnectModal from "./LinkedInConnectModal";
 import MastodonConnectModal from "./MastodonConnectModal";
 import InstagramBusinessSetupModal from "./InstagramBusinessSetupModal";
+import FacebookSetupModal from "./FacebookSetupModal";
 
 const SESSION_KEY = "qp_channels_skipped";
 
 const platforms = [
   { id: "instagram",  name: "Instagram",       icon: "/icons/ig-instagram-icon.svg",              type: "oauth-instagram" },
-  { id: "facebook",   name: "Facebook",         icon: "/icons/facebook-round-color-icon.svg",      type: "oauth" },
+  { id: "facebook",   name: "Facebook",         icon: "/icons/facebook-round-color-icon.svg",      type: "oauth-facebook" },
   { id: "linkedin",   name: "LinkedIn",         icon: "/icons/linkedin-icon.svg",                  type: "modal-linkedin" },
   { id: "youtube",    name: "YouTube",          icon: "/icons/youtube-color-icon.svg",             type: "oauth" },
   { id: "threads",    name: "Threads",          icon: "/icons/threads-icon.svg",                   type: "oauth" },
   { id: "mastodon",   name: "Mastodon",         icon: "/icons/mastodon-round-icon.svg",            type: "modal-mastodon" },
   { id: "bluesky",    name: "Bluesky",          icon: "/icons/bluesky-circle-color-icon.svg",      type: "modal-bluesky" },
-  { id: "googleBusiness", name: "Google Business", icon: "/icons/google-icon.svg",               type: "coming-soon" },
+  { id: "pinterest",  name: "Pinterest",        icon: "/icons/pinterest-round-color-icon.svg",     type: "modal-pinterest" },
+  { id: "googleBusiness", name: "Google Business", icon: "/icons/google-icon.svg",               type: "oauth" },
 ];
 
 export default function ConnectChannelsModal() {
@@ -30,6 +32,7 @@ export default function ConnectChannelsModal() {
   const [showLinkedInModal, setShowLinkedInModal] = useState(false);
   const [showMastodonModal, setShowMastodonModal] = useState(false);
   const [showInstagramModal, setShowInstagramModal] = useState(false);
+  const [showFacebookModal, setShowFacebookModal] = useState(false);
 
   useEffect(() => {
     localStorage.removeItem("qp_channels_skipped");
@@ -58,9 +61,14 @@ export default function ConnectChannelsModal() {
       setShowInstagramModal(true);
       return;
     }
+    if (type === "oauth-facebook") {
+      setShowFacebookModal(true);
+      return;
+    }
     if (type === "oauth") {
       if (!token) return;
-      window.location.href = `/api/auth/${id}?token=${token}`;
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      window.location.href = `${apiUrl}/api/auth/${id}?token=${token}`;
       return;
     }
     if (type === "modal-linkedin")  { setShowLinkedInModal(true);  return; }
@@ -257,6 +265,17 @@ export default function ConnectChannelsModal() {
             setShowInstagramModal(false);
             const token = getToken();
             if (token) window.location.href = `/api/auth/instagram?token=${token}`;
+          }}
+        />
+      )}
+      {showFacebookModal && (
+        <FacebookSetupModal
+          isOpen={showFacebookModal}
+          onClose={() => setShowFacebookModal(false)}
+          onProceed={() => {
+            setShowFacebookModal(false);
+            const token = getToken();
+            if (token) window.location.href = `/api/auth/facebook?token=${token}`;
           }}
         />
       )}
