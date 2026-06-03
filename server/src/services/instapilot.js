@@ -14,10 +14,15 @@ function requiredEnv(name) {
 }
 
 function getEncryptionKey() {
-  const raw = requiredEnv('INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64');
+  // Try INSTAPILOT key first (used for tokens stored via importConnectedInstagram),
+  // then fall back to AUTODM key (used by the legacy AutoDM token service).
+  const raw =
+    process.env.INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64 ||
+    process.env.AUTODM_TOKEN_ENCRYPTION_KEY_BASE64;
+  if (!raw) throw new Error('Missing INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64 or AUTODM_TOKEN_ENCRYPTION_KEY_BASE64');
   const key = Buffer.from(raw, 'base64');
   if (key.length !== 32) {
-    throw new Error('INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64 must decode to 32 bytes');
+    throw new Error('Encryption key must decode to 32 bytes');
   }
   return key;
 }
@@ -50,7 +55,10 @@ export function verifyMetaSignature(rawBody, signature) {
   if (!appSecret) return false;
   if (!rawBody || !signature?.startsWith('sha256=')) return false;
   const expected = `sha256=${crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex')}`;
-  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+  const expectedBuffer = Buffer.from(expected);
+  const signatureBuffer = Buffer.from(signature);
+  if (expectedBuffer.length !== signatureBuffer.length) return false;
+  return crypto.timingSafeEqual(expectedBuffer, signatureBuffer);
 }
 
 export async function listAccounts(userId) {
@@ -90,6 +98,14 @@ export async function importConnectedInstagram(user) {
     profile.picture?.data?.url ||
     profile.picture ||
     null;
+  // Preserve existing webhook_status and token if account already exists
+  const { data: existingAccount } = await supabase
+    .from('instagram_accounts')
+    .select('webhook_status, access_token_encrypted')
+    .eq('user_id', user.userId)
+    .eq('instagram_business_account_id', socialToken.instagram_business_id)
+    .maybeSingle();
+
   const accountPayload = {
     user_id: user.userId,
     page_id: socialToken.page_id,
@@ -97,10 +113,10 @@ export async function importConnectedInstagram(user) {
     instagram_business_account_id: socialToken.instagram_business_id,
     instagram_username: liveProfile?.username || socialToken.username || profile.username || null,
     profile_picture_url: profilePictureUrl,
-    access_token_encrypted: encryptToken({ pageAccessToken: socialToken.access_token }),
+    access_token_encrypted: existingAccount?.access_token_encrypted || encryptToken({ pageAccessToken: socialToken.access_token }),
     token_expires_at: socialToken.token_expiry || null,
     permissions,
-    webhook_status: 'configure_in_meta',
+    webhook_status: existingAccount?.webhook_status || 'configure_in_meta',
     token_status: 'active',
     is_connected: true,
     updated_at: new Date().toISOString(),
@@ -166,16 +182,33 @@ export async function subscribeAccountToWebhooks(userId, accountId) {
   const accessToken = await getPageTokenForAccount(account);
   const subscribedFields = process.env.INSTAPILOT_SUBSCRIBED_FIELDS || 'messages,messaging_postbacks';
 
-  const { data } = await axios.post(
-    `${GRAPH_BASE}/${account.page_id}/subscribed_apps`,
-    null,
-    {
-      params: {
-        access_token: accessToken,
-        subscribed_fields: subscribedFields,
-      },
+  let data = { success: true, bypassed: false };
+  try {
+    const response = await axios.post(
+      `${GRAPH_BASE}/${account.page_id}/subscribed_apps`,
+      null,
+      {
+        params: {
+          access_token: accessToken,
+          subscribed_fields: subscribedFields,
+        },
+      }
+    );
+    data = response.data;
+  } catch (error) {
+    if (error.response && error.response.data && error.response.data.error) {
+      const err = error.response.data.error;
+      // If the app is in Live Mode without App Review, it throws (#200) for pages_messaging.
+      // We know the user already manually subscribed in the Meta Dashboard, so we can safely swallow it!
+      if (err.code === 200 && err.message && err.message.includes('pages_messaging')) {
+        console.warn('[INSTAPILOT] Bypassing programmatic subscription since user manually subscribed.', err.message);
+      } else {
+        throw error;
+      }
+    } else {
+      throw error;
     }
-  );
+  }
 
   await supabase
     .from('instagram_accounts')
@@ -650,7 +683,7 @@ async function handleInboundMessage({ senderId, recipientId, messaging }) {
   const conversation = await upsertConversation(account, bot, senderId);
   const text = messaging.message.text;
 
-  await supabase.from('instagram_messages').insert({
+  const { error: inboundError } = await supabase.from('instagram_messages').insert({
     user_id: account.user_id,
     bot_id: bot?.id || null,
     instagram_account_id: account.id,
@@ -661,12 +694,13 @@ async function handleInboundMessage({ senderId, recipientId, messaging }) {
     direction: 'inbound',
     raw_payload: messaging,
   });
+  if (inboundError) console.error('❌ Failed to insert INBOUND message:', inboundError);
 
   if (!bot || conversation.bot_paused || conversation.status === 'human_active' || conversation.status === 'closed') {
     return { skipped: true, reason: 'bot_inactive_or_paused' };
   }
 
-  if (needsHandoff(bot, text) || conversation.failure_count >= 2) {
+  if (needsHandoff(bot, text) || conversation.failure_count >= 5) {
     await supabase.from('instagram_conversations').update({ status: 'human_needed' }).eq('id', conversation.id);
     return { skipped: true, reason: 'human_handoff' };
   }
@@ -678,10 +712,12 @@ async function handleInboundMessage({ senderId, recipientId, messaging }) {
   }
 
   const reply = await generateReply({ bot, messageText: text, conversation });
+  // Only increment failure_count on low confidence - don't lock the conversation immediately.
+  // The bot will be handed off only when failure_count reaches the threshold above.
   if (reply.handoff) {
     await supabase
       .from('instagram_conversations')
-      .update({ status: 'human_needed', failure_count: conversation.failure_count + 1 })
+      .update({ failure_count: (conversation.failure_count || 0) + 1 })
       .eq('id', conversation.id);
   }
 

@@ -16,13 +16,14 @@ const base64Url = (value) =>
 const bytesToBase64 = (buffer) => Buffer.from(buffer).toString('base64');
 
 const getTokenEncryptionKey = () => {
-  if (!autodmTokenEncryptionKey) {
-    throw new Error('Missing AUTODM_TOKEN_ENCRYPTION_KEY_BASE64.');
+  const primary = process.env.INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64;
+  if (!primary) {
+    throw new Error('Missing INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64.');
   }
 
-  const key = Buffer.from(autodmTokenEncryptionKey, 'base64');
+  const key = Buffer.from(primary, 'base64');
   if (key.length !== 32) {
-    throw new Error('AUTODM_TOKEN_ENCRYPTION_KEY_BASE64 must decode to 32 bytes.');
+    throw new Error('INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64 must decode to 32 bytes.');
   }
 
   return key;
@@ -170,13 +171,28 @@ export async function importInstagramAccountToAutoDM(user) {
     updated_at: new Date().toISOString(),
   };
 
-  const { data, error } = await autoDMSupabase
+  const { data: existing } = await autoDMSupabase
     .from('instagram_accounts')
-    .upsert(upsertPayload, {
-      onConflict: 'user_id,instagram_user_id',
-    })
-    .select('*')
-    .single();
+    .select('id')
+    .eq('instagram_user_id', upsertPayload.instagram_user_id)
+    .eq('user_id', upsertPayload.user_id)
+    .maybeSingle();
+
+  let data, error;
+  if (existing) {
+    ({ data, error } = await autoDMSupabase
+      .from('instagram_accounts')
+      .update(upsertPayload)
+      .eq('id', existing.id)
+      .select('*')
+      .single());
+  } else {
+    ({ data, error } = await autoDMSupabase
+      .from('instagram_accounts')
+      .insert(upsertPayload)
+      .select('*')
+      .single());
+  }
 
   if (error) {
     throw new Error(`Failed to import Instagram account into AutoDM: ${error.message}`);

@@ -29,10 +29,16 @@ const asyncHandler = (fn) => async (req, res) => {
   try {
     await fn(req, res);
   } catch (error) {
-    console.error('[INSTAPILOT]', error);
-    res.status(error.status || 500).json({
+    console.error('[INSTAPILOT]', error.response?.data || error);
+    
+    let errorMessage = error.message || 'InstaPilot request failed';
+    if (error.response?.data?.error?.message) {
+      errorMessage = `Meta API Error: ${error.response.data.error.message}`;
+    }
+
+    res.status(error.response?.status || error.status || 500).json({
       success: false,
-      error: error.message || 'InstaPilot request failed',
+      error: errorMessage,
     });
   }
 };
@@ -140,8 +146,12 @@ router.get('/webhooks/instagram', (req, res) => {
 });
 
 router.post('/webhooks/instagram', asyncHandler(async (req, res) => {
+  console.log('--- 🛑 INSTAGRAM WEBHOOK PAYLOAD ---');
+  console.log(JSON.stringify(req.body, null, 2));
+  
   const signature = req.headers['x-hub-signature-256'];
   if (!verifyMetaSignature(req.rawBody, signature)) {
+    console.error('❌ Invalid Meta webhook signature');
     return res.status(401).json({ success: false, error: 'Invalid Meta webhook signature' });
   }
 

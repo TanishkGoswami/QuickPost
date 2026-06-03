@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import ConversationThread from "@/components/instagram/ConversationThread";
@@ -6,10 +6,32 @@ import InboxConversationList from "@/components/instagram/InboxConversationList"
 import LeadPanel from "@/components/instagram/LeadPanel";
 import { Button } from "@/components/ui/button";
 import { useInbox } from "@/hooks/useInbox";
+import { supabase } from "@/lib/supabase";
 
 export default function InstagramInbox() {
   const { conversations, loading, error, refresh } = useInbox();
   const [selectedId, setSelectedId] = useState<string | undefined>();
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleRefresh = async () => {
+    await refresh();
+    setRefreshKey((prev) => prev + 1);
+  };
+
+  useEffect(() => {
+    // Connect to Backend SSE for realtime updates (bypasses Supabase RLS)
+    const eventSource = new EventSource(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/instapilot/stream`);
+    
+    eventSource.onmessage = (e) => {
+      if (e.data === 'refresh') {
+        handleRefresh();
+      }
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [refresh]);
 
   const selected = conversations.find((conversation) => conversation.id === selectedId);
 
@@ -28,7 +50,7 @@ export default function InstagramInbox() {
                 Builder
               </Link>
             </Button>
-            <Button type="button" variant="outline" onClick={refresh} className="gap-2">
+            <Button type="button" variant="outline" onClick={handleRefresh} className="gap-2">
               <RefreshCw className="h-4 w-4" />
               Refresh
             </Button>
@@ -38,7 +60,7 @@ export default function InstagramInbox() {
         {loading ? <div className="rounded-lg border border-black/10 bg-white p-4 text-sm text-[var(--slate)]">Loading inbox...</div> : null}
         <div className="grid gap-5 xl:grid-cols-[320px_1fr_280px]">
           <InboxConversationList conversations={conversations} selectedId={selectedId} onSelect={setSelectedId} />
-          <ConversationThread conversationId={selectedId} onChanged={refresh} />
+          <ConversationThread conversationId={selectedId} refreshKey={refreshKey} onChanged={refresh} />
           <LeadPanel lead={selected?.instagram_leads?.[0]} />
         </div>
       </div>
