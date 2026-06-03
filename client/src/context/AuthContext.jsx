@@ -83,8 +83,12 @@ export function AuthProvider({ children }) {
         || 'active';
 
       // Normalise — if somehow "Pro"/"Enterprise" slipped through from old code, map to new names
-      if (resolvedPlan === 'Pro' || resolvedPlan === 'pro') resolvedPlan = 'Social Pilot';
-      if (resolvedPlan === 'Enterprise' || resolvedPlan === 'enterprise') resolvedPlan = 'GAP Ultimate Ecosystem';
+      const p = resolvedPlan.toLowerCase();
+      if (p.includes('monthly') || p.includes('core') || p === 'all_in_one_bundle_monthly') resolvedPlan = 'GAP Core';
+      else if (p.includes('quarterly') || p.includes('pro') || p === 'all_in_one_bundle_quarterly') resolvedPlan = 'GAP Pro';
+      else if (p.includes('half_yearly') || p.includes('max') || p === 'all_in_one_bundle_half_yearly') resolvedPlan = 'GAP Max';
+      else if (p.includes('all_in_one') || p.includes('ultimate') || p.includes('enterprise')) resolvedPlan = 'GAP Ultimate Ecosystem';
+      else if (p === 'pro') resolvedPlan = 'Social Pilot';
 
       if (resolvedPlan !== 'Free') {
         console.log('✅ [AUTH] Plan resolved:', resolvedPlan);
