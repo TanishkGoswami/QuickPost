@@ -260,6 +260,13 @@ function ResponseFlowBuilder({ responseFlow, onChange, step }) {
         )}
 
         <div className="space-y-3">
+          {nodes.length === 0 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-center text-amber-900">
+              <MessageCircle className="mx-auto mb-2 h-8 w-8 text-amber-500 opacity-80" />
+              <p className="font-medium">No response added</p>
+              <p className="mt-1 text-sm opacity-90">Please add at least one response (like Text or Card) below so the automation can reply.</p>
+            </div>
+          )}
           {nodes.map((node, index) => {
             const config = responseTypes.find((item) => item.type === node.type) || responseTypes[0];
             const Icon = config.icon;
