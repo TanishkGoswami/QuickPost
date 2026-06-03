@@ -2,7 +2,7 @@ import { logError, logInfo, requireEnv } from './db.ts';
 
 const GRAPH_VERSION = 'v19.0';
 const GRAPH_BASE_URL = `https://graph.facebook.com/${GRAPH_VERSION}`;
-const IG_GRAPH_BASE_URL = 'https://graph.instagram.com';
+const IG_GRAPH_BASE_URL = 'https://graph.facebook.com';
 const IG_GRAPH_VERSION = 'v24.0';
 const IG_GRAPH_API_BASE_URL = `${IG_GRAPH_BASE_URL}/${IG_GRAPH_VERSION}`;
 const IG_API_BASE_URL = 'https://api.instagram.com';
@@ -436,7 +436,7 @@ const sendInstagramMessagePayload = async (
   messagingType = 'RESPONSE',
   maxAttempts = 3
 ) => {
-  const url = `${IG_GRAPH_API_BASE_URL}/${igId}/messages`;
+  const url = `${IG_GRAPH_API_BASE_URL}/me/messages`;
 
   let lastError: unknown;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {

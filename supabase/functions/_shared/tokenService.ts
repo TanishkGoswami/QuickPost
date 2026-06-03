@@ -19,27 +19,49 @@ const bytesToBase64 = (bytes: Uint8Array): string => {
   return btoa(raw);
 };
 
-const loadKey = async (): Promise<CryptoKey> => {
-  const keyBase64 = requireEnv('TOKEN_ENCRYPTION_KEY_BASE64');
-  const keyBytes = base64ToBytes(keyBase64);
-  const keyBuffer = keyBytes.buffer.slice(
-    keyBytes.byteOffset,
-    keyBytes.byteOffset + keyBytes.byteLength
-  );
+const loadKeys = async (): Promise<CryptoKey[]> => {
+  const keys: CryptoKey[] = [];
+  const envKeys = [
+    Deno.env.get('INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64'),
+    Deno.env.get('AUTODM_TOKEN_ENCRYPTION_KEY_BASE64')
+  ];
 
-  if (keyBytes.length !== 32) {
-    throw new Error('TOKEN_ENCRYPTION_KEY_BASE64 must decode to 32 bytes');
+  for (const keyBase64 of envKeys) {
+    if (!keyBase64 || keyBase64.trim() === '') continue;
+    
+    let keyBytes: Uint8Array;
+    try {
+      keyBytes = base64ToBytes(keyBase64.trim());
+    } catch (e) {
+      console.warn('Skipping invalid base64 encryption key in environment');
+      continue;
+    }
+    
+    if (keyBytes.length !== 32) continue;
+    
+    const keyBuffer = keyBytes.buffer.slice(
+      keyBytes.byteOffset,
+      keyBytes.byteOffset + keyBytes.byteLength
+    );
+
+    const key = await crypto.subtle.importKey('raw', keyBuffer, { name: 'AES-GCM' }, false, [
+      'encrypt',
+      'decrypt',
+    ]);
+    keys.push(key);
   }
 
-  return crypto.subtle.importKey('raw', keyBuffer, { name: 'AES-GCM' }, false, [
-    'encrypt',
-    'decrypt',
-  ]);
+  if (keys.length === 0) {
+    throw new Error('No valid 32-byte encryption keys found in environment');
+  }
+
+  return keys;
 };
 
 export const encryptTokenBundle = async (bundle: TokenBundle): Promise<string> => {
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await loadKey();
+  const keys = await loadKeys();
+  const key = keys[0]; // Encrypt with the primary key
   const plaintext = encoder.encode(JSON.stringify(bundle));
 
   const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext);
@@ -54,7 +76,7 @@ export const decryptTokenBundle = async (ciphertext: string): Promise<TokenBundl
     throw new Error('Invalid encrypted token format');
   }
 
-  const key = await loadKey();
+  const keys = await loadKeys();
   const iv = base64ToBytes(ivBase64);
   const ivBuffer = iv.buffer.slice(iv.byteOffset, iv.byteOffset + iv.byteLength);
   const encryptedBytes = base64ToBytes(payloadBase64);
@@ -63,16 +85,30 @@ export const decryptTokenBundle = async (ciphertext: string): Promise<TokenBundl
     encryptedBytes.byteOffset + encryptedBytes.byteLength
   );
 
-  const decrypted = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv: ivBuffer },
-    key,
-    encryptedBuffer
-  );
+  let decrypted: ArrayBuffer | null = null;
+  let lastError: Error | null = null;
+
+  for (const key of keys) {
+    try {
+      decrypted = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: ivBuffer },
+        key,
+        encryptedBuffer
+      );
+      break;
+    } catch (e) {
+      lastError = e as Error;
+    }
+  }
+
+  if (!decrypted) {
+    throw new Error(`Decryption failed: ${lastError?.message}`);
+  }
 
   const parsed = JSON.parse(decoder.decode(new Uint8Array(decrypted))) as Partial<TokenBundle>;
 
-  if (!parsed.pageAccessToken || !parsed.userAccessToken) {
-    throw new Error('Token bundle missing expected fields');
+  if (!parsed.pageAccessToken) {
+    throw new Error('Token bundle missing pageAccessToken');
   }
 
   return {

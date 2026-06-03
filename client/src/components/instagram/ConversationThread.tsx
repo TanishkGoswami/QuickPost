@@ -8,7 +8,7 @@ import {
   updateConversation,
 } from "@/services/instagramApi";
 
-export default function ConversationThread({ conversationId, onChanged }: { conversationId?: string; onChanged: () => void }) {
+export default function ConversationThread({ conversationId, refreshKey, onChanged }: { conversationId?: string; refreshKey?: number; onChanged: () => void }) {
   const [thread, setThread] = useState<any>(null);
   const [draft, setDraft] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,7 +27,7 @@ export default function ConversationThread({ conversationId, onChanged }: { conv
 
   useEffect(() => {
     load();
-  }, [conversationId]);
+  }, [conversationId, refreshKey]);
 
   const send = async () => {
     if (!conversationId || !draft.trim()) return;
