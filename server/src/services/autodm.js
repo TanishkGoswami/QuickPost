@@ -312,7 +312,51 @@ export async function listAutomationsForUser(user, { instagramAccountId } = {}) 
 
   const { data, error } = await query;
   if (error) throw new Error(`Failed to load Auto DM automations: ${error.message}`);
-  return data || [];
+  
+  if (!data || data.length === 0) return [];
+
+  const automationIds = data.map((a) => a.id);
+  const mediaIds = data.map((a) => a.media_id).filter(Boolean);
+
+  const [ { data: messages }, { data: webhooks } ] = await Promise.all([
+    autoDMSupabase
+      .from('messages')
+      .select('automation_id, direction')
+      .in('automation_id', automationIds),
+    mediaIds.length > 0 
+      ? autoDMSupabase
+          .from('webhook_logs')
+          .select('payload')
+          .eq('event_type', 'comments')
+          .in('payload->value->media->>id', mediaIds)
+          .limit(1000)
+      : { data: [] }
+  ]);
+
+  const metrics = {};
+  automationIds.forEach(id => { metrics[id] = { inbound: 0, dmsSent: 0, webhookComments: 0 }; });
+
+  for (const m of messages || []) {
+    if (m.direction === 'outbound') metrics[m.automation_id].dmsSent++;
+    if (m.direction === 'inbound') metrics[m.automation_id].inbound++;
+  }
+
+  for (const w of webhooks || []) {
+    const mediaId = w.payload?.value?.media?.id;
+    if (mediaId) {
+      const automationsForMedia = data.filter(a => a.media_id === mediaId);
+      automationsForMedia.forEach(a => { metrics[a.id].webhookComments++; });
+    }
+  }
+
+  return data.map(automation => {
+    const m = metrics[automation.id];
+    return {
+      ...automation,
+      comments: Math.max(m.inbound, m.webhookComments),
+      dms_sent: m.dmsSent,
+    };
+  });
 }
 
 export async function getAutomationForUser(user, automationId) {

@@ -625,15 +625,41 @@ async function findAccountByRecipient(recipientId) {
 }
 
 async function upsertConversation(account, bot, senderId) {
-  const profile = await fetchInstagramScopedUserProfile(account, senderId).catch(() => null);
+  // 1. Check if we already have it in the DB to avoid unnecessary API calls
+  const { data: existingConv } = await supabase
+    .from('instagram_conversations')
+    .select('instagram_username, instagram_name, profile_pic_url')
+    .eq('instagram_account_id', account.id)
+    .eq('instagram_user_id', senderId)
+    .maybeSingle();
+
+  let profile = await fetchInstagramScopedUserProfile(account, senderId).catch(() => null);
+
+  // If profile API failed or returned missing data, try to get username from contacts
+  let fallbackUsername = null;
+  let fallbackName = null;
+  if (!profile || !profile.username) {
+    const { data: contact } = await supabase
+      .from('contacts')
+      .select('username, full_name')
+      .eq('instagram_account_id', account.id)
+      .eq('instagram_user_id', senderId)
+      .maybeSingle();
+      
+    if (contact && contact.username && !contact.username.startsWith('user_')) {
+      fallbackUsername = contact.username;
+      fallbackName = contact.full_name;
+    }
+  }
+
   const payload = {
     user_id: account.user_id,
     bot_id: bot?.id || null,
     instagram_account_id: account.id,
     instagram_user_id: senderId,
-    instagram_username: profile?.username || null,
-    instagram_name: profile?.name || null,
-    profile_pic_url: profile?.profile_pic || null,
+    instagram_username: profile?.username || fallbackUsername || existingConv?.instagram_username || null,
+    instagram_name: profile?.name || fallbackName || existingConv?.instagram_name || null,
+    profile_pic_url: profile?.profile_pic || existingConv?.profile_pic_url || null,
     follower_count: Number.isFinite(profile?.follower_count) ? profile.follower_count : null,
     is_user_follow_business:
       typeof profile?.is_user_follow_business === 'boolean' ? profile.is_user_follow_business : null,
