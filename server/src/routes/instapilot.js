@@ -44,7 +44,7 @@ const asyncHandler = (fn) => async (req, res) => {
 };
 
 router.get('/accounts', authenticateUser, asyncHandler(async (req, res) => {
-  const accounts = await listAccounts(req.user.userId);
+  const accounts = await listAccounts(req.user);
   res.json({ success: true, accounts });
 }));
 

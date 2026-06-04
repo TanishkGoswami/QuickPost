@@ -12,7 +12,7 @@ function InstagramBusinessSetupModal({ isOpen, onClose, onProceed }) {
       >
         {/* Header */}
         <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 bg-white">
-          <h2 className="text-xl font-semibold text-gray-900">Instagram Business Account Setup</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Instagram Professional Account Setup</h2>
           <button
             onClick={onClose}
             className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
@@ -27,20 +27,20 @@ function InstagramBusinessSetupModal({ isOpen, onClose, onProceed }) {
           <div className="p-4 bg-gray-100 border border-gray-300 rounded-lg flex gap-3">
             <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-blue-900">Instagram Business Account Required</p>
+              <p className="text-sm font-medium text-blue-900">Instagram Business or Creator Account Required</p>
               <p className="text-sm text-blue-700 mt-1">
-                To post to Instagram via QuickPost, you need to convert your personal Instagram account to a Business or Creator account.
+                QuickPost will connect directly through Instagram OAuth. A professional Instagram account is required for posting, messages, comments, and insights.
               </p>
             </div>
           </div>
 
           {/* Why Business Account */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Why Do I Need a Business Account?</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Why Do I Need a Professional Account?</h3>
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                <span>Access to Instagram Graph API for automated posting</span>
+                <span>Direct Instagram OAuth access for automated posting</span>
               </li>
               <li className="flex gap-2">
                 <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
@@ -112,17 +112,17 @@ function InstagramBusinessSetupModal({ isOpen, onClose, onProceed }) {
                   5
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 mb-1">Create/Link Facebook Page</h4>
+                  <h4 className="font-semibold text-gray-900 mb-1">Review Professional Settings</h4>
                   <p className="text-sm text-gray-600 mb-2">
-                    You'll need to create a Facebook Page or link an existing one. This is required for the Instagram Graph API.
+                    Make sure your Instagram account is set to Business or Creator and that you can approve the requested permissions during Instagram login.
                   </p>
                   <a
-                    href="https://www.facebook.com/pages/creation"
+                    href="https://help.instagram.com/502981923235522"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-sm text-link hover:underline"
                   >
-                    Create Facebook Page
+                    Instagram professional account guide
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
@@ -152,16 +152,7 @@ function InstagramBusinessSetupModal({ isOpen, onClose, onProceed }) {
                 className="flex items-center gap-2 text-sm text-link hover:underline"
               >
                 <ExternalLink className="w-4 h-4" />
-                Instagram Official Guide: Switch to Business Account
-              </a>
-              <a
-                href="https://www.facebook.com/business/help/898752960195806"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-link hover:underline"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Connect Instagram Business Account to Facebook Page
+                Instagram Official Guide: Switch to Professional Account
               </a>
             </div>
           </div>

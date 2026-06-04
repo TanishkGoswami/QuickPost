@@ -244,7 +244,7 @@ export default function ConnectInstagramPage() {
                 Supports Business & Creator Accounts
               </p>
               <p style={{ fontSize: 11, color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
-                Log in with Facebook to connect your Instagram Professional account (Business or Creator) linked to a Facebook Page.
+                Log in directly with Instagram to connect your Business or Creator account.
               </p>
             </div>
           </div>

@@ -14,6 +14,7 @@ import mastodonOAuth from "../services/mastodonOAuth.js";
 import threadsOAuth from "../services/threadsOAuth.js";
 import xOAuth from "../services/xOAuth.js";
 import redditOAuth from "../services/redditOAuth.js";
+import { startAutoDMInstagramOAuth } from "../services/autodm.js";
 
 import supabase, {
   createOrUpdateUser,
@@ -247,9 +248,12 @@ router.get("/instagram", async (req, res) => {
       );
     }
 
-    const state = instagramOAuth.makeState(userId);
-    const authUrl = instagramOAuth.getAuthorizationUrl(state);
-    return res.redirect(authUrl);
+    const redirectTo = await startAutoDMInstagramOAuth(
+      { userId },
+      CLIENT_URL,
+      `Bearer ${token}`,
+    );
+    return res.redirect(redirectTo);
   } catch (error) {
     console.error("Instagram init error:", error);
     res.redirect(`${CLIENT_URL}/dashboard?error=instagram_oauth_failed`);
@@ -1014,7 +1018,7 @@ router.get("/me", authenticateUser, (req, res) => {
 
 router.get("/accounts", authenticateUser, async (req, res) => {
   try {
-    const accounts = await getConnectedAccounts(req.user.userId);
+    const accounts = await getConnectedAccounts(req.user);
     res.json({ success: true, accounts });
   } catch (error) {
     console.error("Get accounts error:", error);
