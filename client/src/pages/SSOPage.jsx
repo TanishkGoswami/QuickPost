@@ -23,16 +23,34 @@ function SSOPage() {
     const controller = new AbortController();
 
     const processSSO = async () => {
-      // If already logged in to Project B, skip SSO entirely
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate('/dashboard', { replace: true });
-        return;
-      }
-
       const token = new URLSearchParams(window.location.search).get('token');
 
-      if (!token) {
+      if (token) {
+        try {
+          const payloadPart = token.split('.')[0];
+          const base64 = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+          const decodedPayload = JSON.parse(atob(base64));
+          const ssoEmail = decodedPayload?.email;
+
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session && session.user?.email === ssoEmail) {
+            navigate('/dashboard', { replace: true });
+            return;
+          }
+
+          if (session) {
+            await supabase.auth.signOut();
+          }
+        } catch (e) {
+          console.error("SSO token parsing error:", e);
+        }
+      } else {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          navigate('/dashboard', { replace: true });
+          return;
+        }
+
         setStatus('error');
         setMessage('No SSO token found. Please try launching Social Pilot again from GetAiPilot.');
         return;
