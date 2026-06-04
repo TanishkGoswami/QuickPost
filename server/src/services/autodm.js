@@ -5,10 +5,24 @@ import supabase from './supabase.js';
 const autodmTokenEncryptionKey = process.env.AUTODM_TOKEN_ENCRYPTION_KEY_BASE64;
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v21.0';
 const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
+const IG_GRAPH_BASE = process.env.IG_GRAPH_BASE_URL || 'https://graph.instagram.com/v24.0';
+
+function getGraphBaseForToken(accessToken) {
+  return accessToken?.startsWith('IG') ? IG_GRAPH_BASE : GRAPH_BASE;
+}
 
 const getAutoDMSupabaseAdmin = () => {
   return supabase;
 };
+
+function getUserIds(userOrId) {
+  if (typeof userOrId === 'string') return [userOrId].filter(Boolean);
+  return [...new Set([userOrId?.userId, userOrId?.authUserId].filter(Boolean))];
+}
+
+function getPrimaryUserId(user) {
+  return user?.userId || user?.authUserId;
+}
 
 const base64Url = (value) =>
   Buffer.from(value).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
@@ -16,14 +30,17 @@ const base64Url = (value) =>
 const bytesToBase64 = (buffer) => Buffer.from(buffer).toString('base64');
 
 const getTokenEncryptionKey = () => {
-  const primary = process.env.INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64;
+  const primary =
+    process.env.INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64 ||
+    process.env.AUTODM_TOKEN_ENCRYPTION_KEY_BASE64 ||
+    process.env.TOKEN_ENCRYPTION_KEY_BASE64;
   if (!primary) {
-    throw new Error('Missing INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64.');
+    throw new Error('Missing INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64 or TOKEN_ENCRYPTION_KEY_BASE64.');
   }
 
   const key = Buffer.from(primary, 'base64');
   if (key.length !== 32) {
-    throw new Error('INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64 must decode to 32 bytes.');
+    throw new Error('Token encryption key must decode to 32 bytes.');
   }
 
   return key;
@@ -62,7 +79,8 @@ export async function startAutoDMInstagramOAuth(user, frontendUrl, authHeader) {
 
   if (!response.ok) {
     throw new Error(
-      payload.error ||
+      payload.details ||
+        payload.error ||
         payload.message ||
         `AutoDM OAuth function failed with status ${response.status}`
     );
@@ -116,6 +134,8 @@ async function fetchInstagramBusinessProfile({ accessToken, instagramBusinessId 
 
 export async function importInstagramAccountToAutoDM(user) {
   const autoDMSupabase = getAutoDMSupabaseAdmin();
+  const userIds = getUserIds(user);
+  const primaryUserId = getPrimaryUserId(user);
 
   // Ensure user exists in AutoDM auth.users (required by FK constraint)
   await ensureAutoDMUser(user);
@@ -123,8 +143,10 @@ export async function importInstagramAccountToAutoDM(user) {
   const { data: socialInstagram, error: socialError } = await supabase
     .from('social_tokens')
     .select('access_token, token_expiry, instagram_business_id, page_id, username, profile_data')
-    .eq('user_id', user.userId)
+    .in('user_id', userIds)
     .eq('provider', 'instagram')
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (socialError) {
@@ -149,7 +171,7 @@ export async function importInstagramAccountToAutoDM(user) {
   });
 
   const upsertPayload = {
-    user_id: user.userId,
+    user_id: primaryUserId,
     instagram_user_id: socialInstagram.instagram_business_id,
     username: liveProfile?.username || socialInstagram.username || profile.username || `ig_${socialInstagram.instagram_business_id}`,
     full_name: liveProfile?.name || profile.name || profile.full_name || null,
@@ -167,7 +189,7 @@ export async function importInstagramAccountToAutoDM(user) {
     is_connected: true,
     followers_count: liveProfile?.followers_count || profile.followers_count || null,
     media_count: liveProfile?.media_count || profile.media_count || null,
-    page_id: socialInstagram.page_id || null,
+    page_id: socialInstagram.page_id || socialInstagram.instagram_business_id,
     updated_at: new Date().toISOString(),
   };
 
@@ -218,20 +240,23 @@ export async function importInstagramAccountToAutoDM(user) {
 
 export async function getAutoDMStatus(user) {
   const autoDMSupabase = getAutoDMSupabaseAdmin();
+  const userIds = getUserIds(user);
 
   let [{ data: accounts, error: accountsError }, { data: socialInstagram, error: socialError }] =
     await Promise.all([
       autoDMSupabase
         .from('instagram_accounts')
         .select('*')
-        .eq('user_id', user.userId)
+        .in('user_id', userIds)
         .eq('is_connected', true)
         .order('created_at', { ascending: false }),
       supabase
         .from('social_tokens')
         .select('access_token, token_expiry, instagram_business_id, page_id, username, profile_data, provider')
-        .eq('user_id', user.userId)
+        .in('user_id', userIds)
         .eq('provider', 'instagram')
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle(),
     ]);
 
@@ -256,7 +281,7 @@ export async function getAutoDMStatus(user) {
       const { data: refreshedAccounts, error: refreshError } = await autoDMSupabase
         .from('instagram_accounts')
         .select('*')
-        .eq('user_id', user.userId)
+        .in('user_id', userIds)
         .eq('is_connected', true)
         .order('created_at', { ascending: false });
         
@@ -293,7 +318,7 @@ function cleanAutomationPayload(payload = {}, user) {
 
   return {
     ...rest,
-    user_id: user.authUserId || user.userId,
+    user_id: getPrimaryUserId(user),
     updated_at: new Date().toISOString(),
   };
 }
@@ -303,7 +328,7 @@ export async function listAutomationsForUser(user, { instagramAccountId } = {}) 
   let query = autoDMSupabase
     .from('automations')
     .select('*')
-    .eq('user_id', user.authUserId || user.userId)
+    .eq('user_id', getPrimaryUserId(user))
     .order('created_at', { ascending: false });
 
   if (instagramAccountId) {
@@ -365,7 +390,7 @@ export async function getAutomationForUser(user, automationId) {
     .from('automations')
     .select('*')
     .eq('id', automationId)
-    .eq('user_id', user.authUserId || user.userId)
+    .eq('user_id', getPrimaryUserId(user))
     .maybeSingle();
 
   if (error) throw new Error(`Failed to load Auto DM automation: ${error.message}`);
@@ -394,7 +419,7 @@ export async function updateAutomationForUser(user, automationId, payload) {
     .from('automations')
     .update(cleanPayload)
     .eq('id', automationId)
-    .eq('user_id', user.authUserId || user.userId)
+    .eq('user_id', getPrimaryUserId(user))
     .select('*')
     .single();
 
@@ -408,18 +433,21 @@ export async function deleteAutomationForUser(user, automationId) {
     .from('automations')
     .delete()
     .eq('id', automationId)
-    .eq('user_id', user.authUserId || user.userId);
+    .eq('user_id', getPrimaryUserId(user));
 
   if (error) throw new Error(`Failed to delete Auto DM automation: ${error.message}`);
   return true;
 }
 
 export async function fetchInstagramMediaForUser(user, limit = 30) {
+  const userIds = getUserIds(user);
   const { data: token, error } = await supabase
     .from('social_tokens')
     .select('access_token, instagram_business_id')
-    .eq('user_id', user.userId)
+    .in('user_id', userIds)
     .eq('provider', 'instagram')
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (error) throw new Error(`Failed to read Instagram token: ${error.message}`);
@@ -427,7 +455,11 @@ export async function fetchInstagramMediaForUser(user, limit = 30) {
     throw new Error('Instagram is not connected in Social Pilot.');
   }
 
-  const url = new URL(`https://graph.facebook.com/v21.0/${token.instagram_business_id}/media`);
+  if (token.access_token.startsWith('enc:')) {
+    throw new Error('Instagram token is encrypted in social_tokens. Please reconnect Instagram.');
+  }
+
+  const url = new URL(`${getGraphBaseForToken(token.access_token)}/${token.instagram_business_id}/media`);
   url.searchParams.set('access_token', token.access_token);
   url.searchParams.set('fields', 'id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,like_count,comments_count');
   url.searchParams.set('limit', String(limit));
@@ -452,7 +484,7 @@ function buildComposerAutomationPayload({ user, account, config, publication, so
     (publication?.mediaType === 'video' ? 'comment_on_reel' : 'comment_on_post');
 
   return {
-    user_id: user.authUserId || user.userId,
+    user_id: getPrimaryUserId(user),
     instagram_account_id: account.id,
     name: config.name || `Auto DM for ${publication?.mediaId || 'Instagram post'}`,
     trigger_type: triggerType,
@@ -473,11 +505,15 @@ function buildComposerAutomationPayload({ user, account, config, publication, so
 }
 
 async function resolveImportedAutoDMInstagramAccount(autoDMSupabase, user) {
+  const userIds = getUserIds(user);
+  const primaryUserId = getPrimaryUserId(user);
   const { data: socialInstagram, error: socialError } = await supabase
     .from('social_tokens')
     .select('instagram_business_id, page_id')
-    .eq('user_id', user.userId)
+    .in('user_id', userIds)
     .eq('provider', 'instagram')
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (socialError) {
@@ -492,7 +528,7 @@ async function resolveImportedAutoDMInstagramAccount(autoDMSupabase, user) {
   let { data: account, error: accountError } = await autoDMSupabase
     .from('instagram_accounts')
     .select('*')
-    .eq('user_id', user.userId)
+    .eq('user_id', primaryUserId)
     .eq('instagram_user_id', instagramBusinessId)
     .eq('is_connected', true)
     .maybeSingle();
@@ -539,7 +575,7 @@ export async function createOrUpdateComposerAutomation({
     const { data: existing, error: findError } = await autoDMSupabase
       .from('automations')
       .select('id')
-      .eq('user_id', user.authUserId || user.userId)
+      .eq('user_id', getPrimaryUserId(user))
       .eq('source_broadcast_id', sourceBroadcastId)
       .maybeSingle();
 
@@ -558,7 +594,7 @@ export async function createOrUpdateComposerAutomation({
         .from('automations')
         .update(payload)
         .eq('id', existing.id)
-        .eq('user_id', user.authUserId || user.userId)
+        .eq('user_id', getPrimaryUserId(user))
         .select('*')
         .single();
 
@@ -597,7 +633,7 @@ export async function createOrUpdateComposerAutomation({
     const { data: existing, error: existingError } = await autoDMSupabase
       .from('automations')
       .select('id')
-      .eq('user_id', user.authUserId || user.userId)
+      .eq('user_id', getPrimaryUserId(user))
       .eq('source_broadcast_id', sourceBroadcastId)
       .maybeSingle();
 
@@ -609,7 +645,7 @@ export async function createOrUpdateComposerAutomation({
       .from('automations')
       .update(payload)
       .eq('id', existing.id)
-      .eq('user_id', user.authUserId || user.userId)
+      .eq('user_id', getPrimaryUserId(user))
       .select('*')
       .single();
 
@@ -625,7 +661,7 @@ export async function listContactsForUser(user, { instagramAccountId } = {}) {
   let query = autoDMSupabase
     .from('contacts')
     .select('*')
-    .eq('user_id', user.userId)
+    .eq('user_id', getPrimaryUserId(user))
     .order('last_interaction_at', { ascending: false });
 
   if (instagramAccountId) {
@@ -654,7 +690,7 @@ export async function getDailyMetrics(user, { instagramAccountId, startDate } = 
   let query = autoDMSupabase
     .from('daily_metrics')
     .select('*')
-    .eq('user_id', user.userId)
+    .eq('user_id', getPrimaryUserId(user))
     .order('date', { ascending: false });
 
   if (instagramAccountId) {
@@ -677,7 +713,7 @@ export async function getAutomationAnalytics(user, automationId) {
     .from('automations')
     .select('*')
     .eq('id', automationId)
-    .eq('user_id', user.authUserId || user.userId)
+    .eq('user_id', getPrimaryUserId(user))
     .maybeSingle();
 
   if (automationError) throw new Error(`Failed to verify automation: ${automationError.message}`);
@@ -773,7 +809,7 @@ export async function syncAutomationInsights(user, automationId) {
     .from('automations')
     .select('*')
     .eq('id', automationId)
-    .eq('user_id', user.authUserId || user.userId)
+    .eq('user_id', getPrimaryUserId(user))
     .maybeSingle();
 
   if (automationError) throw new Error(`Failed to verify automation: ${automationError.message}`);
@@ -782,8 +818,10 @@ export async function syncAutomationInsights(user, automationId) {
   const { data: token } = await supabase
     .from('social_tokens')
     .select('access_token, instagram_business_id')
-    .eq('user_id', user.userId)
+    .in('user_id', getUserIds(user))
     .eq('provider', 'instagram')
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (!token?.access_token || !token?.instagram_business_id) {
@@ -791,7 +829,12 @@ export async function syncAutomationInsights(user, automationId) {
   }
 
   // Fetch account followers
-  const accountUrl = new URL(`https://graph.facebook.com/v21.0/${token.instagram_business_id}`);
+  if (token.access_token.startsWith('enc:')) {
+    throw new Error('Instagram token is encrypted in social_tokens. Please reconnect Instagram.');
+  }
+
+  const graphBase = getGraphBaseForToken(token.access_token);
+  const accountUrl = new URL(`${graphBase}/${token.instagram_business_id}`);
   accountUrl.searchParams.set('access_token', token.access_token);
   accountUrl.searchParams.set('fields', 'followers_count');
   const accountRes = await fetch(accountUrl.toString());
@@ -800,7 +843,7 @@ export async function syncAutomationInsights(user, automationId) {
 
   let matchedMedia = null;
   if (automation.media_id) {
-    const mediaUrl = new URL(`https://graph.facebook.com/v21.0/${automation.media_id}`);
+    const mediaUrl = new URL(`${graphBase}/${automation.media_id}`);
     mediaUrl.searchParams.set('access_token', token.access_token);
     mediaUrl.searchParams.set('fields', 'like_count,comments_count,permalink,caption');
     const mediaRes = await fetch(mediaUrl.toString());
@@ -823,7 +866,7 @@ export async function syncAutomationInsights(user, automationId) {
     .from('automations')
     .update(updates)
     .eq('id', automationId)
-    .eq('user_id', user.authUserId || user.userId)
+    .eq('user_id', getPrimaryUserId(user))
     .select('*')
     .single();
 

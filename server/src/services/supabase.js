@@ -323,14 +323,18 @@ export async function createOrUpdateUser(email, name, externalId = null, profile
  * Get connected accounts for a user (returns metadata)
  * Compatible with your /auth/accounts endpoint
  */
-export async function getConnectedAccounts(userId) {
+export async function getConnectedAccounts(userOrId) {
   try {
+    const userIds = typeof userOrId === 'string'
+      ? [userOrId].filter(Boolean)
+      : [...new Set([userOrId?.userId, userOrId?.authUserId].filter(Boolean))];
+
     const { data, error } = await supabase
       .from('social_tokens')
       .select('provider, updated_at, token_expiry, page_id, instagram_business_id, account_id, bluesky_did, bluesky_handle, profile_data, mastodon_instance, username')
-      .eq('user_id', userId);
+      .in('user_id', userIds);
 
-    console.log(`\n📊 [SUPABASE] Raw social_tokens for user ${userId}:`, data?.map(d => d.provider));
+    console.log(`\n📊 [SUPABASE] Raw social_tokens for user ${userIds.join(',')}:`, data?.map(d => d.provider));
 
     if (error) {
        console.error('💥 [SUPABASE] getConnectedAccounts query error:', error.message);

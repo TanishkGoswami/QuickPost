@@ -3,6 +3,7 @@ import { AlertCircle, CheckCircle2, ChevronDown, ExternalLink, Instagram, Refres
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
+import { startAutoDMInstagramOAuth } from "@/services/autodm/supabaseClient";
 import {
   disconnectInstagramAccount,
   importSocialInstagramAccount,
@@ -17,13 +18,19 @@ export default function ConnectCard({ accounts, onChanged }: { accounts: any[]; 
   const tokenReady = connected?.token_status === "active";
   const displayName = connected?.instagram_username ? `@${connected.instagram_username}` : "Instagram account";
 
-  const startMetaOAuth = () => {
+  const startMetaOAuth = async () => {
     const token = localStorage.getItem("quickpost_token");
     if (!token) {
       toast.error("Please log in again before connecting Instagram.");
       return;
     }
-    window.location.href = `/api/auth/instagram?token=${encodeURIComponent(token)}`;
+
+    try {
+      const redirectTo = await startAutoDMInstagramOAuth(window.location.origin);
+      window.location.assign(redirectTo);
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || err.message || "Failed to start Instagram login");
+    }
   };
 
   const importAccount = async () => {

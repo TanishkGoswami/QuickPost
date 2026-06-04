@@ -9,6 +9,7 @@ import LinkedInConnectModal from "./LinkedInConnectModal";
 import MastodonConnectModal from "./MastodonConnectModal";
 import InstagramBusinessSetupModal from "./InstagramBusinessSetupModal";
 import FacebookSetupModal from "./FacebookSetupModal";
+import { startAutoDMInstagramOAuth } from "../services/autodm/supabaseClient";
 
 const SESSION_KEY = "qp_channels_skipped";
 
@@ -258,11 +259,16 @@ export default function ConnectChannelsModal() {
       {/* Sub-modals */}
       {showInstagramModal && (
         <InstagramBusinessSetupModal
+          isOpen={showInstagramModal}
           onClose={() => setShowInstagramModal(false)}
-          onProceed={() => {
+          onProceed={async () => {
             setShowInstagramModal(false);
-            const token = getToken();
-            if (token) window.location.href = `/api/auth/instagram?token=${token}`;
+            try {
+              const redirectTo = await startAutoDMInstagramOAuth(window.location.origin);
+              window.location.assign(redirectTo);
+            } catch (error) {
+              alert(error?.message || "Failed to start Instagram login.");
+            }
           }}
         />
       )}

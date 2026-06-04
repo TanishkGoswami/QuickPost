@@ -121,7 +121,7 @@ export default function ConnectInstagramPage() {
                 Supports Business & Creator Accounts
               </p>
               <p className="text-xs text-blue-700">
-                Log in with Meta to connect the professional Instagram account you want AutoDM to manage.
+                Log in directly with Instagram to connect the professional account you want AutoDM to manage.
               </p>
             </div>
           </div>
