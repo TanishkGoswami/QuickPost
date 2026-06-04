@@ -21,7 +21,11 @@ function isSocialPlan(planValue: string): boolean {
     p.startsWith("social_pilot") ||
     p.startsWith("all_in_one") ||
     p === "social pilot" ||
-    p === "gap ultimate ecosystem"
+    p === "gap ultimate ecosystem" ||
+    p.includes("core") ||
+    p.includes("pro") ||
+    p.includes("max") ||
+    p.startsWith("gap_")
   );
 }
 
@@ -85,11 +89,16 @@ Deno.serve(async (req: Request) => {
 
     let storedPlan = "Free";
     if (hasSocial) {
-      storedPlan =
-        planLabel ||
-        (rawPlanId.toLowerCase().startsWith("all_in_one")
-          ? "GAP Ultimate Ecosystem"
-          : "Social Pilot");
+      if (planLabel) {
+        storedPlan = planLabel;
+      } else {
+        const id = rawPlanId.toLowerCase();
+        if (id.includes("monthly") || id.includes("core") || id === "all_in_one_bundle_monthly") storedPlan = "GAP Core";
+        else if (id.includes("quarterly") || id.includes("pro") || id === "all_in_one_bundle_quarterly") storedPlan = "GAP Pro";
+        else if (id.includes("half_yearly") || id.includes("max") || id === "all_in_one_bundle_half_yearly") storedPlan = "GAP Max";
+        else if (id.startsWith("all_in_one") || id.includes("ultimate")) storedPlan = "GAP Ultimate Ecosystem";
+        else storedPlan = "Social Pilot";
+      }
     } else if (!rawPlanId && existingPaid) {
       storedPlan = existingSub?.plan || "Social Pilot";
     }

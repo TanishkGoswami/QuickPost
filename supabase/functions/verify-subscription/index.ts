@@ -15,7 +15,10 @@ const corsHeaders = {
 function getPlanName(planId: string): string {
   if (!planId) return "Social Pilot";
   const p = planId.toLowerCase();
-  if (p.includes("enterprise") || p.startsWith("all_in_one")) return "GAP Ultimate Ecosystem";
+  if (p.includes("all_in_one_bundle_monthly")) return "GAP Core";
+  if (p.includes("all_in_one_bundle_quarterly")) return "GAP Pro";
+  if (p.includes("all_in_one_bundle_half_yearly")) return "GAP Max";
+  if (p.includes("enterprise") || p.startsWith("all_in_one") || p.includes("ultimate")) return "GAP Ultimate Ecosystem";
   return "Social Pilot"; // default for any paid plan on social
 }
 
