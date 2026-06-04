@@ -165,14 +165,14 @@ const extractEvents = (payload: any): WebhookEvent[] => {
       const eventId = String(change?.value?.id ?? `${entryId}-${Date.now()}-comment`);
       const mediaId = String(change?.value?.media?.id ?? '');
 
-      if (senderId === entryId || senderId === String(change?.value?.instagram_business_account_id ?? '')) {
-        logInfo('Skipping own comment webhook event', {
-          entryId,
-          senderId,
-          eventId,
-        });
-        continue;
-      }
+      // if (senderId === entryId || senderId === String(change?.value?.instagram_business_account_id ?? '')) {
+      //   logInfo('Skipping own comment webhook event', {
+      //     entryId,
+      //     senderId,
+      //     eventId,
+      //   });
+      //   continue;
+      // }
 
       logInfo('Extracted comment event details', {
         entryId,
@@ -300,7 +300,7 @@ Deno.serve(async (request: Request) => {
           .from('webhook_logs')
           .update({ 
             processed: true, 
-            processing_error: `CRASH: ${errorMessage}` 
+            message_text: `CRASH: ${errorMessage}` 
           })
           .eq('dedupe_key', dedupeKey);
       }
