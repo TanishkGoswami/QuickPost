@@ -114,9 +114,17 @@ function ActionMenu({ automation, onEdit, onData, onDuplicate, onDelete }) {
 
 function AnalyticsModal({ automation, analytics, loading, onClose, onSync, onEdit }) {
   const comments = analytics?.comments ?? statValue(automation, ['comments', 'comments_count', 'total_comments']);
-  const sent = analytics?.messagesSent ?? analytics?.dms_sent ?? statValue(automation, ['dms_sent', 'messages_sent', 'total_messages_sent']);
-  const people = analytics?.people ?? analytics?.unique_people ?? statValue(automation, ['people', 'contacts_count', 'unique_contacts']);
-  const lastUsed = automation.last_used_at || automation.updated_at || automation.created_at;
+  const sent =
+    analytics?.dmsSent ??
+    analytics?.messagesSent ??
+    analytics?.dms_sent ??
+    statValue(automation, ['dms_sent', 'messages_sent', 'total_messages_sent']);
+  const people =
+    analytics?.uniqueContacts ??
+    analytics?.people ??
+    analytics?.unique_people ??
+    statValue(automation, ['people', 'contacts_count', 'unique_contacts']);
+  const lastUsed = analytics?.lastUsedAt || automation.last_used_at || automation.updated_at || automation.created_at;
 
   return (
     <div className="modal-overlay" onClick={onClose}>

@@ -37,7 +37,24 @@ export default function BotBuilderForm({
   const [form, setForm] = useState<any>(() => selectedBot || { ...defaultForm, instagram_account_id: accounts[0]?.id || "" });
   const [saving, setSaving] = useState(false);
 
-  const activeAccountOptions = useMemo(() => accounts.filter((account) => account.is_connected), [accounts]);
+  const activeAccountOptions = useMemo(() => {
+    const seen = new Set<string>();
+    return accounts
+      .filter((account) => account.is_connected)
+      .filter((account) => {
+        const identity = String(
+          account.instagram_business_account_id ||
+            account.instagram_user_id ||
+            account.page_id ||
+            account.instagram_username ||
+            account.id
+        );
+        if (seen.has(identity)) return false;
+        seen.add(identity);
+        return true;
+      });
+  }, [accounts]);
+  const statusLabel = form.id ? (form.is_active ? "Active" : "Paused") : form.is_active ? "Active" : "Draft";
 
   const setField = (key: string, value: unknown) => setForm((current: any) => ({ ...current, [key]: value }));
 
@@ -47,23 +64,36 @@ export default function BotBuilderForm({
     }
   }, [activeAccountOptions, form.id, form.instagram_account_id]);
 
-  const save = async () => {
-    if (!form.instagram_account_id) {
+  useEffect(() => {
+    if (form.instagram_account_id && !activeAccountOptions.some((account) => account.id === form.instagram_account_id)) {
+      setField("instagram_account_id", activeAccountOptions[0]?.id || "");
+    }
+  }, [activeAccountOptions, form.instagram_account_id]);
+
+  const save = async (overrides: Record<string, unknown> = {}) => {
+    const nextForm = { ...form, ...overrides };
+    if (!nextForm.instagram_account_id) {
       toast.error("Instagram account is syncing. Please wait a moment or connect Instagram.");
       return;
     }
-    if (!form.business_name?.trim()) {
+    if (!nextForm.business_name?.trim()) {
       toast.error("Add your business name first.");
       return;
     }
     setSaving(true);
     try {
-      const savedBot = form.id
-        ? await updateInstagramBot(form.id, form)
-        : await createInstagramBot(form);
-      toast.success("Bot saved. Knowledge base is unlocked.");
+      const savedBot = nextForm.id
+        ? await updateInstagramBot(nextForm.id, nextForm)
+        : await createInstagramBot(nextForm);
+      toast.success(
+        "is_active" in overrides
+          ? nextForm.is_active
+            ? "Bot activated."
+            : "Bot paused."
+          : "Bot saved. Knowledge base is unlocked."
+      );
       onSaved(savedBot);
-      if (!form.id && savedBot) setForm(savedBot);
+      if (savedBot) setForm(savedBot);
     } catch (err: any) {
       toast.error(err.response?.data?.error || err.message || "Failed to save bot");
     } finally {
@@ -89,11 +119,23 @@ export default function BotBuilderForm({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className={`rounded-md px-3 py-2 text-xs font-black uppercase tracking-[0.14em] ${form.is_active ? "bg-emerald-100 text-emerald-800" : "bg-black/5 text-[var(--slate)]"}`}>
-              {form.is_active ? "Active" : "Draft"}
+              {statusLabel}
             </span>
+            {form.id ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => save({ is_active: !form.is_active })}
+                disabled={saving || !activeAccountOptions.length}
+                className="gap-2 bg-white"
+              >
+                <Power className="h-4 w-4" />
+                {form.is_active ? "Pause Bot" : "Activate Bot"}
+              </Button>
+            ) : null}
             <Button
               type="button"
-              onClick={save}
+              onClick={() => save()}
               disabled={saving || !activeAccountOptions.length}
               className="gap-2 bg-[var(--arc)] text-white hover:bg-[#d95f27]"
             >

@@ -1,6 +1,15 @@
 import axios from 'axios';
 
-const GRAPH_API_URL = 'https://graph.facebook.com/v18.0';
+const FACEBOOK_GRAPH_API_URL = 'https://graph.facebook.com/v18.0';
+const INSTAGRAM_GRAPH_API_URL = 'https://graph.instagram.com';
+
+function getInstagramGraphBase(accessToken) {
+  return accessToken?.startsWith('IGA') ? INSTAGRAM_GRAPH_API_URL : FACEBOOK_GRAPH_API_URL;
+}
+
+function getGraphErrorMessage(error) {
+  return error.response?.data?.error?.message || error.message;
+}
 
 /**
  * Post image to Instagram Feed using the Container workflow
@@ -21,6 +30,7 @@ export async function postImageToInstagram(imageUrl, caption, tokens) {
     }
 
     const { accessToken, businessId } = tokens;
+    const graphBaseUrl = getInstagramGraphBase(accessToken);
 
     console.log('📸 Starting Instagram Image Container workflow...');
     console.log('Image URL:', imageUrl);
@@ -29,7 +39,7 @@ export async function postImageToInstagram(imageUrl, caption, tokens) {
     // Step 1: Create Media Container for Image
     console.log('Step 1: Creating image container...');
     const containerResponse = await axios.post(
-      `${GRAPH_API_URL}/${businessId}/media`,
+      `${graphBaseUrl}/${businessId}/media`,
       {
         image_url: imageUrl,
         caption: caption,
@@ -47,7 +57,7 @@ export async function postImageToInstagram(imageUrl, caption, tokens) {
     // Step 3: Publish the container
     console.log('Step 3: Publishing media...');
     const publishResponse = await axios.post(
-      `${GRAPH_API_URL}/${businessId}/media_publish`,
+      `${graphBaseUrl}/${businessId}/media_publish`,
       {
         creation_id: containerId,
         access_token: accessToken
@@ -61,7 +71,7 @@ export async function postImageToInstagram(imageUrl, caption, tokens) {
     let permalink = null;
     try {
       const mediaDetailsResponse = await axios.get(
-        `${GRAPH_API_URL}/${mediaId}`,
+        `${graphBaseUrl}/${mediaId}`,
         {
           params: {
             fields: 'permalink',
@@ -87,7 +97,7 @@ export async function postImageToInstagram(imageUrl, caption, tokens) {
     console.error('❌ Instagram image posting failed:', error.message);
     
     // Extract detailed error from Instagram API
-    const errorMessage = error.response?.data?.error?.message || error.message;
+    const errorMessage = getGraphErrorMessage(error);
     const errorCode = error.response?.data?.error?.code;
 
     console.error('Full error details:', error.response?.data);
@@ -121,6 +131,7 @@ export async function postToInstagram(videoUrl, caption, tokens) {
     }
 
     const { accessToken, businessId } = tokens;
+    const graphBaseUrl = getInstagramGraphBase(accessToken);
 
     console.log('📸 Starting Instagram Reels Container workflow...');
 
@@ -138,7 +149,7 @@ export async function postToInstagram(videoUrl, caption, tokens) {
     }
 
     const containerResponse = await axios.post(
-      `${GRAPH_API_URL}/${businessId}/media`,
+      `${graphBaseUrl}/${businessId}/media`,
       containerPayload
     );
 
@@ -157,7 +168,13 @@ export async function postToInstagram(videoUrl, caption, tokens) {
       
       try {
         const statusRes = await axios.get(
-          `${GRAPH_API_URL}/${containerId}?fields=status_code&access_token=${accessToken}`
+          `${graphBaseUrl}/${containerId}`,
+          {
+            params: {
+              fields: 'status_code',
+              access_token: accessToken
+            }
+          }
         );
         const statusCode = statusRes.data.status_code;
         console.log(`Polling attempt ${attempts}: Status is ${statusCode}`);
@@ -181,7 +198,7 @@ export async function postToInstagram(videoUrl, caption, tokens) {
     // Step 3: Publish the container
     console.log('Step 3: Publishing media...');
     const publishResponse = await axios.post(
-      `${GRAPH_API_URL}/${businessId}/media_publish`,
+      `${graphBaseUrl}/${businessId}/media_publish`,
       {
         creation_id: containerId,
         access_token: accessToken
@@ -195,7 +212,7 @@ export async function postToInstagram(videoUrl, caption, tokens) {
     let permalink = null;
     try {
       const mediaDetailsResponse = await axios.get(
-        `${GRAPH_API_URL}/${mediaId}`,
+        `${graphBaseUrl}/${mediaId}`,
         {
           params: {
             fields: 'permalink',
@@ -221,7 +238,7 @@ export async function postToInstagram(videoUrl, caption, tokens) {
     console.error('❌ Instagram posting failed:', error.message);
     
     // Extract detailed error from Instagram API
-    const errorMessage = error.response?.data?.error?.message || error.message;
+    const errorMessage = getGraphErrorMessage(error);
     const errorCode = error.response?.data?.error?.code;
 
     return {
@@ -248,6 +265,7 @@ export async function postCarouselToInstagram(mediaUrls, caption, tokens) {
     }
 
     const { accessToken, businessId } = tokens;
+    const graphBaseUrl = getInstagramGraphBase(accessToken);
     console.log(`📸 Starting Instagram Carousel workflow with ${mediaUrls.length} items...`);
 
     // Step 1: Create individual media containers for each item
@@ -257,7 +275,7 @@ export async function postCarouselToInstagram(mediaUrls, caption, tokens) {
       const isVideo = url.toLowerCase().match(/\.(mp4|mov|avi)$/) || url.includes('/video/');
       
       const containerRes = await axios.post(
-        `${GRAPH_API_URL}/${businessId}/media`,
+        `${graphBaseUrl}/${businessId}/media`,
         {
           media_type: isVideo ? 'VIDEO' : 'IMAGE',
           [isVideo ? 'video_url' : 'image_url']: url,
@@ -276,7 +294,7 @@ export async function postCarouselToInstagram(mediaUrls, caption, tokens) {
     // Step 3: Create the Carousel Container
     console.log('Step 3: Creating carousel container...');
     const carouselRes = await axios.post(
-      `${GRAPH_API_URL}/${businessId}/media`,
+      `${graphBaseUrl}/${businessId}/media`,
       {
         media_type: 'CAROUSEL',
         children: childIds,
@@ -290,7 +308,7 @@ export async function postCarouselToInstagram(mediaUrls, caption, tokens) {
     // Step 4: Publish
     console.log('Step 4: Publishing carousel...');
     const publishRes = await axios.post(
-      `${GRAPH_API_URL}/${businessId}/media_publish`,
+      `${graphBaseUrl}/${businessId}/media_publish`,
       {
         creation_id: creationId,
         access_token: accessToken
@@ -309,7 +327,7 @@ export async function postCarouselToInstagram(mediaUrls, caption, tokens) {
 
   } catch (error) {
     console.error('❌ Instagram Carousel failed:', error.response?.data || error.message);
-    const errorMessage = error.response?.data?.error?.message || error.message;
+    const errorMessage = getGraphErrorMessage(error);
     return {
       success: false,
       platform: 'Instagram',
@@ -327,8 +345,9 @@ export async function postCarouselToInstagram(mediaUrls, caption, tokens) {
  */
 export async function getInstagramMediaDetails(mediaId, accessToken) {
   try {
+    const graphBaseUrl = getInstagramGraphBase(accessToken);
     const response = await axios.get(
-      `${GRAPH_API_URL}/${mediaId}`,
+      `${graphBaseUrl}/${mediaId}`,
       {
         params: {
           fields: 'id,media_type,media_url,permalink,timestamp',

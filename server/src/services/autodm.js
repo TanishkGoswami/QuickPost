@@ -193,6 +193,27 @@ export async function importInstagramAccountToAutoDM(user) {
     updated_at: new Date().toISOString(),
   };
 
+  await autoDMSupabase
+    .from('instagram_accounts')
+    .update({
+      is_connected: false,
+      token_status: 'disconnected',
+      updated_at: new Date().toISOString(),
+    })
+    .in('user_id', userIds)
+    .neq('instagram_user_id', upsertPayload.instagram_user_id);
+
+  await autoDMSupabase
+    .from('instagram_accounts')
+    .update({
+      is_connected: false,
+      token_status: 'disconnected',
+      updated_at: new Date().toISOString(),
+    })
+    .in('user_id', userIds)
+    .is('instagram_user_id', null)
+    .neq('instagram_business_account_id', upsertPayload.instagram_user_id);
+
   const { data: existing } = await autoDMSupabase
     .from('instagram_accounts')
     .select('id')
@@ -267,9 +288,12 @@ export async function getAutoDMStatus(user) {
     throw new Error(`Failed to load Social Pilot Instagram state: ${socialError.message}`);
   }
 
-  const hasSocialInstagramConnection = Boolean(
-    socialInstagram?.instagram_business_id || socialInstagram?.page_id
-  );
+  const activeInstagramId = socialInstagram?.instagram_business_id || socialInstagram?.page_id || null;
+  const hasSocialInstagramConnection = Boolean(activeInstagramId);
+  accounts = (accounts || []).filter((account) => {
+    const accountIgId = account.instagram_user_id || account.instagram_business_account_id || account.page_id;
+    return !activeInstagramId || accountIgId === activeInstagramId;
+  });
 
   // Auto-sync existing Social Pilot Instagram connection to AutoDM if not already imported
   if ((!accounts || accounts.length === 0) && hasSocialInstagramConnection && socialInstagram?.access_token) {
@@ -286,7 +310,10 @@ export async function getAutoDMStatus(user) {
         .order('created_at', { ascending: false });
         
       if (!refreshError && refreshedAccounts) {
-        accounts = refreshedAccounts;
+        accounts = refreshedAccounts.filter((account) => {
+          const accountIgId = account.instagram_user_id || account.instagram_business_account_id || account.page_id;
+          return accountIgId === activeInstagramId;
+        });
         console.log(`✅ [AUTODM-AUTO-SYNC] Automatically synced and loaded ${refreshedAccounts.length} Instagram account(s)`);
       }
     } catch (syncErr) {
@@ -307,7 +334,14 @@ function getAutoDMSupabaseForUserMutation() {
   return getAutoDMSupabaseAdmin();
 }
 
-function cleanAutomationPayload(payload = {}, user) {
+function isForeignKeyViolation(error, constraintName) {
+  return (
+    error?.code === '23503' &&
+    (!constraintName || String(error.message || '').includes(constraintName))
+  );
+}
+
+function cleanAutomationPayload(payload = {}, user, { includeUserId = true } = {}) {
   const {
     id,
     created_at,
@@ -318,9 +352,32 @@ function cleanAutomationPayload(payload = {}, user) {
 
   return {
     ...rest,
-    user_id: getPrimaryUserId(user),
+    ...(includeUserId ? { user_id: getPrimaryUserId(user) } : {}),
     updated_at: new Date().toISOString(),
   };
+}
+
+async function insertAutomationWithUserFallback(autoDMSupabase, payload, user) {
+  const { user_id, ...basePayload } = payload;
+  const candidateUserIds = [...new Set([user_id, ...getUserIds(user)].filter(Boolean))];
+  let lastError = null;
+
+  for (const candidateUserId of candidateUserIds) {
+    const { data, error } = await autoDMSupabase
+      .from('automations')
+      .insert({ ...basePayload, user_id: candidateUserId })
+      .select('*')
+      .single();
+
+    if (!error) return data;
+
+    lastError = error;
+    if (!isForeignKeyViolation(error, 'automations_user_id_fkey')) {
+      break;
+    }
+  }
+
+  throw lastError || new Error('Unknown automation insert error');
 }
 
 export async function listAutomationsForUser(user, { instagramAccountId } = {}) {
@@ -328,7 +385,7 @@ export async function listAutomationsForUser(user, { instagramAccountId } = {}) 
   let query = autoDMSupabase
     .from('automations')
     .select('*')
-    .eq('user_id', getPrimaryUserId(user))
+    .in('user_id', getUserIds(user))
     .order('created_at', { ascending: false });
 
   if (instagramAccountId) {
@@ -390,7 +447,7 @@ export async function getAutomationForUser(user, automationId) {
     .from('automations')
     .select('*')
     .eq('id', automationId)
-    .eq('user_id', getPrimaryUserId(user))
+    .in('user_id', getUserIds(user))
     .maybeSingle();
 
   if (error) throw new Error(`Failed to load Auto DM automation: ${error.message}`);
@@ -401,25 +458,22 @@ export async function createAutomationForUser(user, payload) {
   const autoDMSupabase = getAutoDMSupabaseForUserMutation();
   const cleanPayload = cleanAutomationPayload(payload, user);
 
-  const { data, error } = await autoDMSupabase
-    .from('automations')
-    .insert(cleanPayload)
-    .select('*')
-    .single();
-
-  if (error) throw new Error(`Failed to create Auto DM automation: ${error.message}`);
-  return data;
+  try {
+    return await insertAutomationWithUserFallback(autoDMSupabase, cleanPayload, user);
+  } catch (error) {
+    throw new Error(`Failed to create Auto DM automation: ${error?.message || 'Unknown error'}`);
+  }
 }
 
 export async function updateAutomationForUser(user, automationId, payload) {
   const autoDMSupabase = getAutoDMSupabaseForUserMutation();
-  const cleanPayload = cleanAutomationPayload(payload, user);
+  const cleanPayload = cleanAutomationPayload(payload, user, { includeUserId: false });
 
   const { data, error } = await autoDMSupabase
     .from('automations')
     .update(cleanPayload)
     .eq('id', automationId)
-    .eq('user_id', getPrimaryUserId(user))
+    .in('user_id', getUserIds(user))
     .select('*')
     .single();
 
@@ -433,7 +487,7 @@ export async function deleteAutomationForUser(user, automationId) {
     .from('automations')
     .delete()
     .eq('id', automationId)
-    .eq('user_id', getPrimaryUserId(user));
+    .in('user_id', getUserIds(user));
 
   if (error) throw new Error(`Failed to delete Auto DM automation: ${error.message}`);
   return true;
@@ -575,7 +629,7 @@ export async function createOrUpdateComposerAutomation({
     const { data: existing, error: findError } = await autoDMSupabase
       .from('automations')
       .select('id')
-      .eq('user_id', getPrimaryUserId(user))
+      .in('user_id', getUserIds(user))
       .eq('source_broadcast_id', sourceBroadcastId)
       .maybeSingle();
 
@@ -590,11 +644,12 @@ export async function createOrUpdateComposerAutomation({
     }
 
     if (existing?.id) {
+      const { user_id, ...updatePayload } = payload;
       const { data, error } = await autoDMSupabase
         .from('automations')
-        .update(payload)
+        .update(updatePayload)
         .eq('id', existing.id)
-        .eq('user_id', getPrimaryUserId(user))
+        .in('user_id', getUserIds(user))
         .select('*')
         .single();
 
@@ -603,7 +658,14 @@ export async function createOrUpdateComposerAutomation({
     }
   }
 
-  const { data, error } = await autoDMSupabase.from('automations').insert(payload).select('*').single();
+  let data, error;
+  try {
+    data = await insertAutomationWithUserFallback(autoDMSupabase, payload, user);
+    error = null;
+  } catch (insertError) {
+    data = null;
+    error = insertError;
+  }
 
   if (!error) {
     return { skipped: false, automation: data, updated: false };
@@ -611,11 +673,14 @@ export async function createOrUpdateComposerAutomation({
 
   if (error.code === '42703' || String(error.message || '').includes('source_')) {
     const { source, source_broadcast_id, source_job_id, ...legacyPayload } = payload;
-    const { data: legacyData, error: legacyError } = await autoDMSupabase
-      .from('automations')
-      .insert(legacyPayload)
-      .select('*')
-      .single();
+    let legacyData, legacyError;
+    try {
+      legacyData = await insertAutomationWithUserFallback(autoDMSupabase, legacyPayload, user);
+      legacyError = null;
+    } catch (insertError) {
+      legacyData = null;
+      legacyError = insertError;
+    }
 
     if (legacyError) {
       throw new Error(`Failed to create Auto DM automation: ${legacyError.message}`);
@@ -633,7 +698,7 @@ export async function createOrUpdateComposerAutomation({
     const { data: existing, error: existingError } = await autoDMSupabase
       .from('automations')
       .select('id')
-      .eq('user_id', getPrimaryUserId(user))
+      .in('user_id', getUserIds(user))
       .eq('source_broadcast_id', sourceBroadcastId)
       .maybeSingle();
 
@@ -641,11 +706,12 @@ export async function createOrUpdateComposerAutomation({
       throw new Error(`Failed to recover duplicate Auto DM automation: ${existingError?.message || error.message}`);
     }
 
+    const { user_id, ...updatePayload } = payload;
     const { data: updated, error: updateError } = await autoDMSupabase
       .from('automations')
-      .update(payload)
+      .update(updatePayload)
       .eq('id', existing.id)
-      .eq('user_id', getPrimaryUserId(user))
+      .in('user_id', getUserIds(user))
       .select('*')
       .single();
 
@@ -713,7 +779,7 @@ export async function getAutomationAnalytics(user, automationId) {
     .from('automations')
     .select('*')
     .eq('id', automationId)
-    .eq('user_id', getPrimaryUserId(user))
+    .in('user_id', getUserIds(user))
     .maybeSingle();
 
   if (automationError) throw new Error(`Failed to verify automation: ${automationError.message}`);
@@ -776,11 +842,18 @@ export async function getAutomationAnalytics(user, automationId) {
     automation,
     comments,
     dmsSent,
+    dms_sent: dmsSent,
+    messagesSent: dmsSent,
     inboundMessages: inbound.length,
     uniqueContacts: contactIds.length,
+    unique_contacts: contactIds.length,
+    people: contactIds.length,
     successfulMessages: successful,
+    successful_messages: successful,
     failedMessages: failed,
+    failed: failed,
     successRate: dmsSent > 0 ? Math.round((successful / dmsSent) * 100) : 0,
+    success_rate: dmsSent > 0 ? Math.round((successful / dmsSent) * 100) : 0,
     lastUsedAt: (messageRows || [])[0]?.created_at ?? null,
     pendingSessions: (sessionRows || []).filter((r) => r.status === 'pending').length,
     completedSessions: (sessionRows || []).filter((r) => r.status === 'completed').length,
@@ -809,7 +882,7 @@ export async function syncAutomationInsights(user, automationId) {
     .from('automations')
     .select('*')
     .eq('id', automationId)
-    .eq('user_id', getPrimaryUserId(user))
+    .in('user_id', getUserIds(user))
     .maybeSingle();
 
   if (automationError) throw new Error(`Failed to verify automation: ${automationError.message}`);
@@ -866,7 +939,7 @@ export async function syncAutomationInsights(user, automationId) {
     .from('automations')
     .update(updates)
     .eq('id', automationId)
-    .eq('user_id', getPrimaryUserId(user))
+    .in('user_id', getUserIds(user))
     .select('*')
     .single();
 

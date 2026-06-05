@@ -495,6 +495,8 @@ interface PendingAutomationSession {
 
 const automationSelectFields =
   'id,name,user_id,keywords,response_flow,trigger_type,media_id,instagram_account_id,comment_reply_enabled,comment_reply_text,schedule_type,starts_at,ends_at,expired_at';
+const instagramAccountSelectFields =
+  'id,user_id,page_id,ig_id:instagram_user_id,webhook_ig_id:webhook_instagram_user_id,access_token_encrypted,token_expires_at,is_connected';
 
 const isAutomationRunnableNow = (automation: Partial<AutomationRecord>, now = new Date()) => {
   const startsAt = automation.starts_at ? new Date(automation.starts_at) : null;
@@ -812,7 +814,63 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
       .is('webhook_instagram_user_id', null);
   }
 
-  const connectedAccounts = (accounts ?? []).filter((a: any) => a.is_connected !== false);
+  let connectedAccounts = (accounts ?? []).filter((a: any) => a.is_connected !== false);
+
+  if (payload.mediaId) {
+    const { data: mediaAutomations, error: mediaAutomationError } = await supabase
+      .from('automations')
+      .select('instagram_account_id,starts_at,ends_at')
+      .eq('is_active', true)
+      .eq('media_id', payload.mediaId);
+
+    if (mediaAutomationError) {
+      throw new Error(`Failed loading media automation account mapping: ${mediaAutomationError.message}`);
+    }
+
+    await expireFinishedAutomations((mediaAutomations ?? []) as any, payload.requestId);
+
+    const existingAccountIds = new Set(connectedAccounts.map((account: any) => account.id));
+    const mediaMappedAccountIds = Array.from(
+      new Set(
+        (mediaAutomations ?? [])
+          .filter((automation: any) => isAutomationRunnableNow(automation))
+          .map((automation: any) => automation.instagram_account_id)
+          .filter(Boolean)
+      )
+    );
+    const missingAccountIds = mediaMappedAccountIds.filter((accountId) => !existingAccountIds.has(accountId));
+
+    if (missingAccountIds.length > 0) {
+      const { data: mappedAccounts, error: mappedAccountError } = await supabase
+        .from('instagram_accounts')
+        .select(instagramAccountSelectFields)
+        .in('id', missingAccountIds)
+        .eq('is_connected', true);
+
+      if (mappedAccountError) {
+        throw new Error(`Failed loading media mapped accounts: ${mappedAccountError.message}`);
+      }
+
+      if ((mappedAccounts ?? []).length > 0) {
+        connectedAccounts = [...connectedAccounts, ...((mappedAccounts ?? []) as any[])];
+
+        await supabase
+          .from('instagram_accounts')
+          .update({ webhook_instagram_user_id: payload.igId, updated_at: new Date().toISOString() })
+          .in(
+            'id',
+            (mappedAccounts ?? []).map((account: any) => account.id)
+          );
+
+        logInfo('Expanded webhook account scope via media automation mapping', {
+          requestId: payload.requestId,
+          webhookIgId: payload.igId,
+          mediaId: payload.mediaId,
+          mappedAccountIds: (mappedAccounts ?? []).map((account: any) => account.id),
+        });
+      }
+    }
+  }
 
   if (connectedAccounts.length === 0) {
     logInfo('No connected account row for incoming event', {
@@ -976,6 +1034,8 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
     igId: selectedAccount.ig_id,
   });
 
+  const automationOwnerUserId = (matched as any).user_id || ownerUserId;
+
   const senderProfile = await enrichSenderProfileFromContact(
     selectedAccount.id,
     payload.senderId,
@@ -1005,7 +1065,7 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
   // kabhi nahi banta tha. Ab pehle save karo, chahe send fail ho ya na ho.
   let contactId: string | null = null;
 
-  if (ownerUserId) {
+  if (automationOwnerUserId) {
     try {
       const username = senderProfile.username || `user_${payload.senderId}`;
 
@@ -1014,7 +1074,7 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
         senderId: payload.senderId,
         username,
         accountId: selectedAccount.id,
-        ownerUserId,
+        ownerUserId: automationOwnerUserId,
         triggerType: payload.triggerType,
       });
 
@@ -1029,7 +1089,7 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
         const { data: newContact, error: insertError } = await supabase
           .from('contacts')
           .insert({
-            user_id: ownerUserId,
+            user_id: automationOwnerUserId,
             instagram_account_id: selectedAccount.id,
             instagram_user_id: payload.senderId,
             username,
@@ -1048,7 +1108,7 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
             code: insertError.code,
             senderId: payload.senderId,
             accountId: selectedAccount.id,
-            ownerUserId,
+            ownerUserId: automationOwnerUserId,
           });
         } else {
           contactId = newContact.id;
@@ -1085,7 +1145,7 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
         igId: payload.igId,
         senderId: payload.senderId,
         accountId: selectedAccount.id,
-        ownerUserId,
+        ownerUserId: automationOwnerUserId,
         error: contactError instanceof Error ? contactError.message : String(contactError),
         stack: contactError instanceof Error ? contactError.stack : undefined,
       });
@@ -1426,11 +1486,11 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
   // ─────────────────────────────────────────────────────────────────────
 
   // ── STEP 3: Record messages (only after successful send) ──────────────
-  if (ownerUserId && contactId) {
+  if (automationOwnerUserId && contactId) {
     try {
       // Record Inbound Message (The trigger)
       const { error: inboundMsgError } = await supabase.from('messages').insert({
-        user_id: ownerUserId,
+        user_id: automationOwnerUserId,
         instagram_account_id: selectedAccount.id,
         contact_id: contactId,
         automation_id: matched.id,
@@ -1450,7 +1510,7 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
 
       // Record Outbound Message (The reply) + update sent count
       const { error: outboundMsgError } = await supabase.from('messages').insert({
-        user_id: ownerUserId,
+        user_id: automationOwnerUserId,
         instagram_account_id: selectedAccount.id,
         contact_id: contactId,
         automation_id: matched.id,

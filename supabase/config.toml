@@ -1,0 +1,8 @@
+[functions.webhook]
+verify_jwt = false
+
+[functions.oauth-callback]
+verify_jwt = false
+
+[functions.oauth-start]
+verify_jwt = true

@@ -102,9 +102,24 @@ export async function listAccounts(userOrId) {
     .from('instagram_accounts')
     .select('*')
     .in('user_id', userIds)
-    .order('created_at', { ascending: false });
+    .eq('is_connected', true)
+    .order('updated_at', { ascending: false });
   if (error) throw error;
-  return (data || []).map(({ access_token_encrypted, ...account }) => account);
+
+  const seen = new Set();
+  return (data || [])
+    .filter((account) => {
+      const identity =
+        account.instagram_business_account_id ||
+        account.instagram_user_id ||
+        account.page_id ||
+        account.instagram_username ||
+        account.id;
+      if (seen.has(identity)) return false;
+      seen.add(identity);
+      return true;
+    })
+    .map(({ access_token_encrypted, ...account }) => account);
 }
 
 export async function importConnectedInstagram(user) {
