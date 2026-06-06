@@ -28,6 +28,7 @@ import LinkedInConnectModal from "./LinkedInConnectModal";
 import MastodonConnectModal from "./MastodonConnectModal";
 import FacebookSetupModal from "./FacebookSetupModal";
 import apiClient from "../utils/apiClient";
+import { startAutoDMInstagramOAuth } from "../services/autodm/supabaseClient";
 
 // User has paid access if plan is anything other than Free
 function isFree(plan) {
@@ -81,17 +82,18 @@ function Sidebar() {
   const [imgError, setImgError] = useState(false);
 
   const handleConnectInstagram = () => setShowBusinessSetupModal(true);
-  const handleProceedToConnect = () => {
+  const handleProceedToConnect = async () => {
     setShowBusinessSetupModal(false);
-    const token = localStorage.getItem("quickpost_token");
-    if (!token) {
-      alert("Error", "Authentication token missing. Please log in again.", {
+    setConnectingPlatform("instagram");
+    try {
+      const redirectTo = await startAutoDMInstagramOAuth(window.location.origin);
+      window.location.assign(redirectTo);
+    } catch (error) {
+      setConnectingPlatform(null);
+      alert("Error", error?.message || "Failed to start Instagram login.", {
         intent: "danger",
       });
-      return;
     }
-    const apiUrl = import.meta.env.VITE_API_URL || "";
-    window.location.href = `${apiUrl}/api/auth/instagram?token=${token}`;
   };
   const handleConnectFacebook = () => {
     const token = localStorage.getItem("quickpost_token");

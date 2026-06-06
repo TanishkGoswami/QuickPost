@@ -181,9 +181,19 @@ function createResponseNode(type) {
       buttons: [{ id: generateId('button'), type: 'url', title: 'Open link', url: '' }],
     };
   }
-  if (type === 'carousel') return { id, type, items: [] };
+  if (type === 'carousel') return { id, type, items: [createCarouselItem()] };
   if (type === 'lead_form') return { id, type, form_title: 'Lead form', form_fields: [] };
   return { id, type: 'delay', delay_seconds: 5 };
+}
+
+function createCarouselItem() {
+  return {
+    id: generateId('carousel'),
+    image_url: '',
+    title: '',
+    subtitle: '',
+    buttons: [{ id: generateId('button'), type: 'url', title: '', url: '' }],
+  };
 }
 
 function responseSummary(node) {
@@ -271,7 +281,10 @@ function ResponseFlowBuilder({ responseFlow, onChange, step }) {
             const config = responseTypes.find((item) => item.type === node.type) || responseTypes[0];
             const Icon = config.icon;
             return (
-              <div key={node.id} className="flex items-center gap-3 rounded-lg border border-black/10 bg-white p-3">
+              <div
+                key={node.id}
+                className="grid grid-cols-[18px_32px_34px_minmax(0,1fr)_36px_36px] items-center gap-2 rounded-lg border border-black/10 bg-white p-3 sm:grid-cols-[20px_34px_36px_minmax(0,1fr)_auto_auto] sm:gap-3"
+              >
                 <GripVertical className="h-4 w-4 shrink-0 text-[var(--slate)]/60" />
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--ink)] text-sm font-semibold text-white">
                   {index + 1}
@@ -280,15 +293,22 @@ function ResponseFlowBuilder({ responseFlow, onChange, step }) {
                   <Icon className="h-4 w-4" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-[var(--ink)]">{config.shortLabel}</p>
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <p className="min-w-0 truncate font-medium text-[var(--ink)]">{config.shortLabel}</p>
                     <span className="text-xs font-medium text-primary">Editable</span>
                   </div>
-                  <p className="truncate text-sm text-[var(--slate)]">{responseSummary(node)}</p>
+                  <p className="line-clamp-2 break-words text-sm leading-5 text-[var(--slate)]">{responseSummary(node)}</p>
                 </div>
-                <Button type="button" variant="outline" className="h-9 rounded-md" onClick={() => setEditingNode({ ...node })}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit response
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label={`Edit ${config.shortLabel}`}
+                  className="h-9 w-9 rounded-md sm:w-auto sm:px-3"
+                  onClick={() => setEditingNode({ ...node })}
+                >
+                  <Pencil className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Edit response</span>
                 </Button>
                 <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-md text-red-600" onClick={() => removeNode(node.id)}>
                   <Trash2 className="h-4 w-4" />
@@ -366,6 +386,39 @@ function ResponseEditorDialog({ node, open, onOpenChange, onSave }) {
 
   const removeButton = (buttonId) => {
     setDraft({ ...draft, buttons: (draft.buttons || []).filter((button) => button.id !== buttonId) });
+  };
+
+  const carouselItems = draft.items?.length ? draft.items : [createCarouselItem()];
+
+  const updateCarouselItem = (itemId, updates) => {
+    setDraft({
+      ...draft,
+      items: carouselItems.map((item) => (item.id === itemId ? { ...item, ...updates } : item)),
+    });
+  };
+
+  const removeCarouselItem = (itemId) => {
+    setDraft({ ...draft, items: carouselItems.filter((item) => item.id !== itemId) });
+  };
+
+  const updateCarouselButton = (itemId, buttonId, updates) => {
+    updateCarouselItem(itemId, {
+      buttons: (carouselItems.find((item) => item.id === itemId)?.buttons || []).map((button) =>
+        button.id === buttonId ? { ...button, ...updates } : button
+      ),
+    });
+  };
+
+  const addCarouselButton = (itemId) => {
+    const item = carouselItems.find((entry) => entry.id === itemId);
+    updateCarouselItem(itemId, {
+      buttons: [...(item?.buttons || []), { id: generateId('button'), type: 'url', title: '', url: '' }],
+    });
+  };
+
+  const removeCarouselButton = (itemId, buttonId) => {
+    const item = carouselItems.find((entry) => entry.id === itemId);
+    updateCarouselItem(itemId, { buttons: (item?.buttons || []).filter((button) => button.id !== buttonId) });
   };
 
   return (
@@ -458,7 +511,88 @@ function ResponseEditorDialog({ node, open, onOpenChange, onSave }) {
             </div>
           )}
 
-          {draft.type === 'carousel' && <p className="rounded-lg border border-black/10 bg-black/[0.02] p-4 text-sm text-[var(--slate)]">Carousel shell added. Item-level editor can be expanded from here.</p>}
+          {draft.type === 'carousel' && (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                Add one or more carousel cards. Each card can have an image, title, subtitle, and optional action buttons.
+              </div>
+              {carouselItems.map((item, index) => (
+                <div key={item.id} className="space-y-3 rounded-lg border border-black/10 bg-black/[0.02] p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label>Carousel card {index + 1}</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`Remove carousel card ${index + 1}`}
+                      className="h-8 w-8 rounded-md text-red-600"
+                      disabled={carouselItems.length === 1}
+                      onClick={() => removeCarouselItem(item.id)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Input value={item.image_url || ''} onChange={(event) => updateCarouselItem(item.id, { image_url: event.target.value })} placeholder="Image URL" />
+                  <Input value={item.title || ''} onChange={(event) => updateCarouselItem(item.id, { title: event.target.value })} placeholder="Card title" />
+                  <Textarea
+                    value={item.subtitle || ''}
+                    onChange={(event) => updateCarouselItem(item.id, { subtitle: event.target.value })}
+                    placeholder="Card subtitle"
+                    rows={2}
+                  />
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <Label>Buttons</Label>
+                      <Button type="button" variant="outline" size="sm" className="rounded-md" onClick={() => addCarouselButton(item.id)}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Button
+                      </Button>
+                    </div>
+                    {(item.buttons || []).map((button) => (
+                      <div key={button.id} className="grid gap-2 sm:grid-cols-[1fr_120px_1fr_36px]">
+                        <Input
+                          value={button.title || ''}
+                          onChange={(event) => updateCarouselButton(item.id, button.id, { title: event.target.value })}
+                          placeholder="Button text"
+                        />
+                        <select
+                          className="h-10 rounded-md border border-black/10 bg-white px-3 text-sm"
+                          value={button.type || 'url'}
+                          onChange={(event) => updateCarouselButton(item.id, button.id, { type: event.target.value })}
+                        >
+                          <option value="url">URL</option>
+                          <option value="postback">Postback</option>
+                        </select>
+                        <Input
+                          value={button.type === 'postback' ? button.payload || '' : button.url || ''}
+                          onChange={(event) =>
+                            updateCarouselButton(
+                              item.id,
+                              button.id,
+                              button.type === 'postback' ? { payload: event.target.value } : { url: event.target.value }
+                            )
+                          }
+                          placeholder={button.type === 'postback' ? 'Payload' : 'https://...'}
+                        />
+                        <Button type="button" variant="ghost" size="icon" className="rounded-md text-red-600" onClick={() => removeCarouselButton(item.id, button.id)}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full rounded-md border-dashed"
+                onClick={() => setDraft({ ...draft, items: [...carouselItems, createCarouselItem()] })}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Carousel Card
+              </Button>
+            </div>
+          )}
 
           {draft.type === 'lead_form' && (
             <div>

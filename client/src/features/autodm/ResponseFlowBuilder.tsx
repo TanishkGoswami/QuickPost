@@ -7,6 +7,7 @@ import {
   Layers,
   MessageSquare,
   MousePointer,
+  Pencil,
   Plus,
   Trash2,
   Type,
@@ -36,6 +37,29 @@ const nodeTypes = [
 
 function getNodeConfig(type) {
   return nodeTypes.find((n) => n.type === type) || nodeTypes[0];
+}
+
+function createCarouselItem() {
+  return {
+    id: generateId(),
+    image_url: "",
+    title: "",
+    subtitle: "",
+    buttons: [{ id: generateId(), type: "url", title: "", url: "" }],
+  };
+}
+
+function getNodeSummary(node) {
+  if (node.type === "carousel") {
+    const count = node.items?.length || 0;
+    return count === 1 ? "1 carousel item" : `${count} carousel items`;
+  }
+
+  if (node.type === "delay") {
+    return `${node.delay_seconds || 5} second delay`;
+  }
+
+  return node.content || node.card_title || `${node.buttons?.length || node.form_fields?.length || 0} items`;
 }
 
 export function ResponseFlowBuilder({ responseFlow, onChange }) {
@@ -92,42 +116,46 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
             return (
               <div
                 key={node.id}
-                className={`flex items-center gap-3 rounded-xl border border-l-4 bg-white px-3.5 py-3 shadow-sm transition-shadow hover:shadow-md ${config.border}`}
+                className={`grid grid-cols-[18px_34px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-xl border border-l-4 bg-white px-3 py-3 shadow-sm transition-shadow hover:shadow-md sm:grid-cols-[20px_36px_minmax(0,1fr)_auto] sm:gap-3 ${config.border}`}
               >
-                <button className="cursor-grab text-slate-300 hover:text-slate-500">
+                <button type="button" aria-label="Drag response" className="cursor-grab text-slate-300 hover:text-slate-500">
                   <GripVertical className="h-4 w-4" />
                 </button>
-                <div className="flex flex-1 items-center gap-3 min-w-0">
-                  <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${config.color}`}>
-                    <NodeIcon className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-slate-800 capitalize">{config.label}</p>
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-400">
-                        #{index + 1}
-                      </span>
-                    </div>
-                    <p className="truncate text-xs text-slate-400">
-                      {node.content || node.card_title || `${node.buttons?.length || node.form_fields?.length || 0} items`}
-                    </p>
-                  </div>
+
+                <div className={`flex h-8 w-8 items-center justify-center rounded-lg sm:h-9 sm:w-9 ${config.color}`}>
+                  <NodeIcon className="h-4 w-4 text-white" />
                 </div>
-                <div className="flex items-center gap-1">
+
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <p className="min-w-0 truncate text-sm font-semibold text-slate-800 capitalize">{config.label}</p>
+                    <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-400">
+                      #{index + 1}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 line-clamp-2 break-words text-xs leading-4 text-slate-400">
+                    {getNodeSummary(node)}
+                  </p>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1">
                   <Button
                     variant="ghost"
-                    size="sm"
-                    className="h-8 rounded-lg px-3 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    size="icon"
+                    aria-label={`Edit ${config.label}`}
+                    className="h-8 w-8 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 sm:w-auto sm:px-3"
                     onClick={() => {
                       setEditingNode({ ...node });
                       setEditDialogOpen(true);
                     }}
                   >
-                    Edit
+                    <Pencil className="h-3.5 w-3.5 sm:hidden" />
+                    <span className="hidden text-xs font-medium sm:inline">Edit</span>
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
+                    aria-label={`Delete ${config.label}`}
                     className="h-8 w-8 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500"
                     onClick={() =>
                       onChange({ ...responseFlow, nodes: responseFlow.nodes.filter((item) => item.id !== node.id) })
@@ -168,6 +196,7 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
                     type: nodeType.type,
                     content: nodeType.type === "text" ? "" : undefined,
                     buttons: nodeType.type === "buttons" || nodeType.type === "card" ? [] : undefined,
+                    items: nodeType.type === "carousel" ? [createCarouselItem()] : undefined,
                     form_fields: nodeType.type === "form" ? [] : undefined,
                     delay_seconds: nodeType.type === "delay" ? 5 : undefined,
                   };
@@ -282,6 +311,12 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
                   onChange={(form_fields) => setEditingNode({ ...editingNode, form_fields })}
                 />
               )}
+              {editingNode.type === "carousel" && (
+                <CarouselItemEditor
+                  items={editingNode.items || []}
+                  onChange={(items) => setEditingNode({ ...editingNode, items })}
+                />
+              )}
               {editingNode.type === "delay" && (
                 <div>
                   <Label className="text-sm font-medium text-slate-700">Delay in seconds</Label>
@@ -317,6 +352,77 @@ export function ResponseFlowBuilder({ responseFlow, onChange }) {
         </DialogContent>
       </Dialog>
     </Card>
+  );
+}
+
+function CarouselItemEditor({ items, onChange }) {
+  const safeItems = items.length ? items : [createCarouselItem()];
+
+  const updateItem = (itemId, updates) => {
+    onChange(safeItems.map((item) => (item.id === itemId ? { ...item, ...updates } : item)));
+  };
+
+  const updateItemButtons = (itemId, buttons) => {
+    updateItem(itemId, { buttons });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="text-sm font-medium text-slate-700">Carousel Cards</Label>
+        <p className="mt-1 text-xs text-slate-500">Add cards users can swipe through inside Instagram DM.</p>
+      </div>
+
+      {safeItems.map((item, index) => (
+        <div key={item.id} className="space-y-3 rounded-xl border border-black/10 bg-slate-50 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Card {index + 1}</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={`Remove carousel card ${index + 1}`}
+              className="h-8 w-8 text-red-600"
+              onClick={() => onChange(safeItems.filter((entry) => entry.id !== item.id))}
+              disabled={safeItems.length === 1}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <Input
+            value={item.image_url || ""}
+            onChange={(event) => updateItem(item.id, { image_url: event.target.value })}
+            placeholder="Image URL"
+            className="rounded-lg border-black/10 bg-white text-sm"
+          />
+          <Input
+            value={item.title || ""}
+            onChange={(event) => updateItem(item.id, { title: event.target.value })}
+            placeholder="Card title"
+            className="rounded-lg border-black/10 bg-white text-sm"
+          />
+          <Textarea
+            value={item.subtitle || ""}
+            onChange={(event) => updateItem(item.id, { subtitle: event.target.value })}
+            rows={2}
+            placeholder="Short subtitle"
+            className="resize-none rounded-lg border-black/10 bg-white text-sm"
+          />
+          <ButtonEditor buttons={item.buttons || []} onChange={(buttons) => updateItemButtons(item.id, buttons)} />
+        </div>
+      ))}
+
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="rounded-lg border-dashed"
+        onClick={() => onChange([...safeItems, createCarouselItem()])}
+      >
+        <Plus className="mr-2 h-4 w-4" />
+        Add Carousel Card
+      </Button>
+    </div>
   );
 }
 

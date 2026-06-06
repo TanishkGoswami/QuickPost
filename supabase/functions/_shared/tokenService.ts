@@ -22,6 +22,7 @@ const bytesToBase64 = (bytes: Uint8Array): string => {
 const loadKeys = async (): Promise<CryptoKey[]> => {
   const keys: CryptoKey[] = [];
   const envKeys = [
+    Deno.env.get('TOKEN_ENCRYPTION_KEY_BASE64'),
     Deno.env.get('INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64'),
     Deno.env.get('AUTODM_TOKEN_ENCRYPTION_KEY_BASE64')
   ];

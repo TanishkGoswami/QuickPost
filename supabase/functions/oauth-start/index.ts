@@ -4,7 +4,53 @@ const SCOPES = [
   'instagram_business_basic',
   'instagram_business_manage_messages',
   'instagram_business_manage_comments',
+  'instagram_business_content_publish',
+  'instagram_business_manage_insights',
 ].join(',');
+
+const getInstagramOAuthCallbackUrl = (): string => {
+  const callbackUrl =
+    Deno.env.get('IG_OAUTH_CALLBACK_URL') ||
+    Deno.env.get('META_OAUTH_CALLBACK_URL');
+
+  if (!callbackUrl?.trim()) {
+    throw new Error('Missing required environment variable: IG_OAUTH_CALLBACK_URL');
+  }
+
+  return callbackUrl.trim();
+};
+
+const getFrontendUrlFromEnv = (): string | null => {
+  const frontendUrl = Deno.env.get('FRONTEND_URL') || Deno.env.get('SITE_URL');
+  return frontendUrl?.trim() || null;
+};
+
+const normalizeFrontendUrl = (value: string | null | undefined): string | null => {
+  if (!value?.trim()) return null;
+
+  try {
+    const parsed = new URL(value.trim());
+    if (!['http:', 'https:'].includes(parsed.protocol)) return null;
+    return parsed.origin;
+  } catch {
+    return null;
+  }
+};
+
+const getOAuthStateSecret = (): string => {
+  const stateSecret =
+    Deno.env.get('OAUTH_STATE_SECRET') ||
+    Deno.env.get('IG_APP_SECRET') ||
+    Deno.env.get('META_APP_SECRET');
+
+  if (!stateSecret?.trim()) {
+    throw new Error(
+      'Missing required environment variable: OAUTH_STATE_SECRET or IG_APP_SECRET'
+    );
+  }
+
+  return stateSecret.trim();
+};
 
 const toBase64Url = (input: string): string =>
   btoa(input).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
@@ -41,28 +87,33 @@ Deno.serve(async (request: Request) => {
       return json(401, { error: error ?? 'Unauthorized' }, corsHeaders);
     }
 
-    const callbackUrl = requireEnv('META_OAUTH_CALLBACK_URL');
-    const envFrontendUrl = requireEnv('FRONTEND_URL');
+    const callbackUrl = getInstagramOAuthCallbackUrl();
     const appId = requireEnv('IG_APP_ID');
-    const stateSecret = requireEnv('OAUTH_STATE_SECRET');
+    const stateSecret = getOAuthStateSecret();
 
     // Prefer the frontend URL sent by the browser (supports both live & ngrok).
     // Fall back to the environment variable if not provided.
     let bodyFrontendUrl: string | undefined;
+    let forceReconnect = false;
     if (request.method === 'POST') {
       try {
         const body = await request.json();
         if (body?.frontendUrl && typeof body.frontendUrl === 'string') {
           bodyFrontendUrl = body.frontendUrl;
         }
+        forceReconnect = body?.forceReconnect === true;
       } catch {
         // ignore JSON parse errors — body is optional
       }
     }
-    const frontendUrl = bodyFrontendUrl ?? envFrontendUrl;
+    const frontendUrl =
+      normalizeFrontendUrl(bodyFrontendUrl) ||
+      normalizeFrontendUrl(getFrontendUrlFromEnv()) ||
+      'http://localhost:5173';
 
     const statePayload = {
       uid: user.id,
+      email: user.email ?? null,
       iat: Date.now(),
       nonce: crypto.randomUUID(),
       redirect: frontendUrl,
@@ -73,6 +124,11 @@ Deno.serve(async (request: Request) => {
     const state = `${payloadEncoded}.${signature}`;
 
     const authUrl = new URL('https://www.instagram.com/oauth/authorize');
+    authUrl.searchParams.set('enable_fb_login', '0');
+    if (forceReconnect) {
+      authUrl.searchParams.set('force_authentication', '1');
+      authUrl.searchParams.set('force_reauth', 'true');
+    }
     authUrl.searchParams.set('client_id', appId);
     authUrl.searchParams.set('redirect_uri', callbackUrl);
     authUrl.searchParams.set('state', state);
@@ -97,10 +153,19 @@ Deno.serve(async (request: Request) => {
       corsHeaders
     );
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     logError('OAuth start failed', {
       requestId,
-      error: error instanceof Error ? error.message : String(error),
+      error: message,
     });
-    return json(500, { error: 'Unable to start OAuth flow' }, corsHeaders);
+    return json(
+      500,
+      {
+        error: 'Unable to start OAuth flow',
+        details: message,
+        requestId,
+      },
+      corsHeaders
+    );
   }
 });

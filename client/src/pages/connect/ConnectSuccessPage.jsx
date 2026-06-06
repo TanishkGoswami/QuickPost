@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { autodmSupabase } from '../../services/autodm/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { CheckCircle, Loader2, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { fetchInstagramAccounts, importSocialInstagramAccount } from '../../services/instagramApi';
+import { autodmSupabase } from '../../services/autodm/supabaseClient';
 
 export default function ConnectSuccessPage() {
   const navigate = useNavigate();
@@ -27,17 +28,25 @@ export default function ConnectSuccessPage() {
           return;
         }
 
-        const { data: accounts, error } = await autodmSupabase
-          .from('instagram_accounts')
-          .select('*')
-          .eq('user_id', user.userId);
+        await importSocialInstagramAccount().catch((error) => {
+          console.warn('Instagram import after OAuth skipped:', error?.message || error);
+        });
 
-        if (error) {
-          console.error('Error hydrating instagram accounts:', error);
-          setLoadError('Failed to load Instagram connection. Please retry.');
-          return;
+        let accounts = [];
+        try {
+          accounts = await fetchInstagramAccounts();
+        } catch (error) {
+          console.warn('Instagram accounts API unavailable, using Supabase fallback:', error?.message || error);
+          const { data, error: fallbackError } = await autodmSupabase
+            .from('instagram_accounts')
+            .select('*')
+            .eq('user_id', user.userId)
+            .eq('is_connected', true)
+            .order('updated_at', { ascending: false });
+
+          if (fallbackError) throw fallbackError;
+          accounts = data || [];
         }
-
         const connectedAccounts = (accounts || []).filter(acc => acc.is_connected !== false);
 
         if (connectedAccounts.length > 0) {

@@ -6,7 +6,6 @@ import {
   disconnectInstagramAccount,
   getAutoDMStatus,
   importInstagramAccountFromSocial,
-  listInstagramAccountsForUser,
 } from "@/services/autodm/accounts";
 import { isAutoDMConfigured } from "@/services/autodm/supabaseClient";
 
@@ -81,7 +80,8 @@ export function AutoDMProvider({ children }) {
 
   const refreshAccountsFromSupabase = async () => {
     if (!user?.userId) return [];
-    const data = await listInstagramAccountsForUser(user.userId);
+    const status = await getAutoDMStatus();
+    const data = status.autodmAccounts || [];
     setAccounts(data);
     setActiveAccountId((current) => current || data[0]?.id || null);
     return data;

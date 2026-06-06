@@ -495,6 +495,8 @@ interface PendingAutomationSession {
 
 const automationSelectFields =
   'id,name,user_id,keywords,response_flow,trigger_type,media_id,instagram_account_id,comment_reply_enabled,comment_reply_text,schedule_type,starts_at,ends_at,expired_at';
+const instagramAccountSelectFields =
+  'id,user_id,page_id,ig_id:instagram_user_id,webhook_ig_id:webhook_instagram_user_id,access_token_encrypted,token_expires_at,is_connected';
 
 const isAutomationRunnableNow = (automation: Partial<AutomationRecord>, now = new Date()) => {
   const startsAt = automation.starts_at ? new Date(automation.starts_at) : null;
@@ -636,45 +638,143 @@ const checkRateLimit = async (igId: string, senderId: string) => {
   return Boolean(data);
 };
 
+const DIRECT_IG_REFRESH_BUFFER_MS = 5 * 60 * 1000;
+const DIRECT_IG_REFRESH_FALLBACK_MS = 60 * 1000;
+const FACEBOOK_REFRESH_BUFFER_MS = 5 * 24 * 60 * 60 * 1000;
+const TOKEN_USABLE_BUFFER_MS = 60 * 1000;
+
+const getTokenExpiryMs = (tokenExpiresAt?: string | null) => {
+  if (!tokenExpiresAt) return null;
+  const value = new Date(tokenExpiresAt).getTime();
+  return Number.isFinite(value) ? value : null;
+};
+
+const isAccountTokenUsable = (account: Pick<InstagramAccountRecord, 'token_expires_at'>) => {
+  const expiryMs = getTokenExpiryMs(account.token_expires_at);
+  return expiryMs !== null && expiryMs - Date.now() > TOKEN_USABLE_BUFFER_MS;
+};
+
+const markAccountDisconnected = async (
+  account: InstagramAccountRecord,
+  reason: string,
+  requestId?: string
+) => {
+  const supabase = getSupabaseAdmin();
+  const nowIso = new Date().toISOString();
+  const { error: accountError } = await supabase
+    .from('instagram_accounts')
+    .update({ is_connected: false, updated_at: nowIso })
+    .eq('id', account.id);
+
+  if (accountError) {
+    logError('Failed marking Instagram account disconnected', {
+      requestId,
+      accountId: account.id,
+      igId: account.ig_id,
+      error: accountError.message,
+    });
+  }
+
+  const { data: tokenRow } = await supabase
+    .from('social_tokens')
+    .select('profile_data')
+    .eq('user_id', account.user_id)
+    .eq('provider', 'instagram')
+    .maybeSingle();
+
+  const { error: tokenError } = await supabase
+    .from('social_tokens')
+    .update({
+      profile_data: {
+        ...((tokenRow as any)?.profile_data || {}),
+        token_status: 'expired',
+        token_error: reason,
+        updated_by: 'autodm_webhook',
+      },
+      updated_at: nowIso,
+    })
+    .eq('user_id', account.user_id)
+    .eq('provider', 'instagram');
+
+  if (tokenError) {
+    logError('Failed marking social Instagram token expired', {
+      requestId,
+      accountId: account.id,
+      igId: account.ig_id,
+      error: tokenError.message,
+    });
+  }
+};
+
 const refreshAccountTokenIfNeeded = async (
   account: InstagramAccountRecord,
   requestId?: string
 ): Promise<{ pageAccessToken: string; userAccessToken: string }> => {
   const supabase = getSupabaseAdmin();
   const tokenBundle = await decryptTokenBundle(account.access_token_encrypted);
+  if (!isAccountTokenUsable(account)) {
+    const reason = 'Instagram token expired. Please reconnect Instagram.';
+    await markAccountDisconnected(account, reason, requestId);
+    throw new Error(reason);
+  }
 
   const expiresAt = new Date(account.token_expires_at);
-  const needsRefresh = expiresAt.getTime() - Date.now() < 1000 * 60 * 60 * 24 * 5;
+  const expiryMs = expiresAt.getTime();
+  const isDirectIg = tokenBundle.userAccessToken?.startsWith('IG') || tokenBundle.userAccessToken?.startsWith('IGA');
+  const refreshBufferMs = isDirectIg ? DIRECT_IG_REFRESH_BUFFER_MS : FACEBOOK_REFRESH_BUFFER_MS;
+  const hasKnownExpiry = Number.isFinite(expiryMs);
+  const msUntilExpiry = hasKnownExpiry ? expiryMs - Date.now() : Number.NEGATIVE_INFINITY;
+  const needsRefresh = !hasKnownExpiry || msUntilExpiry < refreshBufferMs;
 
-  if (!needsRefresh) {
+  if (!needsRefresh || !isDirectIg) {
     return tokenBundle;
   }
 
-  const refreshed = await refreshIGLongLivedToken(tokenBundle.userAccessToken);
+  try {
+    const refreshed = await refreshIGLongLivedToken(tokenBundle.userAccessToken);
 
-  const newBundle = {
-    pageAccessToken: refreshed.access_token,
-    userAccessToken: refreshed.access_token,
-  };
+    const newBundle = {
+      pageAccessToken: refreshed.access_token,
+      userAccessToken: refreshed.access_token,
+    };
 
-  const encrypted = await encryptTokenBundle(newBundle);
-  const nextExpiry = new Date(Date.now() + (refreshed.expires_in ?? 60 * 24 * 60 * 60) * 1000);
+    const encrypted = await encryptTokenBundle(newBundle);
+    const nextExpiry = new Date(Date.now() + (refreshed.expires_in ?? 60 * 24 * 60 * 60) * 1000);
 
-  const { error } = await supabase
-    .from('instagram_accounts')
-    .update({
-      access_token_encrypted: encrypted,
-      token_expires_at: nextExpiry.toISOString(),
-    })
-    .eq('id', account.id);
+    const { error } = await supabase
+      .from('instagram_accounts')
+      .update({
+        access_token_encrypted: encrypted,
+        token_expires_at: nextExpiry.toISOString(),
+      })
+      .eq('id', account.id);
 
-  if (error) {
-    throw new Error(`Failed persisting refreshed token: ${error.message}`);
+    if (error) {
+      throw new Error(`Failed persisting refreshed token: ${error.message}`);
+    }
+
+    logInfo('Refreshed account token', { requestId, igId: account.ig_id, pageId: account.page_id });
+
+    return newBundle;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (hasKnownExpiry && msUntilExpiry > DIRECT_IG_REFRESH_FALLBACK_MS) {
+      logError('Direct Instagram token refresh failed; using still-valid token', {
+        requestId,
+        igId: account.ig_id,
+        pageId: account.page_id,
+        tokenExpiresAt: account.token_expires_at,
+        minutesUntilExpiry: Math.round(msUntilExpiry / 60000),
+        error: message,
+      });
+      return tokenBundle;
+    }
+
+    const reason = `Instagram token expired or cannot be refreshed. Please reconnect Instagram. ${message}`;
+    await markAccountDisconnected(account, reason, requestId);
+    throw new Error(reason);
   }
-
-  logInfo('Refreshed account token', { requestId, igId: account.ig_id, pageId: account.page_id });
-
-  return newBundle;
 };
 
 export const processAutomationEvent = async (payload: AutomationInput) => {
@@ -812,7 +912,91 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
       .is('webhook_instagram_user_id', null);
   }
 
-  const connectedAccounts = (accounts ?? []).filter((a: any) => a.is_connected !== false);
+  const nowMs = Date.now();
+  const expiredAccounts = (accounts ?? []).filter((account: any) => {
+    const expiryMs = getTokenExpiryMs(account.token_expires_at);
+    return expiryMs !== null && expiryMs - nowMs <= TOKEN_USABLE_BUFFER_MS;
+  });
+
+  for (const expiredAccount of expiredAccounts as InstagramAccountRecord[]) {
+    await markAccountDisconnected(
+      expiredAccount,
+      'Instagram token expired. Please reconnect Instagram.',
+      payload.requestId
+    );
+  }
+
+  let connectedAccounts = (accounts ?? []).filter(
+    (a: any) => a.is_connected !== false && isAccountTokenUsable(a)
+  );
+
+  if (payload.mediaId) {
+    const { data: mediaAutomations, error: mediaAutomationError } = await supabase
+      .from('automations')
+      .select('instagram_account_id,starts_at,ends_at')
+      .eq('is_active', true)
+      .eq('media_id', payload.mediaId);
+
+    if (mediaAutomationError) {
+      throw new Error(`Failed loading media automation account mapping: ${mediaAutomationError.message}`);
+    }
+
+    await expireFinishedAutomations((mediaAutomations ?? []) as any, payload.requestId);
+
+    const existingAccountIds = new Set(connectedAccounts.map((account: any) => account.id));
+    const mediaMappedAccountIds = Array.from(
+      new Set(
+        (mediaAutomations ?? [])
+          .filter((automation: any) => isAutomationRunnableNow(automation))
+          .map((automation: any) => automation.instagram_account_id)
+          .filter(Boolean)
+      )
+    );
+    const missingAccountIds = mediaMappedAccountIds.filter((accountId) => !existingAccountIds.has(accountId));
+
+    if (missingAccountIds.length > 0) {
+      const { data: mappedAccounts, error: mappedAccountError } = await supabase
+        .from('instagram_accounts')
+        .select(instagramAccountSelectFields)
+        .in('id', missingAccountIds)
+        .eq('is_connected', true);
+
+      if (mappedAccountError) {
+        throw new Error(`Failed loading media mapped accounts: ${mappedAccountError.message}`);
+      }
+
+      if ((mappedAccounts ?? []).length > 0) {
+        connectedAccounts = [...connectedAccounts, ...((mappedAccounts ?? []) as any[])];
+
+        await supabase
+          .from('instagram_accounts')
+          .update({ webhook_instagram_user_id: payload.igId, updated_at: new Date().toISOString() })
+          .in(
+            'id',
+            (mappedAccounts ?? []).map((account: any) => account.id)
+          );
+
+        logInfo('Expanded webhook account scope via media automation mapping', {
+          requestId: payload.requestId,
+          webhookIgId: payload.igId,
+          mediaId: payload.mediaId,
+          mappedAccountIds: (mappedAccounts ?? []).map((account: any) => account.id),
+        });
+      }
+    }
+  }
+
+  const expiredConnectedAccounts = connectedAccounts.filter(
+    (account: any) => !isAccountTokenUsable(account)
+  );
+  for (const expiredAccount of expiredConnectedAccounts as InstagramAccountRecord[]) {
+    await markAccountDisconnected(
+      expiredAccount,
+      'Instagram token expired. Please reconnect Instagram.',
+      payload.requestId
+    );
+  }
+  connectedAccounts = connectedAccounts.filter((account: any) => isAccountTokenUsable(account));
 
   if (connectedAccounts.length === 0) {
     logInfo('No connected account row for incoming event', {
@@ -976,6 +1160,8 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
     igId: selectedAccount.ig_id,
   });
 
+  const automationOwnerUserId = (matched as any).user_id || ownerUserId;
+
   const senderProfile = await enrichSenderProfileFromContact(
     selectedAccount.id,
     payload.senderId,
@@ -1005,7 +1191,7 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
   // kabhi nahi banta tha. Ab pehle save karo, chahe send fail ho ya na ho.
   let contactId: string | null = null;
 
-  if (ownerUserId) {
+  if (automationOwnerUserId) {
     try {
       const username = senderProfile.username || `user_${payload.senderId}`;
 
@@ -1014,7 +1200,7 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
         senderId: payload.senderId,
         username,
         accountId: selectedAccount.id,
-        ownerUserId,
+        ownerUserId: automationOwnerUserId,
         triggerType: payload.triggerType,
       });
 
@@ -1029,7 +1215,7 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
         const { data: newContact, error: insertError } = await supabase
           .from('contacts')
           .insert({
-            user_id: ownerUserId,
+            user_id: automationOwnerUserId,
             instagram_account_id: selectedAccount.id,
             instagram_user_id: payload.senderId,
             username,
@@ -1048,7 +1234,7 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
             code: insertError.code,
             senderId: payload.senderId,
             accountId: selectedAccount.id,
-            ownerUserId,
+            ownerUserId: automationOwnerUserId,
           });
         } else {
           contactId = newContact.id;
@@ -1085,7 +1271,7 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
         igId: payload.igId,
         senderId: payload.senderId,
         accountId: selectedAccount.id,
-        ownerUserId,
+        ownerUserId: automationOwnerUserId,
         error: contactError instanceof Error ? contactError.message : String(contactError),
         stack: contactError instanceof Error ? contactError.stack : undefined,
       });
@@ -1426,11 +1612,11 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
   // ─────────────────────────────────────────────────────────────────────
 
   // ── STEP 3: Record messages (only after successful send) ──────────────
-  if (ownerUserId && contactId) {
+  if (automationOwnerUserId && contactId) {
     try {
       // Record Inbound Message (The trigger)
       const { error: inboundMsgError } = await supabase.from('messages').insert({
-        user_id: ownerUserId,
+        user_id: automationOwnerUserId,
         instagram_account_id: selectedAccount.id,
         contact_id: contactId,
         automation_id: matched.id,
@@ -1450,7 +1636,7 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
 
       // Record Outbound Message (The reply) + update sent count
       const { error: outboundMsgError } = await supabase.from('messages').insert({
-        user_id: ownerUserId,
+        user_id: automationOwnerUserId,
         instagram_account_id: selectedAccount.id,
         contact_id: contactId,
         automation_id: matched.id,

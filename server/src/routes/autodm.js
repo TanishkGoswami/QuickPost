@@ -71,7 +71,12 @@ router.post('/import-instagram', authenticateUser, async (req, res) => {
 
 router.post('/oauth-start', authenticateUser, async (req, res) => {
   try {
-    const redirectTo = await startAutoDMInstagramOAuth(req.user, req.body?.frontendUrl, req.headers.authorization);
+    const redirectTo = await startAutoDMInstagramOAuth(
+      req.user,
+      req.body?.frontendUrl,
+      req.headers.authorization,
+      req.body?.forceReconnect === true,
+    );
     res.json({
       success: true,
       redirectTo,
@@ -155,8 +160,14 @@ router.delete('/automations/:id', authenticateUser, async (req, res) => {
 router.get('/instagram-media', authenticateUser, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 30;
-    const media = await fetchInstagramMediaForUser(req.user, limit);
-    res.json({ success: true, media });
+    const result = await fetchInstagramMediaForUser(req.user, limit);
+    const media = Array.isArray(result) ? result : result.media || [];
+    res.json({
+      success: true,
+      media,
+      account: result.account || null,
+      warning: result.warning || null,
+    });
   } catch (error) {
     console.error('[AUTODM] Instagram media error:', error);
     res.status(500).json({

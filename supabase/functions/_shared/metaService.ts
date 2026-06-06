@@ -2,7 +2,7 @@ import { logError, logInfo, requireEnv } from './db.ts';
 
 const GRAPH_VERSION = 'v19.0';
 const GRAPH_BASE_URL = `https://graph.facebook.com/${GRAPH_VERSION}`;
-const IG_GRAPH_BASE_URL = 'https://graph.facebook.com';
+const IG_GRAPH_BASE_URL = 'https://graph.instagram.com';
 const IG_GRAPH_VERSION = 'v24.0';
 const IG_GRAPH_API_BASE_URL = `${IG_GRAPH_BASE_URL}/${IG_GRAPH_VERSION}`;
 const IG_API_BASE_URL = 'https://api.instagram.com';
@@ -66,6 +66,34 @@ const parseGraphResponse = async <T>(response: Response): Promise<T> => {
   }
 
   return json;
+};
+
+const fetchFirstInstagramResponse = async <T>(
+  endpoints: string[],
+  accessToken: string,
+  fieldsList: string[],
+  extraParams: Record<string, string> = {}
+): Promise<T> => {
+  let lastError: unknown;
+
+  for (const fields of fieldsList) {
+    for (const endpoint of endpoints) {
+      const url = new URL(endpoint);
+      url.searchParams.set('access_token', accessToken);
+      url.searchParams.set('fields', fields);
+      for (const [key, value] of Object.entries(extraParams)) {
+        url.searchParams.set(key, value);
+      }
+
+      try {
+        return await parseGraphResponse<T>(await fetch(url.toString()));
+      } catch (error) {
+        lastError = error;
+      }
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error('Instagram Graph API request failed');
 };
 
 export const exchangeCodeForShortLivedToken = async (code: string, redirectUri: string) => {
@@ -142,16 +170,43 @@ export const exchangeIGCodeForShortLivedToken = async (code: string, redirectUri
 export const exchangeIGForLongLivedToken = async (shortLivedToken: string) => {
   const clientSecret = requireEnv('IG_APP_SECRET');
 
+  // Try GET request first as per official Instagram Basic Display API / Graph API documentation
   const url = new URL(`${IG_GRAPH_BASE_URL}/access_token`);
   url.searchParams.set('grant_type', 'ig_exchange_token');
   url.searchParams.set('client_secret', clientSecret);
   url.searchParams.set('access_token', shortLivedToken);
 
-  const response = await fetch(url.toString());
-  return parseGraphResponse<{ access_token: string; token_type: string; expires_in: number }>(
-    response
-  );
+  try {
+    const getResponse = await fetch(url.toString());
+    return await parseGraphResponse<{ access_token: string; token_type: string; expires_in: number }>(
+      getResponse
+    );
+  } catch (getError) {
+    const getMessage = getError instanceof Error ? getError.message : String(getError);
+    logInfo('Instagram long-lived token exchange via GET failed, trying POST fallback...', { error: getMessage });
+
+    // Fallback to POST if GET fails
+    const formData = new URLSearchParams();
+    formData.append('grant_type', 'ig_exchange_token');
+    formData.append('client_secret', clientSecret);
+    formData.append('access_token', shortLivedToken);
+
+    try {
+      const postResponse = await fetch(`${IG_GRAPH_BASE_URL}/access_token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: formData.toString(),
+      });
+      return await parseGraphResponse<{ access_token: string; token_type: string; expires_in: number }>(
+        postResponse
+      );
+    } catch (postError) {
+      const postMessage = postError instanceof Error ? postError.message : String(postError);
+      throw new Error(`Instagram long-lived token exchange failed. GET: ${getMessage}; POST: ${postMessage}`);
+    }
+  }
 };
+
 
 export const refreshIGLongLivedToken = async (currentToken: string) => {
   const url = new URL(`${IG_GRAPH_BASE_URL}/refresh_access_token`);
@@ -165,15 +220,28 @@ export const refreshIGLongLivedToken = async (currentToken: string) => {
 };
 
 export const fetchIGUserInfo = async (accessToken: string) => {
-  const url = new URL(`${IG_GRAPH_BASE_URL}/me`);
-  url.searchParams.set(
-    'fields',
-    'id,username,name,profile_picture_url,followers_count,media_count,account_type'
-  );
-  url.searchParams.set('access_token', accessToken);
+  let userId = '';
+  try {
+    const meJson = await fetchFirstInstagramResponse<{
+      user_id?: string;
+      id?: string;
+      username?: string;
+    }>(
+      [`${IG_GRAPH_API_BASE_URL}/me`, `${IG_GRAPH_BASE_URL}/me`],
+      accessToken,
+      ['user_id,username', 'id,username']
+    );
+    userId = meJson.user_id || meJson.id || '';
+  } catch (meError) {
+    console.error('[OAuth Callback] Fetch /me failed:', meError instanceof Error ? meError.message : String(meError));
+    throw meError;
+  }
 
-  const response = await fetch(url.toString());
-  return parseGraphResponse<{
+  if (!userId) {
+    throw new Error('Failed to retrieve Instagram User ID from token');
+  }
+
+  const json = await fetchFirstInstagramResponse<{
     id: string;
     username: string;
     name?: string;
@@ -181,7 +249,20 @@ export const fetchIGUserInfo = async (accessToken: string) => {
     followers_count?: number;
     media_count?: number;
     account_type?: string;
-  }>(response);
+  }>(
+    [`${IG_GRAPH_API_BASE_URL}/${userId}`, `${IG_GRAPH_BASE_URL}/${userId}`],
+    accessToken,
+    [
+      'id,username,name,profile_picture_url,followers_count,media_count,account_type',
+      'id,username,name,profile_picture_url',
+      'id,username',
+    ]
+  );
+
+  return {
+    ...json,
+    id: json.id || userId,
+  };
 };
 
 export const refreshLongLivedUserToken = async (currentUserToken: string) => {
@@ -645,16 +726,21 @@ export const sendInstagramPrivateReplyGenericTemplate = async (
   );
 
 export const fetchInstagramMedia = async (igId: string, pageAccessToken: string, limit = 30) => {
-  const url = new URL(`${IG_GRAPH_BASE_URL}/${igId}/media`);
-  url.searchParams.set('access_token', pageAccessToken);
-  url.searchParams.set(
-    'fields',
-    'id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,username,like_count,comments_count'
+  return fetchFirstInstagramResponse<{ data: InstagramMedia[] }>(
+    [
+      `${IG_GRAPH_API_BASE_URL}/${igId}/media`,
+      `${IG_GRAPH_BASE_URL}/${igId}/media`,
+      `${IG_GRAPH_API_BASE_URL}/me/media`,
+      `${IG_GRAPH_BASE_URL}/me/media`,
+    ],
+    pageAccessToken,
+    [
+      'id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,username,like_count,comments_count',
+      'id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,username',
+      'id,caption,media_type,permalink,timestamp',
+    ],
+    { limit: limit.toString() }
   );
-  url.searchParams.set('limit', limit.toString());
-
-  const response = await fetch(url.toString());
-  return parseGraphResponse<{ data: InstagramMedia[] }>(response);
 };
 
 export interface InstagramMedia {

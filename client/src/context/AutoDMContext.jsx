@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import apiClient from '../utils/apiClient';
 import { useAuth } from './AuthContext';
+import { startAutoDMInstagramOAuth } from '../services/autodm/supabaseClient';
 
 const AutoDMContext = createContext(null);
 
@@ -97,18 +98,14 @@ export function AutoDMProvider({ children }) {
   }, [loadStatus, status?.autoDMStorageError, status?.autoDMStorageReady]);
 
   const startOAuth = useCallback(async () => {
-    const res = await apiClient.post('/api/autodm/oauth-start', {
-      frontendUrl: window.location.origin,
-    });
-    return res.data.redirectTo;
+    return startAutoDMInstagramOAuth(window.location.origin);
   }, []);
 
   const loadAutomations = useCallback(async () => {
-    if (!activeAccount?.id) return;
     try {
       setAutomationsLoading(true);
       const res = await apiClient.get('/api/autodm/automations', {
-        params: { instagramAccountId: activeAccount.id },
+        params: activeAccount?.id ? { instagramAccountId: activeAccount.id } : {},
       });
       setAutomations(res.data.automations || []);
     } catch (err) {
@@ -182,6 +179,20 @@ export function AutoDMProvider({ children }) {
 
   const fetchInstagramMedia = useCallback(async (limit = 30) => {
     const res = await apiClient.get('/api/autodm/instagram-media', { params: { limit } });
+    if (res.data.account) {
+      setStatus((prev) => {
+        const previousAccounts = prev?.autodmAccounts || [];
+        const nextAccounts = previousAccounts.some((account) => account.id === res.data.account.id)
+          ? previousAccounts.map((account) => (account.id === res.data.account.id ? res.data.account : account))
+          : [res.data.account, ...previousAccounts];
+
+        return {
+          ...(prev || {}),
+          autodmAccounts: nextAccounts,
+        };
+      });
+      setActiveAccount(res.data.account);
+    }
     return res.data.media || [];
   }, []);
 

@@ -248,7 +248,7 @@ export default function AutoDMInstagramProfilePage() {
                   <span className="autodm-avatar">
                     {account.profile_picture_url ? <img src={account.profile_picture_url} alt="" /> : accountUsername?.[0]?.toUpperCase()}
                   </span>
-                  @{accountUsername}
+                  <span>@{accountUsername}</span>
                 </button>
               );
             })}

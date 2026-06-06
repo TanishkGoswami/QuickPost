@@ -4,8 +4,13 @@ import supabase from './supabase.js';
 
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v21.0';
 const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
+const IG_GRAPH_BASE = process.env.IG_GRAPH_BASE_URL || 'https://graph.instagram.com/v24.0';
 const DEFAULT_REPLY =
   'I am not fully sure about that. Our team will help you shortly.';
+
+function getGraphBaseForToken(accessToken) {
+  return accessToken?.startsWith('IG') ? IG_GRAPH_BASE : GRAPH_BASE;
+}
 
 function requiredEnv(name) {
   const value = process.env[name];
@@ -13,18 +18,33 @@ function requiredEnv(name) {
   return value;
 }
 
-function getEncryptionKey() {
+function getEncryptionKeys() {
   // Try INSTAPILOT key first (used for tokens stored via importConnectedInstagram),
   // then fall back to AUTODM key (used by the legacy AutoDM token service).
-  const raw =
-    process.env.INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64 ||
-    process.env.AUTODM_TOKEN_ENCRYPTION_KEY_BASE64;
-  if (!raw) throw new Error('Missing INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64 or AUTODM_TOKEN_ENCRYPTION_KEY_BASE64');
-  const key = Buffer.from(raw, 'base64');
-  if (key.length !== 32) {
-    throw new Error('Encryption key must decode to 32 bytes');
+  const rawKeys = [
+    process.env.TOKEN_ENCRYPTION_KEY_BASE64 ||
+      null,
+    process.env.INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64 || null,
+    process.env.AUTODM_TOKEN_ENCRYPTION_KEY_BASE64 || null,
+  ].filter(Boolean);
+
+  if (!rawKeys.length) {
+    throw new Error(
+      'Missing TOKEN_ENCRYPTION_KEY_BASE64, INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64 or AUTODM_TOKEN_ENCRYPTION_KEY_BASE64'
+    );
   }
-  return key;
+
+  return rawKeys.map((raw) => {
+    const key = Buffer.from(raw, 'base64');
+    if (key.length !== 32) {
+      throw new Error('Encryption key must decode to 32 bytes');
+    }
+    return key;
+  });
+}
+
+function getEncryptionKey() {
+  return getEncryptionKeys()[0];
 }
 
 export function encryptToken(value) {
@@ -44,10 +64,20 @@ export function decryptToken(payload) {
   const data = Buffer.from(dataB64, 'base64');
   const encrypted = data.subarray(0, -16);
   const tag = data.subarray(-16);
-  const decipher = crypto.createDecipheriv('aes-256-gcm', getEncryptionKey(), Buffer.from(ivB64, 'base64'));
-  decipher.setAuthTag(tag);
-  const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8');
-  return JSON.parse(decrypted);
+  let lastError;
+
+  for (const key of getEncryptionKeys()) {
+    try {
+      const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(ivB64, 'base64'));
+      decipher.setAuthTag(tag);
+      const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8');
+      return JSON.parse(decrypted);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw new Error(`Failed to decrypt Instagram token: ${lastError?.message || 'unknown error'}`);
 }
 
 export function verifyMetaSignature(rawBody, signature) {
@@ -61,27 +91,51 @@ export function verifyMetaSignature(rawBody, signature) {
   return crypto.timingSafeEqual(expectedBuffer, signatureBuffer);
 }
 
-export async function listAccounts(userId) {
+function getUserIds(userOrId) {
+  if (typeof userOrId === 'string') return [userOrId].filter(Boolean);
+  return [...new Set([userOrId?.userId, userOrId?.authUserId].filter(Boolean))];
+}
+
+export async function listAccounts(userOrId) {
+  const userIds = getUserIds(userOrId);
   const { data, error } = await supabase
     .from('instagram_accounts')
     .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
+    .in('user_id', userIds)
+    .eq('is_connected', true)
+    .order('updated_at', { ascending: false });
   if (error) throw error;
-  return (data || []).map(({ access_token_encrypted, ...account }) => account);
+
+  const seen = new Set();
+  return (data || [])
+    .filter((account) => {
+      const identity =
+        account.instagram_business_account_id ||
+        account.instagram_user_id ||
+        account.page_id ||
+        account.instagram_username ||
+        account.id;
+      if (seen.has(identity)) return false;
+      seen.add(identity);
+      return true;
+    })
+    .map(({ access_token_encrypted, ...account }) => account);
 }
 
 export async function importConnectedInstagram(user) {
+  const userIds = getUserIds(user);
   const { data: socialToken, error } = await supabase
     .from('social_tokens')
     .select('access_token, token_expiry, instagram_business_id, page_id, username, profile_data')
-    .eq('user_id', user.userId)
+    .in('user_id', userIds)
     .eq('provider', 'instagram')
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (error) throw error;
-  if (!socialToken?.access_token || !socialToken?.instagram_business_id || !socialToken?.page_id) {
-    throw new Error('Connect an Instagram Professional account through Meta OAuth first.');
+  if (!socialToken?.access_token || !socialToken?.instagram_business_id) {
+    throw new Error('Connect an Instagram Professional account through Instagram OAuth first.');
   }
 
   const permissions = await fetchTokenPermissions(socialToken.access_token).catch(() => []);
@@ -108,7 +162,7 @@ export async function importConnectedInstagram(user) {
 
   const accountPayload = {
     user_id: user.userId,
-    page_id: socialToken.page_id,
+    page_id: socialToken.page_id || socialToken.instagram_business_id,
     page_name: profile.page_name || liveProfile?.name || profile.name || null,
     instagram_business_account_id: socialToken.instagram_business_id,
     instagram_username: liveProfile?.username || socialToken.username || profile.username || null,
@@ -140,7 +194,7 @@ async function fetchTokenPermissions(accessToken) {
 }
 
 async function fetchInstagramProfile({ accessToken, instagramBusinessId }) {
-  const { data } = await axios.get(`${GRAPH_BASE}/${instagramBusinessId}`, {
+  const { data } = await axios.get(`${getGraphBaseForToken(accessToken)}/${instagramBusinessId}`, {
     params: {
       access_token: accessToken,
       fields: 'id,username,name,profile_picture_url',
@@ -180,7 +234,8 @@ export async function disconnectAccount(userId, accountId) {
 export async function subscribeAccountToWebhooks(userId, accountId) {
   const account = await getOwnedAccount(userId, accountId);
   const accessToken = await getPageTokenForAccount(account);
-  const subscribedFields = process.env.INSTAPILOT_SUBSCRIBED_FIELDS || 'messages,messaging_postbacks';
+  const subscribedFields =
+    process.env.INSTAPILOT_SUBSCRIBED_FIELDS || 'messages,messaging_postbacks,comments';
 
   let data = { success: true, bypassed: false };
   try {
@@ -772,14 +827,18 @@ async function handleInboundMessage({ senderId, recipientId, messaging }) {
 
 export async function sendInstagramMessage({ account, recipientId, text, messagingType = 'RESPONSE' }) {
   const accessToken = await getPageTokenForAccount(account);
+  const graphBase = getGraphBaseForToken(accessToken);
   const { data } = await axios.post(
-    `${GRAPH_BASE}/${account.page_id}/messages`,
+    `${graphBase}/${account.page_id}/messages`,
     {
       recipient: { id: recipientId },
       messaging_type: messagingType,
       message: { text: String(text).slice(0, 1000) },
     },
-    { params: { access_token: accessToken } }
+    {
+      headers: accessToken.startsWith('IG') ? { Authorization: `Bearer ${accessToken}` } : undefined,
+      params: accessToken.startsWith('IG') ? undefined : { access_token: accessToken },
+    }
   );
   return data;
 }
