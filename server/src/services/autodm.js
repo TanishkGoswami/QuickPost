@@ -1307,16 +1307,6 @@ export async function getDailyMetrics(user, { instagramAccountId, startDate } = 
   }
 
   const { data, error } = await query;
-    .order('date', { ascending: false });
-
-  if (instagramAccountId) {
-    query = query.eq('instagram_account_id', instagramAccountId);
-  }
-  if (startDate) {
-    query = query.gte('date', startDate);
-  }
-
-  const { data, error } = await query;
   if (error) throw new Error(`Failed to load daily metrics: ${error.message}`);
   return data || [];
 }
