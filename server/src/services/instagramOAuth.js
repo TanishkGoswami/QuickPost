@@ -4,6 +4,8 @@ import supabase from './supabase.js';
 import { importInstagramAccountToAutoDM } from './autodm.js';
 
 const GRAPH_VERSION = 'v21.0';
+const FACEBOOK_TOKEN_REFRESH_BUFFER_MS = 7 * 24 * 60 * 60 * 1000;
+const DIRECT_IG_TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
 // ✅ Add instagram_content_publish (required for posting)
 const INSTAGRAM_SCOPES = [
@@ -46,6 +48,10 @@ class InstagramOAuthService {
       nonce: crypto.randomUUID(),
       ts: Date.now()
     });
+  }
+
+  isDirectInstagramToken(accessToken) {
+    return accessToken?.startsWith('IG') || accessToken?.startsWith('IGA');
   }
 
   /**
@@ -351,25 +357,38 @@ class InstagramOAuthService {
 
   async refreshAccessToken(currentToken) {
     try {
-      const response = await axios.get(
-        `https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token`,
-        {
-          params: {
-            grant_type: 'fb_exchange_token',
-            client_id: this.appId,
-            client_secret: this.appSecret,
-            fb_exchange_token: currentToken
-          }
-        }
-      );
+      const isDirectInstagramToken = this.isDirectInstagramToken(currentToken);
+      const response = isDirectInstagramToken
+        ? await axios.get('https://graph.instagram.com/refresh_access_token', {
+            params: {
+              grant_type: 'ig_refresh_token',
+              access_token: currentToken
+            }
+          })
+        : await axios.get(
+            `https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token`,
+            {
+              params: {
+                grant_type: 'fb_exchange_token',
+                client_id: this.appId,
+                client_secret: this.appSecret,
+                fb_exchange_token: currentToken
+              }
+            }
+          );
 
       return {
         accessToken: response.data.access_token,
         expiresIn: response.data.expires_in
       };
     } catch (error) {
+      const graphMessage =
+        error.response?.data?.error?.message ||
+        error.response?.data?.error?.error_user_msg ||
+        error.response?.data?.error?.type ||
+        error.message;
       console.error('❌ IG refresh token error:', error.response?.data || error.message);
-      throw new Error('Failed to refresh Instagram token');
+      throw new Error(`Failed to refresh Instagram token: ${graphMessage}`);
     }
   }
 
@@ -385,12 +404,16 @@ class InstagramOAuthService {
 
     const now = new Date();
     const expiry = new Date(data.token_expiry);
+    const isDirectInstagramToken = this.isDirectInstagramToken(data.access_token);
+    const refreshBufferMs = isDirectInstagramToken
+      ? DIRECT_IG_TOKEN_REFRESH_BUFFER_MS
+      : FACEBOOK_TOKEN_REFRESH_BUFFER_MS;
 
-    if (expiry - now < 7 * 24 * 60 * 60 * 1000) {
+    if (!data.token_expiry || Number.isNaN(expiry.getTime()) || expiry - now < refreshBufferMs) {
       const refreshed = await this.refreshAccessToken(data.access_token);
 
       const newExpiry = new Date();
-      newExpiry.setDate(newExpiry.getDate() + 60);
+      newExpiry.setSeconds(newExpiry.getSeconds() + (refreshed.expiresIn || 60 * 24 * 60 * 60));
 
       await supabase
         .from('social_tokens')
@@ -421,14 +444,16 @@ class InstagramOAuthService {
       return {
         accessToken: refreshed.accessToken,
         instagramBusinessId: data.instagram_business_id,
-        pageId: data.page_id
+        pageId: data.page_id,
+        tokenExpiry: newExpiry.toISOString()
       };
     }
 
     return {
       accessToken: data.access_token,
       instagramBusinessId: data.instagram_business_id,
-      pageId: data.page_id
+      pageId: data.page_id,
+      tokenExpiry: data.token_expiry
     };
   }
 }

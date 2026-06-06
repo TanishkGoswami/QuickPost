@@ -94,12 +94,14 @@ Deno.serve(async (request: Request) => {
     // Prefer the frontend URL sent by the browser (supports both live & ngrok).
     // Fall back to the environment variable if not provided.
     let bodyFrontendUrl: string | undefined;
+    let forceReconnect = false;
     if (request.method === 'POST') {
       try {
         const body = await request.json();
         if (body?.frontendUrl && typeof body.frontendUrl === 'string') {
           bodyFrontendUrl = body.frontendUrl;
         }
+        forceReconnect = body?.forceReconnect === true;
       } catch {
         // ignore JSON parse errors — body is optional
       }
@@ -123,8 +125,10 @@ Deno.serve(async (request: Request) => {
 
     const authUrl = new URL('https://www.instagram.com/oauth/authorize');
     authUrl.searchParams.set('enable_fb_login', '0');
-    authUrl.searchParams.set('force_authentication', '1');
-    authUrl.searchParams.set('force_reauth', 'true');
+    if (forceReconnect) {
+      authUrl.searchParams.set('force_authentication', '1');
+      authUrl.searchParams.set('force_reauth', 'true');
+    }
     authUrl.searchParams.set('client_id', appId);
     authUrl.searchParams.set('redirect_uri', callbackUrl);
     authUrl.searchParams.set('state', state);

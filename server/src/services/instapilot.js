@@ -234,7 +234,8 @@ export async function disconnectAccount(userId, accountId) {
 export async function subscribeAccountToWebhooks(userId, accountId) {
   const account = await getOwnedAccount(userId, accountId);
   const accessToken = await getPageTokenForAccount(account);
-  const subscribedFields = process.env.INSTAPILOT_SUBSCRIBED_FIELDS || 'messages,messaging_postbacks';
+  const subscribedFields =
+    process.env.INSTAPILOT_SUBSCRIBED_FIELDS || 'messages,messaging_postbacks,comments';
 
   let data = { success: true, bypassed: false };
   try {

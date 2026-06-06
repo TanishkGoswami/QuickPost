@@ -638,45 +638,143 @@ const checkRateLimit = async (igId: string, senderId: string) => {
   return Boolean(data);
 };
 
+const DIRECT_IG_REFRESH_BUFFER_MS = 5 * 60 * 1000;
+const DIRECT_IG_REFRESH_FALLBACK_MS = 60 * 1000;
+const FACEBOOK_REFRESH_BUFFER_MS = 5 * 24 * 60 * 60 * 1000;
+const TOKEN_USABLE_BUFFER_MS = 60 * 1000;
+
+const getTokenExpiryMs = (tokenExpiresAt?: string | null) => {
+  if (!tokenExpiresAt) return null;
+  const value = new Date(tokenExpiresAt).getTime();
+  return Number.isFinite(value) ? value : null;
+};
+
+const isAccountTokenUsable = (account: Pick<InstagramAccountRecord, 'token_expires_at'>) => {
+  const expiryMs = getTokenExpiryMs(account.token_expires_at);
+  return expiryMs !== null && expiryMs - Date.now() > TOKEN_USABLE_BUFFER_MS;
+};
+
+const markAccountDisconnected = async (
+  account: InstagramAccountRecord,
+  reason: string,
+  requestId?: string
+) => {
+  const supabase = getSupabaseAdmin();
+  const nowIso = new Date().toISOString();
+  const { error: accountError } = await supabase
+    .from('instagram_accounts')
+    .update({ is_connected: false, updated_at: nowIso })
+    .eq('id', account.id);
+
+  if (accountError) {
+    logError('Failed marking Instagram account disconnected', {
+      requestId,
+      accountId: account.id,
+      igId: account.ig_id,
+      error: accountError.message,
+    });
+  }
+
+  const { data: tokenRow } = await supabase
+    .from('social_tokens')
+    .select('profile_data')
+    .eq('user_id', account.user_id)
+    .eq('provider', 'instagram')
+    .maybeSingle();
+
+  const { error: tokenError } = await supabase
+    .from('social_tokens')
+    .update({
+      profile_data: {
+        ...((tokenRow as any)?.profile_data || {}),
+        token_status: 'expired',
+        token_error: reason,
+        updated_by: 'autodm_webhook',
+      },
+      updated_at: nowIso,
+    })
+    .eq('user_id', account.user_id)
+    .eq('provider', 'instagram');
+
+  if (tokenError) {
+    logError('Failed marking social Instagram token expired', {
+      requestId,
+      accountId: account.id,
+      igId: account.ig_id,
+      error: tokenError.message,
+    });
+  }
+};
+
 const refreshAccountTokenIfNeeded = async (
   account: InstagramAccountRecord,
   requestId?: string
 ): Promise<{ pageAccessToken: string; userAccessToken: string }> => {
   const supabase = getSupabaseAdmin();
   const tokenBundle = await decryptTokenBundle(account.access_token_encrypted);
+  if (!isAccountTokenUsable(account)) {
+    const reason = 'Instagram token expired. Please reconnect Instagram.';
+    await markAccountDisconnected(account, reason, requestId);
+    throw new Error(reason);
+  }
 
   const expiresAt = new Date(account.token_expires_at);
-  const needsRefresh = expiresAt.getTime() - Date.now() < 1000 * 60 * 60 * 24 * 5;
+  const expiryMs = expiresAt.getTime();
+  const isDirectIg = tokenBundle.userAccessToken?.startsWith('IG') || tokenBundle.userAccessToken?.startsWith('IGA');
+  const refreshBufferMs = isDirectIg ? DIRECT_IG_REFRESH_BUFFER_MS : FACEBOOK_REFRESH_BUFFER_MS;
+  const hasKnownExpiry = Number.isFinite(expiryMs);
+  const msUntilExpiry = hasKnownExpiry ? expiryMs - Date.now() : Number.NEGATIVE_INFINITY;
+  const needsRefresh = !hasKnownExpiry || msUntilExpiry < refreshBufferMs;
 
-  if (!needsRefresh) {
+  if (!needsRefresh || !isDirectIg) {
     return tokenBundle;
   }
 
-  const refreshed = await refreshIGLongLivedToken(tokenBundle.userAccessToken);
+  try {
+    const refreshed = await refreshIGLongLivedToken(tokenBundle.userAccessToken);
 
-  const newBundle = {
-    pageAccessToken: refreshed.access_token,
-    userAccessToken: refreshed.access_token,
-  };
+    const newBundle = {
+      pageAccessToken: refreshed.access_token,
+      userAccessToken: refreshed.access_token,
+    };
 
-  const encrypted = await encryptTokenBundle(newBundle);
-  const nextExpiry = new Date(Date.now() + (refreshed.expires_in ?? 60 * 24 * 60 * 60) * 1000);
+    const encrypted = await encryptTokenBundle(newBundle);
+    const nextExpiry = new Date(Date.now() + (refreshed.expires_in ?? 60 * 24 * 60 * 60) * 1000);
 
-  const { error } = await supabase
-    .from('instagram_accounts')
-    .update({
-      access_token_encrypted: encrypted,
-      token_expires_at: nextExpiry.toISOString(),
-    })
-    .eq('id', account.id);
+    const { error } = await supabase
+      .from('instagram_accounts')
+      .update({
+        access_token_encrypted: encrypted,
+        token_expires_at: nextExpiry.toISOString(),
+      })
+      .eq('id', account.id);
 
-  if (error) {
-    throw new Error(`Failed persisting refreshed token: ${error.message}`);
+    if (error) {
+      throw new Error(`Failed persisting refreshed token: ${error.message}`);
+    }
+
+    logInfo('Refreshed account token', { requestId, igId: account.ig_id, pageId: account.page_id });
+
+    return newBundle;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (hasKnownExpiry && msUntilExpiry > DIRECT_IG_REFRESH_FALLBACK_MS) {
+      logError('Direct Instagram token refresh failed; using still-valid token', {
+        requestId,
+        igId: account.ig_id,
+        pageId: account.page_id,
+        tokenExpiresAt: account.token_expires_at,
+        minutesUntilExpiry: Math.round(msUntilExpiry / 60000),
+        error: message,
+      });
+      return tokenBundle;
+    }
+
+    const reason = `Instagram token expired or cannot be refreshed. Please reconnect Instagram. ${message}`;
+    await markAccountDisconnected(account, reason, requestId);
+    throw new Error(reason);
   }
-
-  logInfo('Refreshed account token', { requestId, igId: account.ig_id, pageId: account.page_id });
-
-  return newBundle;
 };
 
 export const processAutomationEvent = async (payload: AutomationInput) => {
@@ -814,7 +912,23 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
       .is('webhook_instagram_user_id', null);
   }
 
-  let connectedAccounts = (accounts ?? []).filter((a: any) => a.is_connected !== false);
+  const nowMs = Date.now();
+  const expiredAccounts = (accounts ?? []).filter((account: any) => {
+    const expiryMs = getTokenExpiryMs(account.token_expires_at);
+    return expiryMs !== null && expiryMs - nowMs <= TOKEN_USABLE_BUFFER_MS;
+  });
+
+  for (const expiredAccount of expiredAccounts as InstagramAccountRecord[]) {
+    await markAccountDisconnected(
+      expiredAccount,
+      'Instagram token expired. Please reconnect Instagram.',
+      payload.requestId
+    );
+  }
+
+  let connectedAccounts = (accounts ?? []).filter(
+    (a: any) => a.is_connected !== false && isAccountTokenUsable(a)
+  );
 
   if (payload.mediaId) {
     const { data: mediaAutomations, error: mediaAutomationError } = await supabase
@@ -871,6 +985,18 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
       }
     }
   }
+
+  const expiredConnectedAccounts = connectedAccounts.filter(
+    (account: any) => !isAccountTokenUsable(account)
+  );
+  for (const expiredAccount of expiredConnectedAccounts as InstagramAccountRecord[]) {
+    await markAccountDisconnected(
+      expiredAccount,
+      'Instagram token expired. Please reconnect Instagram.',
+      payload.requestId
+    );
+  }
+  connectedAccounts = connectedAccounts.filter((account: any) => isAccountTokenUsable(account));
 
   if (connectedAccounts.length === 0) {
     logInfo('No connected account row for incoming event', {

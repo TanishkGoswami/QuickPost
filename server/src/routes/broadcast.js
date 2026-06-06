@@ -28,6 +28,7 @@ import { createJob, updateJob, failJob, getJob } from "../services/jobQueue.js";
 import fs from "fs";
 import { resolveMentions } from "../services/mentions.js";
 import { createOrUpdateComposerAutomation } from "../services/autodm.js";
+import { getValidInstagramTokensForPosting } from "../services/instagramToken.js";
 
 const router = express.Router();
 
@@ -321,6 +322,8 @@ async function processBroadcastJob({
         mediaType, 
         { 
           ...platData, 
+          sourceJobId: jobId,
+          source_job_id: jobId,
           postType,
           autoDMConfig: autoDMConfig?.enabled ? autoDMConfig : null,
           selectedChannels: channels, 
@@ -404,18 +407,32 @@ async function processBroadcastJob({
 
   // Instagram
   if (channels.includes("instagram") && tokens.instagram) {
-    const resolvedCaption = resolveMentions(caption, 'instagram', tokens.instagram);
-    let action;
-    if (mediaUrls.length > 1 && !isVideo) {
-      action = postCarouselToInstagram(mediaUrls, resolvedCaption, tokens.instagram);
-    } else if (isVideo) {
-      const igTokens = { ...tokens.instagram, coverUrl: autoCoverImageUrl };
-      action = postToInstagram(primaryMediaUrl, resolvedCaption, igTokens);
-    } else {
-      action = postImageToInstagram(primaryMediaUrl, resolvedCaption, tokens.instagram);
-    }
     platformPromises.push(
-      action.then((r) => onChannelComplete("Instagram", r)),
+      (async () => {
+        try {
+          const instagramTokens = await getValidInstagramTokensForPosting(userId, tokens.instagram);
+          tokens.instagram = instagramTokens;
+          const resolvedCaption = resolveMentions(caption, 'instagram', instagramTokens);
+          let result;
+          if (mediaUrls.length > 1 && !isVideo) {
+            result = await postCarouselToInstagram(mediaUrls, resolvedCaption, instagramTokens);
+          } else if (isVideo) {
+            const igTokens = { ...instagramTokens, coverUrl: autoCoverImageUrl };
+            result = await postToInstagram(primaryMediaUrl, resolvedCaption, igTokens);
+          } else {
+            result = await postImageToInstagram(primaryMediaUrl, resolvedCaption, instagramTokens);
+          }
+          return onChannelComplete("Instagram", result);
+        } catch (error) {
+          return onChannelComplete("Instagram", {
+            success: false,
+            platform: "Instagram",
+            error: error.message || "Instagram token expired. Please reconnect Instagram.",
+            errorCode: error.code || error.statusCode || null,
+            requiresReconnect: Boolean(error.requiresReconnect || error.code === "REAUTH_REQUIRED"),
+          });
+        }
+      })(),
     );
   }
 
@@ -648,26 +665,40 @@ async function processBroadcastJob({
       const { platform, result } = promiseResult.value;
       results[platform.toLowerCase()] = result;
       if (result && result.success === false) {
-        failedPlatforms.push({ platform, error: result.error || "Unknown error" });
+        failedPlatforms.push({
+          platform,
+          error: result.error || "Unknown error",
+          errorCode: result.errorCode || null,
+          requiresReconnect: Boolean(result.requiresReconnect),
+        });
         console.error(`❌ [JOB:${jobId}] ${platform} failed:`, result.error);
       }
     } else {
       // Promise rejected — extract platform name from reason if possible
       console.error(`❌ [JOB:${jobId}] Platform promise rejected:`, promiseResult.reason);
-      failedPlatforms.push({ platform: "Unknown", error: promiseResult.reason?.message || String(promiseResult.reason) });
+      failedPlatforms.push({
+        platform: "Unknown",
+        error: promiseResult.reason?.message || String(promiseResult.reason),
+        errorCode: promiseResult.reason?.code || null,
+        requiresReconnect: Boolean(promiseResult.reason?.requiresReconnect),
+      });
     }
   }
+
+  const hasPlatformFailures = failedPlatforms.length > 0;
 
   // ── Phase 4: Save to DB (85 → 95%) ────────────────────────────────────
   updateJob(jobId, { progress: 87, step: "Saving broadcast record…" });
   try {
     const savedBroadcast = await saveBroadcast(userId, caption, filenames, results, mediaType, {
       ...platData,
+      sourceJobId: jobId,
+      source_job_id: jobId,
       postType,
       autoDMConfig: autoDMConfig?.enabled ? autoDMConfig : null,
       selected_aspect_ratio: selectedAspectRatio,
       selected_post_size_preset: selectedPostSizePreset
-    }, 'sent');
+    }, hasPlatformFailures ? 'failed' : 'sent');
     if (autoDMConfig?.enabled && results.instagram?.success) {
       try {
         await createOrUpdateComposerAutomation({
@@ -703,7 +734,7 @@ async function processBroadcastJob({
   setTimeout(() => cleanupFiles(filePaths, thumbnailFile), 10000);
 
   const successCount = platformPromises.length - failedPlatforms.length;
-  const anyFailed = failedPlatforms.length > 0;
+  const anyFailed = hasPlatformFailures;
   const failedStr = failedPlatforms.map(f => `${f.platform}: ${f.error}`).join(" | ");
 
   const finalStatus = anyFailed ? "failed" : "completed";
@@ -719,6 +750,12 @@ async function processBroadcastJob({
     progress: 100,
     step: finalStep,
     error: finalError,
+    meta: {
+      ...(getJob(jobId)?.meta || {}),
+      failedPlatforms,
+      requiresReconnect: failedPlatforms.some((failure) => failure.requiresReconnect),
+      retryDisabled: failedPlatforms.some((failure) => failure.requiresReconnect),
+    },
     result: results,
   });
   console.log(`🎉 [JOB:${jobId}] Broadcast job finished. Success: ${successCount}/${platformPromises.length}${anyFailed ? ` | Errors: ${failedStr}` : ''}`);

@@ -125,6 +125,8 @@ function AnalyticsModal({ automation, analytics, loading, onClose, onSync, onEdi
     analytics?.unique_people ??
     statValue(automation, ['people', 'contacts_count', 'unique_contacts']);
   const lastUsed = analytics?.lastUsedAt || automation.last_used_at || automation.updated_at || automation.created_at;
+  const recentErrors = Array.isArray(analytics?.recentErrors) ? analytics.recentErrors : [];
+  const hasIssues = recentErrors.length > 0 || (analytics?.failed || 0) > 0;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -199,7 +201,9 @@ function AnalyticsModal({ automation, analytics, loading, onClose, onSync, onEdi
                       <h3>Delivery Health</h3>
                       <p>Message delivery and follow-up session status.</p>
                     </div>
-                    <span className="autodm-health">Healthy</span>
+                    <span className={`autodm-health ${hasIssues ? 'warn' : ''}`}>
+                      {hasIssues ? 'Needs attention' : 'Healthy'}
+                    </span>
                   </div>
                   <div className="autodm-metrics-row">
                     <div className="autodm-metric-line">
@@ -222,7 +226,15 @@ function AnalyticsModal({ automation, analytics, loading, onClose, onSync, onEdi
                     <span style={{ width: `${sent > 0 ? 100 : 0}%` }} />
                   </div>
                   <h3 className="autodm-section-title">Issues</h3>
-                  <div className="autodm-success-box">No recent processing errors found for this automation.</div>
+                  {recentErrors.length > 0 ? (
+                    <div className="autodm-issue-list">
+                      {recentErrors.map((errorText, index) => (
+                        <p key={`${errorText}-${index}`}>{errorText}</p>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="autodm-good-box">No recent processing errors found for this automation.</div>
+                  )}
                 </section>
 
                 <section className="autodm-panel">
@@ -285,7 +297,7 @@ export default function AutoDMAutomationsPage() {
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   useEffect(() => {
-    if (activeAccount?.id) loadAutomations();
+    loadAutomations();
   }, [activeAccount?.id, loadAutomations]);
 
   const rows = useMemo(() => automations || [], [automations]);

@@ -37,9 +37,17 @@ const verifyWebhookSignature = async (
   }
 
   const received = signatureHeader.replace('sha256=', '').trim().toLowerCase();
+  const rotationSecrets = (Deno.env.get('META_WEBHOOK_SIGNATURE_SECRETS') ?? '')
+    .split(',')
+    .map((secret) => secret.trim())
+    .filter(Boolean)
+    .map((secret, index) => [`META_WEBHOOK_SIGNATURE_SECRETS[${index}]`, secret] as [string, string]);
+
   const secrets = [
     ['META_APP_SECRET', Deno.env.get('META_APP_SECRET')?.trim()],
     ['IG_APP_SECRET', Deno.env.get('IG_APP_SECRET')?.trim()],
+    ['INSTAGRAM_APP_SECRET', Deno.env.get('INSTAGRAM_APP_SECRET')?.trim()],
+    ...rotationSecrets,
   ].filter((entry): entry is [string, string] => Boolean(entry[1]));
 
   if (secrets.length === 0) {
@@ -223,6 +231,12 @@ Deno.serve(async (request: Request) => {
     const arrayBuffer = await request.arrayBuffer();
     const rawBody = new Uint8Array(arrayBuffer);
     const signature = request.headers.get('x-hub-signature-256');
+    logInfo('Instagram webhook POST received', {
+      requestId,
+      bodyLength: rawBody.byteLength,
+      hasSignature: Boolean(signature),
+      signaturePrefix: signature?.slice(0, 16) ?? null,
+    });
     const signatureValid = await verifyWebhookSignature(rawBody, signature, requestId);
 
     if (!signatureValid) {
@@ -300,7 +314,7 @@ Deno.serve(async (request: Request) => {
           .from('webhook_logs')
           .update({ 
             processed: true, 
-            message_text: `CRASH: ${errorMessage}` 
+            processing_error: errorMessage,
           })
           .eq('dedupe_key', dedupeKey);
       }

@@ -25,7 +25,7 @@ import apiClient from '../utils/apiClient';
 /**
  * @typedef {Object} UploadJob
  * @property {string}   id
- * @property {'pending'|'processing'|'completed'|'failed'} status
+ * @property {'pending'|'processing'|'completed'|'failed'|'stalled'} status
  * @property {number}   progress   — 0–100
  * @property {string}   step       — Human-readable step label
  * @property {string|null} error
@@ -37,7 +37,7 @@ import apiClient from '../utils/apiClient';
 const UploadJobContext = createContext(null);
 
 const POLL_INTERVAL_MS = 1500;
-const MAX_POLL_ERRORS  = 5; // stop polling after 5 consecutive network errors
+const MAX_POLL_ERRORS  = 12; // give slow uploads/server cold starts enough time before declaring status unavailable
 
 export function UploadJobProvider({ children }) {
   const [jobs, setJobs] = useState([]);
@@ -107,7 +107,18 @@ export function UploadJobProvider({ children }) {
           setJobs((prev) =>
             prev.map((j) =>
               j.id === jobId && j.status !== 'completed'
-                ? { ...j, status: 'failed', error: 'Lost connection. Please check status manually.', updatedAt: Date.now() }
+                ? {
+                    ...j,
+                    status: 'stalled',
+                    step: 'Status connection lost. Check Broadcast History before retrying.',
+                    error: null,
+                    meta: {
+                      ...(j.meta || {}),
+                      statusUnavailable: true,
+                      retryDisabled: true,
+                    },
+                    updatedAt: Date.now(),
+                  }
                 : j
             )
           );
@@ -121,11 +132,11 @@ export function UploadJobProvider({ children }) {
     (jobId) => {
       if (pollersRef.current.has(jobId)) return; // already polling
 
-      // Immediate first fetch
-      fetchJobStatus(jobId);
-
       const intervalId = setInterval(() => fetchJobStatus(jobId), POLL_INTERVAL_MS);
       pollersRef.current.set(jobId, { intervalId, errorCount: 0 });
+
+      // Immediate first fetch after the poller exists so first-request failures are counted.
+      fetchJobStatus(jobId);
     },
     [fetchJobStatus]
   );
@@ -210,6 +221,22 @@ export function UploadJobProvider({ children }) {
    */
   const retryJob = useCallback(
     (jobId) => {
+      const currentJob = jobs.find((job) => job.id === jobId);
+      if (currentJob?.meta?.retryDisabled || currentJob?.meta?.requiresReconnect) {
+        setJobs((prev) =>
+          prev.map((job) =>
+            job.id === jobId
+              ? {
+                  ...job,
+                  error: 'Instagram connection expired. Please reconnect Instagram before posting again.',
+                  updatedAt: Date.now(),
+                }
+              : job
+          )
+        );
+        return;
+      }
+
       stopPolling(jobId); // clean up any stale poller first
 
       setJobs((prev) =>
@@ -229,7 +256,7 @@ export function UploadJobProvider({ children }) {
 
       startPolling(jobId);
     },
-    [startPolling, stopPolling]
+    [jobs, startPolling, stopPolling]
   );
 
   /**
@@ -239,7 +266,7 @@ export function UploadJobProvider({ children }) {
     setJobs((prev) =>
       prev.filter((j) => {
         const isDone =
-          j.status === 'completed' || j.status === 'failed';
+          j.status === 'completed' || j.status === 'failed' || j.status === 'stalled';
         if (isDone) {
           stopPolling(j.id);
           callbacksRef.current.delete(j.id);
