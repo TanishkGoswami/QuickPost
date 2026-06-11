@@ -65,10 +65,10 @@ export default function BotBuilderForm({
   }, [activeAccountOptions, form.id, form.instagram_account_id]);
 
   useEffect(() => {
-    if (form.instagram_account_id && !activeAccountOptions.some((account) => account.id === form.instagram_account_id)) {
+    if (accounts.length > 0 && form.instagram_account_id && !activeAccountOptions.some((account) => account.id === form.instagram_account_id)) {
       setField("instagram_account_id", activeAccountOptions[0]?.id || "");
     }
-  }, [activeAccountOptions, form.instagram_account_id]);
+  }, [accounts, activeAccountOptions, form.instagram_account_id]);
 
   const save = async (overrides: Record<string, unknown> = {}) => {
     const nextForm = { ...form, ...overrides };
