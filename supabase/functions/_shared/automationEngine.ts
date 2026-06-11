@@ -883,11 +883,58 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
           storedIgId: (accounts[0] as any).ig_id,
         });
       } else if ((fallbackAccounts ?? []).length > 1) {
-        logError('Cannot map webhook igId: multiple connected accounts and no exact/media mapping', {
+        logInfo('Attempting self-healing webhook mapping for multiple accounts', {
           requestId: payload.requestId,
           webhookIgId: payload.igId,
-          connectedAccountCount: fallbackAccounts?.length ?? 0,
         });
+
+        for (const account of fallbackAccounts ?? []) {
+          try {
+            const tokenBundle = await decryptTokenBundle(account.access_token_encrypted);
+            const token = tokenBundle.userAccessToken || tokenBundle.pageAccessToken;
+            if (token && (token.startsWith('IG') || token.startsWith('IGA'))) {
+              const res = await fetch(
+                `https://graph.instagram.com/v24.0/${payload.igId}?fields=id,username&access_token=${token}`
+              );
+              if (res.ok) {
+                const data = await res.json();
+                const storedIgId = account.ig_id || account.page_id;
+                if (
+                  data &&
+                  (data.id === storedIgId || data.username === (account as any).instagram_username)
+                ) {
+                  // Clear duplicate webhook mappings first
+                  await supabase
+                    .from('instagram_accounts')
+                    .update({ webhook_instagram_user_id: null })
+                    .eq('webhook_instagram_user_id', payload.igId);
+
+                  // Update matched account
+                  await supabase
+                    .from('instagram_accounts')
+                    .update({ webhook_instagram_user_id: payload.igId, updated_at: new Date().toISOString() })
+                    .eq('id', account.id);
+
+                  (account as any).webhook_instagram_user_id = payload.igId;
+                  accounts = [account];
+                  logInfo('Self-healing successfully mapped webhook igId to account', {
+                    requestId: payload.requestId,
+                    webhookIgId: payload.igId,
+                    accountId: account.id,
+                    username: (account as any).instagram_username,
+                  });
+                  break;
+                }
+              }
+            }
+          } catch (e) {
+            logError('Self-healing mapping attempt failed for account', {
+              requestId: payload.requestId,
+              accountId: account.id,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+        }
       }
     }
 
