@@ -102,9 +102,24 @@ export async function listAccounts(userOrId) {
     .from('instagram_accounts')
     .select('*')
     .in('user_id', userIds)
-    .order('created_at', { ascending: false });
+    .eq('is_connected', true)
+    .order('updated_at', { ascending: false });
   if (error) throw error;
-  return (data || []).map(({ access_token_encrypted, ...account }) => account);
+
+  const seen = new Set();
+  return (data || [])
+    .filter((account) => {
+      const identity =
+        account.instagram_business_account_id ||
+        account.instagram_user_id ||
+        account.page_id ||
+        account.instagram_username ||
+        account.id;
+      if (seen.has(identity)) return false;
+      seen.add(identity);
+      return true;
+    })
+    .map(({ access_token_encrypted, ...account }) => account);
 }
 
 export async function importConnectedInstagram(user) {
@@ -145,6 +160,21 @@ export async function importConnectedInstagram(user) {
     .eq('instagram_business_account_id', socialToken.instagram_business_id)
     .maybeSingle();
 
+  let tokenEncrypted = existingAccount?.access_token_encrypted;
+  if (tokenEncrypted) {
+    try {
+      const decrypted = decryptToken(tokenEncrypted);
+      if (decrypted?.pageAccessToken !== socialToken.access_token) {
+        tokenEncrypted = encryptToken({ pageAccessToken: socialToken.access_token });
+      }
+    } catch (e) {
+      console.warn('[INSTAPILOT] Existing token decryption failed, re-encrypting:', e.message);
+      tokenEncrypted = encryptToken({ pageAccessToken: socialToken.access_token });
+    }
+  } else {
+    tokenEncrypted = encryptToken({ pageAccessToken: socialToken.access_token });
+  }
+
   const accountPayload = {
     user_id: user.userId,
     page_id: socialToken.page_id || socialToken.instagram_business_id,
@@ -152,7 +182,7 @@ export async function importConnectedInstagram(user) {
     instagram_business_account_id: socialToken.instagram_business_id,
     instagram_username: liveProfile?.username || socialToken.username || profile.username || null,
     profile_picture_url: profilePictureUrl,
-    access_token_encrypted: existingAccount?.access_token_encrypted || encryptToken({ pageAccessToken: socialToken.access_token }),
+    access_token_encrypted: tokenEncrypted,
     token_expires_at: socialToken.token_expiry || null,
     permissions,
     webhook_status: existingAccount?.webhook_status || 'configure_in_meta',
@@ -219,12 +249,13 @@ export async function disconnectAccount(userId, accountId) {
 export async function subscribeAccountToWebhooks(userId, accountId) {
   const account = await getOwnedAccount(userId, accountId);
   const accessToken = await getPageTokenForAccount(account);
-  const subscribedFields = process.env.INSTAPILOT_SUBSCRIBED_FIELDS || 'messages,messaging_postbacks';
+  const subscribedFields =
+    process.env.INSTAPILOT_SUBSCRIBED_FIELDS || 'messages,messaging_postbacks,comments';
 
   let data = { success: true, bypassed: false };
   try {
     const response = await axios.post(
-      `${GRAPH_BASE}/${account.page_id}/subscribed_apps`,
+      `${getGraphBaseForToken(accessToken)}/${account.page_id}/subscribed_apps`,
       null,
       {
         params: {
@@ -646,21 +677,68 @@ async function findAccountByRecipient(recipientId) {
   let { data, error } = await supabase
     .from('instagram_accounts')
     .select('*')
-    .eq('instagram_business_account_id', recipientId)
+    .or(`instagram_business_account_id.eq.${recipientId},webhook_instagram_user_id.eq.${recipientId},page_id.eq.${recipientId}`)
     .eq('is_connected', true)
-    .maybeSingle();
+    .order('updated_at', { ascending: false });
+
   if (error) throw error;
-  if (!data) {
-    const fallback = await supabase
-      .from('instagram_accounts')
-      .select('*')
-      .eq('page_id', recipientId)
-      .eq('is_connected', true)
-      .maybeSingle();
-    if (fallback.error) throw fallback.error;
-    data = fallback.data;
+  if (data && data.length > 0) {
+    const exact = data.find((acc) => acc.webhook_instagram_user_id === recipientId);
+    if (exact) return exact;
+    return data[0];
   }
-  return data;
+
+  // Self-healing mapping fallback for direct Instagram accounts
+  const { data: fallbackAccounts, error: fallbackError } = await supabase
+    .from('instagram_accounts')
+    .select('*')
+    .eq('is_connected', true);
+
+  if (!fallbackError && fallbackAccounts) {
+    for (const account of fallbackAccounts) {
+      try {
+        const decrypted = decryptToken(account.access_token_encrypted);
+        const token = decrypted.pageAccessToken || decrypted.userAccessToken;
+        if (token && token.startsWith('IG')) {
+          console.log(`[INSTAPILOT] Checking self-healing match for ${account.instagram_username}...`);
+          const res = await axios.get(`https://graph.instagram.com/v24.0/${recipientId}`, {
+            params: { access_token: token, fields: 'id,username' },
+            timeout: 5000,
+          });
+          const storedId = account.instagram_user_id || account.page_id;
+          if (
+            res.data &&
+            (res.data.id === storedId || res.data.username === account.instagram_username)
+          ) {
+            console.log(
+              `[INSTAPILOT] Self-healing mapped webhook recipient ${recipientId} to account ${account.instagram_username}`
+            );
+            // First clear this webhook ID on other accounts to avoid unique constraint violations
+            await supabase
+              .from('instagram_accounts')
+              .update({ webhook_instagram_user_id: null })
+              .eq('webhook_instagram_user_id', recipientId);
+
+            // Update matched account
+            await supabase
+              .from('instagram_accounts')
+              .update({ webhook_instagram_user_id: recipientId, updated_at: new Date().toISOString() })
+              .eq('id', account.id);
+
+            account.webhook_instagram_user_id = recipientId;
+            return account;
+          }
+        }
+      } catch (e) {
+        console.warn(
+          `[INSTAPILOT] Failed self-healing check for account ${account.instagram_username}:`,
+          e.response?.data || e.message
+        );
+      }
+    }
+  }
+
+  return null;
 }
 
 async function upsertConversation(account, bot, senderId) {

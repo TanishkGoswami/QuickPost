@@ -14,6 +14,16 @@ interface OAuthStatePayload {
   redirect: string;
 }
 
+interface InstagramProfile {
+  id: string;
+  username: string;
+  name?: string | null;
+  profile_picture_url?: string | null;
+  followers_count?: number | null;
+  media_count?: number | null;
+  account_type?: string | null;
+}
+
 const fromBase64Url = (input: string): string => {
   const normalized = input.replace(/-/g, '+').replace(/_/g, '/');
   const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
@@ -107,6 +117,16 @@ const getFallbackFrontendUrl = (): string => {
   return frontendUrl?.trim() || 'http://localhost:5173';
 };
 
+const buildFallbackInstagramProfile = (userId: string): InstagramProfile => ({
+  id: userId,
+  username: `ig_${userId}`,
+  name: null,
+  profile_picture_url: null,
+  followers_count: 0,
+  media_count: 0,
+  account_type: 'BUSINESS',
+});
+
 const resolveAppUserId = async (
   supabase: ReturnType<typeof getSupabaseAdmin>,
   authUserId: string,
@@ -188,14 +208,34 @@ Deno.serve(async (request: Request) => {
     const callbackUrl = getInstagramOAuthCallbackUrl();
 
     const shortToken = await exchangeIGCodeForShortLivedToken(code, callbackUrl);
-    const longToken = await exchangeIGForLongLivedToken(shortToken.access_token);
-    const igUser = await fetchIGUserInfo(longToken.access_token);
+    const tokenForStorage = await exchangeIGForLongLivedToken(shortToken.access_token);
+    const minLongLivedTtlSeconds = 24 * 60 * 60;
+
+    if (!tokenForStorage.expires_in || tokenForStorage.expires_in < minLongLivedTtlSeconds) {
+      throw new Error(
+        'Instagram returned a short-lived token. Please reconnect; if this repeats, check IG_APP_SECRET and Instagram Login app settings.'
+      );
+    }
+
+    let igUser: InstagramProfile;
+    let profileSyncError: string | null = null;
+    try {
+      igUser = await fetchIGUserInfo(tokenForStorage.access_token);
+    } catch (profileError) {
+      profileSyncError = profileError instanceof Error ? profileError.message : String(profileError);
+      logError('Instagram profile fetch failed after OAuth', {
+        requestId,
+        userId: shortToken.user_id,
+        error: profileSyncError,
+      });
+      igUser = buildFallbackInstagramProfile(String(shortToken.user_id));
+    }
 
     const encryptedToken = await encryptTokenBundle({
-      pageAccessToken: longToken.access_token,
-      userAccessToken: longToken.access_token,
+      pageAccessToken: tokenForStorage.access_token,
+      userAccessToken: tokenForStorage.access_token,
     });
-    const expiresAt = new Date(Date.now() + longToken.expires_in * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + tokenForStorage.expires_in * 1000).toISOString();
 
     const supabase = getSupabaseAdmin();
     const appUserId = await resolveAppUserId(supabase, statePayload.uid, statePayload.email);
@@ -244,7 +284,7 @@ Deno.serve(async (request: Request) => {
       {
         user_id: appUserId,
         provider: 'instagram',
-        access_token: longToken.access_token,
+        access_token: tokenForStorage.access_token,
         token_expiry: expiresAt,
         instagram_business_id: igUser.id,
         page_id: null,
@@ -257,6 +297,11 @@ Deno.serve(async (request: Request) => {
           followers_count: igUser.followers_count ?? null,
           media_count: igUser.media_count ?? null,
           account_type: igUser.account_type ?? null,
+          profile_sync_status: profileSyncError ? 'pending' : 'synced',
+          profile_sync_error: profileSyncError,
+          token_status: 'active',
+          token_lifecycle: 'long_lived',
+          token_expires_at: expiresAt,
         },
         updated_at: new Date().toISOString(),
       },

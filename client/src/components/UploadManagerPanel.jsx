@@ -40,6 +40,7 @@ const css = {
 
 function phase(progress, status) {
   if (status === 'failed') return { label: 'FAILED', bar: css.error, glow: 'rgba(239,68,68,0.15)', text: css.error };
+  if (status === 'stalled') return { label: 'CHECK', bar: css.slate, glow: 'rgba(105,105,105,0.12)', text: css.slate };
   if (status === 'completed' || progress >= 100) return { label: 'DONE', bar: css.success, glow: 'rgba(16,185,129,0.15)', text: css.success };
   if (progress < 30) return { label: 'UPLOADING', bar: css.arc, glow: 'rgba(243,115,56,0.15)', text: css.arc };
   if (progress < 70) return { label: 'PUBLISHING', bar: css.arc, glow: 'rgba(243,115,56,0.15)', text: css.arc };
@@ -70,11 +71,13 @@ const JobCard = React.forwardRef(function JobCard({ job, onRetry, onDismiss }, r
   const isActive = status === 'pending' || status === 'processing';
   const isDone = status === 'completed';
   const isFailed = status === 'failed';
+  const isStalled = status === 'stalled';
   const channels = meta?.channels || [];
   const caption = meta?.caption || '';
   const mediaType = meta?.mediaType || 'image';
   const fileCount = meta?.fileCount || 1;
   const previewUrl = meta?.previewUrl || null;
+  const requiresReconnect = Boolean(meta?.requiresReconnect || meta?.retryDisabled);
 
   React.useEffect(() => {
     if (status === 'completed') {
@@ -155,6 +158,7 @@ const JobCard = React.forwardRef(function JobCard({ job, onRetry, onDismiss }, r
                 {isActive && <StatusDot color={p.bar} />}
                 {isDone && <CheckCircle2 size={10} color={css.success} />}
                 {isFailed && <AlertCircle size={10} color={css.error} />}
+                {isStalled && <AlertCircle size={10} color={css.slate} />}
                 <span style={{ 
                   fontSize: 9.5, 
                   fontWeight: 700, 
@@ -239,7 +243,7 @@ const JobCard = React.forwardRef(function JobCard({ job, onRetry, onDismiss }, r
               color: isDone ? css.success : isFailed ? css.error : css.slate,
               fontVariantNumeric: 'tabular-nums', letterSpacing: '0.02em',
             }}>
-              {isDone ? '100%' : isFailed ? 'ERR' : `${progress}%`}
+              {isDone ? '100%' : isFailed ? 'ERR' : isStalled ? 'CHK' : `${progress}%`}
             </span>
 
             <div style={{ display: 'flex' }}>
@@ -272,7 +276,13 @@ const JobCard = React.forwardRef(function JobCard({ job, onRetry, onDismiss }, r
           {/* Retry button */}
           {isFailed && (
             <button
-              onClick={() => onRetry(job.id)}
+              onClick={() => {
+                if (requiresReconnect) {
+                  window.location.href = '/connect';
+                  return;
+                }
+                onRetry(job.id);
+              }}
               style={{
                 marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 6,
                 background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)',
@@ -284,7 +294,7 @@ const JobCard = React.forwardRef(function JobCard({ job, onRetry, onDismiss }, r
               onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.05)'}
             >
               <RefreshCw size={10} className={isActive ? 'animate-spin' : ''} />
-              Retry
+              {requiresReconnect ? 'Reconnect' : 'Retry'}
             </button>
           )}
         </div>
@@ -302,7 +312,8 @@ export default function UploadManagerPanel() {
 
   const completedCount = jobs.filter(j => j.status === 'completed').length;
   const failedCount = jobs.filter(j => j.status === 'failed').length;
-  const anyFinished = completedCount > 0 || failedCount > 0;
+  const stalledCount = jobs.filter(j => j.status === 'stalled').length;
+  const anyFinished = completedCount > 0 || failedCount > 0 || stalledCount > 0;
 
   // Average progress of active jobs
   const activeJobs = jobs.filter(j => j.status === 'pending' || j.status === 'processing');

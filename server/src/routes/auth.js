@@ -252,6 +252,7 @@ router.get("/instagram", async (req, res) => {
       { userId },
       CLIENT_URL,
       `Bearer ${token}`,
+      true,
     );
     return res.redirect(redirectTo);
   } catch (error) {

@@ -97,6 +97,15 @@ Deno.serve(async (request: Request) => {
     await supabase
       .from('instagram_accounts')
       .update({
+        page_id: accountInfo.id ?? account.page_id,
+        page_name: accountInfo.name ?? accountInfo.username ?? account.page_name,
+        instagram_business_account_id: accountInfo.id ?? account.instagram_business_account_id,
+        instagram_user_id: accountInfo.id ?? account.instagram_user_id,
+        instagram_username: accountInfo.username ?? account.instagram_username,
+        username: accountInfo.username ?? account.username,
+        full_name: accountInfo.name ?? account.full_name,
+        profile_picture_url: accountInfo.profile_picture_url ?? account.profile_picture_url,
+        account_type: accountInfo.account_type === 'CREATOR' ? 'CREATOR' : account.account_type,
         followers_count: accountInfo.followers_count ?? account.followers_count ?? 0,
         media_count: accountInfo.media_count ?? account.media_count ?? 0,
         updated_at: new Date().toISOString(),

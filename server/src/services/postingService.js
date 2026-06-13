@@ -16,6 +16,7 @@ import googleBusinessOAuth from './googleBusinessOAuth.js';
 import { updateBroadcastResults } from './broadcasts.js';
 import { resolveMentions } from './mentions.js';
 import { createOrUpdateComposerAutomation } from './autodm.js';
+import { getValidInstagramTokensForPosting, isInstagramAuthError } from './instagramToken.js';
 
 /**
  * Core function to broadcast to platforms
@@ -56,16 +57,18 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
     
     // Instagram
     if (channels.includes('instagram') && tokens.instagram) {
-      const resolvedCaption = resolveMentions(caption, 'instagram', tokens.instagram);
+      const freshInstagramTokens = await getValidInstagramTokensForPosting(userId, tokens.instagram);
+      tokens.instagram = freshInstagramTokens;
+      const resolvedCaption = resolveMentions(caption, 'instagram', freshInstagramTokens);
       let instagramAction;
       if (mediaUrls.length > 1 && !isVideo) {
-        instagramAction = postCarouselToInstagram(mediaUrls, resolvedCaption, tokens.instagram);
+        instagramAction = postCarouselToInstagram(mediaUrls, resolvedCaption, freshInstagramTokens);
       } else if (isVideo) {
-        const igTokens = { ...tokens.instagram, coverUrl: coverImageUrl };
+        const igTokens = { ...freshInstagramTokens, coverUrl: coverImageUrl };
         const videoUrl = mediaUrls[filePaths.findIndex(p => p.includes('video-'))] || primaryMediaUrl;
         instagramAction = postToInstagram(videoUrl, resolvedCaption, igTokens);
       } else {
-        instagramAction = postImageToInstagram(primaryMediaUrl, resolvedCaption, tokens.instagram);
+        instagramAction = postImageToInstagram(primaryMediaUrl, resolvedCaption, freshInstagramTokens);
       }
       platformPromises.push(instagramAction.then(result => ({ platform: 'instagram', result })));
     }
@@ -202,7 +205,36 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
       if (promiseResult.status === 'fulfilled') {
         const { platform, result } = promiseResult.value;
         results[platform] = result;
+      } else {
+        results.unknown = {
+          success: false,
+          error: promiseResult.reason?.message || String(promiseResult.reason),
+        };
       }
+    }
+
+    const failedPlatformEntries = Object.entries(results)
+      .filter(([platform, result]) => platform !== 'mediaUrl' && platform !== 'mediaUrls' && result?.success === false)
+      .map(([platform, result]) => ({
+        platform,
+        error: result.error || 'Unknown error',
+      }));
+    const failedPlatforms = failedPlatformEntries.map((failure) => `${failure.platform}: ${failure.error}`);
+
+    if (failedPlatforms.length > 0) {
+      const status = failedPlatforms.length === platformPromises.length ? 'failed' : 'sent';
+      await updateBroadcastResults(broadcastId, results, status);
+      const requiresReconnect = failedPlatformEntries.some((failure) =>
+        failure.platform === 'instagram' && isInstagramAuthError(failure.error)
+      );
+      const error = new Error(
+        `${requiresReconnect ? 'REAUTH_REQUIRED: ' : ''}Platform publishing failed - ${failedPlatforms.join(' | ')}`
+      );
+      if (requiresReconnect) {
+        error.code = 'REAUTH_REQUIRED';
+        error.statusCode = 401;
+      }
+      throw error;
     }
 
     // Update DB with results
