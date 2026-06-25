@@ -212,19 +212,52 @@ function Sidebar() {
       ),
       onConnect: handleConnectFacebook,
     },
-    {
-      id: "instagram",
-      name: "Instagram",
-      connected: connectedAccounts.instagram?.connected,
-      icon: (
-        <img
-          src="/icons/ig-instagram-icon.svg"
-          style={{ width: 20, height: 20 }}
-          alt=""
-        />
-      ),
-      onConnect: handleConnectInstagram,
-    },
+    ...(connectedAccounts.instagramAccounts?.length > 0 
+      ? connectedAccounts.instagramAccounts.map(acc => ({
+          id: `instagram:${acc.id}`,
+          name: acc.username || "Instagram",
+          connected: true,
+          icon: (
+            <img
+              src="/icons/ig-instagram-icon.svg"
+              style={{ width: 20, height: 20 }}
+              alt=""
+            />
+          ),
+          onConnect: handleConnectInstagram,
+        }))
+      : [
+          {
+            id: "instagram",
+            name: "Instagram",
+            connected: false,
+            icon: (
+              <img
+                src="/icons/ig-instagram-icon.svg"
+                style={{ width: 20, height: 20 }}
+                alt=""
+              />
+            ),
+            onConnect: handleConnectInstagram,
+          }
+        ]),
+    ...(connectedAccounts.instagramAccounts?.length > 0
+      ? [
+          {
+            id: "instagram_connect",
+            name: "Instagram",
+            connected: false,
+            icon: (
+              <img
+                src="/icons/ig-instagram-icon.svg"
+                style={{ width: 20, height: 20 }}
+                alt=""
+              />
+            ),
+            onConnect: handleConnectInstagram,
+          }
+        ]
+      : []),
     {
       id: "x",
       name: "X",

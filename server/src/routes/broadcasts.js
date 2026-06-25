@@ -139,4 +139,32 @@ router.post('/broadcasts/:id/retry', authenticateUser, async (req, res) => {
   }
 });
 
+/**
+ * @route   DELETE /api/broadcasts/:id
+ * @desc    Delete a broadcast from history
+ * @access  Protected
+ */
+router.delete('/broadcasts/:id', authenticateUser, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // First get the broadcast to verify ownership
+    const { getBroadcastById, deleteBroadcast } = await import('../services/broadcasts.js');
+    const broadcast = await getBroadcastById(id);
+    
+    if (!broadcast) {
+      return res.status(404).json({ success: false, error: 'Broadcast not found' });
+    }
+    
+    if (broadcast.user_id !== req.user.userId) {
+      return res.status(403).json({ success: false, error: 'Unauthorized to delete this broadcast' });
+    }
+    
+    await deleteBroadcast(id);
+    res.json({ success: true, message: 'Broadcast deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to delete broadcast' });
+  }
+});
+
 export default router;

@@ -6,61 +6,61 @@ import { useAuth } from '../context/AuthContext';
 const PLATFORMS = [
   {
     id: 'facebook', name: 'Facebook', borderColor: 'border-blue-600',
-    icon: <img src="/icons/facebook-round-color-icon.svg" className="w-5 h-5 object-contain" alt="Facebook" />
+    icon: <img src="/icons/facebook-round-color-icon.svg" className="w-8 h-8 object-contain" alt="Facebook" />
   },
   {
     id: 'youtube', name: 'YouTube', borderColor: 'border-red-600',
-    icon:<img src="/icons/youtube-color-icon.svg" className="w-5 h-5 object-contain" alt="Youtube" />
+    icon:<img src="/icons/youtube-color-icon.svg" className="w-8 h-8 object-contain" alt="Youtube" />
   },
   {
     id: 'instagram', name: 'Instagram', borderColor: 'border-pink-600',
-    icon: <img src="/icons/ig-instagram-icon.svg" className="w-5 h-5 object-contain" alt="Instagram" />
+    icon: <img src="/icons/ig-instagram-icon.svg" className="w-8 h-8 object-contain" alt="Instagram" />
   },
   {
     id: 'linkedin', name: 'LinkedIn', borderColor: 'border-blue-700',
-    icon: <img src="/icons/linkedin-icon.svg" className="w-5 h-5 object-contain" alt="LinkedIn" />
+    icon: <img src="/icons/linkedin-icon.svg" className="w-8 h-8 object-contain" alt="LinkedIn" />
   },
   {
     id: 'threads', name: 'Threads', borderColor: 'border-black',
-    icon: <img src="/icons/threads-icon.svg" className="w-5 h-5 object-contain" alt="Threads" />
+    icon: <img src="/icons/threads-icon.svg" className="w-8 h-8 object-contain" alt="Threads" />
   },
   {
     id: 'x', name: 'X', borderColor: 'border-black',
-    icon: <img src="/icons/x-social-media-round-icon.svg" className="w-5 h-5 object-contain" alt="X" />,
+    icon: <img src="/icons/x-social-media-round-icon.svg" className="w-8 h-8 object-contain" alt="X" />,
     comingSoon: true,
   },
   {
     id: 'pinterest', name: 'Pinterest', borderColor: 'border-red-600',
-    icon: <img src="/icons/pinterest-round-color-icon.svg" className="w-5 h-5 object-contain" alt="Pinterest" />,
+    icon: <img src="/icons/pinterest-round-color-icon.svg" className="w-8 h-8 object-contain" alt="Pinterest" />,
     comingSoon: true,
   },
   {
     id: 'bluesky', name: 'Bluesky', borderColor: 'border-blue-500',
-    icon: <img src="/icons/bluesky-circle-color-icon.svg" className="w-5 h-5 object-contain" alt="Bluesky" />
+    icon: <img src="/icons/bluesky-circle-color-icon.svg" className="w-8 h-8 object-contain" alt="Bluesky" />
   },
   {
     id: 'mastodon', name: 'Mastodon', borderColor: 'border-purple-600',
-    icon: <img src="/icons/mastodon-round-icon.svg" className="w-5 h-5 object-contain" alt="Mastodon" />,
+    icon: <img src="/icons/mastodon-round-icon.svg" className="w-8 h-8 object-contain" alt="Mastodon" />,
   },
 
   {
     id: 'reddit',
     name: 'Reddit',
-    icon: <img src="/icons/reddit-icon.svg" className="w-5 h-5 object-contain" alt="Reddit" />,
+    icon: <img src="/icons/reddit-icon.svg" className="w-8 h-8 object-contain" alt="Reddit" />,
     borderColor: 'border-orange-600',
     comingSoon: true,
   },
   {
     id: 'googleBusiness',
     name: 'Google Business',
-    icon: <img src="/icons/google-icon.svg" className="w-5 h-5 object-contain" alt="Google Business" />,
+    icon: <img src="/icons/google-icon.svg" className="w-8 h-8 object-contain" alt="Google Business" />,
     borderColor: 'border-blue-500',
     comingSoon: true,
   },
   {
     id: 'snapchat',
     name: 'Snapchat',
-    icon: <img src="/icons/snapchat-square-color-icon.svg" className="w-5 h-5 object-contain" alt="Snapchat" />,
+    icon: <img src="/icons/snapchat-square-color-icon.svg" className="w-8 h-8 object-contain" alt="Snapchat" />,
     borderColor: 'border-yellow-400',
     comingSoon: true,
   },
@@ -76,8 +76,34 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect, righ
   const moreRef = useRef(null);
 
   // Split platforms
-  const connectedPlatforms = PLATFORMS.filter(p => connectedAccounts?.[p.id]?.connected);
-  const unconnectedPlatforms = PLATFORMS.filter(p => !connectedAccounts?.[p.id]?.connected);
+  const connectedPlatforms = [];
+  PLATFORMS.forEach(p => {
+    if (p.id === 'instagram') {
+      const igAccounts = connectedAccounts?.instagramAccounts || [];
+      if (igAccounts.length > 0) {
+        igAccounts.forEach(acc => {
+          connectedPlatforms.push({
+            id: `instagram:${acc.id}`,
+            name: acc.username ? `Instagram (@${acc.username})` : 'Instagram',
+            borderColor: p.borderColor,
+            icon: acc.profilePicture ? (
+              <img src={acc.profilePicture} className="w-8 h-8 object-cover rounded-full" alt={acc.username || 'Instagram'} />
+            ) : p.icon,
+            isInstagram: true
+          });
+        });
+      } else if (connectedAccounts?.instagram?.connected) {
+         connectedPlatforms.push(p);
+      }
+    } else if (connectedAccounts?.[p.id]?.connected) {
+      connectedPlatforms.push(p);
+    }
+  });
+
+  const unconnectedPlatforms = PLATFORMS.filter(p => {
+    if (p.id === 'instagram') return !connectedAccounts?.instagram?.connected && !(connectedAccounts?.instagramAccounts?.length > 0);
+    return !connectedAccounts?.[p.id]?.connected;
+  });
   const visibleUnconnected = unconnectedPlatforms.slice(0, 3);
   const hiddenUnconnected = unconnectedPlatforms.slice(3);
 
@@ -119,7 +145,8 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect, righ
       <div className="flex items-center gap-3.5 flex-wrap">
         {connectedPlatforms.map((p) => {
           const isSelected = selectedChannels.includes(p.id);
-          const isLocked = isFree && !allowedFreePlatforms.includes(p.id);
+          const basePlatformId = p.isInstagram ? 'instagram' : p.id;
+          const isLocked = isFree && !allowedFreePlatforms.includes(basePlatformId);
           return (
             <button
               key={p.id}

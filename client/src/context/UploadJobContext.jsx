@@ -181,6 +181,37 @@ export function UploadJobProvider({ children }) {
   }, [fetchJobStatus]);
 
   /* ─────────────────────────────────────────────────────────────
+     INITIAL LOAD — restore jobs on page refresh
+  ───────────────────────────────────────────────────────────── */
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchInitialJobs = async () => {
+      try {
+        const { data } = await apiClient.get('/api/jobs');
+        if (!mounted || !data?.success) return;
+        
+        setJobs(data.jobs || []);
+        
+        // Start polling for any active jobs
+        data.jobs?.forEach((job) => {
+          if (job.status === 'pending' || job.status === 'processing') {
+            startPolling(job.id);
+          }
+        });
+      } catch (err) {
+        console.error('[UploadJobContext] Failed to fetch initial jobs:', err);
+      }
+    };
+    
+    fetchInitialJobs();
+    
+    return () => {
+      mounted = false;
+    };
+  }, [startPolling]);
+
+  /* ─────────────────────────────────────────────────────────────
      PUBLIC API
   ───────────────────────────────────────────────────────────── */
 

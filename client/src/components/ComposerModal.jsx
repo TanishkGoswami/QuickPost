@@ -1048,6 +1048,8 @@ const SmartWarnings = memo(function SmartWarnings({
 }) {
   const warnings = [];
 
+  const hasInstagram = selectedChannels.some(c => c === 'instagram' || c.startsWith('instagram:'));
+
   const mainMedia = mediaFiles[0];
   if (!mainMedia || !mainMedia.dimensions) return null;
 
@@ -1067,7 +1069,7 @@ const SmartWarnings = memo(function SmartWarnings({
   }
 
   if (
-    selectedChannels.includes("instagram") &&
+    hasInstagram &&
     platformData.instagram?.type === "reel" &&
     isHorizontal
   ) {
@@ -1233,6 +1235,8 @@ function ComposerModal({
 
   /* ── State ── */
   const [selectedChannels, setSelectedChannels] = useState([]);
+  const hasInstagram = selectedChannels.some(c => c === "instagram" || c.startsWith("instagram:"));
+  const getBasePlatform = (c) => c?.split(':')[0] || c;
   const [caption, setCaption] = useState("");
   const [mediaFiles, setMediaFiles] = useState([]);
   const [isScheduled, setIsScheduled] = useState(false);
@@ -1432,12 +1436,12 @@ function ComposerModal({
       setActivePreviewPlatform("instagram");
       return;
     }
-    if (!selectedChannels.includes(activePreviewPlatform))
-      setActivePreviewPlatform(selectedChannels[0]);
+    if (!selectedChannels.some(c => getBasePlatform(c) === activePreviewPlatform))
+      setActivePreviewPlatform(getBasePlatform(selectedChannels[0]));
   }, [JSON.stringify(selectedChannels), activePreviewPlatform]);
 
   useEffect(() => {
-    if (!selectedChannels.includes("instagram") && autoDMConfig.enabled) {
+    if (!hasInstagram && autoDMConfig.enabled) {
       setAutoDMConfig((current) => ({ ...current, enabled: false }));
     }
   }, [JSON.stringify(selectedChannels), autoDMConfig.enabled]);
@@ -1652,7 +1656,7 @@ function ComposerModal({
         return false;
       }
     }
-    if (selectedChannels.includes("instagram") && autoDMConfig.enabled) {
+    if (hasInstagram && autoDMConfig.enabled) {
       if (!autoDMConfig.keywords?.length) {
         setError("Add at least one Auto DM keyword or turn Auto DM off.");
         return false;
@@ -1688,7 +1692,7 @@ function ComposerModal({
       formData.append("platformPresets", JSON.stringify(platformPresets));
       formData.append("userTimezone", userTimezone);
       formData.append("isScheduled", isScheduled ? "true" : "false");
-      if (selectedChannels.includes("instagram") && autoDMConfig.enabled) {
+      if (hasInstagram && autoDMConfig.enabled) {
         formData.append("autoDMConfig", JSON.stringify(autoDMConfig));
       }
 
@@ -2808,8 +2812,8 @@ function ComposerModal({
                   onYoutubeThumbnailChange={setYoutubeThumbnail}
                 />
 
-                {/* ── Smart Warnings ── */}
-                {selectedChannels.includes("instagram") && (
+                {/* ✨ Smart Warnings ✨ */}
+                {hasInstagram && (
                   <Section label="Instagram Auto DM" mb={20}>
                     <AutoDMComposerPanel
                       config={autoDMConfig}
@@ -3040,7 +3044,7 @@ function ComposerModal({
                 whileTap={!publishDisabled ? { scale: 0.97 } : {}}
                 type="button"
                 onClick={handleSubmit}
-                disabled={publishDisabled || isFreeLimitReached}
+                disabled={publishDisabled || isFreeLimitReached || loading}
                 className={`btn-fly ${publishDisabled || isFreeLimitReached || loading ? "" : "hovering"}`}
                 style={{
                   background:

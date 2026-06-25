@@ -79,7 +79,8 @@ const LOAD_MORE_SKELETON_HEIGHTS = [260, 190, 315, 225, 285, 205, 335, 240];
 /* ── Platform helpers ── */
 function getPlatformIcon(id) {
   const s = { width: 14, height: 14, objectFit: "contain" };
-  switch (id) {
+  const baseId = id.split(':')[0];
+  switch (baseId) {
     case "facebook":
       return (
         <img
@@ -142,6 +143,14 @@ function getPostPreviewRatio(post) {
 }
 
 function buildPlatforms(post) {
+  let instagramChannels = post.selected_channels && Array.isArray(post.selected_channels)
+    ? post.selected_channels.filter(c => c === 'instagram' || c.startsWith('instagram:'))
+    : [];
+  
+  if (instagramChannels.length === 0 && (post.instagram_success || post.instagram_error)) {
+    instagramChannels = ['instagram'];
+  }
+
   return [
     {
       id: "linkedin",
@@ -157,13 +166,13 @@ function buildPlatforms(post) {
       error: post.youtube_error,
       url: post.youtube_shorts_url || post.youtube_url,
     },
-    {
-      id: "instagram",
+    ...instagramChannels.map(igId => ({
+      id: igId,
       name: "Instagram",
       success: post.instagram_success,
       error: post.instagram_error,
       url: post.instagram_url,
-    },
+    })),
     {
       id: "facebook",
       name: "Facebook",
@@ -728,9 +737,9 @@ function PinterestCard({ post, onOpen, formatDate }) {
                       overflow: "hidden",
                     }}
                   >
-                    {ICON_MAP[p.id] ? (
+                    {ICON_MAP[p.id.split(':')[0]] ? (
                       <img
-                        src={`/icons/${ICON_MAP[p.id]}`}
+                        src={`/icons/${ICON_MAP[p.id.split(':')[0]]}`}
                         alt={p.name}
                         style={{ width: 13, height: 13, objectFit: "contain" }}
                       />
@@ -760,12 +769,16 @@ function PinterestCard({ post, onOpen, formatDate }) {
                     height: 6,
                     borderRadius: "50%",
                     flexShrink: 0,
-                    background: isScheduled
+                    background: post.status === 'processing'
+                      ? "#eab308"
+                      : isScheduled
                       ? "#f97316"
                       : allSuccess
                         ? "#22c55e"
                         : "#ef4444",
-                    boxShadow: isScheduled
+                    boxShadow: post.status === 'processing'
+                      ? "0 0 6px rgba(234,179,8,0.7)"
+                      : isScheduled
                       ? "0 0 6px rgba(249,115,22,0.7)"
                       : allSuccess
                         ? "0 0 6px rgba(34,197,94,0.7)"
@@ -917,6 +930,28 @@ function PinterestCard({ post, onOpen, formatDate }) {
           </div>
         </div>
       )}
+
+      {post.status === 'processing' && (
+        <>
+          {post.step && (
+            <div style={{
+              position: 'absolute', bottom: 12, left: 8, right: 8, zIndex: 10,
+              background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 11, padding: '4px 8px',
+              borderRadius: 6, backdropFilter: 'blur(4px)', textAlign: 'center',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+            }}>
+              {post.step}
+            </div>
+          )}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'rgba(234,179,8,0.2)', zIndex: 10
+          }}>
+            <div style={{
+              height: '100%', width: `${post.progress || 0}%`, background: '#eab308', transition: 'width 0.5s ease-out'
+            }} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -935,6 +970,7 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
         overflow: "hidden",
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         boxShadow: expanded ? css.shadow : "0 4px 15px rgba(0,0,0,0.01)",
+        position: "relative"
       }}
     >
       <div
@@ -1076,7 +1112,7 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
                         width: 24,
                         height: 24,
                         borderRadius: "50%",
-                        background: PLATFORM_COLORS[p.id] || css.slate,
+                        background: PLATFORM_COLORS[p.id.split(':')[0]] || css.slate,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -1185,6 +1221,23 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
           )}
         </div>
       )}
+
+      {post.status === 'processing' && (
+        <>
+          {post.step && (
+            <div style={{ position: 'absolute', bottom: 8, left: 18, fontSize: 11, color: '#eab308', fontWeight: 600 }}>
+              {post.step}
+            </div>
+          )}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'rgba(234,179,8,0.2)'
+          }}>
+            <div style={{
+              height: '100%', width: `${post.progress || 0}%`, background: '#eab308', transition: 'width 0.5s ease-out'
+            }} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -1239,7 +1292,7 @@ function SkeletonCard({ height }) {
    MAIN DASHBOARD
    ══════════════════════════════════════════════════════ */
 function Dashboard() {
-  const { user, refreshAccounts } = useAuth();
+  const { user, connectedAccounts, refreshAccounts } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("sent");
@@ -1349,21 +1402,61 @@ function Dashboard() {
     setDisplayCount(BATCH_SIZE);
   }, [searchTerm]);
 
-  const fetchBroadcasts = async () => {
+  const fetchBroadcasts = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       let params = {};
       if (activeTab === "sent") params.status = "sent";
       else if (activeTab === "queue") params.status = "scheduled";
 
-      const response = await apiClient.get("/api/broadcasts", { params });
-      setBroadcasts(response.data.broadcasts || []);
+      const [resBroadcasts, resJobs] = await Promise.all([
+        apiClient.get("/api/broadcasts", { params }),
+        apiClient.get("/api/jobs").catch(() => ({ data: { jobs: [] } }))
+      ]);
+
+      let bcastData = resBroadcasts.data.broadcasts || [];
+      const jobsData = resJobs.data?.jobs || [];
+
+      const activeJobs = jobsData.filter(j => j.status === 'pending' || j.status === 'processing');
+      const pseudoBroadcasts = activeJobs.map(job => ({
+        id: job.id,
+        status: "processing",
+        caption: job.meta?.caption || "",
+        media_type: job.meta?.mediaType || "image",
+        media_url: job.meta?.previewUrl || "",
+        thumbnail_url: job.meta?.previewUrl || "",
+        selected_channels: job.meta?.channels || [],
+        posted_at: job.createdAt ? new Date(job.createdAt).toISOString() : new Date().toISOString(),
+        progress: job.progress,
+        step: job.step
+      }));
+
+      let displayPseudo = [];
+      if (activeTab === "queue" || activeTab === "history" || activeTab === "all") {
+        displayPseudo = pseudoBroadcasts;
+      }
+
+      // Filter out any broadcasts that might already exist with the same sourceJobId (if they just completed)
+      const existingJobIds = new Set(bcastData.map(b => b.platform_data?.sourceJobId || b.platform_data?.source_job_id).filter(Boolean));
+      const filteredPseudo = displayPseudo.filter(p => !existingJobIds.has(p.id));
+
+      setBroadcasts([...filteredPseudo, ...bcastData]);
     } catch (err) {
       setBroadcasts([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const hasActiveJobs = broadcasts.some(b => b.status === 'processing');
+    if (hasActiveJobs) {
+      const interval = setInterval(() => {
+        fetchBroadcasts(true);
+      }, 5000); // Poll every 5s while jobs are active
+      return () => clearInterval(interval);
+    }
+  }, [broadcasts, activeTab, searchTerm]);
 
   const formatDate = useCallback((dateString) =>
     new Date(dateString).toLocaleDateString('en-US', {
@@ -1381,9 +1474,12 @@ function Dashboard() {
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     if (selectedPlatform === "all") return matchesSearch;
-    const matchesPlatform = buildPlatforms(b).some(
-      (p) => p.id === selectedPlatform,
-    );
+    const matchesPlatform = buildPlatforms(b).some((p) => {
+      if (p.id === selectedPlatform) return true;
+      // Allow legacy generic "instagram" posts to show up for any specific instagram filter
+      if (selectedPlatform.startsWith("instagram:") && p.id === "instagram") return true;
+      return false;
+    });
     return matchesSearch && matchesPlatform;
   }), [broadcasts, searchTerm, selectedPlatform]);
 
@@ -1517,17 +1613,27 @@ function Dashboard() {
             <div
               style={{
                 padding: "4px 10px",
-                background: "rgba(20,20,19,0.05)",
-                borderRadius: css.r_btn,
-                border: "1px solid rgba(20,20,19,0.1)",
+                background: "var(--canvas)",
+                borderRadius: 20,
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
+                border: "1px solid rgba(20,20,19,0.08)",
               }}
             >
               <span style={{ fontSize: 11, fontWeight: 700, color: css.ink }}>
-                {selectedPlatform.charAt(0).toUpperCase() +
-                  selectedPlatform.slice(1)}
+                {(() => {
+                  if (selectedPlatform.startsWith("instagram:")) {
+                    const igId = selectedPlatform.split(":")[1];
+                    const acc = connectedAccounts?.instagramAccounts?.find((a) => a.id === igId);
+                    if (acc && acc.username) return `Instagram (@${acc.username})`;
+                    return "Instagram Account";
+                  }
+                  return (
+                    selectedPlatform.charAt(0).toUpperCase() +
+                    selectedPlatform.slice(1)
+                  );
+                })()}
               </span>
               <button
                 onClick={() => navigate("/dashboard")}
@@ -2050,6 +2156,18 @@ function Dashboard() {
           <PostPreviewModal
             post={selectedPost}
             onClose={() => setSelectedPost(null)}
+            onDelete={async (id) => {
+              try {
+                const res = await apiClient.delete(`/api/broadcasts/${id}`);
+                if (res.data.success) {
+                  setBroadcasts(prev => prev.filter(b => b.id !== id));
+                  setSelectedPost(null);
+                }
+              } catch (error) {
+                console.error("Failed to delete post:", error);
+                alert("Failed to delete post.");
+              }
+            }}
           />
         )}
       </AnimatePresence>
