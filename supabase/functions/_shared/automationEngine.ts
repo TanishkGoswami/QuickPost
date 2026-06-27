@@ -65,6 +65,7 @@ interface ResponseFlowNode {
   card_title?: string;
   card_subtitle?: string;
   card_image_url?: string;
+  items?: CarouselItem[];
   carousel_items?: CarouselItem[];
   delay_seconds?: number;
 }
@@ -73,12 +74,17 @@ interface ResponseFlow {
   nodes?: ResponseFlowNode[];
   opening_message_enabled?: boolean;
   opening_message?: string;
+  opening_button?: string;
 }
 
 interface SenderProfile {
   username: string;
   firstName: string;
   fullName: string;
+  profilePictureUrl?: string;
+  followerCount?: number | null;
+  isFollowingYou?: boolean | null;
+  youAreFollowing?: boolean | null;
 }
 
 const getSenderProfile = (payload: AutomationInput): SenderProfile => {
@@ -117,17 +123,85 @@ const getSenderProfile = (payload: AutomationInput): SenderProfile => {
   };
 };
 
+interface InstagramScopedUserProfile {
+  name?: string;
+  username?: string;
+  profile_pic?: string;
+  follower_count?: number;
+  is_user_follow_business?: boolean;
+  is_business_follow_user?: boolean;
+}
+
+const fetchInstagramScopedUserProfile = async (
+  senderId: string,
+  accessToken: string,
+  requestId?: string
+): Promise<InstagramScopedUserProfile | null> => {
+  if (!senderId || !accessToken) return null;
+
+  const url = new URL(`https://graph.instagram.com/v24.0/${senderId}`);
+  url.searchParams.set('access_token', accessToken);
+  url.searchParams.set(
+    'fields',
+    'name,username,profile_pic,follower_count,is_user_follow_business,is_business_follow_user'
+  );
+
+  try {
+    const response = await fetch(url.toString());
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok || json?.error) {
+      throw new Error(json?.error?.message || `Instagram scoped profile failed (${response.status})`);
+    }
+    return json;
+  } catch (error) {
+    logInfo('Instagram scoped user profile unavailable', {
+      requestId,
+      senderId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+};
+
+const mergeSenderProfile = (
+  profile: SenderProfile,
+  scopedProfile: InstagramScopedUserProfile | null
+): SenderProfile => {
+  if (!scopedProfile) return profile;
+
+  const username = cleanText(scopedProfile.username) || profile.username;
+  const fullName = cleanText(scopedProfile.name) || profile.fullName;
+  const firstName = fullName.split(/\s+/).filter(Boolean)[0] || username || profile.firstName;
+
+  return {
+    username,
+    firstName,
+    fullName,
+    profilePictureUrl: cleanText(scopedProfile.profile_pic) || profile.profilePictureUrl,
+    followerCount:
+      typeof scopedProfile.follower_count === 'number' ? scopedProfile.follower_count : profile.followerCount,
+    isFollowingYou:
+      typeof scopedProfile.is_user_follow_business === 'boolean'
+        ? scopedProfile.is_user_follow_business
+        : profile.isFollowingYou,
+    youAreFollowing:
+      typeof scopedProfile.is_business_follow_user === 'boolean'
+        ? scopedProfile.is_business_follow_user
+        : profile.youAreFollowing,
+  };
+};
+
 const enrichSenderProfileFromContact = async (
   instagramAccountId: string,
   senderId: string,
   profile: SenderProfile
 ): Promise<SenderProfile> => {
-  if (profile.username && profile.firstName !== 'there') return profile;
+  if (profile.username && profile.firstName !== 'there' && profile.profilePictureUrl) return profile;
 
   const supabase = getSupabaseAdmin();
   const { data: contact } = await supabase
     .from('contacts')
-    .select('username, full_name')
+    .select('username, full_name, profile_picture_url, follower_count, is_following_you, you_are_following')
     .eq('instagram_account_id', instagramAccountId)
     .eq('instagram_user_id', senderId)
     .maybeSingle();
@@ -141,6 +215,13 @@ const enrichSenderProfileFromContact = async (
     username: hasRealUsername ? username : profile.username,
     firstName: firstName || profile.firstName,
     fullName: fullName || firstName || profile.fullName,
+    profilePictureUrl: cleanText(contact?.profile_picture_url) || profile.profilePictureUrl,
+    followerCount:
+      typeof contact?.follower_count === 'number' ? contact.follower_count : profile.followerCount,
+    isFollowingYou:
+      typeof contact?.is_following_you === 'boolean' ? contact.is_following_you : profile.isFollowingYou,
+    youAreFollowing:
+      typeof contact?.you_are_following === 'boolean' ? contact.you_are_following : profile.youAreFollowing,
   };
 };
 
@@ -250,8 +331,20 @@ const buildTemplateElement = (
   imageUrl?: string | null,
   buttons?: ResponseFlowButton[]
 ): InstagramGenericTemplateElement | null => {
-  const cleanTitle = cleanText(title).slice(0, 80) || 'Details';
-  const cleanSubtitle = cleanText(subtitle).slice(0, 80);
+  let cleanTitle = cleanText(title);
+  let cleanSubtitle = cleanText(subtitle);
+  
+  // If title is longer than 80 chars, split it into title and subtitle (max 80 each)
+  if (cleanTitle.length > 80) {
+    if (!cleanSubtitle) {
+      cleanSubtitle = cleanTitle.slice(80, 160).trim();
+    }
+    cleanTitle = cleanTitle.slice(0, 80).trim();
+  } else {
+    cleanTitle = cleanTitle || 'Details';
+    cleanSubtitle = cleanSubtitle.slice(0, 80);
+  }
+
   const cleanImageUrl = cleanText(imageUrl);
   const templateButtons = buildTemplateButtons(buttons);
 
@@ -270,18 +363,30 @@ const buildTemplateElement = (
 const buildResponseActions = (
   automation: AutomationRecord,
   profile: SenderProfile,
-  startNodeIndex = 0
+  startNodeIndex = 0,
+  includeOpening = true
 ): MessageAction[] => {
   const flow = normalizeFlow(automation);
   if (!flow) return [];
 
   const actions: MessageAction[] = [];
 
-  if (flow.opening_message_enabled && cleanText(flow.opening_message)) {
-    actions.push({
-      type: 'text',
-      text: renderMessageTemplate(cleanText(flow.opening_message), profile),
-    });
+  if (includeOpening && flow.opening_message_enabled && cleanText(flow.opening_message)) {
+    if (flow.opening_button) {
+      const msgText = renderMessageTemplate(cleanText(flow.opening_message), profile);
+      actions.push({
+        type: 'text',
+        text: msgText,
+        quickReplies: buildQuickReplies([
+          { type: 'postback', title: flow.opening_button, payload: flow.opening_button },
+        ]),
+      });
+    } else {
+      actions.push({
+        type: 'text',
+        text: renderMessageTemplate(cleanText(flow.opening_message), profile),
+      });
+    }
   }
 
   for (const node of (flow.nodes ?? []).slice(startNodeIndex)) {
@@ -354,7 +459,7 @@ const buildResponseActions = (
 
       case 'carousel': {
         const elements: InstagramGenericTemplateElement[] = [];
-        for (const item of node.carousel_items ?? []) {
+        for (const item of node.carousel_items ?? node.items ?? []) {
           const element = buildTemplateElement(
             renderMessageTemplate(cleanText(item.title), profile),
             renderMessageTemplate(cleanText(item.subtitle), profile),
@@ -367,16 +472,18 @@ const buildResponseActions = (
         break;
       }
 
-      case 'form': {
+      case 'form':
+      case 'lead_form': {
         const fields = (node.form_fields ?? [])
           .map((field) => cleanText(field.label))
           .filter(Boolean);
-        if (fields.length) {
-          actions.push({
-            type: 'text',
-            text: `Please reply with these details:\n${fields.map((field) => `- ${field}`).join('\n')}`,
-          });
-        }
+        const formTitle = cleanText((node as any).form_title) || 'Please share your details';
+        actions.push({
+          type: 'text',
+          text: fields.length
+            ? `${formTitle}:\n${fields.map((field) => `- ${field}`).join('\n')}`
+            : formTitle,
+        });
         break;
       }
 
@@ -393,11 +500,22 @@ const buildResponseActions = (
     }
   }
 
-  if (actions.length === 0 && cleanText(flow.opening_message)) {
-    actions.push({
-      type: 'text',
-      text: renderMessageTemplate(cleanText(flow.opening_message), profile),
-    });
+  if (includeOpening && actions.length === 0 && cleanText(flow.opening_message)) {
+    if (flow.opening_button) {
+      const msgText = renderMessageTemplate(cleanText(flow.opening_message), profile);
+      actions.push({
+        type: 'text',
+        text: msgText,
+        quickReplies: buildQuickReplies([
+          { type: 'postback', title: flow.opening_button, payload: flow.opening_button },
+        ]),
+      });
+    } else {
+      actions.push({
+        type: 'text',
+        text: renderMessageTemplate(cleanText(flow.opening_message), profile),
+      });
+    }
   }
 
   return actions;
@@ -437,6 +555,10 @@ const buildExpectedKeywordsFromFirstNode = (automation: AutomationRecord): strin
       .filter(Boolean)
       .map((keyword) => cleanText(keyword).toLowerCase()) ?? [];
 
+  if (flow?.opening_button) {
+    buttonKeywords.push(cleanText(flow.opening_button).toLowerCase());
+  }
+
   return Array.from(new Set(['setup', ...buttonKeywords].filter(Boolean)));
 };
 
@@ -457,6 +579,33 @@ const templateToFallbackText = (action: Extract<MessageAction, { type: 'template
     )
     .filter(Boolean)
     .join('\n\n');
+
+const getLoggableOutboundAction = (actions: MessageAction[]) =>
+  actions.find((action) => action.type !== 'delay') ?? null;
+
+const serializeMessageActionForLog = (action: MessageAction | null) => {
+  if (!action) {
+    return { messageType: 'text', content: '', mediaUrl: null as string | null };
+  }
+
+  if (action.type === 'text') {
+    return { messageType: 'text', content: action.text, mediaUrl: null as string | null };
+  }
+
+  if (action.type === 'image') {
+    return { messageType: 'image', content: action.imageUrl, mediaUrl: action.imageUrl };
+  }
+
+  if (action.type === 'template') {
+    return {
+      messageType: 'template',
+      content: JSON.stringify({ elements: action.elements }),
+      mediaUrl: action.elements.find((element) => cleanText(element.image_url))?.image_url ?? null,
+    };
+  }
+
+  return { messageType: 'text', content: '', mediaUrl: null as string | null };
+};
 
 const sleep = (seconds: number) =>
   new Promise((resolve) => setTimeout(resolve, seconds * 1000));
@@ -1209,14 +1358,19 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
 
   const automationOwnerUserId = (matched as any).user_id || ownerUserId;
 
-  const senderProfile = await enrichSenderProfileFromContact(
+  let tokenBundle = await refreshAccountTokenIfNeeded(selectedAccount, payload.requestId);
+  let senderProfile = await enrichSenderProfileFromContact(
     selectedAccount.id,
     payload.senderId,
     getSenderProfile(payload)
   );
+  senderProfile = mergeSenderProfile(
+    senderProfile,
+    await fetchInstagramScopedUserProfile(payload.senderId, tokenBundle.pageAccessToken, payload.requestId)
+  );
   const responseActions =
     continuationSession
-      ? buildResponseActions(matched, senderProfile, continuationSession.next_node_index)
+      ? buildResponseActions(matched, senderProfile, continuationSession.next_node_index, false)
       : payload.triggerType === 'comment'
         ? getCommentPrivateReplyActions(buildResponseActions(matched, senderProfile))
         : buildResponseActions(matched, senderProfile);
@@ -1241,6 +1395,15 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
   if (automationOwnerUserId) {
     try {
       const username = senderProfile.username || `user_${payload.senderId}`;
+      const contactProfileFields = {
+        full_name: senderProfile.fullName && senderProfile.fullName !== 'there' ? senderProfile.fullName : undefined,
+        profile_picture_url: senderProfile.profilePictureUrl || undefined,
+        follower_count: typeof senderProfile.followerCount === 'number' ? senderProfile.followerCount : undefined,
+        is_following_you:
+          typeof senderProfile.isFollowingYou === 'boolean' ? senderProfile.isFollowingYou : undefined,
+        you_are_following:
+          typeof senderProfile.youAreFollowing === 'boolean' ? senderProfile.youAreFollowing : undefined,
+      };
 
       logInfo('Saving contact (pre-send)', {
         requestId: payload.requestId,
@@ -1266,6 +1429,7 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
             instagram_account_id: selectedAccount.id,
             instagram_user_id: payload.senderId,
             username,
+            ...contactProfileFields,
             first_interaction_at: new Date().toISOString(),
             last_interaction_at: new Date().toISOString(),
             total_messages_sent: 0,
@@ -1296,6 +1460,7 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
           .from('contacts')
           .update({
             username: updatedUsername,
+            ...contactProfileFields,
             last_interaction_at: new Date().toISOString(),
             total_messages_received: (existingContact.total_messages_received ?? 0) + 1,
             updated_at: new Date().toISOString(),
@@ -1333,7 +1498,6 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
   // ─────────────────────────────────────────────────────────────────────
 
   // ── STEP 2: Get tokens and send reply ────────────────────────────────
-  let tokenBundle = await refreshAccountTokenIfNeeded(selectedAccount, payload.requestId);
   logInfo('Token bundle loaded for reply', {
     requestId: payload.requestId,
     accountId: selectedAccount.id,
@@ -1577,7 +1741,12 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
 
   if (payload.triggerType === 'comment' && contactId) {
     const flow = normalizeFlow(matched);
-    const hasFollowUpNodes = (flow?.nodes?.length ?? 0) > 1;
+    const usesOpeningButton =
+      flow?.opening_message_enabled !== false &&
+      Boolean(cleanText(flow?.opening_message)) &&
+      Boolean(cleanText(flow?.opening_button));
+    const nextNodeIndex = usesOpeningButton ? 0 : 1;
+    const hasFollowUpNodes = (flow?.nodes?.length ?? 0) > nextNodeIndex;
 
     if (hasFollowUpNodes) {
       const sessionPayload = {
@@ -1586,7 +1755,7 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
         contact_id: contactId,
         sender_id: payload.senderId,
         expected_keywords: buildExpectedKeywordsFromFirstNode(matched),
-        next_node_index: 1,
+        next_node_index: nextNodeIndex,
         status: 'pending',
         expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
       };
@@ -1682,14 +1851,16 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
       }
 
       // Record Outbound Message (The reply) + update sent count
+      const outboundLog = serializeMessageActionForLog(getLoggableOutboundAction(responseActions));
       const { error: outboundMsgError } = await supabase.from('messages').insert({
         user_id: automationOwnerUserId,
         instagram_account_id: selectedAccount.id,
         contact_id: contactId,
         automation_id: matched.id,
         direction: 'outbound',
-        message_type: 'text',
-        content: primaryReplyText,
+        message_type: outboundLog.messageType,
+        content: outboundLog.content,
+        media_url: outboundLog.mediaUrl,
         status: 'sent',
         sent_at: new Date().toISOString(),
         created_at: new Date().toISOString(),

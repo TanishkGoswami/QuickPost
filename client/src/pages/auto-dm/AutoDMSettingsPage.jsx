@@ -86,7 +86,7 @@ export default function AutoDMSettingsPage() {
               <Field label="Automations" value={String(limits.automations)} />
               <Field label="DMs/day" value={String(limits.dms)} />
               <Field label="IG accounts" value={String(limits.accounts)} />
-              <Field label="Analytics" value={limits.analytics ? 'Included' : 'Upgrade required'} />
+              <Field label="Analytics" value={limits.analytics ? 'Included' : 'Not included'} />
             </div>
           </section>
 

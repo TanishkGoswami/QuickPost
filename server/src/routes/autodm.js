@@ -55,7 +55,7 @@ router.get('/status', authenticateUser, async (req, res) => {
 
 router.post('/import-instagram', authenticateUser, async (req, res) => {
   try {
-    const account = await importInstagramAccountToAutoDM(req.user);
+    const account = await importInstagramAccountToAutoDM(req.user, req.body?.instagramAccountId);
     res.json({
       success: true,
       account,
@@ -160,8 +160,46 @@ router.delete('/automations/:id', authenticateUser, async (req, res) => {
 router.get('/instagram-media', authenticateUser, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 30;
-    const result = await fetchInstagramMediaForUser(req.user, limit);
+    const result = await fetchInstagramMediaForUser(req.user, limit, req.query.instagramAccountId);
     const media = Array.isArray(result) ? result : result.media || [];
+    
+    if (false && media.length === 0) {
+      media = [
+        {
+          id: 'mock1',
+          media_type: 'IMAGE',
+          media_url: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+          thumbnail_url: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+          caption: 'Beautiful sunset!',
+          permalink: '#'
+        },
+        {
+          id: 'mock2',
+          media_type: 'IMAGE',
+          media_url: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+          thumbnail_url: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+          caption: 'Coffee time ☕',
+          permalink: '#'
+        },
+        {
+          id: 'mock3',
+          media_type: 'IMAGE',
+          media_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+          thumbnail_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+          caption: 'My new workspace setup!',
+          permalink: '#'
+        },
+        {
+          id: 'mock4',
+          media_type: 'IMAGE',
+          media_url: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+          thumbnail_url: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+          caption: 'Abstract art',
+          permalink: '#'
+        }
+      ];
+    }
+    
     res.json({
       success: true,
       media,

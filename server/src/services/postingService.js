@@ -59,6 +59,8 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
     // Instagram
     const instagramChannels = channels.filter(c => c === 'instagram' || c.startsWith('instagram:'));
     if (instagramChannels.length > 0 && (tokens.instagram || tokens.instagramAccounts?.length > 0)) {
+      const postedBusinessIds = new Set();
+      
       for (const igChannel of instagramChannels) {
         let currentTokens;
         let platformKey = 'instagram';
@@ -88,6 +90,10 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
         }
 
         if (currentTokens) {
+          if (currentTokens.businessId) {
+            if (postedBusinessIds.has(currentTokens.businessId)) continue;
+            postedBusinessIds.add(currentTokens.businessId);
+          }
           const freshInstagramTokens = await getValidInstagramTokensForPosting(userId, currentTokens);
           const resolvedCaption = resolveMentions(caption, 'instagram', freshInstagramTokens);
           let instagramAction;

@@ -39,6 +39,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAutoDM } from '../../context/AutoDMContext';
 import { KeywordInput } from '../../features/autodm/KeywordInput';
 
+import ResponseFlowBuilder from '../../features/autodm/ResponseFlowBuilder';
+import MobilePreview from './MobilePreview';
+
+
 const triggerTypes = [
   {
     value: 'comment_on_post',
@@ -97,21 +101,50 @@ const responseTypes = [
 const defaultResponseFlow = {
   nodes: [
     {
+      id: 'starter-text',
+      type: 'text',
+      content: 'Hey there! I\'m so happy you\'re here, thanks so much for your interest 😄\n\nClick below and I\'ll send you the link right away!',
+      buttons: [{ id: 'starter-button', type: 'postback', title: 'Send me the link', payload: 'send_link' }],
+    },
+    {
       id: 'starter-card',
       type: 'card',
       card_title: 'Get your free guide',
-      card_subtitle: 'Tap SETUP below and I will send everything in DM.',
-      buttons: [{ id: 'starter-setup', type: 'postback', title: 'SETUP', payload: 'setup' }],
-    },
-    {
-      id: 'starter-text',
-      type: 'text',
-      content: 'Hey {{first_name}}, here is the guide you asked for:\nhttps://your-link.com',
+      card_subtitle: 'Here is the link as promised!',
+      buttons: [{ id: 'starter-setup', type: 'url', title: 'Open link', url: 'https://your-link.com' }],
     },
   ],
-  opening_message_enabled: false,
-  opening_message: '',
 };
+
+Object.assign(defaultResponseFlow, {
+  opening_message_enabled: true,
+  opening_message:
+    "Hey there! I'm so happy you're here,\nthanks so much for your interest \uD83D\uDE0A\n\nClick below and I'll send you the link\nin just a sec \u2728",
+  opening_button: 'Send me the link',
+  nodes: [
+    {
+      id: 'link-message',
+      type: 'text',
+      content: 'Write a message',
+      buttons: [{ id: 'open-link', type: 'url', title: 'Open link', url: 'https://your-link.com' }],
+    },
+  ],
+});
+
+function normalizeResponseFlow(flow) {
+  const source = flow && typeof flow === 'object' ? flow : {};
+  const nodes = Array.isArray(source.nodes) && source.nodes.length ? source.nodes : defaultResponseFlow.nodes;
+  const firstNode = nodes[0] || defaultResponseFlow.nodes[0];
+
+  return {
+    ...defaultResponseFlow,
+    ...source,
+    opening_message_enabled: source.opening_message_enabled !== false,
+    opening_message: source.opening_message || defaultResponseFlow.opening_message,
+    opening_button: source.opening_button || firstNode.buttons?.[0]?.title || defaultResponseFlow.opening_button,
+    nodes: nodes.map((node) => ({ ...node })),
+  };
+}
 
 function generateId(prefix = 'item') {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -207,436 +240,27 @@ function responseSummary(node) {
   return 'Response';
 }
 
-function ResponseFlowBuilder({ responseFlow, onChange, step }) {
-  const nodes = responseFlow?.nodes || [];
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [editingNode, setEditingNode] = useState(null);
-
-  const updateNode = (draft) => {
-    onChange({
-      ...responseFlow,
-      nodes: nodes.map((node) => (node.id === draft.id ? draft : node)),
-    });
-    setEditingNode(null);
-  };
-
-  const removeNode = (nodeId) => {
-    onChange({ ...responseFlow, nodes: nodes.filter((node) => node.id !== nodeId) });
-  };
-
-  const addNode = (type) => {
-    const node = createResponseNode(type);
-    onChange({ ...responseFlow, nodes: [...nodes, node] });
-    setPickerOpen(false);
-    setEditingNode(node);
-  };
-
-  return (
-    <Card className="overflow-hidden rounded-lg border-black/10 shadow-sm">
-      <CardHeader className="border-b border-black/10 bg-white">
-        <CardTitle className="flex flex-wrap items-center gap-2 text-[22px] font-semibold text-[var(--ink)]">
-          <StepBadge step={step} />
-          Response Flow
-          <Badge variant="secondary" className="rounded-md bg-primary/10 text-primary">
-            Editable
-          </Badge>
-          <EditorInfo text="Build the automated DM sequence sent after the trigger. Add text, image, card, buttons, carousel, lead form, or delay steps." />
-        </CardTitle>
-        <p className="text-sm text-[var(--slate)]">Click any response row to edit its text, image, buttons, or fields.</p>
-      </CardHeader>
-      <CardContent className="space-y-3 p-5">
-        <div className="flex items-center justify-between gap-4 rounded-lg border border-black/10 bg-black/[0.02] p-4">
-          <div className="flex min-w-0 items-center gap-3">
-            <Pencil className="h-4 w-4 shrink-0 text-primary" />
-            <div className="min-w-0">
-              <p className="font-medium text-[var(--ink)]">Opening Message</p>
-              <p className="text-sm text-[var(--slate)]">Toggle on to edit and send a welcome message before the main flow.</p>
-            </div>
-          </div>
-          <Switch
-            checked={Boolean(responseFlow.opening_message_enabled)}
-            onCheckedChange={(checked) => onChange({ ...responseFlow, opening_message_enabled: checked })}
-          />
-        </div>
-
-        {responseFlow.opening_message_enabled && (
-          <Textarea
-            rows={2}
-            value={responseFlow.opening_message || ''}
-            onChange={(event) => onChange({ ...responseFlow, opening_message: event.target.value })}
-            placeholder="Hey {{first_name}}! Thanks for reaching out..."
-            className="resize-none rounded-lg"
-          />
-        )}
-
-        <div className="space-y-3">
-          {nodes.length === 0 && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-center text-amber-900">
-              <MessageCircle className="mx-auto mb-2 h-8 w-8 text-amber-500 opacity-80" />
-              <p className="font-medium">No response added</p>
-              <p className="mt-1 text-sm opacity-90">Please add at least one response (like Text or Card) below so the automation can reply.</p>
-            </div>
-          )}
-          {nodes.map((node, index) => {
-            const config = responseTypes.find((item) => item.type === node.type) || responseTypes[0];
-            const Icon = config.icon;
-            return (
-              <div
-                key={node.id}
-                className="grid grid-cols-[18px_32px_34px_minmax(0,1fr)_36px_36px] items-center gap-2 rounded-lg border border-black/10 bg-white p-3 sm:grid-cols-[20px_34px_36px_minmax(0,1fr)_auto_auto] sm:gap-3"
-              >
-                <GripVertical className="h-4 w-4 shrink-0 text-[var(--slate)]/60" />
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--ink)] text-sm font-semibold text-white">
-                  {index + 1}
-                </span>
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <Icon className="h-4 w-4" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <p className="min-w-0 truncate font-medium text-[var(--ink)]">{config.shortLabel}</p>
-                    <span className="text-xs font-medium text-primary">Editable</span>
-                  </div>
-                  <p className="line-clamp-2 break-words text-sm leading-5 text-[var(--slate)]">{responseSummary(node)}</p>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  aria-label={`Edit ${config.shortLabel}`}
-                  className="h-9 w-9 rounded-md sm:w-auto sm:px-3"
-                  onClick={() => setEditingNode({ ...node })}
-                >
-                  <Pencil className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Edit response</span>
-                </Button>
-                <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-md text-red-600" onClick={() => removeNode(node.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            );
-          })}
-        </div>
-
-        <Button type="button" variant="outline" className="h-11 w-full rounded-md border-dashed" onClick={() => setPickerOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Response
-        </Button>
-      </CardContent>
-
-      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
-        <DialogContent className="max-w-md rounded-lg bg-white">
-          <DialogHeader>
-            <DialogTitle>Add Response Element</DialogTitle>
-            <DialogDescription>Choose what to send next: text, image, buttons, delay, etc.</DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-1 gap-3 py-3 sm:grid-cols-2">
-            {responseTypes.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.type}
-                  type="button"
-                  className="rounded-lg border border-black/10 bg-white p-4 text-center transition-colors hover:border-primary hover:bg-primary/5"
-                  onClick={() => addNode(item.type)}
-                >
-                  <Icon className="mx-auto h-6 w-6 text-primary" />
-                  <p className="mt-2 font-medium text-[var(--ink)]">{item.label}</p>
-                  <p className="mt-1 text-xs text-[var(--slate)]">{item.description}</p>
-                </button>
-              );
-            })}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <ResponseEditorDialog node={editingNode} open={Boolean(editingNode)} onOpenChange={(open) => !open && setEditingNode(null)} onSave={updateNode} />
-    </Card>
-  );
-}
-
-function ResponseEditorDialog({ node, open, onOpenChange, onSave }) {
-  const [draft, setDraft] = useState(null);
-
-  useEffect(() => {
-    setDraft(node ? { ...node } : null);
-  }, [node]);
-
-  if (!draft) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent />
-      </Dialog>
-    );
-  }
-
-  const addButton = () => {
-    setDraft({
-      ...draft,
-      buttons: [...(draft.buttons || []), { id: generateId('button'), type: 'url', title: '', url: '' }],
-    });
-  };
-
-  const updateButton = (buttonId, updates) => {
-    setDraft({
-      ...draft,
-      buttons: (draft.buttons || []).map((button) => (button.id === buttonId ? { ...button, ...updates } : button)),
-    });
-  };
-
-  const removeButton = (buttonId) => {
-    setDraft({ ...draft, buttons: (draft.buttons || []).filter((button) => button.id !== buttonId) });
-  };
-
-  const carouselItems = draft.items?.length ? draft.items : [createCarouselItem()];
-
-  const updateCarouselItem = (itemId, updates) => {
-    setDraft({
-      ...draft,
-      items: carouselItems.map((item) => (item.id === itemId ? { ...item, ...updates } : item)),
-    });
-  };
-
-  const removeCarouselItem = (itemId) => {
-    setDraft({ ...draft, items: carouselItems.filter((item) => item.id !== itemId) });
-  };
-
-  const updateCarouselButton = (itemId, buttonId, updates) => {
-    updateCarouselItem(itemId, {
-      buttons: (carouselItems.find((item) => item.id === itemId)?.buttons || []).map((button) =>
-        button.id === buttonId ? { ...button, ...updates } : button
-      ),
-    });
-  };
-
-  const addCarouselButton = (itemId) => {
-    const item = carouselItems.find((entry) => entry.id === itemId);
-    updateCarouselItem(itemId, {
-      buttons: [...(item?.buttons || []), { id: generateId('button'), type: 'url', title: '', url: '' }],
-    });
-  };
-
-  const removeCarouselButton = (itemId, buttonId) => {
-    const item = carouselItems.find((entry) => entry.id === itemId);
-    updateCarouselItem(itemId, { buttons: (item?.buttons || []).filter((button) => button.id !== buttonId) });
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg rounded-lg bg-white">
-        <DialogHeader>
-          <DialogTitle>Edit {responseTypes.find((item) => item.type === draft.type)?.shortLabel || 'Response'}</DialogTitle>
-          <DialogDescription>Update the content used in this response step.</DialogDescription>
-        </DialogHeader>
-
-        <div className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
-          {draft.type === 'text' && (
-            <div>
-              <Label className="mb-2 block">Message text</Label>
-              <Textarea value={draft.content || ''} onChange={(event) => setDraft({ ...draft, content: event.target.value })} rows={5} />
-            </div>
-          )}
-
-          {draft.type === 'image' && (
-            <>
-              <div>
-                <Label className="mb-2 block">Image URL</Label>
-                <Input value={draft.image_url || ''} onChange={(event) => setDraft({ ...draft, image_url: event.target.value })} placeholder="https://..." />
-              </div>
-              <div>
-                <Label className="mb-2 block">Caption</Label>
-                <Textarea value={draft.content || ''} onChange={(event) => setDraft({ ...draft, content: event.target.value })} rows={3} />
-              </div>
-            </>
-          )}
-
-          {draft.type === 'card' && (
-            <>
-              <div>
-                <Label className="mb-2 block">Card image URL</Label>
-                <Input value={draft.card_image_url || ''} onChange={(event) => setDraft({ ...draft, card_image_url: event.target.value })} placeholder="https://..." />
-              </div>
-              <div>
-                <Label className="mb-2 block">Card title</Label>
-                <Input value={draft.card_title || ''} onChange={(event) => setDraft({ ...draft, card_title: event.target.value })} />
-              </div>
-              <div>
-                <Label className="mb-2 block">Card subtitle</Label>
-                <Textarea value={draft.card_subtitle || ''} onChange={(event) => setDraft({ ...draft, card_subtitle: event.target.value })} rows={3} />
-              </div>
-            </>
-          )}
-
-          {draft.type === 'buttons' && (
-            <div>
-              <Label className="mb-2 block">Message text</Label>
-              <Textarea value={draft.content || ''} onChange={(event) => setDraft({ ...draft, content: event.target.value })} rows={3} />
-            </div>
-          )}
-
-          {['card', 'buttons'].includes(draft.type) && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Buttons</Label>
-                <Button type="button" variant="outline" size="sm" className="rounded-md" onClick={addButton}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Button
-                </Button>
-              </div>
-              {(draft.buttons || []).map((button) => (
-                <div key={button.id} className="space-y-2 rounded-lg border border-black/10 bg-black/[0.02] p-3">
-                  <Input value={button.title || ''} onChange={(event) => updateButton(button.id, { title: event.target.value })} placeholder="Button text" />
-                  <div className="grid gap-2 sm:grid-cols-[140px_1fr_36px]">
-                    <select
-                      className="h-10 rounded-md border border-black/10 bg-white px-3 text-sm"
-                      value={button.type || 'url'}
-                      onChange={(event) => updateButton(button.id, { type: event.target.value })}
-                    >
-                      <option value="url">URL</option>
-                      <option value="postback">Postback</option>
-                    </select>
-                    <Input
-                      value={button.type === 'postback' ? button.payload || '' : button.url || ''}
-                      onChange={(event) =>
-                        updateButton(button.id, button.type === 'postback' ? { payload: event.target.value } : { url: event.target.value })
-                      }
-                      placeholder={button.type === 'postback' ? 'Payload' : 'https://...'}
-                    />
-                    <Button type="button" variant="ghost" size="icon" className="rounded-md text-red-600" onClick={() => removeButton(button.id)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {draft.type === 'carousel' && (
-            <div className="space-y-4">
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                Add one or more carousel cards. Each card can have an image, title, subtitle, and optional action buttons.
-              </div>
-              {carouselItems.map((item, index) => (
-                <div key={item.id} className="space-y-3 rounded-lg border border-black/10 bg-black/[0.02] p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <Label>Carousel card {index + 1}</Label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Remove carousel card ${index + 1}`}
-                      className="h-8 w-8 rounded-md text-red-600"
-                      disabled={carouselItems.length === 1}
-                      onClick={() => removeCarouselItem(item.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <Input value={item.image_url || ''} onChange={(event) => updateCarouselItem(item.id, { image_url: event.target.value })} placeholder="Image URL" />
-                  <Input value={item.title || ''} onChange={(event) => updateCarouselItem(item.id, { title: event.target.value })} placeholder="Card title" />
-                  <Textarea
-                    value={item.subtitle || ''}
-                    onChange={(event) => updateCarouselItem(item.id, { subtitle: event.target.value })}
-                    placeholder="Card subtitle"
-                    rows={2}
-                  />
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-3">
-                      <Label>Buttons</Label>
-                      <Button type="button" variant="outline" size="sm" className="rounded-md" onClick={() => addCarouselButton(item.id)}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Button
-                      </Button>
-                    </div>
-                    {(item.buttons || []).map((button) => (
-                      <div key={button.id} className="grid gap-2 sm:grid-cols-[1fr_120px_1fr_36px]">
-                        <Input
-                          value={button.title || ''}
-                          onChange={(event) => updateCarouselButton(item.id, button.id, { title: event.target.value })}
-                          placeholder="Button text"
-                        />
-                        <select
-                          className="h-10 rounded-md border border-black/10 bg-white px-3 text-sm"
-                          value={button.type || 'url'}
-                          onChange={(event) => updateCarouselButton(item.id, button.id, { type: event.target.value })}
-                        >
-                          <option value="url">URL</option>
-                          <option value="postback">Postback</option>
-                        </select>
-                        <Input
-                          value={button.type === 'postback' ? button.payload || '' : button.url || ''}
-                          onChange={(event) =>
-                            updateCarouselButton(
-                              item.id,
-                              button.id,
-                              button.type === 'postback' ? { payload: event.target.value } : { url: event.target.value }
-                            )
-                          }
-                          placeholder={button.type === 'postback' ? 'Payload' : 'https://...'}
-                        />
-                        <Button type="button" variant="ghost" size="icon" className="rounded-md text-red-600" onClick={() => removeCarouselButton(item.id, button.id)}>
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full rounded-md border-dashed"
-                onClick={() => setDraft({ ...draft, items: [...carouselItems, createCarouselItem()] })}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Carousel Card
-              </Button>
-            </div>
-          )}
-
-          {draft.type === 'lead_form' && (
-            <div>
-              <Label className="mb-2 block">Form title</Label>
-              <Input value={draft.form_title || ''} onChange={(event) => setDraft({ ...draft, form_title: event.target.value })} />
-            </div>
-          )}
-
-          {draft.type === 'delay' && (
-            <div>
-              <Label className="mb-2 block">Delay in seconds</Label>
-              <Input type="number" min={1} max={60} value={draft.delay_seconds || 5} onChange={(event) => setDraft({ ...draft, delay_seconds: Number(event.target.value) || 5 })} />
-            </div>
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button type="button" variant="outline" className="rounded-md" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button type="button" className="rounded-md" onClick={() => onSave(draft)}>
-            Save response
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 function MediaSelector({ open, onOpenChange, onSelect, fetchMedia }) {
   const [media, setMedia] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [warning, setWarning] = useState('');
 
   useEffect(() => {
     if (!open) return;
     let mounted = true;
     setLoading(true);
+    setWarning('');
     fetchMedia(30)
       .then((items) => {
-        if (mounted) setMedia(items || []);
+        if (!mounted) return;
+        setMedia(items || []);
+        setWarning(items?.warning || '');
       })
       .catch((error) => {
         console.error('[AutoDM] Failed to load media:', error);
-        toast.error(error.response?.data?.error || error.message || 'Failed to load Instagram media');
+        const message = error.response?.data?.error || error.message || 'Failed to load Instagram media';
+        setWarning(message);
+        toast.error(message);
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -661,7 +285,35 @@ function MediaSelector({ open, onOpenChange, onSelect, fetchMedia }) {
               ))}
             </div>
           ) : media.length === 0 ? (
-            <div className="py-12 text-center text-sm text-[var(--slate)]">No media found yet.</div>
+            <div className="mx-auto max-w-md py-12 text-center text-sm text-[var(--slate)]">
+              <ImageIcon className="mx-auto mb-3 h-10 w-10 opacity-30" />
+              <p className="font-semibold text-[var(--ink)]">No posts or reels found yet.</p>
+              <p className="mt-2 leading-relaxed">
+                {warning || 'If this account has posts, reconnect Instagram or refresh after Meta finishes syncing media permissions.'}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-4 rounded-md"
+                onClick={() => {
+                  setLoading(true);
+                  setWarning('');
+                  fetchMedia(30)
+                    .then((items) => {
+                      setMedia(items || []);
+                      setWarning(items?.warning || '');
+                    })
+                    .catch((error) => {
+                      const message = error.response?.data?.error || error.message || 'Failed to load Instagram media';
+                      setWarning(message);
+                      toast.error(message);
+                    })
+                    .finally(() => setLoading(false));
+                }}
+              >
+                Refresh posts
+              </Button>
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               {media.map((item) => (
@@ -745,7 +397,7 @@ export default function AutomationEditorPage() {
         setScheduleType(data.schedule_type || 'manual');
         setStartsAt(toDateTimeLocalValue(data.starts_at));
         setEndsAt(toDateTimeLocalValue(data.ends_at));
-        setResponseFlow(data.response_flow || defaultResponseFlow);
+        setResponseFlow(normalizeResponseFlow(data.response_flow || defaultResponseFlow));
         setIsActive(Boolean(data.is_active));
       } catch (error) {
         toast.error(error.message || 'Failed to load automation');
@@ -894,256 +546,238 @@ export default function AutomationEditorPage() {
   const responseStep = keywordStep + 1;
   const commentStep = responseStep + 1;
   const durationStep = isCommentTrigger ? commentStep + 1 : responseStep + 1;
-
   return (
-    <div className="space-y-6">
-      <div className="rounded-lg border border-black/10 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <Button variant="ghost" size="icon" className="rounded-md" onClick={() => navigate('/dashboard/auto-dm/automations')}>
+    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-[#F2F4F7]">
+      {/* Left Sidebar - Form */}
+      <div className="w-[450px] flex-shrink-0 bg-white border-r border-black/10 flex flex-col h-full overflow-hidden shadow-sm relative z-10">
+        
+        {/* Top Navbar in Sidebar */}
+        <div className="flex items-center justify-between p-4 border-b border-black/10 bg-white sticky top-0 z-20">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/auto-dm/automations')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="min-w-0 flex-1">
-              <Label htmlFor="automation-name" className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[var(--slate)]">
-                <Pencil className="h-3.5 w-3.5" />
-                Automation name - editable
-              </Label>
-              <Input
-                id="automation-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                className="h-12 max-w-xl rounded-md bg-black/[0.035] px-4 text-lg font-semibold text-[var(--ink)]"
-                placeholder="Name this automation"
+            <div className="flex flex-col">
+              <Input 
+                value={name} 
+                onChange={(e) => setName(e.target.value)} 
+                className="h-7 border-transparent px-1 font-bold text-lg focus-visible:ring-1 focus-visible:ring-primary shadow-none"
               />
-              <p className="mt-1 text-xs text-[var(--slate)]">Click here to rename it. This name appears in your automations list.</p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-            {!isNew && (
-              <Button variant="outline" className="rounded-md" onClick={() => toast.success('Re-trigger initiated for past commenters')}>
-                <Play className="mr-2 h-4 w-4" />
-                Re-Trigger
-              </Button>
-            )}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-[var(--slate)]">Status</span>
-              <Switch checked={isActive} onCheckedChange={setIsActive} />
-            </div>
-            <Button className="rounded-md" onClick={handleSave} disabled={isSaving}>
-              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Save Changes
-            </Button>
+          <div className="flex items-center gap-2">
+             <span className="text-xs font-medium text-gray-500 mr-2">{isSaving ? 'Saving...' : 'Saved'}</span>
+             <Button variant="outline" size="sm" onClick={handleSave} disabled={isSaving}>
+               {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+               Save
+             </Button>
+             <div className="flex items-center gap-2 ml-2">
+                <Switch checked={isActive} onCheckedChange={setIsActive} />
+                <span className="text-sm font-medium">{isActive ? 'Active' : 'Inactive'}</span>
+             </div>
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]">
-        <div className="space-y-6">
-          <Card className="overflow-visible rounded-lg border-black/10 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex flex-wrap items-center gap-2 text-[22px] font-semibold text-[var(--ink)]">
-                <StepBadge step={1} />
-                Select a Trigger
-                <Zap className="h-5 w-5 text-primary" />
-                <EditorInfo text="Choose the Instagram event that starts this automation. Example: a comment on a post, a reel comment, or a direct message." />
-                <span className="text-sm font-normal text-[var(--slate)]">When to run automation</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="mb-4 text-sm text-[var(--slate)]">Select trigger type</p>
-              <Select value={triggerType} onValueChange={setTriggerType}>
-                <SelectTrigger className="h-auto w-full rounded-md py-3">
-                  <SelectValue>
-                    <div className="flex items-center gap-3">
-                      <SelectedTriggerIcon className="h-5 w-5 text-primary" />
-                      <span className="font-medium">{selectedTrigger.label}</span>
+        {/* Scrollable Form Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-gray-50/50">
+          
+          {/* Section 1: When someone comments on */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <Instagram className="w-5 h-5" />
+              When someone comments on
+            </h3>
+            <div className="bg-white rounded-xl border border-black/10 p-4 shadow-sm space-y-4">
+               <div className="flex flex-col gap-3">
+                  <label className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                     <input 
+                        type="radio" 
+                        name="post_selection" 
+                        className="w-4 h-4 text-primary" 
+                        checked={!applyToAllMedia}
+                        onChange={() => {
+                          setApplyToAllMedia(false);
+                          setTriggerType('comment_on_post');
+                        }}
+                     />
+                     <span className="font-medium text-gray-700">a specific post or reel</span>
+                  </label>
+                  
+                  {!applyToAllMedia && (
+                    <div className="ml-8 p-4 bg-gray-50 rounded-lg border border-black/5">
+                        {selectedMedia ? (
+                            <div className="flex flex-col gap-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-16 h-16 rounded-md overflow-hidden bg-black flex-shrink-0">
+                                      {selectedMedia.media_type === 'VIDEO' ? (
+                                        <video src={selectedMedia.media_url || selectedMedia.thumbnail_url} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <img src={selectedMedia.thumbnail_url || selectedMedia.media_url} alt="Media" className="w-full h-full object-cover" />
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-gray-500 line-clamp-3">{selectedMedia.caption || 'No caption'}</p>
+                                </div>
+                                <Button variant="outline" size="sm" onClick={() => setShowMediaSelector(true)} className="w-full bg-white">
+                                    Change Media
+                                </Button>
+                            </div>
+                        ) : (
+                            <Button variant="outline" size="sm" onClick={() => setShowMediaSelector(true)} className="w-full bg-white text-primary font-medium hover:bg-gray-100 border-none shadow-none">
+                                Show All
+                            </Button>
+                        )}
                     </div>
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  {triggerTypes.map((trigger) => {
-                    const Icon = trigger.icon;
-                    return (
-                      <SelectItem key={trigger.value} value={trigger.value} disabled={!trigger.available}>
-                        <div className="flex w-full items-center gap-3 py-1">
-                          <Icon className="h-5 w-5 text-primary" />
-                          <div className="flex flex-col items-start leading-tight">
-                            <span className="font-medium text-sm">{trigger.label}</span>
-                            <span className="text-xs text-[var(--slate)]">{trigger.description}</span>
-                          </div>
-                          {!trigger.available && <Badge variant="secondary" className="ml-2 whitespace-nowrap rounded-md">Coming Soon</Badge>}
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
+                  )}
 
-          {needsMediaSelection && (
-            <Card className="rounded-lg border-black/10 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-[22px] font-semibold text-[var(--ink)]">
-                  <StepBadge step={2} />
-                  Pick post or reel
-                  <EditorInfo text="Use All posts & reels for a broad automation, or turn it off to attach this automation to one exact post/reel." />
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-4 flex items-center justify-between rounded-lg border border-black/10 p-4">
-                  <div>
-                    <p className="font-medium text-[var(--ink)]">All posts & reels</p>
-                    <p className="text-sm text-[var(--slate)]">If enabled, this automation can trigger on any post/reel.</p>
-                  </div>
-                  <Switch
-                    checked={applyToAllMedia}
-                    onCheckedChange={(checked) => {
-                      setApplyToAllMedia(checked);
-                      if (checked) setSelectedMedia(null);
-                    }}
-                  />
-                </div>
-
-                {!applyToAllMedia &&
-                  (selectedMedia ? (
-                    <div className="relative overflow-hidden rounded-lg border border-black/10">
-                      <img src={selectedMedia.thumbnail_url || selectedMedia.media_url} alt={selectedMedia.caption || 'Selected media'} className="h-56 w-full object-cover" />
-                      <Button variant="destructive" size="icon" className="absolute right-3 top-3 rounded-md" onClick={() => setSelectedMedia(null)}>
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className="w-full rounded-lg border-2 border-dashed border-black/15 p-8 text-center transition-colors hover:border-primary hover:bg-primary/5"
-                      onClick={() => setShowMediaSelector(true)}
-                    >
-                      <ImageIcon className="mx-auto h-8 w-8 text-primary" />
-                      <p className="mt-2 font-medium text-[var(--ink)]">Select Post or Reel</p>
-                      <p className="text-sm text-[var(--slate)]">Click to choose from your Instagram posts</p>
-                    </button>
-                  ))}
-              </CardContent>
-            </Card>
-          )}
-
-          <Card className="rounded-lg border-black/10 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-[22px] font-semibold text-[var(--ink)]">
-                <StepBadge step={keywordStep} />
-                Add trigger keywords
-                <EditorInfo text="Keywords tell the automation when to respond. If a comment or DM contains any of these words, this automation can run." />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <KeywordInput keywords={keywords} onChange={setKeywords} caseSensitive={isCaseSensitive} onCaseSensitiveChange={setIsCaseSensitive} />
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-4 lg:sticky lg:top-5">
-          {isCommentTrigger && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              Instagram allows one private reply from a comment. Put the main CTA or button first, then continue the full sequence from a DM keyword trigger like SETUP.
+                  <label className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                     <input 
+                        type="radio" 
+                        name="post_selection" 
+                        className="w-4 h-4 text-primary" 
+                        checked={applyToAllMedia}
+                        onChange={() => {
+                          setApplyToAllMedia(true);
+                          setTriggerType('comment_any_post');
+                        }}
+                     />
+                     <span className="font-medium text-gray-700">any post or reel</span>
+                  </label>
+               </div>
             </div>
-          )}
+          </div>
 
-          <ResponseFlowBuilder responseFlow={responseFlow} onChange={setResponseFlow} step={responseStep} />
-
-          {isCommentTrigger && (
-            <Card className="rounded-lg border-black/10 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-[22px] font-semibold text-[var(--ink)]">
-                  <StepBadge step={commentStep} />
-                  Comment reply
-                  <EditorInfo text="This is the public reply posted under the user's comment. Keep it short, usually telling them to check DM or tap the CTA." />
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label>Enable comment reply</Label>
-                  <Switch checked={commentReplyEnabled} onCheckedChange={setCommentReplyEnabled} />
+          {/* Section 2: And this comment has */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-gray-900">And this comment has</h3>
+            <div className="bg-white rounded-xl border border-black/10 p-5 shadow-sm space-y-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                    <input type="radio" checked={true} readOnly className="w-4 h-4 text-primary" />
+                    <span className="font-medium text-gray-700">a specific word or words</span>
+                </label>
+                <div className="ml-7 space-y-2">
+                    <KeywordInput 
+                        keywords={keywords}
+                        onChange={setKeywords}
+                        caseSensitive={isCaseSensitive}
+                        onCaseSensitiveChange={setIsCaseSensitive}
+                    />
                 </div>
-                {commentReplyEnabled && (
-                  <div>
-                    <Label className="mb-2 block">Reply text</Label>
-                    <Textarea value={commentReplyText} onChange={(event) => setCommentReplyText(event.target.value)} placeholder="Check your DM!" rows={3} className="resize-none rounded-md" />
-                    <p className="mt-2 text-xs text-[var(--slate)]">Posted as a reply to the comment, once per user per post.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
+                
+                {/* Public comment reply */}
+                <div className="ml-7 mt-6 border-t border-black/5 pt-5">
+                   <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <Label className="text-sm font-semibold text-gray-800">Public Comment Reply</Label>
+                        <p className="text-xs text-gray-500 mt-1">Reply to the triggering comment publicly.</p>
+                      </div>
+                      <Switch 
+                          checked={commentReplyEnabled} 
+                          onCheckedChange={setCommentReplyEnabled} 
+                      />
+                   </div>
+                   {commentReplyEnabled && (
+                      <div className="mt-3">
+                          <Textarea 
+                              value={commentReplyText}
+                              onChange={(e) => setCommentReplyText(e.target.value)}
+                              placeholder="Sent it to your DM. Tap SETUP to continue."
+                              className="w-full text-sm resize-none rounded-lg border-black/10 min-h-[60px]"
+                          />
+                      </div>
+                   )}
+                </div>
+            </div>
+          </div>
 
-          <Card className="rounded-lg border-black/10 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-[22px] font-semibold text-[var(--ink)]">
-                <StepBadge step={durationStep} />
-                Automation duration
-                <Clock className="h-5 w-5 text-primary" />
-                <EditorInfo text="Set when the automation should stop. This prevents old campaigns from running forever." />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label className="mb-2 block">How long should this automation run?</Label>
-                <Select value={scheduleType} onValueChange={setScheduleType}>
-                  <SelectTrigger className="rounded-md">
-                    <SelectValue placeholder="Select duration" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white">
-                    <SelectItem value="duration">Run for a fixed duration</SelectItem>
-                    <SelectItem value="custom">Custom start and end time</SelectItem>
-                    <SelectItem value="manual">Run until manually turned off</SelectItem>
-                  </SelectContent>
-                </Select>
+          {/* Section 3: Two-step DM flow */}
+          <div className="space-y-4 pb-20">
+            <h3 className="text-lg font-bold text-gray-900">They will get</h3>
+
+            <div className="overflow-hidden rounded-xl border border-black/10 bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-black/5 bg-gray-50/60 p-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#1683dd] text-sm font-bold text-white">
+                    1
+                  </span>
+                  <div>
+                    <p className="font-semibold text-gray-900">Opening DM</p>
+                    <p className="text-xs font-medium text-gray-500">Sent first with a button, like the screenshot.</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={Boolean(responseFlow.opening_message_enabled)}
+                  onCheckedChange={(checked) => setResponseFlow((prev) => ({ ...prev, opening_message_enabled: checked }))}
+                />
               </div>
 
-              {scheduleType === 'duration' && (
-                <div className="grid gap-3 sm:grid-cols-2">
+              {responseFlow.opening_message_enabled ? (
+                <div className="space-y-4 p-5">
+                  <Textarea
+                    value={responseFlow.opening_message || ''}
+                    onChange={(event) => setResponseFlow((prev) => ({ ...prev, opening_message: event.target.value }))}
+                    placeholder="Hey there! I'm so happy you're here..."
+                    className="min-h-[126px] resize-none rounded-md border-gray-200 text-sm leading-relaxed focus-visible:ring-1"
+                  />
+                  <Input
+                    value={responseFlow.opening_button || ''}
+                    onChange={(event) => setResponseFlow((prev) => ({ ...prev, opening_button: event.target.value }))}
+                    placeholder="Send me the link"
+                    className="rounded-md border-gray-200"
+                  />
+                </div>
+              ) : null}
+            </div>
+
+            <div className="overflow-hidden rounded-xl border border-black/10 bg-white shadow-sm">
+              <div className="border-b border-black/5 bg-gray-50/60 p-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#141413] text-sm font-bold text-white">
+                    2
+                  </span>
                   <div>
-                    <Label className="mb-2 block">Duration</Label>
-                    <Select value={durationDays} onValueChange={setDurationDays}>
-                      <SelectTrigger className="rounded-md">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        <SelectItem value="1">24 hours</SelectItem>
-                        <SelectItem value="7">7 days</SelectItem>
-                        <SelectItem value="14">14 days</SelectItem>
-                        <SelectItem value="30">30 days</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="mb-2 block">Start time</Label>
-                    <Input type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} className="rounded-md" />
-                    <p className="mt-1 text-xs text-[var(--slate)]">Leave blank to start now.</p>
+                    <p className="font-semibold text-gray-900">After they tap the button</p>
+                    <p className="text-xs font-medium text-gray-500">Shown after the user sends “{responseFlow.opening_button || 'Send me the link'}”.</p>
                   </div>
                 </div>
-              )}
+              </div>
 
-              {scheduleType === 'custom' && (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <Label className="mb-2 block">Start time</Label>
-                    <Input type="datetime-local" value={startsAt} onChange={(event) => setStartsAt(event.target.value)} className="rounded-md" />
-                  </div>
-                  <div>
-                    <Label className="mb-2 block">Stop time</Label>
-                    <Input type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} className="rounded-md" />
-                  </div>
-                </div>
-              )}
-
-              <div className="rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm text-[var(--ink)]">{getSchedulePreview()}</div>
-            </CardContent>
-          </Card>
+              <div className="p-0">
+                <ResponseFlowBuilder
+                  responseFlow={responseFlow}
+                  onChange={setResponseFlow}
+                  step={2}
+                  hideHeader
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <MediaSelector open={showMediaSelector} onOpenChange={setShowMediaSelector} onSelect={setSelectedMedia} fetchMedia={fetchInstagramMedia} />
+      {/* Right Canvas - Mobile Preview */}
+      <div className="flex-1 bg-gray-50 relative overflow-hidden flex items-center justify-center">
+         <div className="absolute inset-0 pattern-dots opacity-30" style={{ backgroundSize: '24px 24px', backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)' }} />
+         <div className="relative z-10 w-full max-w-[400px] transform scale-95 origin-center transition-transform hover:scale-100 duration-300">
+            <MobilePreview 
+                triggerType={triggerType}
+                keywords={keywords}
+                selectedMedia={selectedMedia}
+                responseFlow={responseFlow}
+                commentReplyText={commentReplyText}
+                commentReplyEnabled={commentReplyEnabled}
+            />
+         </div>
+      </div>
+
+      <MediaSelector 
+        open={showMediaSelector} 
+        onOpenChange={setShowMediaSelector} 
+        onSelect={(media) => {
+          setSelectedMedia(media);
+          setShowMediaSelector(false);
+        }} 
+        fetchMedia={fetchInstagramMedia} 
+      />
     </div>
   );
 }

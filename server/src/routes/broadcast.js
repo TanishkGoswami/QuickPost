@@ -30,6 +30,7 @@ import { resolveMentions } from "../services/mentions.js";
 import { createOrUpdateComposerAutomation } from "../services/autodm.js";
 import { getValidInstagramTokensForPosting } from "../services/instagramToken.js";
 import { decryptToken } from "../services/instapilot.js";
+import { enqueueBroadcastJob, isBroadcastQueueEnabled } from "../services/broadcastQueue.js";
 
 const router = express.Router();
 
@@ -345,8 +346,10 @@ async function processBroadcastJob({
         progress: 100,
         step: `Post scheduled for ${new Date(scheduledAt).toLocaleString()}!`,
       });
-      console.log(`📅 [JOB:${jobId}] Broadcast successfully scheduled. Files preserved for scheduler.`);
-      // ⚠️ DO NOT cleanup files here — the scheduler needs the local filePaths
+      console.log(`📅 [JOB:${jobId}] Broadcast successfully scheduled. Cleaning up local files to save space.`);
+      if (isCloudinaryConfigured()) {
+        cleanupFiles(filePaths, thumbnailFile);
+      }
       return;
     } catch (dbErr) {
       failJob(jobId, `Scheduling failed: ${dbErr.message}`);
@@ -356,6 +359,55 @@ async function processBroadcastJob({
   }
 
   // ── Phase 3: Immediate Broadcast (Platform APIs) ────────────────────────
+  if (isBroadcastQueueEnabled()) {
+    updateJob(jobId, { progress: 80, step: "Queueing broadcast worker..." });
+    try {
+      const savedBroadcast = await saveBroadcast(
+        userId,
+        caption,
+        filenames,
+        { mediaUrls, thumbnailUrl: finalThumbnailUrl },
+        mediaType,
+        {
+          ...platData,
+          sourceJobId: jobId,
+          source_job_id: jobId,
+          postType,
+          autoDMConfig: autoDMConfig?.enabled ? autoDMConfig : null,
+          selectedChannels: channels,
+          filePaths,
+          userTimezone: userTimezone || 'UTC',
+          selectedAspectRatio,
+          selectedPostSizePreset
+        },
+        'queued',
+        new Date().toISOString()
+      );
+
+      if (!savedBroadcast?.id) {
+        throw new Error('Failed to save queued broadcast record');
+      }
+
+      await enqueueBroadcastJob(savedBroadcast.id);
+      updateJob(jobId, {
+        status: "completed",
+        progress: 100,
+        step: "Broadcast queued for publishing.",
+        meta: {
+          ...(getJob(jobId)?.meta || {}),
+          broadcastId: savedBroadcast.id,
+          queued: true,
+        },
+      });
+      console.log(`📨 [JOB:${jobId}] Broadcast queued in BullMQ: ${savedBroadcast.id}`);
+      return;
+    } catch (queueErr) {
+      console.error(`❌ [JOB:${jobId}] Queue handoff failed:`, queueErr.message);
+      failJob(jobId, `Queue handoff failed: ${queueErr.message}`);
+      return;
+    }
+  }
+
   const primaryMediaUrl = mediaUrls[0];
   const youtubeThumbnailPath = thumbnailFile
     ? thumbnailFile.path
@@ -412,6 +464,8 @@ async function processBroadcastJob({
   // Instagram
   const instagramChannels = channels.filter(c => c === "instagram" || c.startsWith("instagram:"));
   if (instagramChannels.length > 0 && (tokens.instagram || tokens.instagramAccounts?.length > 0)) {
+    const postedBusinessIds = new Set();
+    
     for (const igChannel of instagramChannels) {
       let currentTokens;
       let platformKey = "Instagram";
@@ -441,6 +495,10 @@ async function processBroadcastJob({
       }
 
       if (currentTokens) {
+        if (currentTokens.businessId) {
+          if (postedBusinessIds.has(currentTokens.businessId)) continue;
+          postedBusinessIds.add(currentTokens.businessId);
+        }
         platformPromises.push(
           (async () => {
             try {

@@ -12,6 +12,110 @@ const IG_GRAPH_BASE = /\/v\d+\.\d+$/.test(IG_GRAPH_ORIGIN)
   : `${IG_GRAPH_ORIGIN}/${IG_GRAPH_VERSION}`;
 const IG_GRAPH_ROOT = IG_GRAPH_BASE.replace(/\/v\d+\.\d+$/, '');
 
+function decryptTokenBundle(ciphertext) {
+  if (!ciphertext || typeof ciphertext !== 'string') return null;
+  const parts = ciphertext.split(':');
+  if (parts.length !== 4) return null;
+  const [prefix, version, ivBase64, payloadBase64] = parts;
+  if (prefix !== 'enc' || version !== 'v1') return null;
+
+  try {
+    const iv = Buffer.from(ivBase64, 'base64');
+    const encrypted = Buffer.from(payloadBase64, 'base64');
+    const tag = encrypted.subarray(encrypted.length - 16);
+    const data = encrypted.subarray(0, encrypted.length - 16);
+
+    const keys = [
+      process.env.TOKEN_ENCRYPTION_KEY_BASE64,
+      process.env.INSTAPILOT_TOKEN_ENCRYPTION_KEY_BASE64,
+      process.env.AUTODM_TOKEN_ENCRYPTION_KEY_BASE64
+    ].filter(Boolean);
+
+    for (const keyBase64 of keys) {
+      try {
+        const key = Buffer.from(keyBase64, 'base64');
+        const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+        decipher.setAuthTag(tag);
+        let decrypted = decipher.update(data, null, 'utf8');
+        decrypted += decipher.final('utf8');
+        return JSON.parse(decrypted);
+      } catch (e) {
+        // Try next key
+      }
+    }
+  } catch (err) {
+    console.warn('[AutoDM] Token decryption error:', err.message);
+  }
+  return null;
+}
+
+async function getDecryptedInstagramToken(userIds, targetInstagramAccountId = null) {
+  let query = supabase
+    .from('social_tokens')
+    .select('access_token, instagram_business_id, page_id, username, profile_data')
+    .in('user_id', userIds)
+    .eq('provider', 'instagram')
+    .order('updated_at', { ascending: false });
+
+  if (targetInstagramAccountId) {
+    query = query.or(`instagram_business_id.eq.${targetInstagramAccountId},page_id.eq.${targetInstagramAccountId}`);
+  }
+
+  const { data: token } = await query.limit(1).maybeSingle();
+
+  let accessToken = token?.access_token;
+  let instagramBusinessId = token?.instagram_business_id || token?.page_id || targetInstagramAccountId;
+  let profileData = token?.profile_data || {};
+  let originalTokenData = token || null;
+
+  if (!accessToken) {
+    if (!targetInstagramAccountId) {
+      throw new Error('Instagram is not connected in Social Pilot.');
+    }
+    const { data: accountRows, error: accErr } = await supabase
+      .from('instagram_accounts')
+      .select('id, access_token_encrypted, username, instagram_business_account_id, instagram_user_id, page_id')
+      .in('user_id', userIds)
+      .limit(25);
+
+    const requested = String(targetInstagramAccountId);
+    const account = (accountRows || []).find((row) =>
+      [
+        row.id,
+        row.instagram_business_account_id,
+        row.instagram_user_id,
+        row.page_id,
+      ]
+        .filter(Boolean)
+        .map(String)
+        .includes(requested)
+    );
+
+    if (accErr || !account?.access_token_encrypted) {
+      throw new Error('Instagram is not connected in Social Pilot.');
+    }
+
+    const decrypted = decryptTokenBundle(account.access_token_encrypted);
+    if (!decrypted?.pageAccessToken) {
+      throw new Error('Failed to decrypt Instagram token for background sync.');
+    }
+
+    accessToken = decrypted.pageAccessToken;
+    profileData = { username: account.username };
+    originalTokenData = null;
+  }
+
+  if (accessToken.startsWith('enc:')) {
+    const decrypted = decryptTokenBundle(accessToken);
+    if (!decrypted?.pageAccessToken) {
+      throw new Error('Instagram media sync needs a fresh Instagram connection.');
+    }
+    accessToken = decrypted.pageAccessToken;
+  }
+
+  return { accessToken, instagramBusinessId, profileData, originalTokenData };
+}
+
 function isDirectInstagramToken(accessToken) {
   return accessToken?.startsWith('IG') || accessToken?.startsWith('IGA');
 }
@@ -160,11 +264,13 @@ async function fetchFirstInstagramGraphJson({ urls, token, fieldsList, limit }) 
   throw lastError || new Error('Instagram Graph API request failed');
 }
 
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value || '')
+  );
+}
+
 function getUserIds(userOrId) {
-  const isUuid = (value) =>
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      String(value || '')
-    );
   const ids = typeof userOrId === 'string'
     ? [userOrId]
     : [userOrId?.userId, userOrId?.authUserId];
@@ -174,6 +280,20 @@ function getUserIds(userOrId) {
 
 function getPrimaryUserId(user) {
   return user?.userId || user?.authUserId;
+}
+
+function sortByCreatedAtDesc(rows = []) {
+  return [...rows].sort(
+    (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+  );
+}
+
+function sortByMetricDateDesc(rows = []) {
+  return [...rows].sort((a, b) => {
+    const dateDiff = new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+    if (dateDiff !== 0) return dateDiff;
+    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+  });
 }
 
 async function getOwnedInstagramAccountIds(autoDMSupabase, user, { includeDisconnected = true } = {}) {
@@ -377,20 +497,46 @@ async function fetchInstagramBusinessProfile({ accessToken, instagramBusinessId 
   }
 }
 
-export async function importInstagramAccountToAutoDM(user) {
+export async function importInstagramAccountToAutoDM(user, targetInstagramAccountId) {
   const autoDMSupabase = getAutoDMSupabaseAdmin();
   const userIds = getUserIds(user);
   const primaryUserId = getPrimaryUserId(user);
+  let targetSocialInstagramId = targetInstagramAccountId;
 
   // Ensure user exists in AutoDM auth.users (required by FK constraint)
   await ensureAutoDMUser(user);
 
-  const { data: socialInstagram, error: socialError } = await supabase
+  if (targetInstagramAccountId && isUuid(targetInstagramAccountId)) {
+    const { data: targetAccount, error: targetAccountError } = await autoDMSupabase
+      .from('instagram_accounts')
+      .select('instagram_business_account_id, instagram_user_id, page_id')
+      .eq('id', targetInstagramAccountId)
+      .in('user_id', userIds)
+      .maybeSingle();
+
+    if (targetAccountError) {
+      throw new Error(`Failed to resolve selected Instagram account: ${targetAccountError.message}`);
+    }
+
+    targetSocialInstagramId =
+      targetAccount?.instagram_business_account_id ||
+      targetAccount?.instagram_user_id ||
+      targetAccount?.page_id ||
+      targetInstagramAccountId;
+  }
+
+  let query = supabase
     .from('social_tokens')
     .select('access_token, token_expiry, instagram_business_id, page_id, username, profile_data')
     .in('user_id', userIds)
     .eq('provider', 'instagram')
-    .order('updated_at', { ascending: false })
+    .order('updated_at', { ascending: false });
+
+  if (targetSocialInstagramId) {
+    query = query.or(`instagram_business_id.eq.${targetSocialInstagramId},page_id.eq.${targetSocialInstagramId}`);
+  }
+
+  const { data: socialInstagram, error: socialError } = await query
     .limit(1)
     .maybeSingle();
 
@@ -418,7 +564,7 @@ export async function importInstagramAccountToAutoDM(user) {
         token_status: 'expired',
         updated_at: new Date().toISOString(),
       })
-      .eq('user_id', primaryUserId)
+      .in('user_id', userIds)
       .eq('instagram_user_id', socialInstagram.instagram_business_id);
 
     throw new Error('Instagram token expired. Please reconnect Instagram before syncing AutoDM.');
@@ -461,32 +607,13 @@ export async function importInstagramAccountToAutoDM(user) {
     updated_at: new Date().toISOString(),
   };
 
-  await autoDMSupabase
-    .from('instagram_accounts')
-    .update({
-      is_connected: false,
-      token_status: 'disconnected',
-      updated_at: new Date().toISOString(),
-    })
-    .in('user_id', userIds)
-    .neq('instagram_user_id', upsertPayload.instagram_user_id);
-
-  await autoDMSupabase
-    .from('instagram_accounts')
-    .update({
-      is_connected: false,
-      token_status: 'disconnected',
-      updated_at: new Date().toISOString(),
-    })
-    .in('user_id', userIds)
-    .is('instagram_user_id', null)
-    .neq('instagram_business_account_id', upsertPayload.instagram_user_id);
-
   const { data: existing } = await autoDMSupabase
     .from('instagram_accounts')
     .select('id')
     .eq('instagram_user_id', upsertPayload.instagram_user_id)
-    .eq('user_id', upsertPayload.user_id)
+    .in('user_id', userIds)
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   let data, error;
@@ -538,7 +665,7 @@ export async function getAutoDMStatus(user) {
   const autoDMSupabase = getAutoDMSupabaseAdmin();
   const userIds = getUserIds(user);
 
-  let [{ data: accounts, error: accountsError }, { data: socialInstagram, error: socialError }] =
+  let [{ data: accounts, error: accountsError }, { data: socialTokens, error: socialError }] =
     await Promise.all([
       autoDMSupabase
         .from('instagram_accounts')
@@ -552,8 +679,6 @@ export async function getAutoDMStatus(user) {
         .in('user_id', userIds)
         .eq('provider', 'instagram')
         .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle(),
     ]);
 
   if (accountsError) {
@@ -563,68 +688,69 @@ export async function getAutoDMStatus(user) {
     throw new Error(`Failed to load Social Pilot Instagram state: ${socialError.message}`);
   }
 
-  const socialTokenExpiryMs = socialInstagram?.token_expiry
-    ? new Date(socialInstagram.token_expiry).getTime()
-    : null;
-  const socialTokenExpired =
-    socialInstagram?.profile_data?.token_status === 'expired' ||
-    (Number.isFinite(socialTokenExpiryMs) && socialTokenExpiryMs - Date.now() <= 60 * 1000);
-  const activeInstagramId = socialTokenExpired
-    ? null
-    : socialInstagram?.instagram_business_id || socialInstagram?.page_id || null;
-  const hasSocialInstagramConnection = Boolean(activeInstagramId);
-  accounts = (accounts || []).filter((account) => {
-    const accountIgId = account.instagram_user_id || account.instagram_business_account_id || account.page_id;
-    return !activeInstagramId || accountIgId === activeInstagramId;
+  const validSocialTokens = (socialTokens || []).filter(token => {
+    const expiryMs = token.token_expiry ? new Date(token.token_expiry).getTime() : null;
+    const isExpired = token.profile_data?.token_status === 'expired' ||
+      (Number.isFinite(expiryMs) && expiryMs - Date.now() <= 60 * 1000);
+    return !isExpired && (token.instagram_business_id || token.page_id);
   });
 
+  const activeInstagramIds = validSocialTokens.map(t => t.instagram_business_id || t.page_id);
+  const hasSocialInstagramConnection = activeInstagramIds.length > 0;
+  
+  // Filter removed so all connected accounts are returned
+
   // Auto-sync existing Social Pilot Instagram connection to AutoDM if not already imported
-  if ((!accounts || accounts.length === 0) && hasSocialInstagramConnection && socialInstagram?.access_token) {
-    try {
-      console.log(`🔄 [AUTODM-AUTO-SYNC] Auto-importing connected Instagram account for user ${user.userId} on status check...`);
-      await importInstagramAccountToAutoDM(user);
-      
-      // Fetch accounts again to include the newly imported account
-      const { data: refreshedAccounts, error: refreshError } = await autoDMSupabase
-        .from('instagram_accounts')
-        .select('*')
-        .in('user_id', userIds)
-        .eq('is_connected', true)
-        .order('created_at', { ascending: false });
-        
-      if (!refreshError && refreshedAccounts) {
-        accounts = refreshedAccounts.filter((account) => {
-          const accountIgId = account.instagram_user_id || account.instagram_business_account_id || account.page_id;
-          return accountIgId === activeInstagramId;
-        });
-        console.log(`✅ [AUTODM-AUTO-SYNC] Automatically synced and loaded ${refreshedAccounts.length} Instagram account(s)`);
+  for (const token of validSocialTokens) {
+    const igId = token.instagram_business_id || token.page_id;
+    const isImported = accounts.some(a => 
+      a.instagram_user_id === igId || a.instagram_business_account_id === igId || a.page_id === igId
+    );
+    
+    if (!isImported && token.access_token) {
+      try {
+        console.log(`🔄 [AUTODM-AUTO-SYNC] Auto-importing connected Instagram account ${igId} for user ${user.userId}...`);
+        await importInstagramAccountToAutoDM(user, igId);
+      } catch (syncErr) {
+        console.warn(`⚠️ [AUTODM-AUTO-SYNC] On-the-fly AutoDM sync failed for ${igId}:`, syncErr.message);
       }
-    } catch (syncErr) {
-      console.warn(`⚠️ [AUTODM-AUTO-SYNC] On-the-fly AutoDM sync failed:`, syncErr.message);
     }
+  }
+
+  // Reload accounts after potential auto-imports
+  const { data: refreshedAccounts, error: refreshError } = await autoDMSupabase
+    .from('instagram_accounts')
+    .select('*')
+    .in('user_id', userIds)
+    .eq('is_connected', true)
+    .order('created_at', { ascending: false });
+    
+  if (!refreshError && refreshedAccounts) {
+    accounts = refreshedAccounts;
   }
 
   const hasPlaceholderAccount = (accounts || []).some((account) =>
     isPlaceholderInstagramUsername(account.username || account.instagram_username)
   );
 
-  if (hasPlaceholderAccount && hasSocialInstagramConnection && socialInstagram?.access_token) {
+  if (hasPlaceholderAccount) {
     try {
       console.log('[AUTODM-AUTO-SYNC] Repairing placeholder Instagram profile data...');
-      await importInstagramAccountToAutoDM(user);
+      // Re-import the primary one for safety if we find a placeholder
+      const primaryToken = validSocialTokens[0];
+      if (primaryToken) {
+        await importInstagramAccountToAutoDM(user, primaryToken.instagram_business_id || primaryToken.page_id);
+        
+        const { data: repairedAccounts, error: repairError } = await autoDMSupabase
+          .from('instagram_accounts')
+          .select('*')
+          .in('user_id', userIds)
+          .eq('is_connected', true)
+          .order('updated_at', { ascending: false });
 
-      const { data: repairedAccounts, error: repairError } = await autoDMSupabase
-        .from('instagram_accounts')
-        .select('*')
-        .in('user_id', userIds)
-        .eq('is_connected', true)
-        .order('updated_at', { ascending: false });
-
-      if (!repairError && repairedAccounts) {
-        accounts = repairedAccounts.filter((account) => {
-          const accountIgId = account.instagram_user_id || account.instagram_business_account_id || account.page_id;
-          return !activeInstagramId || accountIgId === activeInstagramId;
-        });
+        if (!repairError && repairedAccounts) {
+          accounts = repairedAccounts;
+        }
       }
     } catch (repairError) {
       console.warn('[AUTODM-AUTO-SYNC] Placeholder profile repair failed:', repairError.message);
@@ -634,7 +760,7 @@ export async function getAutoDMStatus(user) {
   return {
     autodmAccounts: accounts || [],
     hasSocialInstagramConnection,
-    socialInstagram: socialInstagram || null,
+    socialInstagram: validSocialTokens[0] || null, // For backwards compatibility
     autoDMStorageReady: true,
     autoDMStorageError: null,
   };
@@ -726,8 +852,9 @@ async function insertAutomationWithUserFallback(autoDMSupabase, payload, user) {
 
 export async function listAutomationsForUser(user, { instagramAccountId } = {}) {
   const autoDMSupabase = getAutoDMSupabaseForUserMutation();
-  const userIds = getUserIds(user);
-  const ownedAccountIds = await getOwnedInstagramAccountIds(autoDMSupabase, user);
+  const ownedAccountIds = await getOwnedInstagramAccountIds(autoDMSupabase, user, {
+    includeDisconnected: false,
+  });
 
   if (instagramAccountId) {
     if (!ownedAccountIds.includes(instagramAccountId)) return [];
@@ -741,28 +868,20 @@ export async function listAutomationsForUser(user, { instagramAccountId } = {}) 
     return hydrateAutomationMetrics(autoDMSupabase, data || []);
   }
 
-  const [{ data: userRows, error: userError }, accountResult] = await Promise.all([
-    autoDMSupabase
-      .from('automations')
-      .select('*')
-      .in('user_id', userIds)
-      .order('created_at', { ascending: false }),
-    ownedAccountIds.length > 0
-      ? autoDMSupabase
-          .from('automations')
-          .select('*')
-          .in('instagram_account_id', ownedAccountIds)
-          .order('created_at', { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
-  ]);
+  if (ownedAccountIds.length === 0) return [];
 
-  if (userError) throw new Error(`Failed to load Auto DM automations: ${userError.message}`);
+  const accountResult = await autoDMSupabase
+    .from('automations')
+    .select('*')
+    .in('instagram_account_id', ownedAccountIds)
+    .order('created_at', { ascending: false });
+
   if (accountResult.error) {
     throw new Error(`Failed to load Auto DM account automations: ${accountResult.error.message}`);
   }
 
   const rowMap = new Map();
-  for (const row of [...(userRows || []), ...(accountResult.data || [])]) {
+  for (const row of accountResult.data || []) {
     rowMap.set(row.id, row);
   }
   const data = Array.from(rowMap.values()).sort(
@@ -890,35 +1009,63 @@ export async function deleteAutomationForUser(user, automationId) {
   return true;
 }
 
-export async function fetchInstagramMediaForUser(user, limit = 30) {
+export async function fetchInstagramMediaForUser(user, limit = 30, targetInstagramAccountId = null) {
   const userIds = getUserIds(user);
-  const { data: token, error } = await supabase
-    .from('social_tokens')
-    .select('access_token, instagram_business_id, username, profile_data')
-    .in('user_id', userIds)
-    .eq('provider', 'instagram')
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  let resolvedTargetInstagramAccountId = targetInstagramAccountId;
 
-  if (error) throw new Error(`Failed to read Instagram token: ${error.message}`);
-  if (!token?.access_token || !token?.instagram_business_id) {
-    throw new Error('Instagram is not connected in Social Pilot.');
+  if (targetInstagramAccountId) {
+    const { data: accounts, error: accountLookupError } = await getAutoDMSupabaseAdmin()
+      .from('instagram_accounts')
+      .select('id, instagram_business_account_id, instagram_user_id, page_id')
+      .in('user_id', userIds);
+
+    if (accountLookupError) {
+      throw new Error(`Failed to resolve Instagram account: ${accountLookupError.message}`);
+    }
+
+    const requested = String(targetInstagramAccountId);
+    const matchedAccount = (accounts || []).find((account) =>
+      [
+        account.id,
+        account.instagram_business_account_id,
+        account.instagram_user_id,
+        account.page_id,
+      ]
+        .filter(Boolean)
+        .map(String)
+        .includes(requested)
+    );
+
+    resolvedTargetInstagramAccountId =
+      matchedAccount?.instagram_business_account_id ||
+      matchedAccount?.instagram_user_id ||
+      matchedAccount?.page_id ||
+      targetInstagramAccountId;
   }
-
-  if (token.access_token.startsWith('enc:')) {
-    return {
-      media: [],
-      account: null,
-      warning: 'Instagram media sync needs a fresh Instagram connection.',
-    };
+  
+  let accessToken, instagramBusinessId, profileData, originalTokenData;
+  try {
+    const res = await getDecryptedInstagramToken(userIds, resolvedTargetInstagramAccountId);
+    accessToken = res.accessToken;
+    instagramBusinessId = res.instagramBusinessId;
+    profileData = res.profileData;
+    originalTokenData = res.originalTokenData;
+  } catch (e) {
+    if (e.message.includes('needs a fresh Instagram connection')) {
+      return {
+        media: [],
+        account: null,
+        warning: e.message,
+      };
+    }
+    throw e;
   }
 
   try {
-    const directToken = isDirectInstagramToken(token.access_token);
+    const directToken = isDirectInstagramToken(accessToken);
     const profile = await fetchInstagramBusinessProfile({
-      accessToken: token.access_token,
-      instagramBusinessId: token.instagram_business_id,
+      accessToken: accessToken,
+      instagramBusinessId: instagramBusinessId,
     }).catch((profileError) => {
       console.warn('[AUTODM] Instagram profile refresh before media failed:', profileError.message);
       return null;
@@ -927,7 +1074,7 @@ export async function fetchInstagramMediaForUser(user, limit = 30) {
     let refreshedAccount = null;
     if (profile?.username) {
       const profileData = {
-        ...(token.profile_data || {}),
+        ...(originalTokenData?.profile_data || {}),
         username: profile.username,
         name: profile.name || null,
         profile_picture_url: profile.profile_picture_url || null,
@@ -936,42 +1083,51 @@ export async function fetchInstagramMediaForUser(user, limit = 30) {
         account_type: profile.account_type || null,
       };
 
-      await Promise.all([
-        supabase
-          .from('social_tokens')
-          .update({
-            username: profile.username,
-            instagram_business_id: profile.id || token.instagram_business_id,
-            account_id: profile.id || token.instagram_business_id,
-            profile_data: profileData,
-            updated_at: new Date().toISOString(),
-          })
-          .in('user_id', userIds)
-          .eq('provider', 'instagram'),
+      const updates = [];
+      if (originalTokenData) {
+        updates.push(
+          supabase
+            .from('social_tokens')
+            .update({
+              username: profile.username,
+              instagram_business_id: profile.id || instagramBusinessId,
+              account_id: profile.id || instagramBusinessId,
+              profile_data: profileData,
+              updated_at: new Date().toISOString(),
+            })
+            .in('user_id', userIds)
+            .eq('provider', 'instagram')
+            .or(`instagram_business_id.eq.${instagramBusinessId},page_id.eq.${instagramBusinessId}`)
+        );
+      }
+
+      updates.push(
         getAutoDMSupabaseAdmin()
           .from('instagram_accounts')
           .update({
-            page_id: profile.id || token.instagram_business_id,
+            page_id: profile.id || instagramBusinessId,
             page_name: profile.name || profile.username,
-            instagram_business_account_id: profile.id || token.instagram_business_id,
-            instagram_user_id: profile.id || token.instagram_business_id,
+            instagram_business_account_id: profile.id || instagramBusinessId,
+            instagram_user_id: profile.id || instagramBusinessId,
             instagram_username: profile.username,
             username: profile.username,
             full_name: profile.name || null,
             profile_picture_url: profile.profile_picture_url || null,
             followers_count: profile.followers_count ?? null,
             media_count: profile.media_count ?? null,
-            updated_at: new Date().toISOString(),
+            account_type: profile.account_type || null,
           })
           .in('user_id', userIds)
-          .eq('is_connected', true),
-      ]);
+          .eq('instagram_business_account_id', instagramBusinessId)
+      );
+
+      await Promise.all(updates);
 
       const { data: accountAfterRefresh } = await getAutoDMSupabaseAdmin()
         .from('instagram_accounts')
         .select('*')
         .in('user_id', userIds)
-        .eq('is_connected', true)
+        .eq('instagram_business_account_id', instagramBusinessId)
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -981,15 +1137,15 @@ export async function fetchInstagramMediaForUser(user, limit = 30) {
 
     const mediaUrls = directToken
       ? [
-          `${IG_GRAPH_BASE}/${token.instagram_business_id}/media`,
-          `${IG_GRAPH_ROOT}/${token.instagram_business_id}/media`,
+          `${IG_GRAPH_BASE}/${instagramBusinessId}/media`,
+          `${IG_GRAPH_ROOT}/${instagramBusinessId}/media`,
           `${IG_GRAPH_BASE}/me/media`,
           `${IG_GRAPH_ROOT}/me/media`
         ]
-      : [`${getGraphBaseForToken(token.access_token)}/${token.instagram_business_id}/media`];
+      : [`${getGraphBaseForToken(accessToken)}/${instagramBusinessId}/media`];
     const json = await fetchFirstInstagramGraphJson({
       urls: mediaUrls,
-      token: token.access_token,
+      token: accessToken,
       fieldsList: [
         'id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,username,like_count,comments_count',
         'id,caption,media_type,media_url,permalink,thumbnail_url,timestamp,username',
@@ -1043,7 +1199,6 @@ function buildComposerAutomationPayload({ user, account, config, publication, so
 
 async function resolveImportedAutoDMInstagramAccount(autoDMSupabase, user) {
   const userIds = getUserIds(user);
-  const primaryUserId = getPrimaryUserId(user);
   const { data: socialInstagram, error: socialError } = await supabase
     .from('social_tokens')
     .select('instagram_business_id, page_id')
@@ -1065,9 +1220,11 @@ async function resolveImportedAutoDMInstagramAccount(autoDMSupabase, user) {
   let { data: account, error: accountError } = await autoDMSupabase
     .from('instagram_accounts')
     .select('*')
-    .eq('user_id', primaryUserId)
+    .in('user_id', userIds)
     .eq('instagram_user_id', instagramBusinessId)
     .eq('is_connected', true)
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (accountError) {
@@ -1264,23 +1421,78 @@ export async function createOrUpdateComposerAutomation({
 
 export async function listContactsForUser(user, { instagramAccountId } = {}) {
   const autoDMSupabase = getAutoDMSupabaseAdmin();
+  const userIds = getUserIds(user);
   let query = autoDMSupabase
     .from('contacts')
     .select('*')
-    .eq('user_id', getPrimaryUserId(user))
     .order('last_interaction_at', { ascending: false });
 
   if (instagramAccountId) {
+    const ownedAccountIds = await getOwnedInstagramAccountIds(autoDMSupabase, user, { includeDisconnected: true });
+    if (!ownedAccountIds.includes(instagramAccountId)) {
+      throw new Error('Instagram account is not connected to this user.');
+    }
     query = query.eq('instagram_account_id', instagramAccountId);
+  } else {
+    query = query.in('user_id', userIds);
   }
 
   const { data, error } = await query;
   if (error) throw new Error(`Failed to load contacts: ${error.message}`);
-  return data || [];
+  const contacts = data || [];
+  if (contacts.length === 0) return contacts;
+
+  const accountIds = [...new Set(contacts.map((contact) => contact.instagram_account_id).filter(Boolean))];
+  const instagramUserIds = [...new Set(contacts.map((contact) => contact.instagram_user_id).filter(Boolean))];
+
+  if (accountIds.length === 0 || instagramUserIds.length === 0) return contacts;
+
+  const { data: conversations, error: conversationsError } = await autoDMSupabase
+    .from('instagram_conversations')
+    .select('instagram_account_id,instagram_user_id,instagram_username,instagram_name,profile_pic_url')
+    .in('instagram_account_id', accountIds)
+    .in('instagram_user_id', instagramUserIds);
+
+  if (conversationsError) {
+    console.warn('[AUTODM] Failed loading conversation profile data:', conversationsError.message);
+    return contacts;
+  }
+
+  const profileByContactKey = new Map(
+    (conversations || []).map((conversation) => [
+      `${conversation.instagram_account_id}:${conversation.instagram_user_id}`,
+      conversation,
+    ])
+  );
+
+  return contacts.map((contact) => {
+    const conversation = profileByContactKey.get(`${contact.instagram_account_id}:${contact.instagram_user_id}`);
+    if (!conversation) return contact;
+
+    return {
+      ...contact,
+      username: contact.username || conversation.instagram_username,
+      full_name: contact.full_name || conversation.instagram_name,
+      profile_picture_url: contact.profile_picture_url || conversation.profile_pic_url,
+    };
+  });
 }
 
 export async function listMessagesForContact(user, contactId) {
   const autoDMSupabase = getAutoDMSupabaseAdmin();
+  const userIds = getUserIds(user);
+  const ownedAccountIds = await getOwnedInstagramAccountIds(autoDMSupabase, user, { includeDisconnected: true });
+  const { data: contact, error: contactError } = await autoDMSupabase
+    .from('contacts')
+    .select('id,user_id,instagram_account_id')
+    .eq('id', contactId)
+    .maybeSingle();
+
+  if (contactError) throw new Error(`Failed to verify contact: ${contactError.message}`);
+  if (!contact || (!userIds.includes(contact.user_id) && !ownedAccountIds.includes(contact.instagram_account_id))) {
+    throw new Error('Contact is not accessible to this user.');
+  }
+
   const { data, error } = await autoDMSupabase
     .from('messages')
     .select('*')
@@ -1293,22 +1505,76 @@ export async function listMessagesForContact(user, contactId) {
 
 export async function getDailyMetrics(user, { instagramAccountId, startDate } = {}) {
   const autoDMSupabase = getAutoDMSupabaseAdmin();
-  let query = autoDMSupabase
-    .from('daily_metrics')
-    .select('*')
-    .eq('user_id', getPrimaryUserId(user))
-    .order('date', { ascending: false });
+  const userIds = getUserIds(user);
+  const ownedAccountIds = await getOwnedInstagramAccountIds(autoDMSupabase, user, { includeDisconnected: true });
 
   if (instagramAccountId) {
-    query = query.eq('instagram_account_id', instagramAccountId);
-  }
-  if (startDate) {
-    query = query.gte('date', startDate);
+    if (!ownedAccountIds.includes(instagramAccountId)) {
+      throw new Error('Instagram account is not connected to this user.');
+    }
+    let query = autoDMSupabase
+      .from('daily_metrics')
+      .select('*')
+      .eq('instagram_account_id', instagramAccountId)
+      .order('date', { ascending: false });
+
+    if (startDate) {
+      query = query.gte('date', startDate);
+    }
+
+    const { data, error } = await query;
+    if (error) throw new Error(`Failed to load daily metrics: ${error.message}`);
+    return data || [];
   }
 
-  const { data, error } = await query;
-  if (error) throw new Error(`Failed to load daily metrics: ${error.message}`);
-  return data || [];
+  const metricsQueries = [
+    userIds.length > 0
+      ? autoDMSupabase
+          .from('daily_metrics')
+          .select('*')
+          .in('user_id', userIds)
+          .order('date', { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+    ownedAccountIds.length > 0
+      ? autoDMSupabase
+          .from('daily_metrics')
+          .select('*')
+          .in('instagram_account_id', ownedAccountIds)
+          .order('date', { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+  ];
+
+  if (startDate) {
+    metricsQueries[0] = userIds.length > 0
+      ? autoDMSupabase
+          .from('daily_metrics')
+          .select('*')
+          .in('user_id', userIds)
+          .gte('date', startDate)
+          .order('date', { ascending: false })
+      : Promise.resolve({ data: [], error: null });
+    metricsQueries[1] = ownedAccountIds.length > 0
+      ? autoDMSupabase
+          .from('daily_metrics')
+          .select('*')
+          .in('instagram_account_id', ownedAccountIds)
+          .gte('date', startDate)
+          .order('date', { ascending: false })
+      : Promise.resolve({ data: [], error: null });
+  }
+
+  const [{ data: userRows, error: userError }, { data: accountRows, error: accountError }] =
+    await Promise.all(metricsQueries);
+
+  if (userError) throw new Error(`Failed to load daily metrics: ${userError.message}`);
+  if (accountError) throw new Error(`Failed to load daily account metrics: ${accountError.message}`);
+
+  const rowMap = new Map();
+  for (const row of [...(userRows || []), ...(accountRows || [])]) {
+    rowMap.set(row.id || `${row.instagram_account_id}:${row.date}`, row);
+  }
+
+  return sortByMetricDateDesc(Array.from(rowMap.values()));
 }
 
 export async function getAutomationAnalytics(user, automationId) {
@@ -1447,27 +1713,21 @@ export async function syncAutomationInsights(user, automationId) {
     throw new Error('Automation not found');
   }
 
-  const { data: token } = await supabase
-    .from('social_tokens')
-    .select('access_token, instagram_business_id')
-    .in('user_id', getUserIds(user))
-    .eq('provider', 'instagram')
-    .order('updated_at', { ascending: false })
-    .limit(1)
+  const userIds = getUserIds(user);
+  const { data: automations } = await autoDMSupabase
+    .from('automations')
+    .select('instagram_account_id')
+    .eq('id', automationId)
     .maybeSingle();
 
-  if (!token?.access_token || !token?.instagram_business_id) {
-    throw new Error('Instagram not connected in Social Pilot');
-  }
+  const targetInstagramAccountId = automations?.instagram_account_id;
+
+  const { accessToken, instagramBusinessId } = await getDecryptedInstagramToken(userIds, targetInstagramAccountId);
 
   // Fetch account followers
-  if (token.access_token.startsWith('enc:')) {
-    throw new Error('Instagram token is encrypted in social_tokens. Please reconnect Instagram.');
-  }
-
-  const graphBase = getGraphBaseForToken(token.access_token);
-  const accountUrl = new URL(`${graphBase}/${token.instagram_business_id}`);
-  accountUrl.searchParams.set('access_token', token.access_token);
+  const graphBase = getGraphBaseForToken(accessToken);
+  const accountUrl = new URL(`${graphBase}/${instagramBusinessId}`);
+  accountUrl.searchParams.set('access_token', accessToken);
   accountUrl.searchParams.set('fields', 'followers_count');
   const accountRes = await fetch(accountUrl.toString());
   const accountJson = await accountRes.json();
@@ -1476,7 +1736,7 @@ export async function syncAutomationInsights(user, automationId) {
   let matchedMedia = null;
   if (automation.media_id) {
     const mediaUrl = new URL(`${graphBase}/${automation.media_id}`);
-    mediaUrl.searchParams.set('access_token', token.access_token);
+    mediaUrl.searchParams.set('access_token', accessToken);
     mediaUrl.searchParams.set('fields', 'like_count,comments_count,permalink,caption');
     const mediaRes = await fetch(mediaUrl.toString());
     if (mediaRes.ok) matchedMedia = await mediaRes.json();
@@ -1498,7 +1758,6 @@ export async function syncAutomationInsights(user, automationId) {
     .from('automations')
     .update(updates)
     .eq('id', automationId)
-    .in('user_id', getUserIds(user))
     .select('*')
     .single();
 

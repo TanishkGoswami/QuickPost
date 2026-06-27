@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAutoDM } from '../../context/AutoDMContext';
 import { Download, ExternalLink, MessageCircle, Search, X } from 'lucide-react';
+import AutoDMAccountSwitcher from './AutoDMAccountSwitcher';
 
 function formatRelativeTime(isoString) {
   if (!isoString) return 'Never';
@@ -23,6 +24,51 @@ function ContactAvatar({ contact, size = 36 }) {
       )}
     </div>
   );
+}
+
+function parseTemplateMessage(message) {
+  if (message.message_type !== 'template') return null;
+  try {
+    const parsed = JSON.parse(message.content || '{}');
+    return Array.isArray(parsed.elements) ? parsed.elements : null;
+  } catch {
+    return null;
+  }
+}
+
+function MessageBubbleContent({ message }) {
+  const templateElements = parseTemplateMessage(message);
+
+  if (templateElements?.length) {
+    return (
+      <div className="autodm-template-stack">
+        {templateElements.map((element, index) => (
+          <article className="autodm-template-card" key={`${message.id}-template-${index}`}>
+            {element.image_url ? <img src={element.image_url} alt="" /> : null}
+            <div className="autodm-template-body">
+              {element.title ? <strong>{element.title}</strong> : null}
+              {element.subtitle ? <p>{element.subtitle}</p> : null}
+              {element.buttons?.length ? (
+                <div className="autodm-template-actions">
+                  {element.buttons.map((button, buttonIndex) => (
+                    <span key={`${message.id}-button-${buttonIndex}`}>
+                      {button.title || button.url || button.payload}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </article>
+        ))}
+      </div>
+    );
+  }
+
+  if (message.message_type === 'image' && (message.media_url || message.content)) {
+    return <img className="autodm-message-image" src={message.media_url || message.content} alt="" />;
+  }
+
+  return <p>{message.content || ''}</p>;
 }
 
 function MessageHistoryDialog({ contact, messages, loading, onClose }) {
@@ -55,7 +101,7 @@ function MessageHistoryDialog({ contact, messages, loading, onClose }) {
                 className={`autodm-bubble-row ${message.direction === 'outbound' ? 'is-outbound' : ''}`}
               >
                 <div className="autodm-bubble">
-                  <p>{message.content}</p>
+                  <MessageBubbleContent message={message} />
                   <time>{new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time>
                 </div>
               </div>
@@ -136,10 +182,13 @@ export default function AutoDMContactsPage() {
             {contacts.length} contact{contacts.length !== 1 ? 's' : ''} from Instagram automation conversations.
           </p>
         </div>
-        <button type="button" className="btn-ghost" onClick={exportCSV} disabled={contacts.length === 0}>
-          <Download size={15} />
-          Export
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <AutoDMAccountSwitcher />
+          <button type="button" className="btn-secondary" onClick={exportCSV} disabled={contacts.length === 0}>
+            <Download size={15} />
+            Export
+          </button>
+        </div>
       </header>
 
       <div className="autodm-toolbar">
