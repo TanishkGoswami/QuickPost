@@ -16,9 +16,9 @@ export function KeywordInput({
   const [inputValue, setInputValue] = useState("");
 
   const addKeyword = () => {
-    const trimmed = inputValue.trim();
-    if (trimmed && !keywords.includes(trimmed)) {
-      onChange([...keywords, trimmed]);
+    const trimmed = inputValue.trim().split(' ')[0];
+    if (trimmed) {
+      onChange([trimmed]);
       setInputValue("");
     }
   };
@@ -27,24 +27,26 @@ export function KeywordInput({
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
-        <Input
-          value={inputValue}
-          onChange={(event) => setInputValue(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              addKeyword();
-            }
-          }}
-          placeholder="Enter a keyword..."
-          className="flex-1"
-        />
-        <Button type="button" onClick={addKeyword} disabled={!inputValue.trim()}>
-          <Plus className="mr-1 h-4 w-4" />
-          Add
-        </Button>
-      </div>
+      {keywords.length === 0 && (
+        <div className="flex gap-2">
+          <Input
+            value={inputValue}
+            onChange={(event) => setInputValue(event.target.value.replace(/\s/g, ''))} // prevent spaces
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                addKeyword();
+              }
+            }}
+            placeholder="Enter a single keyword..."
+            className="flex-1"
+          />
+          <Button type="button" onClick={addKeyword} disabled={!inputValue.trim()}>
+            <Plus className="mr-1 h-4 w-4" />
+            Add
+          </Button>
+        </div>
+      )}
 
       {keywords.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -69,7 +71,7 @@ export function KeywordInput({
               <button
                 key={keyword}
                 type="button"
-                onClick={() => onChange([...keywords, keyword])}
+                onClick={() => onChange([keyword])}
                 className="rounded-full border border-dashed border-black/15 bg-white px-3 py-1 text-sm transition-colors hover:border-[var(--arc)] hover:text-[var(--arc)]"
               >
                 + {keyword}

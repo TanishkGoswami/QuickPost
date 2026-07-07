@@ -88,11 +88,12 @@ export function AutoDMProvider({ children }) {
     }
   }, [hasPostingInstagram, loadStatus]);
 
-  const importInstagram = useCallback(async () => {
+  const importInstagram = useCallback(async (instagramAccountId) => {
     if (status?.autoDMStorageReady === false) {
       throw new Error(status.autoDMStorageError || 'AutoDM storage is not ready.');
     }
-    const res = await apiClient.post('/api/autodm/import-instagram');
+    const payload = instagramAccountId ? { instagramAccountId } : {};
+    const res = await apiClient.post('/api/autodm/import-instagram', payload);
     await loadStatus();
     return res.data.account;
   }, [loadStatus, status?.autoDMStorageError, status?.autoDMStorageReady]);
@@ -102,10 +103,15 @@ export function AutoDMProvider({ children }) {
   }, []);
 
   const loadAutomations = useCallback(async () => {
+    if (!activeAccount?.id) {
+      setAutomations([]);
+      return;
+    }
+
     try {
       setAutomationsLoading(true);
       const res = await apiClient.get('/api/autodm/automations', {
-        params: activeAccount?.id ? { instagramAccountId: activeAccount.id } : {},
+        params: { instagramAccountId: activeAccount.id },
       });
       setAutomations(res.data.automations || []);
     } catch (err) {
@@ -178,7 +184,10 @@ export function AutoDMProvider({ children }) {
   }, [activeAccount?.id]);
 
   const fetchInstagramMedia = useCallback(async (limit = 30) => {
-    const res = await apiClient.get('/api/autodm/instagram-media', { params: { limit } });
+    const instagramAccountId = activeAccount?.id || activeAccount?.instagram_business_account_id || activeAccount?.page_id || activeAccount?.instagram_user_id;
+    const res = await apiClient.get('/api/autodm/instagram-media', { 
+      params: { limit, ...(instagramAccountId ? { instagramAccountId } : {}) } 
+    });
     if (res.data.account) {
       setStatus((prev) => {
         const previousAccounts = prev?.autodmAccounts || [];
@@ -193,8 +202,10 @@ export function AutoDMProvider({ children }) {
       });
       setActiveAccount(res.data.account);
     }
-    return res.data.media || [];
-  }, []);
+    const media = res.data.media || [];
+    media.warning = res.data.warning || null;
+    return media;
+  }, [activeAccount?.id, activeAccount?.instagram_business_account_id, activeAccount?.page_id, activeAccount?.instagram_user_id]);
 
   const autodmAccounts = status?.autodmAccounts || [];
   const hasSocialInstagramConnection = status?.hasSocialInstagramConnection || false;

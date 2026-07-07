@@ -27,7 +27,7 @@ const PLANS = [
   {
     name: 'Pro',
     id: '999',
-    price: { 1: 999, 3: 899, 6: 799, 12: 699 },
+    price: { 1: 999, 3: 899, 6: 799, 12: 799 },
     description: 'For creators who broadcast seriously across every platform.',
     icon: <Sparkles size={20} />,
     features: [

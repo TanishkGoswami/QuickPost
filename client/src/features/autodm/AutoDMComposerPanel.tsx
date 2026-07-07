@@ -185,6 +185,7 @@ export function AutoDMComposerPanel({ config, onChange, postType }) {
               <ResponseFlowBuilder
                 responseFlow={config.responseFlow}
                 onChange={(responseFlow) => update({ responseFlow })}
+                compact={true}
               />
             </div>
           </div>

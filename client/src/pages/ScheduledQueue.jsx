@@ -54,6 +54,12 @@ const STATUS_CONFIG = {
     icon: CalendarClock,
     pulse: false,
   },
+  queued: {
+    label: "Queued",
+    color: "bg-violet-50 text-violet-700 border-violet-200",
+    icon: Clock,
+    pulse: false,
+  },
   processing: {
     label: "Publishing…",
     color: "bg-amber-50 text-amber-700 border-amber-200",

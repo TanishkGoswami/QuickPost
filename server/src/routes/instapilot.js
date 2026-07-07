@@ -49,8 +49,13 @@ router.get('/accounts', authenticateUser, asyncHandler(async (req, res) => {
 }));
 
 router.post('/accounts/import-social-instagram', authenticateUser, asyncHandler(async (req, res) => {
-  const account = await importConnectedInstagram(req.user);
-  res.status(201).json({ success: true, account });
+  try {
+    const account = await importConnectedInstagram(req.user);
+    res.status(201).json({ success: true, account });
+  } catch (err) {
+    import('fs').then(fs => fs.writeFileSync('import-error.log', err.stack || err.toString()));
+    throw err;
+  }
 }));
 
 router.delete('/accounts/:id', authenticateUser, asyncHandler(async (req, res) => {

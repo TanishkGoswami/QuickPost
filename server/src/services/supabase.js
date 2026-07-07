@@ -204,6 +204,19 @@ export async function getTokensForUser(userId) {
           username: row.username
         };
       }
+    } // End of for loop
+
+    // Also fetch from instagram_accounts to support multiple IG accounts
+    const { data: igData, error: igError } = await supabase
+      .from('instagram_accounts')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_connected', true);
+      
+    if (!igError && igData) {
+      tokens.instagramAccounts = igData;
+    } else {
+      tokens.instagramAccounts = [];
     }
 
     return tokens;
@@ -376,6 +389,29 @@ export async function getConnectedAccounts(userOrId) {
         username: row.username || null,
         profilePicture: profilePicture
       };
+    }
+
+    // Fetch multiple instagram accounts
+    const { data: igData } = await supabase
+      .from('instagram_accounts')
+      .select('id, instagram_business_account_id, instagram_username, profile_picture_url, token_expires_at, updated_at')
+      .in('user_id', userIds)
+      .eq('is_connected', true);
+
+    if (igData && igData.length > 0) {
+      result.instagramAccounts = igData.map(acc => ({
+        id: acc.id,
+        connected: true,
+        instagram_business_id: acc.instagram_business_account_id,
+        username: acc.instagram_username,
+        profilePicture: acc.profile_picture_url,
+        token_expiry: acc.token_expires_at,
+        updated_at: acc.updated_at
+      }));
+      // Ensure 'instagram' key shows connected if there's at least one
+      result.instagram.connected = true;
+    } else {
+      result.instagramAccounts = [];
     }
 
     console.log(`✅ [SUPABASE] Final connected status:`, Object.keys(result).filter(k => result[k].connected));

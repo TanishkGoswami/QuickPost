@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
+  AlertTriangle,
   BarChart3,
   Camera,
   ExternalLink,
@@ -16,6 +17,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useAutoDM } from '../../context/AutoDMContext';
+import AutoDMAccountSwitcher from './AutoDMAccountSwitcher';
 
 function compactNumber(value) {
   if (value == null) return '-';
@@ -55,13 +57,26 @@ function MiniStat({ label, value }) {
   );
 }
 
-function MediaGrid({ items, loading, emptyLabel }) {
+function MediaGrid({ items, loading, emptyLabel, error, onReconnect }) {
   if (loading) {
     return (
       <div className="autodm-media-grid">
         {Array.from({ length: 10 }).map((_, index) => (
           <div key={index} className="skeleton-shimmer autodm-media-skeleton" />
         ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="autodm-empty card">
+        <AlertTriangle size={32} style={{ color: '#d93025' }} />
+        <h3>Failed to load posts</h3>
+        <p>{error}</p>
+        <button type="button" className="btn-arc mt-2" onClick={onReconnect}>
+          Reconnect Instagram
+        </button>
       </div>
     );
   }
@@ -114,10 +129,12 @@ export default function AutoDMInstagramProfilePage() {
     hasSocialInstagramConnection,
     importInstagram,
     fetchInstagramMedia,
+    startOAuth
   } = useAutoDM();
 
   const [media, setMedia] = useState([]);
   const [mediaLoading, setMediaLoading] = useState(false);
+  const [mediaError, setMediaError] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState(null);
   const [activeTab, setActiveTab] = useState('posts');
@@ -143,11 +160,13 @@ export default function AutoDMInstagramProfilePage() {
 
   const loadMedia = async () => {
     setMediaLoading(true);
+    setMediaError(null);
     try {
       const data = await fetchInstagramMedia(60);
       setMedia(data);
     } catch (error) {
       console.error('[AutoDM] Instagram media load error:', error);
+      setMediaError(error.response?.data?.error || error.message || 'Failed to load media');
       setMedia([]);
     } finally {
       setMediaLoading(false);
@@ -163,6 +182,15 @@ export default function AutoDMInstagramProfilePage() {
       setImportError(error.response?.data?.error || error.message || 'Unable to import Instagram account');
     } finally {
       setImporting(false);
+    }
+  };
+
+  const handleReconnect = async () => {
+    try {
+      const url = await startOAuth();
+      if (url) window.location.href = url;
+    } catch (err) {
+      console.error('Failed to reconnect:', err);
     }
   };
 
@@ -200,6 +228,9 @@ export default function AutoDMInstagramProfilePage() {
 
   return (
     <div className="autodm-page">
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+        <AutoDMAccountSwitcher />
+      </div>
       <section className="card-shadow autodm-profile-hero">
         <div className="autodm-profile-avatar">
           {activeAccount.profile_picture_url ? (
@@ -231,30 +262,6 @@ export default function AutoDMInstagramProfilePage() {
         </div>
       </section>
 
-      {autodmAccounts.length > 1 ? (
-        <section className="card autodm-account-strip">
-          <p className="eyebrow">Connected Accounts</p>
-          <div>
-            {autodmAccounts.map((account) => {
-              const accountUsername = account.username || account.instagram_username;
-              const isActive = account.id === activeAccount.id;
-              return (
-                <button
-                  key={account.id}
-                  type="button"
-                  className={isActive ? 'is-active' : ''}
-                  onClick={() => setActiveAccount(account)}
-                >
-                  <span className="autodm-avatar">
-                    {account.profile_picture_url ? <img src={account.profile_picture_url} alt="" /> : accountUsername?.[0]?.toUpperCase()}
-                  </span>
-                  <span>@{accountUsername}</span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
 
       <section className="autodm-section">
         <div className="autodm-section-heading">
@@ -335,6 +342,8 @@ export default function AutoDMInstagramProfilePage() {
           items={activeMedia}
           loading={mediaLoading}
           emptyLabel={activeTab === 'reels' ? 'No reels found' : activeTab === 'all' ? 'No media found' : 'No posts found'}
+          error={mediaError}
+          onReconnect={handleReconnect}
         />
       </section>
     </div>

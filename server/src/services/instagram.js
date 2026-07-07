@@ -119,7 +119,7 @@ export async function postImageToInstagram(imageUrl, caption, tokens) {
  * @param {Object} tokens - Instagram tokens object
  * @returns {Object} Result with media ID
  */
-export async function postToInstagram(videoUrl, caption, tokens) {
+export async function postToInstagram(videoUrl, caption, tokens, onProgress = null) {
   try {
     if (!tokens || !tokens.accessToken || !tokens.businessId) {
       throw new Error('Missing Instagram credentials');
@@ -160,11 +160,16 @@ export async function postToInstagram(videoUrl, caption, tokens) {
     console.log('Step 2: Polling for video processing status...');
     let isReady = false;
     let attempts = 0;
-    const maxAttempts = 12; // Wait up to 60 seconds
+    const maxAttempts = 60; // Wait up to 300 seconds (5 minutes)
     
     while (!isReady && attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 5000));
       attempts++;
+      
+      if (onProgress) {
+        const simulatedProgress = Math.floor(10 + (attempts / maxAttempts) * 85);
+        onProgress(simulatedProgress);
+      }
       
       try {
         const statusRes = await axios.get(

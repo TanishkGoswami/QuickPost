@@ -14,6 +14,7 @@ import trendsRouter from './routes/trends.js';
 import aiRouter from './routes/ai.js';
 import instapilotRouter from './routes/instapilot.js';
 import autodmRouter from './routes/autodm.js';
+import billingRouter from './routes/billing.js';
 import { initScheduler } from './services/scheduler.js';
 import supabase from './services/supabase.js';
 import { processInstagramWebhook } from './services/instapilot.js';
@@ -80,6 +81,7 @@ app.use('/api', trendsRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/instapilot', instapilotRouter);
 app.use('/api/autodm', autodmRouter);
+app.use('/api/billing', billingRouter);
 
 // Global SSE clients list for Realtime Frontend Updates
 const sseClients = [];
@@ -162,6 +164,9 @@ const server = app.listen(PORT, () => {
 server.timeout = 300000;
 server.keepAliveTimeout = 300000;
 
+const isAutoDMButtonInteraction = (webhookPayload = {}) =>
+  Boolean(webhookPayload?.message?.quick_reply?.payload || webhookPayload?.postback);
+
 // Setup Supabase Realtime listener for Edge Function Webhooks
 // Triggering nodemon restart...
 supabase
@@ -174,6 +179,10 @@ supabase
       if (log.event_type === 'messages' || log.event_type === 'messaging_postbacks') {
         // Skip outbound messages (where sender is the page itself) to prevent infinite loops!
         if (log.payload?.message?.is_echo) return;
+        if (isAutoDMButtonInteraction(log.payload)) {
+          console.log('Skipping InstaPilot for AutoDM button interaction');
+          return;
+        }
         console.log('⚡ Detected new DM from Edge Function webhook log!');
         // Wrap the payload back into standard Meta format
         const metaPayload = {

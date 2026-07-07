@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAutoDM } from '../../context/AutoDMContext';
+import AutoDMAccountSwitcher from './AutoDMAccountSwitcher';
 
 function formatRelativeTime(value) {
   if (!value) return 'Never';
@@ -376,10 +377,13 @@ export default function AutoDMAutomationsPage() {
           <h1>Automations</h1>
           <p>Create and manage your Instagram automations</p>
         </div>
-        <button type="button" className="autodm-create-btn" onClick={() => navigate('/dashboard/auto-dm/automations/new')}>
-          <Plus size={16} />
-          Create
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <AutoDMAccountSwitcher />
+          <button type="button" className="autodm-create-btn" onClick={() => navigate('/dashboard/auto-dm/automations/new')}>
+            <Plus size={16} />
+            Create
+          </button>
+        </div>
       </header>
 
       <section className="card-shadow autodm-automation-table">

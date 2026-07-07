@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import ConnectedPlatformsPanel from '../components/platforms/ConnectedPlatformsPanel';
 
-// Returns true if user has any paid plan (from hub or social)
+// QuickPost billing is independent from Hub product names.
 function hasPaidPlan(plan) {
   if (!plan) return false;
   const p = plan.toLowerCase();
@@ -21,9 +21,10 @@ const PLANS = [
     icon: <Zap size={20} />,
     features: [
       '3 connected social accounts',
-      '10 posts per month',
-      'Basic scheduling',
-      '7-day post history',
+      '10 scheduled posts per channel',
+      '1 active trigger word',
+      '50 automated replies / month',
+      'QuickPost Branding Watermark',
     ],
     cta: 'Current Plan',
     highlighted: false,
@@ -31,20 +32,39 @@ const PLANS = [
   {
     name: 'Pro',
     id: '999',
-    price: { 1: 999, 3: 899, 6: 849, 12: 799 },
+    price: { 1: 999, 3: 899, 6: 799, 12: 799 },
     description: 'For creators who broadcast seriously across every platform.',
     icon: <Sparkles size={20} />,
     features: [
       '10 connected social accounts',
-      'Unlimited posts',
-      'Smart scheduling & timezone sync',
-      'Analytics dashboard',
-      '90-day post history',
+      'Unlimited monthly posts',
+      'Up to 10 Instagram Auto-DM accounts',
+      'Unlimited trigger words & replies',
+      'Hinglish & Hindi trigger matching',
+      'Unlimited contacts',
       'Priority email support',
     ],
     cta: 'Upgrade to Pro',
     highlighted: true,
     badge: 'Most popular',
+  },
+  {
+    name: 'Enterprise',
+    id: 'enterprise',
+    price: { 1: 2999, 3: 2699, 6: 2499, 12: 2499 },
+    description: 'For teams, agencies, and heavy automation users.',
+    icon: <Building2 size={20} />,
+    features: [
+      '30 connected social accounts',
+      'Up to 30 Instagram Auto-DM accounts',
+      'Unlimited posts, replies & contacts',
+      'Hinglish & Hindi trigger matching',
+      'Approval workflows',
+      '10 team members',
+      'Developer API access',
+    ],
+    cta: 'Upgrade to Enterprise',
+    highlighted: false,
   }
 ];
 
@@ -54,8 +74,7 @@ export default function BillingPage() {
   const [billing, setBilling] = useState(1);
   const [upgrading, setUpgrading] = useState(null);
 
-  // Show exact plan name from hub (e.g. "Social Pilot", "GAP Ultimate Ecosystem")
-  const currentPlanName = user?.plan || 'Free';
+  const currentPlanName = user?.entitlements?.plan?.name || 'Free';
   const isPaid = hasPaidPlan(currentPlanName);
 
   React.useEffect(() => { window.scrollTo(0, 0); }, []);
@@ -182,7 +201,7 @@ export default function BillingPage() {
       </div>
 
       {/* Pricing cards */}
-      <div style={{ maxWidth: 850, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, alignItems: 'start' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, alignItems: 'start' }}>
         {PLANS.map((plan, i) => {
           const isCurrentPlan = currentPlanName === plan.name;
           

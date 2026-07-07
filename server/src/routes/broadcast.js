@@ -17,7 +17,7 @@ import { postToThreads } from "../services/threads.js";
 import { broadcastToX } from "../services/x.js";
 import { postToReddit } from "../services/reddit.js";
 import { authenticateUser } from "../middleware/authenticateUser.js";
-import { saveBroadcast } from "../services/broadcasts.js";
+import { assertScheduledQueueCapacity, saveBroadcast } from "../services/broadcasts.js";
 import {
   uploadToCloudinary,
   isCloudinaryConfigured,
@@ -29,6 +29,9 @@ import fs from "fs";
 import { resolveMentions } from "../services/mentions.js";
 import { createOrUpdateComposerAutomation } from "../services/autodm.js";
 import { getValidInstagramTokensForPosting } from "../services/instagramToken.js";
+import { decryptToken } from "../services/instapilot.js";
+import { enqueueBroadcastJob, isBroadcastQueueEnabled } from "../services/broadcastQueue.js";
+import { requireFeature, reserveUsage } from "../middleware/entitlements.js";
 
 const router = express.Router();
 
@@ -41,6 +44,7 @@ const router = express.Router();
 router.post(
   "/broadcast",
   authenticateUser,
+  requireFeature("publishing"),
   (req, res, next) => {
     upload.fields([
       { name: "media", maxCount: 10 },
@@ -50,20 +54,17 @@ router.post(
       next();
     });
   },
+  (req, res, next) => {
+    if (!req.files || (!req.files.media && !req.files.youtubeThumbnail)) {
+      return res.status(400).json({ success: false, error: "No media files uploaded" });
+    }
+    next();
+  },
   async (req, res) => {
     console.log("📥 [BROADCAST] Sync job request received");
 
     try {
       // ── Validate request ──────────────────────────────────────────────────
-      if (
-        !req.files ||
-        (!req.files["media"] && !req.files["youtubeThumbnail"])
-      ) {
-        return res
-          .status(400)
-          .json({ success: false, error: "No media files uploaded" });
-      }
-
     const { 
       caption, 
       selectedChannels, 
@@ -110,6 +111,24 @@ router.post(
 
       const filePaths = uploadedFiles.map((f) => f.path);
       const filenames = uploadedFiles.map((f) => f.filename);
+
+      if (isScheduled) {
+        try {
+          await assertScheduledQueueCapacity(
+            userId,
+            channels,
+            req.entitlements?.limits?.scheduled_queue,
+          );
+        } catch (queueError) {
+          cleanupFiles(filePaths, thumbnailFile);
+          return res.status(queueError.code === 'PLAN_LIMIT_REACHED' ? 403 : 500).json({
+            success: false,
+            error: queueError.message,
+            code: queueError.code || 'QUEUE_CAPACITY_CHECK_FAILED',
+            metric: queueError.metric,
+          });
+        }
+      }
 
       // ── Detect media type ─────────────────────────────────────────────────
       const videos = uploadedFiles.filter((f) =>
@@ -291,6 +310,9 @@ async function processBroadcastJob({
       });
 
       console.log(`✓ [JOB:${jobId}] All files uploaded. URLs:`, mediaUrls);
+      
+      // Clean up the local temporary files immediately since they are now safely in Cloudinary
+      cleanupFiles(filePaths, thumbnailFile);
     } else {
       // Fallback to local URLs if No Cloudinary
       const serverPublicUrl =
@@ -341,8 +363,10 @@ async function processBroadcastJob({
         progress: 100,
         step: `Post scheduled for ${new Date(scheduledAt).toLocaleString()}!`,
       });
-      console.log(`📅 [JOB:${jobId}] Broadcast successfully scheduled. Files preserved for scheduler.`);
-      // ⚠️ DO NOT cleanup files here — the scheduler needs the local filePaths
+      console.log(`📅 [JOB:${jobId}] Broadcast successfully scheduled. Cleaning up local files to save space.`);
+      if (isCloudinaryConfigured()) {
+        cleanupFiles(filePaths, thumbnailFile);
+      }
       return;
     } catch (dbErr) {
       failJob(jobId, `Scheduling failed: ${dbErr.message}`);
@@ -352,6 +376,55 @@ async function processBroadcastJob({
   }
 
   // ── Phase 3: Immediate Broadcast (Platform APIs) ────────────────────────
+  if (isBroadcastQueueEnabled()) {
+    updateJob(jobId, { progress: 80, step: "Queueing broadcast worker..." });
+    try {
+      const savedBroadcast = await saveBroadcast(
+        userId,
+        caption,
+        filenames,
+        { mediaUrls, thumbnailUrl: finalThumbnailUrl },
+        mediaType,
+        {
+          ...platData,
+          sourceJobId: jobId,
+          source_job_id: jobId,
+          postType,
+          autoDMConfig: autoDMConfig?.enabled ? autoDMConfig : null,
+          selectedChannels: channels,
+          filePaths,
+          userTimezone: userTimezone || 'UTC',
+          selectedAspectRatio,
+          selectedPostSizePreset
+        },
+        'queued',
+        new Date().toISOString()
+      );
+
+      if (!savedBroadcast?.id) {
+        throw new Error('Failed to save queued broadcast record');
+      }
+
+      await enqueueBroadcastJob(savedBroadcast.id);
+      updateJob(jobId, {
+        status: "completed",
+        progress: 100,
+        step: "Broadcast queued for publishing.",
+        meta: {
+          ...(getJob(jobId)?.meta || {}),
+          broadcastId: savedBroadcast.id,
+          queued: true,
+        },
+      });
+      console.log(`📨 [JOB:${jobId}] Broadcast queued in BullMQ: ${savedBroadcast.id}`);
+      return;
+    } catch (queueErr) {
+      console.error(`❌ [JOB:${jobId}] Queue handoff failed:`, queueErr.message);
+      failJob(jobId, `Queue handoff failed: ${queueErr.message}`);
+      return;
+    }
+  }
+
   const primaryMediaUrl = mediaUrls[0];
   const youtubeThumbnailPath = thumbnailFile
     ? thumbnailFile.path
@@ -406,34 +479,80 @@ async function processBroadcastJob({
   }
 
   // Instagram
-  if (channels.includes("instagram") && tokens.instagram) {
-    platformPromises.push(
-      (async () => {
-        try {
-          const instagramTokens = await getValidInstagramTokensForPosting(userId, tokens.instagram);
-          tokens.instagram = instagramTokens;
-          const resolvedCaption = resolveMentions(caption, 'instagram', instagramTokens);
-          let result;
-          if (mediaUrls.length > 1 && !isVideo) {
-            result = await postCarouselToInstagram(mediaUrls, resolvedCaption, instagramTokens);
-          } else if (isVideo) {
-            const igTokens = { ...instagramTokens, coverUrl: autoCoverImageUrl };
-            result = await postToInstagram(primaryMediaUrl, resolvedCaption, igTokens);
-          } else {
-            result = await postImageToInstagram(primaryMediaUrl, resolvedCaption, instagramTokens);
+  const instagramChannels = channels.filter(c => c === "instagram" || c.startsWith("instagram:"));
+  if (instagramChannels.length > 0 && (tokens.instagram || tokens.instagramAccounts?.length > 0)) {
+    const postedBusinessIds = new Set();
+    
+    for (const igChannel of instagramChannels) {
+      let currentTokens;
+      let platformKey = "Instagram";
+      
+      if (igChannel === "instagram") {
+        currentTokens = tokens.instagram;
+      } else {
+        const accountId = igChannel.split(":")[1];
+        const igAccount = tokens.instagramAccounts?.find(acc => acc.id === accountId);
+        if (igAccount && igAccount.access_token_encrypted) {
+          try {
+            const decrypted = decryptToken(igAccount.access_token_encrypted);
+            currentTokens = {
+              accessToken: decrypted.pageAccessToken || decrypted.userAccessToken,
+              businessId: igAccount.instagram_business_account_id,
+              pageId: igAccount.page_id,
+              tokenExpiry: igAccount.token_expires_at,
+              username: igAccount.instagram_username
+            };
+            if (igAccount.instagram_username) {
+              platformKey = `Instagram (@${igAccount.instagram_username})`;
+            }
+          } catch (err) {
+            console.error(`Failed to decrypt token for IG account ${accountId}:`, err);
           }
-          return onChannelComplete("Instagram", result);
-        } catch (error) {
-          return onChannelComplete("Instagram", {
-            success: false,
-            platform: "Instagram",
-            error: error.message || "Instagram token expired. Please reconnect Instagram.",
-            errorCode: error.code || error.statusCode || null,
-            requiresReconnect: Boolean(error.requiresReconnect || error.code === "REAUTH_REQUIRED"),
-          });
         }
-      })(),
-    );
+      }
+
+      if (currentTokens) {
+        if (currentTokens.businessId) {
+          if (postedBusinessIds.has(currentTokens.businessId)) continue;
+          postedBusinessIds.add(currentTokens.businessId);
+        }
+        platformPromises.push(
+          (async () => {
+            try {
+              const instagramTokens = await getValidInstagramTokensForPosting(userId, currentTokens);
+              // We don't overwrite tokens.instagram here because there might be multiple
+              const resolvedCaption = resolveMentions(caption, 'instagram', instagramTokens);
+              let result;
+              if (mediaUrls.length > 1 && !isVideo) {
+                result = await postCarouselToInstagram(mediaUrls, resolvedCaption, instagramTokens);
+              } else if (isVideo) {
+                const igTokens = { ...instagramTokens, coverUrl: autoCoverImageUrl };
+                result = await postToInstagram(primaryMediaUrl, resolvedCaption, igTokens, (pct) => {
+                  const base = 30 + Math.floor((completedChannels / selectedChannelCount) * 55);
+                  const slice = Math.floor((1 / selectedChannelCount) * 55);
+                  const currentPct = base + Math.floor((pct / 100) * slice);
+                  updateJob(jobId, {
+                    progress: Math.min(currentPct, 85),
+                    step: `Processing video on Instagram (${pct}%).`,
+                  });
+                });
+              } else {
+                result = await postImageToInstagram(primaryMediaUrl, resolvedCaption, instagramTokens);
+              }
+              return onChannelComplete(platformKey, result);
+            } catch (error) {
+              return onChannelComplete(platformKey, {
+                success: false,
+                platform: platformKey,
+                error: error.message || "Instagram token expired. Please reconnect Instagram.",
+                errorCode: error.code || error.statusCode || null,
+                requiresReconnect: Boolean(error.requiresReconnect || error.code === "REAUTH_REQUIRED"),
+              });
+            }
+          })(),
+        );
+      }
+    }
   }
 
   // Facebook
