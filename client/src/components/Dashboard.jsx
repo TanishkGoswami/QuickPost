@@ -35,16 +35,18 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 /* ── token shortcuts ── */
 const css = {
-  canvas: "var(--canvas)",
-  lifted: "var(--canvas-lifted)",
-  ink: "var(--ink)",
-  white: "var(--white)",
-  slate: "var(--slate)",
-  dust: "var(--dust)",
-  arc: "var(--arc)",
-  shadow: "var(--shadow-card)",
-  r_btn: "var(--r-btn)",
-  r_hero: "var(--r-hero)",
+  canvas: "#f5f1ec",
+  lifted: "#ffffff",
+  surface2: "#ebe7e1",
+  hairline: "#d3cec6",
+  ink: "#111111",
+  white: "#ffffff",
+  slate: "#626260",
+  dust: "#7b7b78",
+  arc: "#ff5600",
+  shadow: "none",
+  r_btn: "8px",
+  r_hero: "16px",
   r_pill: "var(--r-pill)",
 };
 
@@ -464,17 +466,15 @@ function PinterestCard({ post, onOpen, formatDate }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         position: "relative",
-        borderRadius: 20,
+        borderRadius: 16,
         overflow: "hidden",
         cursor: "pointer",
         background: hasMedia ? "transparent" : css.lifted,
-        boxShadow: hovered
-          ? "0 18px 42px rgba(20,20,19,0.13), 0 4px 12px rgba(20,20,19,0.06)"
-          : "0 1px 3px rgba(20,20,19,0.05), 0 10px 28px rgba(20,20,19,0.055)",
-        transform: hovered ? "translateY(-3px)" : "none",
+        boxShadow: "none",
+        transform: hovered ? "translateY(-1px)" : "none",
         transition:
-          "box-shadow 0.35s cubic-bezier(0.2,0.8,0.2,1), transform 0.35s cubic-bezier(0.2,0.8,0.2,1)",
-        border: "1px solid rgba(20,20,19,0.075)",
+          "border-color 0.2s ease, transform 0.2s ease",
+        border: `1px solid ${hovered ? css.ink : css.hairline}`,
         willChange: "transform",
       }}
     >
@@ -966,10 +966,10 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
       style={{
         background: css.lifted,
         borderRadius: css.r_hero,
-        border: `1.5px solid ${expanded ? "rgba(243, 115, 56, 0.25)" : "rgba(20,20,19,0.06)"}`,
+        border: `1px solid ${expanded ? css.ink : css.hairline}`,
         overflow: "hidden",
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        boxShadow: expanded ? css.shadow : "0 4px 15px rgba(0,0,0,0.01)",
+        boxShadow: "none",
         position: "relative"
       }}
     >
@@ -1250,8 +1250,8 @@ function SkeletonCard({ height }) {
       style={{
         borderRadius: 16,
         overflow: "hidden",
-        border: "1px solid rgba(20,20,19,0.075)",
-        boxShadow: "0 1px 3px rgba(20,20,19,0.05), 0 10px 28px rgba(20,20,19,0.045)",
+        border: `1px solid ${css.hairline}`,
+        boxShadow: "none",
       }}
     >
       <div className="skeleton-shimmer" style={{ height, minHeight: 170 }} />
@@ -1525,10 +1525,11 @@ function Dashboard() {
 
   return (
     <div
+      className="dashboard-intercom"
       style={{
         minHeight: "100vh",
         background: css.canvas,
-        fontFamily: "var(--font)",
+        fontFamily: "var(--font-body)",
       }}
     >
       {/* ── Top header ── */}
@@ -1556,8 +1557,8 @@ function Dashboard() {
       <div
         style={{
           background: css.lifted,
-          borderBottom: "1px solid rgba(20,20,19,0.08)",
-          padding: "clamp(14px, 3vw, 20px) 16px",
+          borderBottom: `1px solid ${css.hairline}`,
+          padding: "clamp(24px, 4vw, 40px) clamp(18px, 3vw, 32px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -1580,12 +1581,12 @@ function Dashboard() {
             </div>
             <h1
               style={{
-                fontSize: "clamp(20px, 4vw, 26px)",
-                fontWeight: 600,
+                fontSize: "clamp(36px, 5vw, 56px)",
+                fontWeight: 500,
                 color: css.ink,
                 margin: 0,
-                letterSpacing: "-0.02em",
-                lineHeight: 1,
+                letterSpacing: "-0.025em",
+                lineHeight: 1.08,
               }}
             >
               Analytics
@@ -1597,7 +1598,7 @@ function Dashboard() {
                 alignItems: "center",
                 gap: 7,
                 padding: "6px 11px",
-                borderRadius: css.r_pill,
+                borderRadius: 6,
                 border: "1px solid rgba(5,150,105,0.2)",
                 background: "#eefdf5",
                 color: "#065f46",
@@ -1614,7 +1615,7 @@ function Dashboard() {
               style={{
                 padding: "4px 10px",
                 background: "var(--canvas)",
-                borderRadius: 20,
+              borderRadius: css.r_btn,
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
@@ -1660,7 +1661,7 @@ function Dashboard() {
               gap: 8,
               fontSize: 14,
               padding: "10px 20px",
-              borderRadius: css.r_pill,
+              borderRadius: css.r_btn,
             }}
           >
             <Plus size={16} />
@@ -1673,8 +1674,8 @@ function Dashboard() {
       {/* ── Tabs ── */}
       <div
         style={{
-          background: css.lifted,
-          borderBottom: "1px solid rgba(20,20,19,0.08)",
+          background: css.canvas,
+          borderBottom: `1px solid ${css.hairline}`,
           padding: "0 16px",
           display: "flex",
           alignItems: "center",
@@ -1701,8 +1702,8 @@ function Dashboard() {
                 padding: "14px 0",
                 fontSize: 11,
                 fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
+                textTransform: "none",
+                letterSpacing: 0,
                 color: active ? css.ink : css.slate,
                 border: "none",
                 background: "transparent",
@@ -1746,7 +1747,7 @@ function Dashboard() {
           <div
             style={{
               background: css.canvas,
-              borderBottom: "1px solid rgba(20,20,19,0.06)",
+              borderBottom: `1px solid ${css.hairline}`,
               padding: "12px 16px",
               display: "flex",
               flexDirection: window.innerWidth < 768 ? "column" : "row",
@@ -1784,7 +1785,7 @@ function Dashboard() {
                 style={{
                   width: 1,
                   height: 16,
-                  background: "rgba(20,20,19,0.1)",
+                background: css.hairline,
                   flexShrink: 0,
                 }}
               />
@@ -1841,8 +1842,8 @@ function Dashboard() {
                   style={{
                     padding: "8px 16px 8px 32px",
                     background: css.lifted,
-                    border: "1px solid rgba(20,20,19,0.1)",
-                    borderRadius: css.r_pill,
+                    border: `1px solid ${css.hairline}`,
+                    borderRadius: css.r_btn,
                     fontSize: 13,
                     color: css.ink,
                     fontFamily: "var(--font)",
@@ -1855,7 +1856,7 @@ function Dashboard() {
                 style={{
                   display: "flex",
                   background: css.lifted,
-                  border: "1px solid rgba(20,20,19,0.08)",
+                  border: `1px solid ${css.hairline}`,
                   borderRadius: css.r_pill,
                   padding: 3,
                   gap: 2,
@@ -2045,7 +2046,7 @@ function Dashboard() {
             style={{
               background: css.lifted,
               borderRadius: css.r_hero,
-              border: "1px dashed rgba(20,20,19,0.15)",
+              border: `1px dashed ${css.hairline}`,
               padding: "80px 40px",
               textAlign: "center",
             }}
@@ -2075,7 +2076,7 @@ function Dashboard() {
                   position: "relative",
                   width: 64,
                   height: 64,
-                  borderRadius: "50%",
+                  borderRadius: css.r_btn,
                   background: css.ink,
                   display: "flex",
                   alignItems: "center",
@@ -2088,7 +2089,7 @@ function Dashboard() {
             </div>
             <h3
               style={{
-                fontSize: 22,
+              fontSize: 28,
                 fontWeight: 500,
                 color: css.ink,
                 margin: "0 0 10px",

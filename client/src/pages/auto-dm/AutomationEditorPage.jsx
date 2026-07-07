@@ -547,12 +547,12 @@ export default function AutomationEditorPage() {
   const commentStep = responseStep + 1;
   const durationStep = isCommentTrigger ? commentStep + 1 : responseStep + 1;
   return (
-    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-[#F2F4F7]">
+    <div className="autodm-editor-screen flex h-[calc(100vh-64px)] overflow-hidden">
       {/* Left Sidebar - Form */}
-      <div className="w-[450px] flex-shrink-0 bg-white border-r border-black/10 flex flex-col h-full overflow-hidden shadow-sm relative z-10">
+      <div className="autodm-editor-panel w-[450px] flex-shrink-0 flex flex-col h-full overflow-hidden relative z-10">
         
         {/* Top Navbar in Sidebar */}
-        <div className="flex items-center justify-between p-4 border-b border-black/10 bg-white sticky top-0 z-20">
+        <div className="autodm-editor-top flex items-center justify-between p-4 sticky top-0 z-20">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/auto-dm/automations')}>
               <ArrowLeft className="h-5 w-5" />
@@ -579,15 +579,15 @@ export default function AutomationEditorPage() {
         </div>
 
         {/* Scrollable Form Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-gray-50/50">
+        <div className="autodm-editor-scroll flex-1 overflow-y-auto p-6 space-y-8">
           
           {/* Section 1: When someone comments on */}
           <div className="space-y-4">
-            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <h3 className="autodm-editor-heading text-lg flex items-center gap-2">
               <Instagram className="w-5 h-5" />
               When someone comments on
             </h3>
-            <div className="bg-white rounded-xl border border-black/10 p-4 shadow-sm space-y-4">
+            <div className="autodm-editor-card p-4 space-y-4">
                <div className="flex flex-col gap-3">
                   <label className="flex items-center gap-3 cursor-pointer p-2 rounded-lg hover:bg-gray-50 transition-colors">
                      <input 
@@ -604,7 +604,7 @@ export default function AutomationEditorPage() {
                   </label>
                   
                   {!applyToAllMedia && (
-                    <div className="ml-8 p-4 bg-gray-50 rounded-lg border border-black/5">
+                    <div className="autodm-editor-nested ml-8 p-4">
                         {selectedMedia ? (
                             <div className="flex flex-col gap-3">
                                 <div className="flex items-center gap-3">
@@ -648,8 +648,8 @@ export default function AutomationEditorPage() {
 
           {/* Section 2: And this comment has */}
           <div className="space-y-4">
-            <h3 className="text-lg font-bold text-gray-900">And this comment has</h3>
-            <div className="bg-white rounded-xl border border-black/10 p-5 shadow-sm space-y-4">
+            <h3 className="autodm-editor-heading text-lg">And this comment has</h3>
+            <div className="autodm-editor-card p-5 space-y-4">
                 <label className="flex items-center gap-3 cursor-pointer">
                     <input type="radio" checked={true} readOnly className="w-4 h-4 text-primary" />
                     <span className="font-medium text-gray-700">a specific word or words</span>
@@ -691,10 +691,10 @@ export default function AutomationEditorPage() {
 
           {/* Section 3: Two-step DM flow */}
           <div className="space-y-4 pb-20">
-            <h3 className="text-lg font-bold text-gray-900">They will get</h3>
+            <h3 className="autodm-editor-heading text-lg">They will get</h3>
 
-            <div className="overflow-hidden rounded-xl border border-black/10 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b border-black/5 bg-gray-50/60 p-4">
+            <div className="autodm-editor-card overflow-hidden">
+              <div className="autodm-editor-card-head flex items-center justify-between p-4">
                 <div className="flex items-center gap-3">
                   <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#1683dd] text-sm font-bold text-white">
                     1
@@ -728,8 +728,8 @@ export default function AutomationEditorPage() {
               ) : null}
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-black/10 bg-white shadow-sm">
-              <div className="border-b border-black/5 bg-gray-50/60 p-4">
+            <div className="autodm-editor-card overflow-hidden">
+              <div className="autodm-editor-card-head p-4">
                 <div className="flex items-center gap-3">
                   <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#141413] text-sm font-bold text-white">
                     2
@@ -755,8 +755,8 @@ export default function AutomationEditorPage() {
       </div>
 
       {/* Right Canvas - Mobile Preview */}
-      <div className="flex-1 bg-gray-50 relative overflow-hidden flex items-center justify-center">
-         <div className="absolute inset-0 pattern-dots opacity-30" style={{ backgroundSize: '24px 24px', backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)' }} />
+      <div className="autodm-preview-canvas flex-1 relative overflow-hidden flex items-center justify-center">
+         <div className="absolute inset-0 pattern-dots" />
          <div className="relative z-10 w-full max-w-[400px] transform scale-95 origin-center transition-transform hover:scale-100 duration-300">
             <MobilePreview 
                 triggerType={triggerType}
