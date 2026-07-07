@@ -643,19 +643,19 @@ export async function importInstagramAccountToAutoDM(user, targetInstagramAccoun
     'import_instagram_account'
   );
 
-  const { error: profileError } = await autoDMSupabase.from('profiles').upsert(
+  const { error: userSyncError } = await autoDMSupabase.from('users').upsert(
     {
-      id: user.userId,
+      id: primaryUserId,
       email: user.email,
-      full_name: user.name || user.email?.split('@')[0] || null,
-      avatar_url: user.profilePicture || null,
+      name: user.name || user.email?.split('@')[0] || null,
+      profile_picture: user.profilePicture || null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: 'id' }
   );
 
-  if (profileError) {
-    console.warn('[AUTODM] Failed to sync profile:', profileError.message);
+  if (userSyncError) {
+    console.warn('[AUTODM] Failed to sync user:', userSyncError.message);
   }
 
   return data;
@@ -953,9 +953,23 @@ export async function getAutomationForUser(user, automationId) {
   return data;
 }
 
+const STORED_BRANDING_PATTERN =
+  /\n*\s*_(?:⚡\s*)?(?:This automation is from SocialPilot \(social\.getaipilot\.in\)|Automated via QuickPost\.co \(Get it Free\))_\s*$/i;
+
+function removeStoredBranding(value) {
+  if (typeof value === 'string') return value.replace(STORED_BRANDING_PATTERN, '').trimEnd();
+  if (Array.isArray(value)) return value.map(removeStoredBranding);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [key, removeStoredBranding(child)]),
+    );
+  }
+  return value;
+}
+
 export async function createAutomationForUser(user, payload) {
   const autoDMSupabase = getAutoDMSupabaseForUserMutation();
-  const cleanPayload = cleanAutomationPayload(payload, user);
+  const cleanPayload = removeStoredBranding(cleanAutomationPayload(payload, user));
 
   try {
     const automation = await insertAutomationWithUserFallback(autoDMSupabase, cleanPayload, user);
@@ -976,7 +990,9 @@ export async function updateAutomationForUser(user, automationId, payload) {
   const existing = await getAutomationForUser(user, automationId);
   if (!existing) throw new Error('Automation not found');
 
-  const cleanPayload = cleanAutomationPayload(payload, user, { includeUserId: false });
+  const cleanPayload = removeStoredBranding(
+    cleanAutomationPayload(payload, user, { includeUserId: false }),
+  );
 
   const { data, error } = await autoDMSupabase
     .from('automations')

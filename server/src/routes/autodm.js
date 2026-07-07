@@ -17,6 +17,7 @@ import {
   getAutomationAnalytics,
   syncAutomationInsights,
 } from '../services/autodm.js';
+import { requireFeature, requireResourceCapacity } from '../middleware/entitlements.js';
 
 
 const router = express.Router();
@@ -53,7 +54,12 @@ router.get('/status', authenticateUser, async (req, res) => {
   }
 });
 
-router.post('/import-instagram', authenticateUser, async (req, res) => {
+router.post(
+  '/import-instagram',
+  authenticateUser,
+  requireFeature('autodm'),
+  requireResourceCapacity('autodm_accounts', 'instagram_accounts', { is_connected: true }),
+  async (req, res) => {
   try {
     const account = await importInstagramAccountToAutoDM(req.user, req.body?.instagramAccountId);
     res.json({
@@ -67,7 +73,8 @@ router.post('/import-instagram', authenticateUser, async (req, res) => {
       error: error.message || 'Failed to import Instagram account',
     });
   }
-});
+  },
+);
 
 router.post('/oauth-start', authenticateUser, async (req, res) => {
   try {
@@ -118,7 +125,12 @@ router.get('/automations/:id', authenticateUser, async (req, res) => {
   }
 });
 
-router.post('/automations', authenticateUser, async (req, res) => {
+router.post(
+  '/automations',
+  authenticateUser,
+  requireFeature('autodm'),
+  requireResourceCapacity('autodm_automations', 'automations'),
+  async (req, res) => {
   try {
     const automation = await createAutomationForUser(req.user, req.body || {});
     res.status(201).json({ success: true, automation });
@@ -129,9 +141,10 @@ router.post('/automations', authenticateUser, async (req, res) => {
       error: error.message || 'Failed to create Auto DM automation',
     });
   }
-});
+  },
+);
 
-router.patch('/automations/:id', authenticateUser, async (req, res) => {
+router.patch('/automations/:id', authenticateUser, requireFeature('autodm'), async (req, res) => {
   try {
     const automation = await updateAutomationForUser(req.user, req.params.id, req.body || {});
     res.json({ success: true, automation });

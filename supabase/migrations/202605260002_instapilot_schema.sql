@@ -1,4 +1,4 @@
--- GAP InstaPilot / Instagram AI Bot Builder
+-- GAP InstaPilot / Instagram AI Bot Builder (normalized version)
 -- Run in Supabase SQL editor. Uses official Meta OAuth/Webhooks/Graph API data only.
 
 create extension if not exists vector;

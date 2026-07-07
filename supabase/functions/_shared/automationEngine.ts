@@ -13,6 +13,11 @@ import {
   type InstagramGenericTemplateElement,
 } from './metaService.ts';
 import { decryptTokenBundle, encryptTokenBundle } from './tokenService.ts';
+import {
+  applyDeliveryBranding,
+  getDeliveryPlan,
+  stripBrandingWatermark,
+} from './deliveryPolicy.ts';
 
 interface AutomationRecord {
   id: string;
@@ -245,6 +250,48 @@ type MessageAction =
   | { type: 'image'; imageUrl: string }
   | { type: 'template'; elements: InstagramGenericTemplateElement[] }
   | { type: 'delay'; seconds: number };
+
+const resolveDeliveryPlan = async (userId: string) => {
+  const supabase = getSupabaseAdmin();
+  const now = Date.now();
+  const { data, error } = await supabase
+    .from('app_subscriptions')
+    .select('plan_id,status,current_period_end,trial_ends_at,grace_period_ends_at,updated_at')
+    .eq('user_id', userId)
+    .in('status', ['active', 'trialing'])
+    .order('updated_at', { ascending: false });
+
+  // Missing entitlement infrastructure must never remove Free-plan branding.
+  if (error) {
+    logError('Entitlement lookup failed; applying Free plan delivery rules', {
+      userId,
+      error: error.message,
+    });
+    return { id: 'free', replyLimit: 50 };
+  }
+
+  return getDeliveryPlan(data ?? [], now);
+};
+
+const reserveMonthlyAutoDmReply = async (userId: string, limit: number) => {
+  const now = new Date();
+  const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+    .toISOString()
+    .slice(0, 10);
+  const periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0))
+    .toISOString()
+    .slice(0, 10);
+  const { data, error } = await getSupabaseAdmin().rpc('consume_entitlement_usage', {
+    p_user_id: userId,
+    p_metric: 'autodm_replies_per_month',
+    p_amount: 1,
+    p_limit: limit,
+    p_period_start: periodStart,
+    p_period_end: periodEnd,
+  });
+  if (error) throw new Error(`Unable to reserve Auto-DM reply quota: ${error.message}`);
+  return data?.[0]?.allowed === true;
+};
 
 const normalizeFlow = (automation: AutomationRecord): ResponseFlow | null => {
   let flow = automation.response_flow;
@@ -1368,12 +1415,16 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
     senderProfile,
     await fetchInstagramScopedUserProfile(payload.senderId, tokenBundle.pageAccessToken, payload.requestId)
   );
-  const responseActions =
+  let responseActions =
     continuationSession
       ? buildResponseActions(matched, senderProfile, continuationSession.next_node_index, false)
       : payload.triggerType === 'comment'
         ? getCommentPrivateReplyActions(buildResponseActions(matched, senderProfile))
         : buildResponseActions(matched, senderProfile);
+  const deliveryPlan = automationOwnerUserId
+    ? await resolveDeliveryPlan(automationOwnerUserId)
+    : { id: 'free', replyLimit: 50 };
+  responseActions = applyDeliveryBranding(responseActions, deliveryPlan.id === 'free');
   const primaryReplyText = getFirstMessageText(responseActions);
   if (responseActions.length === 0) {
     logInfo('No sendable response found in automation response_flow, skipping', {
@@ -1385,6 +1436,51 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
       .update({ processed: true, processing_error: 'no_reply_text' })
       .eq('dedupe_key', payload.dedupeKey);
     return { status: 'no_reply_text' as const };
+  }
+
+  if (!automationOwnerUserId) {
+    throw new Error('Cannot enforce Auto-DM entitlements without an automation owner');
+  }
+
+  if (deliveryPlan.id === 'free') {
+    const { data: knownContact, error: knownContactError } = await supabase
+      .from('contacts')
+      .select('id')
+      .eq('user_id', automationOwnerUserId)
+      .eq('instagram_account_id', selectedAccount.id)
+      .eq('instagram_user_id', payload.senderId)
+      .maybeSingle();
+    if (knownContactError) {
+      throw new Error(`Unable to verify contact entitlement: ${knownContactError.message}`);
+    }
+    if (!knownContact) {
+      const { count, error: contactCountError } = await supabase
+        .from('contacts')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', automationOwnerUserId);
+      if (contactCountError) {
+        throw new Error(`Unable to verify contact limit: ${contactCountError.message}`);
+      }
+      if ((count ?? 0) >= 100) {
+        await supabase
+          .from('webhook_logs')
+          .update({ processed: true, processing_error: 'contact_limit_reached' })
+          .eq('dedupe_key', payload.dedupeKey);
+        return { status: 'plan_limit_reached' as const };
+      }
+    }
+  }
+
+  const replyAllowed = await reserveMonthlyAutoDmReply(
+    automationOwnerUserId,
+    deliveryPlan.replyLimit
+  );
+  if (!replyAllowed) {
+    await supabase
+      .from('webhook_logs')
+      .update({ processed: true, processing_error: 'autodm_reply_limit_reached' })
+      .eq('dedupe_key', payload.dedupeKey);
+    return { status: 'plan_limit_reached' as const };
   }
 
   // ── STEP 1: Contact save PEHLE karo (DM send se independent) ─────────────
@@ -1710,7 +1806,7 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
   ) {
     commentReplyAttempted = true;
     const commentReplyText = renderMessageTemplate(
-      matched.comment_reply_text.trim(),
+      stripBrandingWatermark(matched.comment_reply_text.trim()),
       senderProfile
     ).trim();
     const commentReplyResult = await sendInstagramCommentReply(

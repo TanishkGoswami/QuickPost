@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- Migration: Add plan & subscription_status to users table
+-- Migration: Add plan & subscription_status to users table (normalized version)
 -- Date: 2026-04-29
 -- Purpose: Allow cross-DB sync from getaipilot.in hub to store plan info
 -- ─────────────────────────────────────────────────────────────────────────────

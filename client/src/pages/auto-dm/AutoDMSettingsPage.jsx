@@ -4,14 +4,6 @@ import { useAuth } from '../../context/AuthContext';
 import { useAutoDM } from '../../context/AutoDMContext';
 import ConnectedPlatformsPanel from '../../components/platforms/ConnectedPlatformsPanel';
 
-const PLAN_LIMITS = {
-  free: { automations: 2, dms: 50, accounts: 1, analytics: false, crm: false },
-  'social pilot': { automations: 50, dms: 1000, accounts: 5, analytics: true, crm: true },
-  pro: { automations: 50, dms: 1000, accounts: 5, analytics: true, crm: true },
-  'gap ultimate ecosystem': { automations: 'Unlimited', dms: 'Unlimited', accounts: 'Unlimited', analytics: true, crm: true },
-  enterprise: { automations: 'Unlimited', dms: 'Unlimited', accounts: 'Unlimited', analytics: true, crm: true },
-};
-
 function Field({ label, value }) {
   return (
     <div className="autodm-settings-field">
@@ -25,8 +17,12 @@ export default function AutoDMSettingsPage() {
   const { user } = useAuth();
   const autoDM = useAutoDM();
   const [activeTab, setActiveTab] = useState('platforms');
-  const planKey = (user?.plan || 'free').toLowerCase();
-  const limits = PLAN_LIMITS[planKey] || PLAN_LIMITS.free;
+  const limits = {
+    automations: user?.entitlements?.limits?.autodm_automations ?? 1,
+    dms: user?.entitlements?.limits?.autodm_replies_per_month ?? 50,
+    accounts: user?.entitlements?.limits?.autodm_accounts ?? 1,
+    analytics: user?.entitlements?.features?.analytics === true,
+  };
 
   return (
     <div className="autodm-settings-page">
@@ -66,7 +62,7 @@ export default function AutoDMSettingsPage() {
           <div className="autodm-settings-grid">
             <Field label="Full name" value={user?.name || 'My Account'} />
             <Field label="Email" value={user?.email} />
-            <Field label="Workspace sync" value="Social Pilot linked" />
+            <Field label="Product" value="QuickPost" />
           </div>
         </section>
       ) : null}

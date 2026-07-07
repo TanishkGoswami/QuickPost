@@ -30,7 +30,7 @@ import FacebookSetupModal from "./FacebookSetupModal";
 import apiClient from "../utils/apiClient";
 import { startAutoDMInstagramOAuth } from "../services/autodm/supabaseClient";
 
-// User has paid access if plan is anything other than Free
+// Helper to determine if the user is on the free plan
 function isFree(plan) {
   if (!plan) return true;
   return plan.toLowerCase() === 'free';
@@ -508,7 +508,7 @@ function Sidebar() {
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);
-            const isLocked = isFree(user?.plan);
+            const isLocked = false;
             const isAutoDM = to === "/dashboard/auto-dm";
 
             const content = (
@@ -677,12 +677,7 @@ function Sidebar() {
             return (
               <button
                 onClick={() => {
-                  if (isFree(user?.plan)) {
-                    alert(
-                      "Please upgrade your Social Pilot plan to manage your social channels.",
-                    );
-                    return;
-                  }
+
                   setConnectedOpen((open) => {
                     const nextOpen = !open;
                     if (nextOpen) setAutoDMOpen(false);
@@ -936,7 +931,16 @@ function Sidebar() {
               .map((platform) => (
                 <button
                   key={platform.id}
-                  onClick={platform.onConnect}
+                  onClick={(e) => {
+                    const limit = user?.entitlements?.limits?.social_accounts || 1;
+                    const connectedCount = platforms.filter(p => p.connected).length;
+                    if (connectedCount >= limit) {
+                      e.preventDefault();
+                      alert("Upgrade Required", `You have reached your limit of ${limit} social account${limit === 1 ? '' : 's'} on the ${user?.entitlements?.plan?.name || 'Free'} plan. Please upgrade to connect more channels.`, { intent: "warning" });
+                      return;
+                    }
+                    platform.onConnect();
+                  }}
                   title={`Connect ${platform.name}`}
                   style={{
                     width: 44,
@@ -1114,7 +1118,7 @@ function Sidebar() {
             }}
           >
             <Sparkles size={14} />
-            Upgrade to Social Pilot
+            Upgrade to QuickPost
           </button>
         )}
 

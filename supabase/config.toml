@@ -6,3 +6,6 @@ verify_jwt = false
 
 [functions.oauth-start]
 verify_jwt = true
+
+[functions.sync-from-hub]
+verify_jwt = false

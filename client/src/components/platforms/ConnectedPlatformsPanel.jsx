@@ -114,12 +114,35 @@ export default function ConnectedPlatformsPanel({
   const [busy, setBusy] = useState(null);
   const [showFacebookModal, setShowFacebookModal] = useState(false);
 
-  const connectedCount = useMemo(
-    () => PLATFORM_META.filter((platform) => connectedAccounts?.[platform.id]?.connected).length,
-    [connectedAccounts],
-  );
+  const connectedCount = useMemo(() => {
+    let count = 0;
+    PLATFORM_META.forEach((platform) => {
+      if (platform.id === "instagram") {
+        if (connectedAccounts?.instagramAccounts?.length > 0) {
+          count += connectedAccounts.instagramAccounts.length;
+        } else if (connectedAccounts?.instagram?.connected) {
+          count += 1;
+        }
+      } else {
+        if (connectedAccounts?.[platform.id]?.connected) {
+          count += 1;
+        }
+      }
+    });
+    return count;
+  }, [connectedAccounts]);
 
   const connectPlatform = async (platform) => {
+    const limit = user?.entitlements?.limits?.social_accounts || 1;
+    if (connectedCount >= limit) {
+      await alert(
+        "Upgrade Required",
+        `You have reached your limit of ${limit} social account${limit === 1 ? '' : 's'} on the ${user?.entitlements?.plan?.name || 'Free'} plan. Please upgrade to connect more channels.`,
+        { intent: "warning" }
+      );
+      return;
+    }
+
     const token = localStorage.getItem("quickpost_token");
     if (platform.oauth) {
       if (!token) {

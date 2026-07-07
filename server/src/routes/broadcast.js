@@ -17,7 +17,7 @@ import { postToThreads } from "../services/threads.js";
 import { broadcastToX } from "../services/x.js";
 import { postToReddit } from "../services/reddit.js";
 import { authenticateUser } from "../middleware/authenticateUser.js";
-import { saveBroadcast } from "../services/broadcasts.js";
+import { assertScheduledQueueCapacity, saveBroadcast } from "../services/broadcasts.js";
 import {
   uploadToCloudinary,
   isCloudinaryConfigured,
@@ -31,6 +31,7 @@ import { createOrUpdateComposerAutomation } from "../services/autodm.js";
 import { getValidInstagramTokensForPosting } from "../services/instagramToken.js";
 import { decryptToken } from "../services/instapilot.js";
 import { enqueueBroadcastJob, isBroadcastQueueEnabled } from "../services/broadcastQueue.js";
+import { requireFeature, reserveUsage } from "../middleware/entitlements.js";
 
 const router = express.Router();
 
@@ -43,6 +44,7 @@ const router = express.Router();
 router.post(
   "/broadcast",
   authenticateUser,
+  requireFeature("publishing"),
   (req, res, next) => {
     upload.fields([
       { name: "media", maxCount: 10 },
@@ -52,20 +54,17 @@ router.post(
       next();
     });
   },
+  (req, res, next) => {
+    if (!req.files || (!req.files.media && !req.files.youtubeThumbnail)) {
+      return res.status(400).json({ success: false, error: "No media files uploaded" });
+    }
+    next();
+  },
   async (req, res) => {
     console.log("📥 [BROADCAST] Sync job request received");
 
     try {
       // ── Validate request ──────────────────────────────────────────────────
-      if (
-        !req.files ||
-        (!req.files["media"] && !req.files["youtubeThumbnail"])
-      ) {
-        return res
-          .status(400)
-          .json({ success: false, error: "No media files uploaded" });
-      }
-
     const { 
       caption, 
       selectedChannels, 
@@ -112,6 +111,24 @@ router.post(
 
       const filePaths = uploadedFiles.map((f) => f.path);
       const filenames = uploadedFiles.map((f) => f.filename);
+
+      if (isScheduled) {
+        try {
+          await assertScheduledQueueCapacity(
+            userId,
+            channels,
+            req.entitlements?.limits?.scheduled_queue,
+          );
+        } catch (queueError) {
+          cleanupFiles(filePaths, thumbnailFile);
+          return res.status(queueError.code === 'PLAN_LIMIT_REACHED' ? 403 : 500).json({
+            success: false,
+            error: queueError.message,
+            code: queueError.code || 'QUEUE_CAPACITY_CHECK_FAILED',
+            metric: queueError.metric,
+          });
+        }
+      }
 
       // ── Detect media type ─────────────────────────────────────────────────
       const videos = uploadedFiles.filter((f) =>

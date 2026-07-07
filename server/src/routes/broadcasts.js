@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticateUser } from '../middleware/authenticateUser.js';
+import { getEntitlements } from '../services/entitlements.js';
 import {
   getBroadcasts,
   cancelBroadcast,
@@ -22,7 +23,12 @@ router.get('/broadcasts', authenticateUser, async (req, res) => {
     const userId = req.user.userId;
     const { status } = req.query;
 
-    const broadcasts = await getBroadcasts(userId, status || null);
+    const entitlements = await getEntitlements(req.user.authUserId || userId);
+    const broadcasts = await getBroadcasts(
+      userId,
+      status || null,
+      entitlements.limits.history_days,
+    );
 
     res.json({
       success: true,
