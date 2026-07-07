@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
@@ -350,6 +351,14 @@ export default function AutomationEditorPage() {
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [showMediaSelector, setShowMediaSelector] = useState(false);
+  const [portalTarget, setPortalTarget] = useState(null);
+  const [headerLeftTarget, setHeaderLeftTarget] = useState(null);
+
+  useEffect(() => {
+    setPortalTarget(document.getElementById('header-actions-portal'));
+    setHeaderLeftTarget(document.getElementById('header-left-portal'));
+  }, []);
+
   const [name, setName] = useState('Untitled');
   const [triggerType, setTriggerType] = useState(searchParams.get('trigger') || 'comment_on_post');
   const [selectedMedia, setSelectedMedia] = useState(null);
@@ -364,6 +373,25 @@ export default function AutomationEditorPage() {
   const [endsAt, setEndsAt] = useState('');
   const [responseFlow, setResponseFlow] = useState(defaultResponseFlow);
   const [isActive, setIsActive] = useState(false);
+  const [recentMedia, setRecentMedia] = useState([]);
+  const [isLoadingRecentMedia, setIsLoadingRecentMedia] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    if (activeAccount && !applyToAllMedia && recentMedia.length === 0) {
+      setIsLoadingRecentMedia(true);
+      fetchInstagramMedia(4).then(media => {
+        if (mounted) {
+          setRecentMedia(media || []);
+          setIsLoadingRecentMedia(false);
+        }
+      }).catch(err => {
+        console.error('Failed to load recent media:', err);
+        if (mounted) setIsLoadingRecentMedia(false);
+      });
+    }
+    return () => { mounted = false; };
+  }, [activeAccount, applyToAllMedia, fetchInstagramMedia, recentMedia.length]);
 
   useEffect(() => {
     if (isNew || !id) {
@@ -547,25 +575,30 @@ export default function AutomationEditorPage() {
   const commentStep = responseStep + 1;
   const durationStep = isCommentTrigger ? commentStep + 1 : responseStep + 1;
   return (
-    <div className="autodm-editor-screen flex h-[calc(100vh-64px)] overflow-hidden">
+    <div className="autodm-editor-screen flex h-[calc(100vh-56px)] overflow-hidden">
       {/* Left Sidebar - Form */}
-      <div className="autodm-editor-panel w-[450px] flex-shrink-0 flex flex-col h-full overflow-hidden relative z-10">
+      <div className="autodm-editor-panel bg-white border-r border-black/5 w-[450px] flex-shrink-0 flex flex-col h-full overflow-hidden relative z-10">
         
-        {/* Top Navbar in Sidebar */}
-        <div className="autodm-editor-top flex items-center justify-between p-4 sticky top-0 z-20">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/auto-dm/automations')}>
-              <ArrowLeft className="h-5 w-5" />
+        {/* Portaled Header Items */}
+        {headerLeftTarget ? createPortal(
+          <div className="flex items-center gap-2 ml-2">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate('/dashboard/auto-dm/automations')}>
+              <ArrowLeft className="h-4 w-4" />
             </Button>
             <div className="flex flex-col">
               <Input 
                 value={name} 
                 onChange={(e) => setName(e.target.value)} 
-                className="h-7 border-transparent px-1 font-bold text-lg focus-visible:ring-1 focus-visible:ring-primary shadow-none"
+                className="h-7 bg-transparent border-transparent px-1 font-bold text-lg focus-visible:ring-1 focus-visible:ring-primary shadow-none w-[200px]"
+                placeholder="Untitled Automation"
               />
             </div>
-          </div>
-          <div className="flex items-center gap-2">
+          </div>,
+          headerLeftTarget
+        ) : null}
+
+        {portalTarget ? createPortal(
+          <div className="flex items-center gap-2 mr-4">
              <span className="text-xs font-medium text-gray-500 mr-2">{isSaving ? 'Saving...' : 'Saved'}</span>
              <Button variant="outline" size="sm" onClick={handleSave} disabled={isSaving}>
                {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
@@ -575,8 +608,9 @@ export default function AutomationEditorPage() {
                 <Switch checked={isActive} onCheckedChange={setIsActive} />
                 <span className="text-sm font-medium">{isActive ? 'Active' : 'Inactive'}</span>
              </div>
-          </div>
-        </div>
+          </div>,
+          portalTarget
+        ) : null}
 
         {/* Scrollable Form Content */}
         <div className="autodm-editor-scroll flex-1 overflow-y-auto p-6 space-y-8">
@@ -622,9 +656,34 @@ export default function AutomationEditorPage() {
                                 </Button>
                             </div>
                         ) : (
-                            <Button variant="outline" size="sm" onClick={() => setShowMediaSelector(true)} className="w-full bg-white text-primary font-medium hover:bg-gray-100 border-none shadow-none">
-                                Show All
-                            </Button>
+                            <div className="flex flex-col gap-2">
+                                {isLoadingRecentMedia ? (
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {[1, 2, 3, 4].map(i => (
+                                          <Skeleton key={i} className="aspect-square w-full rounded-md bg-gray-200" />
+                                        ))}
+                                    </div>
+                                ) : recentMedia.length > 0 ? (
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {recentMedia.map(media => (
+                                            <div 
+                                              key={media.id} 
+                                              onClick={() => setSelectedMedia(media)}
+                                              className="aspect-square bg-gray-100 rounded-md overflow-hidden cursor-pointer hover:opacity-80 transition-opacity border border-gray-200"
+                                            >
+                                                {media.media_type === 'VIDEO' ? (
+                                                    <video src={media.thumbnail_url || media.media_url} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <img src={media.thumbnail_url || media.media_url} alt="Media" className="w-full h-full object-cover" />
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : null}
+                                <Button variant="outline" size="sm" onClick={() => setShowMediaSelector(true)} className="w-full bg-white text-primary font-medium hover:bg-gray-50 border-gray-200 shadow-sm mt-1">
+                                    Show All Posts
+                                </Button>
+                            </div>
                         )}
                     </div>
                   )}
@@ -747,6 +806,7 @@ export default function AutomationEditorPage() {
                   onChange={setResponseFlow}
                   step={2}
                   hideHeader
+                  compact
                 />
               </div>
             </div>
@@ -755,9 +815,9 @@ export default function AutomationEditorPage() {
       </div>
 
       {/* Right Canvas - Mobile Preview */}
-      <div className="autodm-preview-canvas flex-1 relative overflow-hidden flex items-center justify-center">
+      <div className="autodm-preview-canvas flex-1 relative overflow-hidden flex justify-end items-start pt-12 pr-12 lg:pt-20 lg:pr-24 xl:pr-32">
          <div className="absolute inset-0 pattern-dots" />
-         <div className="relative z-10 w-full max-w-[400px] transform scale-95 origin-center transition-transform hover:scale-100 duration-300">
+         <div className="relative z-10 transition-transform duration-300 flex justify-center w-[400px]">
             <MobilePreview 
                 triggerType={triggerType}
                 keywords={keywords}

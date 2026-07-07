@@ -29,6 +29,8 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
   const [imgError, setImgError] = useState(false);
 
+  const isEditorPage = location.pathname.includes('/dashboard/auto-dm/automations/') && location.pathname !== '/dashboard/auto-dm/automations';
+
   if (!user) return null;
 
   const handleLogout = async () => {
@@ -112,6 +114,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div id="header-left-portal"></div>
         {/* Back Button on Trends Page */}
         {isTrendsPage && (
           <button
@@ -164,7 +167,10 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
 
       {/* Right: Actions + user pill */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ display: "flex", gap: 6 }}>
+        <div id="header-actions-portal" style={{ display: "flex", alignItems: "center", gap: 12 }}></div>
+        {!isEditorPage && (
+          <>
+            <div style={{ display: "flex", gap: 6 }}>
           <button
             className="qp-header-icon-button"
             onClick={handleSettingsClick}
@@ -259,6 +265,8 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
             {user.name || "Account"}
           </span>
         </div>
+          </>
+        )}
       </div>
 
       {/* Settings Modal */}

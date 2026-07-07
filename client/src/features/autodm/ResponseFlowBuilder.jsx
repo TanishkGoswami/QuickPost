@@ -328,28 +328,26 @@ function ResponseEditorDialog({ node, open, onOpenChange, onSave }) {
                 </Button>
               </div>
               {(draft.buttons || []).map((button) => (
-                <div key={button.id} className="space-y-2 rounded-lg border border-black/10 bg-black/[0.02] p-3">
+                <div key={button.id} className="grid gap-2 sm:grid-cols-[1fr_120px_1fr_36px] items-center rounded-lg border border-black/10 bg-black/[0.02] p-2">
                   <Input value={button.title || ''} onChange={(event) => updateButton(button.id, { title: event.target.value })} placeholder="Button text" />
-                  <div className="grid gap-2 sm:grid-cols-[140px_1fr_36px]">
-                    <select
-                      className="h-10 rounded-md border border-black/10 bg-white px-3 text-sm"
-                      value={button.type || 'url'}
-                      onChange={(event) => updateButton(button.id, { type: event.target.value })}
-                    >
-                      <option value="url">URL</option>
-                      <option value="postback">Postback</option>
-                    </select>
-                    <Input
-                      value={button.type === 'postback' ? button.payload || '' : button.url || ''}
-                      onChange={(event) =>
-                        updateButton(button.id, button.type === 'postback' ? { payload: event.target.value } : { url: event.target.value })
-                      }
-                      placeholder={button.type === 'postback' ? 'Payload' : 'https://...'}
-                    />
-                    <Button type="button" variant="ghost" size="icon" className="rounded-md text-red-600" onClick={() => removeButton(button.id)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <select
+                    className="h-10 rounded-md border border-black/10 bg-white px-3 text-sm"
+                    value={button.type || 'url'}
+                    onChange={(event) => updateButton(button.id, { type: event.target.value })}
+                  >
+                    <option value="url">URL</option>
+                    <option value="postback">Postback</option>
+                  </select>
+                  <Input
+                    value={button.type === 'postback' ? button.payload || '' : button.url || ''}
+                    onChange={(event) =>
+                      updateButton(button.id, button.type === 'postback' ? { payload: event.target.value } : { url: event.target.value })
+                    }
+                    placeholder={button.type === 'postback' ? 'Payload' : 'https://...'}
+                  />
+                  <Button type="button" variant="ghost" size="icon" className="rounded-md text-red-600 h-10 w-10" onClick={() => removeButton(button.id)}>
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
