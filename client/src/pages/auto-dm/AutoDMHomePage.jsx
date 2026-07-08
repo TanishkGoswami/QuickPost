@@ -104,7 +104,7 @@ export default function AutoDMHomePage() {
   if (!statusLoading && autodmAccounts.length === 0) {
     return (
       <section className="autodm-setup-card">
-        <Send size={34} />
+        <img src="https://illustrations.popsy.co/amber/web-design.svg" alt="Setup Automation" className="h-40 object-contain mx-auto mb-2" />
         <h1>Set Up GAP AutoDM</h1>
         <p>Link Instagram once from Social Pilot. The same official connection powers AutoDM, autoposting, and InstaPilot.</p>
         {importError || autoDMStorageError ? (
@@ -126,13 +126,14 @@ export default function AutoDMHomePage() {
 
   return (
     <div className="autodm-home">
-      <header className="autodm-page-title">
-        <div>
+      <header className="autodm-page-title relative overflow-hidden">
+        <div className="relative z-10">
           <p>Dashboard</p>
           <h1>Welcome back, {firstName}</h1>
           <span>Here's what's happening with your Instagram automation</span>
         </div>
-        <button className="autodm-create-btn" onClick={() => navigate('/dashboard/auto-dm/automations/new')}>
+        <img src="https://illustrations.popsy.co/amber/graphic-design.svg" className="absolute right-32 top-1/2 -translate-y-1/2 h-28 opacity-20 sm:opacity-100 object-contain pointer-events-none" alt="" />
+        <button className="autodm-create-btn relative z-10" onClick={() => navigate('/dashboard/auto-dm/automations/new')}>
           <Plus size={16} /> Create New
         </button>
       </header>
@@ -179,7 +180,10 @@ export default function AutoDMHomePage() {
         <div className="autodm-ref-card">
           <h3>Recent Automations</h3>
           {automationsLoading ? <div className="skeleton-shimmer" style={{ height: 80 }} /> : automations.length === 0 ? (
-            <div className="autodm-empty compact"><Zap size={32} /><p>No automations yet</p></div>
+            <div className="autodm-empty compact">
+              <img src="https://illustrations.popsy.co/amber/product-launch.svg" className="h-20 object-contain mx-auto mb-2" alt="No Automations" />
+              <p>No automations yet</p>
+            </div>
           ) : automations.slice(0, 4).map((automation) => (
             <button className="autodm-mini-row" key={automation.id} onClick={() => navigate(`/dashboard/auto-dm/automations/${automation.id}`)}>
               <span className={automation.is_active ? 'active' : ''} />

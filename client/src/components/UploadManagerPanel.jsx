@@ -28,11 +28,11 @@ const PLATFORM_ICONS = {
 
 // tokens
 const css = {
-  ink: '#141413',
+  ink: '#111111',
   slate: '#696969',
-  arc: '#F37338',
-  canvas: '#F3F0EE',
-  lifted: '#FCFBFA',
+  arc: '#FF5600',
+  canvas: '#F5F1EC',
+  lifted: '#FFFFFF',
   white: '#FFFFFF',
   success: '#10b981',
   error: '#ef4444'
@@ -42,8 +42,8 @@ function phase(progress, status) {
   if (status === 'failed') return { label: 'FAILED', bar: css.error, glow: 'rgba(239,68,68,0.15)', text: css.error };
   if (status === 'stalled') return { label: 'CHECK', bar: css.slate, glow: 'rgba(105,105,105,0.12)', text: css.slate };
   if (status === 'completed' || progress >= 100) return { label: 'DONE', bar: css.success, glow: 'rgba(16,185,129,0.15)', text: css.success };
-  if (progress < 30) return { label: 'UPLOADING', bar: css.arc, glow: 'rgba(243,115,56,0.15)', text: css.arc };
-  if (progress < 70) return { label: 'PUBLISHING', bar: css.arc, glow: 'rgba(243,115,56,0.15)', text: css.arc };
+  if (progress < 30) return { label: 'UPLOADING', bar: css.arc, glow: 'rgba(255,86,0,0.15)', text: css.arc };
+  if (progress < 70) return { label: 'PUBLISHING', bar: css.arc, glow: 'rgba(255,86,0,0.15)', text: css.arc };
   return { label: 'FINALIZING', bar: css.slate, glow: 'rgba(105,105,105,0.15)', text: css.slate };
 }
 
@@ -115,7 +115,7 @@ const JobCard = React.forwardRef(function JobCard({ job, onRetry, onDismiss }, r
         <motion.div
           style={{
             position: 'absolute', top: 0, left: 0, right: 0, height: '100%',
-            background: 'linear-gradient(90deg, transparent 0%, rgba(243,115,56,0.03) 50%, transparent 100%)',
+            background: 'linear-gradient(90deg, transparent 0%, rgba(255,86,0,0.03) 50%, transparent 100%)',
             pointerEvents: 'none',
           }}
           animate={{ x: ['-100%', '200%'] }}
@@ -342,7 +342,7 @@ export default function UploadManagerPanel() {
           boxShadow: [
             '0 24px 48px rgba(0,0,0,0.08)',
             '0 0 0 1px rgba(255,255,255,0.4) inset',
-            activeCount > 0 ? '0 0 60px rgba(243,115,56,0.08)' : '',
+            activeCount > 0 ? '0 0 60px rgba(255,86,0,0.08)' : '',
           ].filter(Boolean).join(', '),
           overflow: 'hidden',
         }}
@@ -365,7 +365,7 @@ export default function UploadManagerPanel() {
                 ? css.arc
                 : css.success,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: activeCount > 0 ? '0 4px 20px rgba(243,115,56,0.3)' : '0 4px 20px rgba(16,185,129,0.2)',
+              boxShadow: activeCount > 0 ? '0 4px 20px rgba(255,86,0,0.3)' : '0 4px 20px rgba(16,185,129,0.2)',
             }}>
               {activeCount > 0 ? (
                 <motion.div

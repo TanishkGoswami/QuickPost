@@ -8,7 +8,7 @@ import {
   MoreHorizontal, MoreVertical, Send,
   Repeat, MessageSquare, Plus, Music2,
   ThumbsUp, ThumbsDown, Play, User,
-  ChevronLeft, Video
+  ChevronLeft, Video, Trash2
 } from 'lucide-react';
 
 /* ── Platform display config ─────────────────────────────────────────── */
@@ -726,7 +726,7 @@ function PreviewContainer({ children, config, format, caption, platformUsername,
   );
 }
 /* ── Main Modal ──────────────────────────────────────────────────────── */
-export default function PostPreviewModal({ post, onClose }) {
+export default function PostPreviewModal({ post, onClose, onDelete }) {
   const { connectedAccounts, user } = useAuth();
   const metrics = usePlatformMetrics(post.caption || "");
   const [activePlatformIdx, setActivePlatformIdx] = useState(0);
@@ -795,9 +795,24 @@ export default function PostPreviewModal({ post, onClose }) {
               </div>
             </div>
           </div>
-          <button onClick={onClose} className="p-2.5 hover:bg-gray-100 rounded-full transition-all group">
-            <X className="w-5 h-5 text-gray-400 group-hover:text-gray-900 group-hover:rotate-90 transition-all duration-300" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onDelete && (
+              <button 
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to delete this post from your history?")) {
+                    onDelete(post.id);
+                  }
+                }} 
+                className="p-2.5 hover:bg-red-50 rounded-full transition-all group"
+                title="Delete Post"
+              >
+                <Trash2 className="w-5 h-5 text-gray-400 group-hover:text-red-500 transition-all duration-300" />
+              </button>
+            )}
+            <button onClick={onClose} className="p-2.5 hover:bg-gray-100 rounded-full transition-all group">
+              <X className="w-5 h-5 text-gray-400 group-hover:text-gray-900 group-hover:rotate-90 transition-all duration-300" />
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-1 overflow-hidden">
@@ -890,20 +905,31 @@ export default function PostPreviewModal({ post, onClose }) {
                         const displayUrl = post.thumbnail_url || post.media_url;
 
                         if (displayUrl) {
-                          // If it's a video and we have a media_url but it's the video itself,
-                          // the img tag might fail unless it's the thumbnail_url.
-                          // Cloudinary thumbnail_url is always an image.
+                          if (!isImage) {
+                            return (
+                              <video
+                                src={post.media_url || displayUrl}
+                                poster={post.thumbnail_url || undefined}
+                                className="w-full h-full object-cover"
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                controls
+                                onError={e => {
+                                  console.error("Video failed to load", e);
+                                }}
+                              />
+                            );
+                          }
+                          
                           return (
                             <img
                               src={displayUrl}
                               alt="Post Preview"
                               className="w-full h-full object-cover"
                               onError={e => {
-                                if (!isImage && post.media_url && e.target.src !== post.media_url) {
-                                  e.target.src = post.media_url;
-                                } else {
-                                  e.target.src = 'https://placehold.co/600x600?text=Preview+Unavailable';
-                                }
+                                e.target.src = 'https://placehold.co/600x600?text=Preview+Unavailable';
                               }}
                             />
                           );

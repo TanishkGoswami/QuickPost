@@ -1,5 +1,5 @@
 import { Instagram, Loader2, Unlink } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
-import { PLAN_LIMITS } from "./types";
+import BillingPage from "../../pages/BillingPage";
 import { useAutoDM } from "./AutoDMContext";
 
 export default function SettingsPage() {
@@ -24,15 +24,6 @@ export default function SettingsPage() {
     disconnectAccount,
   } = useAutoDM();
   const [disconnectId, setDisconnectId] = useState(null);
-
-  const planKey = useMemo(() => {
-    const raw = String(socialUser?.plan || "Free").toLowerCase();
-    if (raw.includes("ultimate") || raw.includes("enterprise")) return "enterprise";
-    if (raw.includes("social pilot") || raw.includes("pro")) return "pro";
-    return "free";
-  }, [socialUser?.plan]);
-
-  const limits = PLAN_LIMITS[planKey];
 
   return (
     <div className="space-y-6">
@@ -130,32 +121,7 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="billing" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Plan Access</CardTitle>
-              <CardDescription>Auto DM follows your Social Pilot subscription tier.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                <div className="rounded-xl border p-4">
-                  <p className="text-sm text-muted-foreground">Plan</p>
-                  <p className="mt-2 text-xl font-semibold capitalize">{planKey}</p>
-                </div>
-                <div className="rounded-xl border p-4">
-                  <p className="text-sm text-muted-foreground">Automations</p>
-                  <p className="mt-2 text-xl font-semibold">{limits.max_automations === -1 ? "Unlimited" : limits.max_automations}</p>
-                </div>
-                <div className="rounded-xl border p-4">
-                  <p className="text-sm text-muted-foreground">DMs / Day</p>
-                  <p className="mt-2 text-xl font-semibold">{limits.max_dms_per_day === -1 ? "Unlimited" : limits.max_dms_per_day}</p>
-                </div>
-                <div className="rounded-xl border p-4">
-                  <p className="text-sm text-muted-foreground">Instagram Accounts</p>
-                  <p className="mt-2 text-xl font-semibold">{limits.max_instagram_accounts === -1 ? "Unlimited" : limits.max_instagram_accounts}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <BillingPage embedded />
         </TabsContent>
       </Tabs>
 

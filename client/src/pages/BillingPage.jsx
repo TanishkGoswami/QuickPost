@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Zap, Building2, Sparkles, AlertCircle } from 'lucide-react';
+import { Check, Zap, Building2, Sparkles, AlertCircle, Download, FileText } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import ConnectedPlatformsPanel from '../components/platforms/ConnectedPlatformsPanel';
+import apiClient from '../utils/apiClient';
 
-// Returns true if user has any paid plan (from hub or social)
+// QuickPost billing is independent from Hub product names.
 function hasPaidPlan(plan) {
   if (!plan) return false;
   const p = plan.toLowerCase();
@@ -21,9 +21,10 @@ const PLANS = [
     icon: <Zap size={20} />,
     features: [
       '3 connected social accounts',
-      '10 posts per month',
-      'Basic scheduling',
-      '7-day post history',
+      '10 scheduled posts per channel',
+      '1 active trigger word',
+      '50 automated replies / month',
+      'QuickPost Branding Watermark',
     ],
     cta: 'Current Plan',
     highlighted: false,
@@ -31,34 +32,81 @@ const PLANS = [
   {
     name: 'Pro',
     id: '999',
-    price: { 1: 999, 3: 899, 6: 849, 12: 799 },
+    price: { 1: 999, 3: 899, 6: 799, 12: 799 },
     description: 'For creators who broadcast seriously across every platform.',
     icon: <Sparkles size={20} />,
     features: [
       '10 connected social accounts',
-      'Unlimited posts',
-      'Smart scheduling & timezone sync',
-      'Analytics dashboard',
-      '90-day post history',
+      'Unlimited monthly posts',
+      'Up to 10 Instagram Auto-DM accounts',
+      'Unlimited trigger words & replies',
+      'Hinglish & Hindi trigger matching',
+      'Unlimited contacts',
       'Priority email support',
     ],
     cta: 'Upgrade to Pro',
     highlighted: true,
     badge: 'Most popular',
+  },
+  {
+    name: 'Enterprise',
+    id: 'enterprise',
+    price: { 1: 2999, 3: 2699, 6: 2499, 12: 2499 },
+    description: 'For teams, agencies, and heavy automation users.',
+    icon: <Building2 size={20} />,
+    features: [
+      '30 connected social accounts',
+      'Up to 30 Instagram Auto-DM accounts',
+      'Unlimited posts, replies & contacts',
+      'Hinglish & Hindi trigger matching',
+      'Approval workflows',
+      '10 team members',
+      'Developer API access',
+    ],
+    cta: 'Upgrade to Enterprise',
+    highlighted: false,
   }
 ];
 
 
-export default function BillingPage() {
+export default function BillingPage({ embedded = false }) {
   const { user } = useAuth();
   const [billing, setBilling] = useState(1);
   const [upgrading, setUpgrading] = useState(null);
+  const [invoices, setInvoices] = useState([]);
+  const [invoiceError, setInvoiceError] = useState('');
 
-  // Show exact plan name from hub (e.g. "Social Pilot", "GAP Ultimate Ecosystem")
-  const currentPlanName = user?.plan || 'Free';
+  const currentPlanName = user?.entitlements?.plan?.name || 'Free';
   const isPaid = hasPaidPlan(currentPlanName);
 
   React.useEffect(() => { window.scrollTo(0, 0); }, []);
+
+  React.useEffect(() => {
+    let alive = true;
+    apiClient.get('/api/billing/invoices')
+      .then(({ data }) => {
+        if (alive) setInvoices(data?.invoices || []);
+      })
+      .catch((err) => {
+        if (!alive) return;
+        if (err.response?.status === 404) {
+          setInvoices([]);
+          return;
+        }
+        setInvoiceError(err.response?.data?.message || err.message || 'Unable to load invoices');
+      });
+    return () => { alive = false; };
+  }, []);
+
+  const formatAmount = (amount) => {
+    const value = Number(amount || 0);
+    return `₹${Math.round(value / 100).toLocaleString('en-IN')}`;
+  };
+
+  const formatDate = (value) => {
+    if (!value) return 'Not available';
+    return new Intl.DateTimeFormat('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(value));
+  };
 
   const handleUpgrade = async (plan) => {
     if (currentPlanName === plan.name || plan.id === 'free') {
@@ -93,16 +141,16 @@ export default function BillingPage() {
   };
 
   return (
-    <div style={{ padding: '32px', maxWidth: 1100, margin: '0 auto', fontFamily: 'var(--font)' }}>
+    <div style={{ padding: embedded ? 0 : '32px', maxWidth: embedded ? 'none' : 1100, margin: '0 auto', fontFamily: 'var(--font)' }}>
       {/* Header */}
-      <div style={{ marginBottom: 40 }}>
+      {!embedded && <div style={{ marginBottom: 40 }}>
         <h1 style={{ fontSize: 28, fontWeight: 600, color: 'var(--ink)', margin: '0 0 8px', letterSpacing: '-0.02em' }}>
           Billing & Plans
         </h1>
         <p style={{ fontSize: 14, color: 'var(--slate)', margin: 0 }}>
           Manage your subscription and billing details.
         </p>
-      </div>
+      </div>}
 
       {/* Current Plan Banner */}
       <div style={{ 
@@ -110,7 +158,7 @@ export default function BillingPage() {
         border: '1px solid rgba(20,20,19,0.08)',
         borderRadius: 'var(--r-hero)',
         padding: '24px',
-        marginBottom: 48,
+        marginBottom: embedded ? 20 : 32,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -133,9 +181,65 @@ export default function BillingPage() {
         )}
       </div>
 
-      <div style={{ marginBottom: 36 }}>
-        <ConnectedPlatformsPanel compact showBillingSummary />
-      </div>
+      <section style={{
+        background: 'var(--canvas-lifted)',
+        border: '1px solid var(--dust)',
+        borderRadius: 'var(--r-hero)',
+        padding: 24,
+        marginBottom: embedded ? 24 : 36,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 18, flexWrap: 'wrap' }}>
+          <div>
+            <h2 style={{ fontSize: 22, fontWeight: 500, margin: '0 0 6px' }}>Invoices</h2>
+            <p style={{ fontSize: 14, color: 'var(--slate)', margin: 0 }}>Paid QuickPost billing records and receipt downloads.</p>
+          </div>
+        </div>
+
+        {invoiceError ? (
+          <p style={{ margin: 0, color: 'var(--danger)', fontSize: 13 }}>{invoiceError}</p>
+        ) : invoices.length === 0 ? (
+          <div style={{ border: '1px dashed var(--dust)', borderRadius: 8, padding: 24, color: 'var(--slate)', fontSize: 14 }}>
+            No invoices found yet. Paid invoices will appear here after Razorpay confirms payment.
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gap: 10 }}>
+            {invoices.map((invoice) => (
+              <div key={invoice.id || invoice.paymentId} style={{
+                display: 'grid',
+                gridTemplateColumns: 'minmax(0, 1fr) auto',
+                gap: 14,
+                alignItems: 'center',
+                border: '1px solid var(--dust)',
+                borderRadius: 8,
+                padding: 14,
+              }}>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}>
+                  <span style={{ width: 36, height: 36, borderRadius: 8, background: '#ebe7e1', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink)', flexShrink: 0 }}>
+                    <FileText size={17} />
+                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    <strong style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--ink)' }}>
+                      {invoice.plan} · {formatAmount(invoice.amount)}
+                    </strong>
+                    <span style={{ display: 'block', fontSize: 12, color: 'var(--slate)', marginTop: 2 }}>
+                      {formatDate(invoice.createdAt)} · {invoice.status}
+                    </span>
+                  </div>
+                </div>
+                {invoice.downloadUrl ? (
+                  <a className="btn-ghost" href={invoice.downloadUrl} target="_blank" rel="noreferrer" download>
+                    <Download size={14} /> Download
+                  </a>
+                ) : (
+                  <button className="btn-ghost" disabled title="Invoice URL is not available for this payment yet">
+                    <Download size={14} /> Download
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Billing toggle */}
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
@@ -170,7 +274,7 @@ export default function BillingPage() {
                 <span style={{
                   fontSize: 10, fontWeight: 700, padding: '2px 6px',
                   borderRadius: 'var(--r-pill)',
-                  background: billing === months ? 'rgba(243,115,56,0.2)' : 'rgba(243,115,56,0.12)',
+                  background: billing === months ? 'rgba(255,86,0,0.2)' : 'rgba(255,86,0,0.12)',
                   color: 'var(--arc)',
                 }}>
                   -{discount}%
@@ -182,7 +286,7 @@ export default function BillingPage() {
       </div>
 
       {/* Pricing cards */}
-      <div style={{ maxWidth: 850, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, alignItems: 'start' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, alignItems: 'start' }}>
         {PLANS.map((plan, i) => {
           const isCurrentPlan = currentPlanName === plan.name;
           
@@ -194,11 +298,11 @@ export default function BillingPage() {
               transition={{ duration: 0.5, delay: i * 0.1 }}
               style={{
                 borderRadius: 'var(--r-hero)',
-                border: `1px solid ${plan.highlighted ? 'rgba(243,115,56,0.35)' : 'rgba(20,20,19,0.08)'}`,
+                border: `1px solid ${plan.highlighted ? 'rgba(255,86,0,0.35)' : 'rgba(20,20,19,0.08)'}`,
                 background: plan.highlighted ? '#fff7f2' : 'var(--canvas-lifted)',
                 padding: 'clamp(28px, 4vw, 36px)',
                 position: 'relative',
-                boxShadow: plan.highlighted ? '0 24px 48px rgba(243,115,56,0.12)' : 'none',
+                boxShadow: plan.highlighted ? '0 24px 48px rgba(255,86,0,0.12)' : 'none',
                 transform: plan.highlighted ? 'scale(1.02)' : 'scale(1)',
               }}
             >
@@ -227,7 +331,7 @@ export default function BillingPage() {
               {/* Icon */}
               <div style={{
                 width: 44, height: 44, borderRadius: '50%',
-                background: plan.highlighted ? 'rgba(243,115,56,0.18)' : 'rgba(20,20,19,0.06)',
+                background: plan.highlighted ? 'rgba(255,86,0,0.18)' : 'rgba(20,20,19,0.06)',
                 color: plan.highlighted ? 'var(--arc)' : 'var(--ink)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 marginBottom: 20,
@@ -289,7 +393,7 @@ export default function BillingPage() {
                   <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                     <span style={{
                       width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                      background: plan.highlighted ? 'rgba(243,115,56,0.18)' : 'rgba(20,20,19,0.06)',
+                      background: plan.highlighted ? 'rgba(255,86,0,0.18)' : 'rgba(20,20,19,0.06)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       marginTop: 1,
                     }}>

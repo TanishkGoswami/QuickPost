@@ -17,6 +17,7 @@ import { updateBroadcastResults } from './broadcasts.js';
 import { resolveMentions } from './mentions.js';
 import { createOrUpdateComposerAutomation } from './autodm.js';
 import { getValidInstagramTokensForPosting, isInstagramAuthError } from './instagramToken.js';
+import { decryptToken } from './instapilot.js';
 
 /**
  * Core function to broadcast to platforms
@@ -56,21 +57,58 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
     }
     
     // Instagram
-    if (channels.includes('instagram') && tokens.instagram) {
-      const freshInstagramTokens = await getValidInstagramTokensForPosting(userId, tokens.instagram);
-      tokens.instagram = freshInstagramTokens;
-      const resolvedCaption = resolveMentions(caption, 'instagram', freshInstagramTokens);
-      let instagramAction;
-      if (mediaUrls.length > 1 && !isVideo) {
-        instagramAction = postCarouselToInstagram(mediaUrls, resolvedCaption, freshInstagramTokens);
-      } else if (isVideo) {
-        const igTokens = { ...freshInstagramTokens, coverUrl: coverImageUrl };
-        const videoUrl = mediaUrls[filePaths.findIndex(p => p.includes('video-'))] || primaryMediaUrl;
-        instagramAction = postToInstagram(videoUrl, resolvedCaption, igTokens);
-      } else {
-        instagramAction = postImageToInstagram(primaryMediaUrl, resolvedCaption, freshInstagramTokens);
+    const instagramChannels = channels.filter(c => c === 'instagram' || c.startsWith('instagram:'));
+    if (instagramChannels.length > 0 && (tokens.instagram || tokens.instagramAccounts?.length > 0)) {
+      const postedBusinessIds = new Set();
+      
+      for (const igChannel of instagramChannels) {
+        let currentTokens;
+        let platformKey = 'instagram';
+        
+        if (igChannel === 'instagram') {
+          currentTokens = tokens.instagram;
+        } else {
+          const accountId = igChannel.split(':')[1];
+          const igAccount = tokens.instagramAccounts?.find(acc => acc.id === accountId);
+          if (igAccount && igAccount.access_token_encrypted) {
+            try {
+              const decrypted = decryptToken(igAccount.access_token_encrypted);
+              currentTokens = {
+                accessToken: decrypted.pageAccessToken || decrypted.userAccessToken,
+                businessId: igAccount.instagram_business_account_id,
+                pageId: igAccount.page_id,
+                tokenExpiry: igAccount.token_expires_at,
+                username: igAccount.instagram_username
+              };
+              if (igAccount.instagram_username) {
+                platformKey = `instagram (@${igAccount.instagram_username})`;
+              }
+            } catch (err) {
+              console.error(`Failed to decrypt token for IG account ${accountId}:`, err);
+            }
+          }
+        }
+
+        if (currentTokens) {
+          if (currentTokens.businessId) {
+            if (postedBusinessIds.has(currentTokens.businessId)) continue;
+            postedBusinessIds.add(currentTokens.businessId);
+          }
+          const freshInstagramTokens = await getValidInstagramTokensForPosting(userId, currentTokens);
+          const resolvedCaption = resolveMentions(caption, 'instagram', freshInstagramTokens);
+          let instagramAction;
+          if (mediaUrls.length > 1 && !isVideo) {
+            instagramAction = postCarouselToInstagram(mediaUrls, resolvedCaption, freshInstagramTokens);
+          } else if (isVideo) {
+            const igTokens = { ...freshInstagramTokens, coverUrl: coverImageUrl };
+            const videoUrl = mediaUrls[filePaths.findIndex(p => p.includes('video-'))] || primaryMediaUrl;
+            instagramAction = postToInstagram(videoUrl, resolvedCaption, igTokens);
+          } else {
+            instagramAction = postImageToInstagram(primaryMediaUrl, resolvedCaption, freshInstagramTokens);
+          }
+          platformPromises.push(instagramAction.then(result => ({ platform: platformKey, result })));
+        }
       }
-      platformPromises.push(instagramAction.then(result => ({ platform: 'instagram', result })));
     }
 
     // Facebook

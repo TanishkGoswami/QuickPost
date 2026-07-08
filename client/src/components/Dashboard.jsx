@@ -35,16 +35,18 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 /* ── token shortcuts ── */
 const css = {
-  canvas: "var(--canvas)",
-  lifted: "var(--canvas-lifted)",
-  ink: "var(--ink)",
-  white: "var(--white)",
-  slate: "var(--slate)",
-  dust: "var(--dust)",
-  arc: "var(--arc)",
-  shadow: "var(--shadow-card)",
-  r_btn: "var(--r-btn)",
-  r_hero: "var(--r-hero)",
+  canvas: "#f5f1ec",
+  lifted: "#ffffff",
+  surface2: "#ebe7e1",
+  hairline: "#d3cec6",
+  ink: "#111111",
+  white: "#ffffff",
+  slate: "#626260",
+  dust: "#7b7b78",
+  arc: "#ff5600",
+  shadow: "none",
+  r_btn: "8px",
+  r_hero: "16px",
   r_pill: "var(--r-pill)",
 };
 
@@ -79,7 +81,8 @@ const LOAD_MORE_SKELETON_HEIGHTS = [260, 190, 315, 225, 285, 205, 335, 240];
 /* ── Platform helpers ── */
 function getPlatformIcon(id) {
   const s = { width: 14, height: 14, objectFit: "contain" };
-  switch (id) {
+  const baseId = id.split(':')[0];
+  switch (baseId) {
     case "facebook":
       return (
         <img
@@ -142,6 +145,14 @@ function getPostPreviewRatio(post) {
 }
 
 function buildPlatforms(post) {
+  let instagramChannels = post.selected_channels && Array.isArray(post.selected_channels)
+    ? post.selected_channels.filter(c => c === 'instagram' || c.startsWith('instagram:'))
+    : [];
+  
+  if (instagramChannels.length === 0 && (post.instagram_success || post.instagram_error)) {
+    instagramChannels = ['instagram'];
+  }
+
   return [
     {
       id: "linkedin",
@@ -157,13 +168,13 @@ function buildPlatforms(post) {
       error: post.youtube_error,
       url: post.youtube_shorts_url || post.youtube_url,
     },
-    {
-      id: "instagram",
+    ...instagramChannels.map(igId => ({
+      id: igId,
       name: "Instagram",
       success: post.instagram_success,
       error: post.instagram_error,
       url: post.instagram_url,
-    },
+    })),
     {
       id: "facebook",
       name: "Facebook",
@@ -455,17 +466,15 @@ function PinterestCard({ post, onOpen, formatDate }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         position: "relative",
-        borderRadius: 20,
+        borderRadius: 16,
         overflow: "hidden",
         cursor: "pointer",
         background: hasMedia ? "transparent" : css.lifted,
-        boxShadow: hovered
-          ? "0 18px 42px rgba(20,20,19,0.13), 0 4px 12px rgba(20,20,19,0.06)"
-          : "0 1px 3px rgba(20,20,19,0.05), 0 10px 28px rgba(20,20,19,0.055)",
-        transform: hovered ? "translateY(-3px)" : "none",
+        boxShadow: "none",
+        transform: hovered ? "translateY(-1px)" : "none",
         transition:
-          "box-shadow 0.35s cubic-bezier(0.2,0.8,0.2,1), transform 0.35s cubic-bezier(0.2,0.8,0.2,1)",
-        border: "1px solid rgba(20,20,19,0.075)",
+          "border-color 0.2s ease, transform 0.2s ease",
+        border: `1px solid ${hovered ? css.ink : css.hairline}`,
         willChange: "transform",
       }}
     >
@@ -728,9 +737,9 @@ function PinterestCard({ post, onOpen, formatDate }) {
                       overflow: "hidden",
                     }}
                   >
-                    {ICON_MAP[p.id] ? (
+                    {ICON_MAP[p.id.split(':')[0]] ? (
                       <img
-                        src={`/icons/${ICON_MAP[p.id]}`}
+                        src={`/icons/${ICON_MAP[p.id.split(':')[0]]}`}
                         alt={p.name}
                         style={{ width: 13, height: 13, objectFit: "contain" }}
                       />
@@ -760,12 +769,16 @@ function PinterestCard({ post, onOpen, formatDate }) {
                     height: 6,
                     borderRadius: "50%",
                     flexShrink: 0,
-                    background: isScheduled
+                    background: post.status === 'processing'
+                      ? "#eab308"
+                      : isScheduled
                       ? "#f97316"
                       : allSuccess
                         ? "#22c55e"
                         : "#ef4444",
-                    boxShadow: isScheduled
+                    boxShadow: post.status === 'processing'
+                      ? "0 0 6px rgba(234,179,8,0.7)"
+                      : isScheduled
                       ? "0 0 6px rgba(249,115,22,0.7)"
                       : allSuccess
                         ? "0 0 6px rgba(34,197,94,0.7)"
@@ -917,6 +930,28 @@ function PinterestCard({ post, onOpen, formatDate }) {
           </div>
         </div>
       )}
+
+      {post.status === 'processing' && (
+        <>
+          {post.step && (
+            <div style={{
+              position: 'absolute', bottom: 12, left: 8, right: 8, zIndex: 10,
+              background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 11, padding: '4px 8px',
+              borderRadius: 6, backdropFilter: 'blur(4px)', textAlign: 'center',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+            }}>
+              {post.step}
+            </div>
+          )}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'rgba(234,179,8,0.2)', zIndex: 10
+          }}>
+            <div style={{
+              height: '100%', width: `${post.progress || 0}%`, background: '#eab308', transition: 'width 0.5s ease-out'
+            }} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -931,10 +966,11 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
       style={{
         background: css.lifted,
         borderRadius: css.r_hero,
-        border: `1.5px solid ${expanded ? "rgba(243, 115, 56, 0.25)" : "rgba(20,20,19,0.06)"}`,
+        border: `1px solid ${expanded ? css.ink : css.hairline}`,
         overflow: "hidden",
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        boxShadow: expanded ? css.shadow : "0 4px 15px rgba(0,0,0,0.01)",
+        boxShadow: "none",
+        position: "relative"
       }}
     >
       <div
@@ -976,7 +1012,7 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
                     fontSize: 9,
                     fontWeight: 800,
                     color: css.arc,
-                    background: "rgba(243, 115, 56, 0.08)",
+                    background: "rgba(255, 86, 0, 0.08)",
                     padding: "2px 8px",
                     borderRadius: css.r_pill,
                     textTransform: "uppercase",
@@ -1035,9 +1071,9 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
       {expanded && (
         <div
           style={{
-            borderTop: "1.5px solid rgba(243, 115, 56, 0.1)",
+            borderTop: "1.5px solid rgba(255, 86, 0, 0.1)",
             background:
-              "linear-gradient(to bottom, rgba(243, 115, 56, 0.02), transparent)",
+              "linear-gradient(to bottom, rgba(255, 86, 0, 0.02), transparent)",
             padding: "24px",
           }}
         >
@@ -1076,7 +1112,7 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
                         width: 24,
                         height: 24,
                         borderRadius: "50%",
-                        background: PLATFORM_COLORS[p.id] || css.slate,
+                        background: PLATFORM_COLORS[p.id.split(':')[0]] || css.slate,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -1160,8 +1196,8 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
                 background: css.white,
                 padding: "20px",
                 borderRadius: css.r_btn,
-                border: "1.2px solid rgba(243, 115, 56, 0.1)",
-                boxShadow: "0 8px 24px rgba(243, 115, 56, 0.05)",
+                border: "1.2px solid rgba(255, 86, 0, 0.1)",
+                boxShadow: "0 8px 24px rgba(255, 86, 0, 0.05)",
               }}
             >
               <div
@@ -1185,6 +1221,23 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
           )}
         </div>
       )}
+
+      {post.status === 'processing' && (
+        <>
+          {post.step && (
+            <div style={{ position: 'absolute', bottom: 8, left: 18, fontSize: 11, color: '#eab308', fontWeight: 600 }}>
+              {post.step}
+            </div>
+          )}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'rgba(234,179,8,0.2)'
+          }}>
+            <div style={{
+              height: '100%', width: `${post.progress || 0}%`, background: '#eab308', transition: 'width 0.5s ease-out'
+            }} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -1197,8 +1250,8 @@ function SkeletonCard({ height }) {
       style={{
         borderRadius: 16,
         overflow: "hidden",
-        border: "1px solid rgba(20,20,19,0.075)",
-        boxShadow: "0 1px 3px rgba(20,20,19,0.05), 0 10px 28px rgba(20,20,19,0.045)",
+        border: `1px solid ${css.hairline}`,
+        boxShadow: "none",
       }}
     >
       <div className="skeleton-shimmer" style={{ height, minHeight: 170 }} />
@@ -1239,7 +1292,7 @@ function SkeletonCard({ height }) {
    MAIN DASHBOARD
    ══════════════════════════════════════════════════════ */
 function Dashboard() {
-  const { user, refreshAccounts } = useAuth();
+  const { user, connectedAccounts, refreshAccounts } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("sent");
@@ -1349,21 +1402,61 @@ function Dashboard() {
     setDisplayCount(BATCH_SIZE);
   }, [searchTerm]);
 
-  const fetchBroadcasts = async () => {
+  const fetchBroadcasts = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       let params = {};
       if (activeTab === "sent") params.status = "sent";
       else if (activeTab === "queue") params.status = "scheduled";
 
-      const response = await apiClient.get("/api/broadcasts", { params });
-      setBroadcasts(response.data.broadcasts || []);
+      const [resBroadcasts, resJobs] = await Promise.all([
+        apiClient.get("/api/broadcasts", { params }),
+        apiClient.get("/api/jobs").catch(() => ({ data: { jobs: [] } }))
+      ]);
+
+      let bcastData = resBroadcasts.data.broadcasts || [];
+      const jobsData = resJobs.data?.jobs || [];
+
+      const activeJobs = jobsData.filter(j => j.status === 'pending' || j.status === 'processing');
+      const pseudoBroadcasts = activeJobs.map(job => ({
+        id: job.id,
+        status: "processing",
+        caption: job.meta?.caption || "",
+        media_type: job.meta?.mediaType || "image",
+        media_url: job.meta?.previewUrl || "",
+        thumbnail_url: job.meta?.previewUrl || "",
+        selected_channels: job.meta?.channels || [],
+        posted_at: job.createdAt ? new Date(job.createdAt).toISOString() : new Date().toISOString(),
+        progress: job.progress,
+        step: job.step
+      }));
+
+      let displayPseudo = [];
+      if (activeTab === "queue" || activeTab === "history" || activeTab === "all") {
+        displayPseudo = pseudoBroadcasts;
+      }
+
+      // Filter out any broadcasts that might already exist with the same sourceJobId (if they just completed)
+      const existingJobIds = new Set(bcastData.map(b => b.platform_data?.sourceJobId || b.platform_data?.source_job_id).filter(Boolean));
+      const filteredPseudo = displayPseudo.filter(p => !existingJobIds.has(p.id));
+
+      setBroadcasts([...filteredPseudo, ...bcastData]);
     } catch (err) {
       setBroadcasts([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const hasActiveJobs = broadcasts.some(b => b.status === 'processing');
+    if (hasActiveJobs) {
+      const interval = setInterval(() => {
+        fetchBroadcasts(true);
+      }, 5000); // Poll every 5s while jobs are active
+      return () => clearInterval(interval);
+    }
+  }, [broadcasts, activeTab, searchTerm]);
 
   const formatDate = useCallback((dateString) =>
     new Date(dateString).toLocaleDateString('en-US', {
@@ -1381,9 +1474,12 @@ function Dashboard() {
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     if (selectedPlatform === "all") return matchesSearch;
-    const matchesPlatform = buildPlatforms(b).some(
-      (p) => p.id === selectedPlatform,
-    );
+    const matchesPlatform = buildPlatforms(b).some((p) => {
+      if (p.id === selectedPlatform) return true;
+      // Allow legacy generic "instagram" posts to show up for any specific instagram filter
+      if (selectedPlatform.startsWith("instagram:") && p.id === "instagram") return true;
+      return false;
+    });
     return matchesSearch && matchesPlatform;
   }), [broadcasts, searchTerm, selectedPlatform]);
 
@@ -1429,10 +1525,11 @@ function Dashboard() {
 
   return (
     <div
+      className="dashboard-intercom"
       style={{
         minHeight: "100vh",
         background: css.canvas,
-        fontFamily: "var(--font)",
+        fontFamily: "var(--font-body)",
       }}
     >
       {/* ── Top header ── */}
@@ -1460,8 +1557,8 @@ function Dashboard() {
       <div
         style={{
           background: css.lifted,
-          borderBottom: "1px solid rgba(20,20,19,0.08)",
-          padding: "clamp(14px, 3vw, 20px) 16px",
+          borderBottom: `1px solid ${css.hairline}`,
+          padding: "clamp(24px, 4vw, 40px) clamp(18px, 3vw, 32px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -1484,12 +1581,12 @@ function Dashboard() {
             </div>
             <h1
               style={{
-                fontSize: "clamp(20px, 4vw, 26px)",
-                fontWeight: 600,
+                fontSize: "clamp(36px, 5vw, 56px)",
+                fontWeight: 500,
                 color: css.ink,
                 margin: 0,
-                letterSpacing: "-0.02em",
-                lineHeight: 1,
+                letterSpacing: "-0.025em",
+                lineHeight: 1.08,
               }}
             >
               Analytics
@@ -1501,7 +1598,7 @@ function Dashboard() {
                 alignItems: "center",
                 gap: 7,
                 padding: "6px 11px",
-                borderRadius: css.r_pill,
+                borderRadius: 6,
                 border: "1px solid rgba(5,150,105,0.2)",
                 background: "#eefdf5",
                 color: "#065f46",
@@ -1517,17 +1614,27 @@ function Dashboard() {
             <div
               style={{
                 padding: "4px 10px",
-                background: "rgba(20,20,19,0.05)",
-                borderRadius: css.r_btn,
-                border: "1px solid rgba(20,20,19,0.1)",
+                background: "var(--canvas)",
+              borderRadius: css.r_btn,
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
+                border: "1px solid rgba(20,20,19,0.08)",
               }}
             >
               <span style={{ fontSize: 11, fontWeight: 700, color: css.ink }}>
-                {selectedPlatform.charAt(0).toUpperCase() +
-                  selectedPlatform.slice(1)}
+                {(() => {
+                  if (selectedPlatform.startsWith("instagram:")) {
+                    const igId = selectedPlatform.split(":")[1];
+                    const acc = connectedAccounts?.instagramAccounts?.find((a) => a.id === igId);
+                    if (acc && acc.username) return `Instagram (@${acc.username})`;
+                    return "Instagram Account";
+                  }
+                  return (
+                    selectedPlatform.charAt(0).toUpperCase() +
+                    selectedPlatform.slice(1)
+                  );
+                })()}
               </span>
               <button
                 onClick={() => navigate("/dashboard")}
@@ -1554,7 +1661,7 @@ function Dashboard() {
               gap: 8,
               fontSize: 14,
               padding: "10px 20px",
-              borderRadius: css.r_pill,
+              borderRadius: css.r_btn,
             }}
           >
             <Plus size={16} />
@@ -1567,8 +1674,8 @@ function Dashboard() {
       {/* ── Tabs ── */}
       <div
         style={{
-          background: css.lifted,
-          borderBottom: "1px solid rgba(20,20,19,0.08)",
+          background: css.canvas,
+          borderBottom: `1px solid ${css.hairline}`,
           padding: "0 16px",
           display: "flex",
           alignItems: "center",
@@ -1595,8 +1702,8 @@ function Dashboard() {
                 padding: "14px 0",
                 fontSize: 11,
                 fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
+                textTransform: "none",
+                letterSpacing: 0,
                 color: active ? css.ink : css.slate,
                 border: "none",
                 background: "transparent",
@@ -1640,7 +1747,7 @@ function Dashboard() {
           <div
             style={{
               background: css.canvas,
-              borderBottom: "1px solid rgba(20,20,19,0.06)",
+              borderBottom: `1px solid ${css.hairline}`,
               padding: "12px 16px",
               display: "flex",
               flexDirection: window.innerWidth < 768 ? "column" : "row",
@@ -1678,7 +1785,7 @@ function Dashboard() {
                 style={{
                   width: 1,
                   height: 16,
-                  background: "rgba(20,20,19,0.1)",
+                background: css.hairline,
                   flexShrink: 0,
                 }}
               />
@@ -1735,8 +1842,8 @@ function Dashboard() {
                   style={{
                     padding: "8px 16px 8px 32px",
                     background: css.lifted,
-                    border: "1px solid rgba(20,20,19,0.1)",
-                    borderRadius: css.r_pill,
+                    border: `1px solid ${css.hairline}`,
+                    borderRadius: css.r_btn,
                     fontSize: 13,
                     color: css.ink,
                     fontFamily: "var(--font)",
@@ -1749,7 +1856,7 @@ function Dashboard() {
                 style={{
                   display: "flex",
                   background: css.lifted,
-                  border: "1px solid rgba(20,20,19,0.08)",
+                  border: `1px solid ${css.hairline}`,
                   borderRadius: css.r_pill,
                   padding: 3,
                   gap: 2,
@@ -1939,7 +2046,7 @@ function Dashboard() {
             style={{
               background: css.lifted,
               borderRadius: css.r_hero,
-              border: "1px dashed rgba(20,20,19,0.15)",
+              border: `1px dashed ${css.hairline}`,
               padding: "80px 40px",
               textAlign: "center",
             }}
@@ -1969,7 +2076,7 @@ function Dashboard() {
                   position: "relative",
                   width: 64,
                   height: 64,
-                  borderRadius: "50%",
+                  borderRadius: css.r_btn,
                   background: css.ink,
                   display: "flex",
                   alignItems: "center",
@@ -1982,7 +2089,7 @@ function Dashboard() {
             </div>
             <h3
               style={{
-                fontSize: 22,
+              fontSize: 28,
                 fontWeight: 500,
                 color: css.ink,
                 margin: "0 0 10px",
@@ -2050,6 +2157,18 @@ function Dashboard() {
           <PostPreviewModal
             post={selectedPost}
             onClose={() => setSelectedPost(null)}
+            onDelete={async (id) => {
+              try {
+                const res = await apiClient.delete(`/api/broadcasts/${id}`);
+                if (res.data.success) {
+                  setBroadcasts(prev => prev.filter(b => b.id !== id));
+                  setSelectedPost(null);
+                }
+              } catch (error) {
+                console.error("Failed to delete post:", error);
+                alert("Failed to delete post.");
+              }
+            }}
           />
         )}
       </AnimatePresence>

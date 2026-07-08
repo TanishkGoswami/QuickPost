@@ -71,6 +71,7 @@ export default function InboxConversationList({
                       {displayName}
                     </p>
                     <p className="truncate text-[11px] text-[var(--slate)]">
+                      {conversation.instagram_accounts?.instagram_username ? `@${conversation.instagram_accounts.instagram_username} • ` : ""}
                       {follows === true ? "Follower" : follows === false ? "Non-follower" : "Follower unknown"} / {conversation.instagram_bots?.bot_name || "InstaPilot"}
                     </p>
                   </div>

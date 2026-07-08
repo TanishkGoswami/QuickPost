@@ -86,14 +86,14 @@ function Login() {
       >
         <path
           d="M -100 500 Q 350 150 800 480 Q 1050 680 1350 300"
-          stroke="#F37338"
+          stroke="#FF5600"
           strokeWidth="1.5"
           fill="none"
           opacity="0.5"
         />
         <path
           d="M 50 700 Q 400 300 900 600"
-          stroke="#F37338"
+          stroke="#FF5600"
           strokeWidth="1"
           fill="none"
           opacity="0.3"

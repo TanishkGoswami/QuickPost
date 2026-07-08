@@ -108,8 +108,8 @@ export default function AboutSection() {
                 timelineRef={sectionRef}
                 customVariants={textVariants}
                 style={{
-                  color: "#3860be",
-                  border: "2px dashed #3860be",
+                  color: "#0007cb",
+                  border: "2px dashed #0007cb",
                   display: "inline-block",
                   padding: "0 12px",
                   borderRadius: 12,

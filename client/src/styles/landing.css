@@ -17,7 +17,7 @@
   width: 140%;
   height: 140%;
   background:
-    radial-gradient(ellipse 60% 45% at 20% 30%, rgba(243,115,56,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 45% at 20% 30%, rgba(255,86,0,0.06) 0%, transparent 70%),
     radial-gradient(ellipse 55% 40% at 80% 70%, rgba(207,69,0,0.04) 0%, transparent 70%);
   pointer-events: none;
 }

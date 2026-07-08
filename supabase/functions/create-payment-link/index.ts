@@ -18,25 +18,29 @@ Deno.serve(async (req) => {
 
   try {
     const { planId, interval = 1, userId, customerName, customerEmail, customerContact } = await req.json();
+    const intervalMonths = Number(interval);
 
     if (!userId || !planId) {
       throw new Error("userId and planId are required");
+    }
+    if (![1, 3, 6, 12].includes(intervalMonths)) {
+      throw new Error("Invalid billing interval");
     }
 
     // 1. Determine amount based on plan
     let amount = 0;
     let description = "";
-    if (planId === "999") {
+    if (planId === "999" || planId === "pro") {
       let monthlyPrice = 999;
-      if (interval === 3) monthlyPrice = 899;
-      else if (interval === 6) monthlyPrice = 799;
-      else if (interval === 12) monthlyPrice = 699;
+      if (intervalMonths === 3) monthlyPrice = 899;
+      else if (intervalMonths === 6) monthlyPrice = 799;
+      else if (intervalMonths === 12) monthlyPrice = 799;
       
-      amount = monthlyPrice * interval * 100; // in paise
-      description = `QuickPost Pro Plan Subscription (${interval} Month${interval > 1 ? 's' : ''})`;
-    } else if (planId === "2999") {
-      amount = 2999 * 100; // in paise
-      description = "QuickPost Enterprise Plan Subscription";
+      amount = Math.round(monthlyPrice * intervalMonths * 100); // in paise
+      description = `QuickPost Pro Plan Subscription (${intervalMonths} Month${intervalMonths > 1 ? 's' : ''})`;
+    } else if (planId === "2999" || planId === "enterprise") {
+      amount = (intervalMonths === 12 ? 29988 : 2999 * intervalMonths) * 100; // in paise
+      description = `QuickPost Enterprise Plan Subscription (${intervalMonths} Month${intervalMonths > 1 ? 's' : ''})`;
     } else {
       throw new Error("Invalid planId");
     }
@@ -70,7 +74,7 @@ Deno.serve(async (req) => {
         notes: {
           user_id: userId,
           plan: planId,
-          interval: interval.toString(),
+          interval: intervalMonths.toString(),
         },
         callback_url: `${req.headers.get("origin") || "http://localhost:5173"}/dashboard?payment=success`,
         callback_method: "get",
@@ -88,7 +92,7 @@ Deno.serve(async (req) => {
     const { error: dbError } = await supabase.from("payments").insert({
       user_id: userId,
       razorpay_payment_link_id: razorpayData.id,
-      plan: planId === "999" ? "Pro" : "Enterprise",
+      plan: planId === "999" || planId === "pro" ? "Pro" : "Enterprise",
       amount,
       status: "pending",
     });

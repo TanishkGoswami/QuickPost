@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import axios from 'axios';
 import supabase from './supabase.js';
+import { consumeUsage } from './entitlements.js';
 
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v21.0';
 const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
@@ -864,7 +865,21 @@ async function handleInboundMessage({ senderId, recipientId, messaging }) {
       .eq('id', conversation.id);
   }
 
-  const sendText = reply.handoff ? bot.fallback_message || DEFAULT_REPLY : reply.text;
+  let sendText = reply.handoff ? bot.fallback_message || DEFAULT_REPLY : reply.text;
+
+  const usage = await consumeUsage(
+    account.user_id,
+    'autodm_replies_per_month',
+    1,
+    'month',
+  );
+  if (!usage.allowed) {
+    return { skipped: true, reason: 'monthly_reply_limit_reached' };
+  }
+  if (usage.entitlements?.plan?.id === 'free') {
+    sendText += '\n\n_⚡ This automation is from SocialPilot (social.getaipilot.in)_';
+  }
+
   await sendInstagramMessage({ account, recipientId: senderId, text: sendText, messagingType: 'RESPONSE' });
   await supabase.from('instagram_messages').insert({
     user_id: account.user_id,

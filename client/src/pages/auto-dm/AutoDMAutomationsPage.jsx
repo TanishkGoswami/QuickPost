@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAutoDM } from '../../context/AutoDMContext';
+import AutoDMAccountSwitcher from './AutoDMAccountSwitcher';
 
 function formatRelativeTime(value) {
   if (!value) return 'Never';
@@ -376,10 +377,13 @@ export default function AutoDMAutomationsPage() {
           <h1>Automations</h1>
           <p>Create and manage your Instagram automations</p>
         </div>
-        <button type="button" className="autodm-create-btn" onClick={() => navigate('/dashboard/auto-dm/automations/new')}>
-          <Plus size={16} />
-          Create
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <AutoDMAccountSwitcher />
+          <button type="button" className="autodm-create-btn" onClick={() => navigate('/dashboard/auto-dm/automations/new')}>
+            <Plus size={16} />
+            Create
+          </button>
+        </div>
       </header>
 
       <section className="card-shadow autodm-automation-table">
@@ -397,7 +401,7 @@ export default function AutoDMAutomationsPage() {
           </div>
         ) : rows.length === 0 ? (
           <div className="autodm-empty">
-            <MessageCircle size={38} />
+            <img src="https://illustrations.popsy.co/amber/web-design.svg" className="h-40 object-contain mx-auto mb-4" alt="No Automations" />
             <p>No automations yet</p>
             <span>Create your first Instagram automation to start sending DMs.</span>
           </div>

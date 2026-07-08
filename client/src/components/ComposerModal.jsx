@@ -769,7 +769,7 @@ const CalendarView = memo(function CalendarView({ value, onChange }) {
               onMouseLeave={(e) => {
                 if (!isSelected) {
                   e.target.style.background = isToday
-                    ? "rgba(243,115,56,0.08)"
+                    ? "rgba(255,86,0,0.08)"
                     : "transparent";
                 }
               }}
@@ -871,7 +871,7 @@ const CustomSelect = memo(function CustomSelect({
           minWidth: isTime ? 130 : 160,
           transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
           boxShadow: open
-            ? "0 4px 12px rgba(243,115,56,0.08)"
+            ? "0 4px 12px rgba(255,86,0,0.08)"
             : "0 2px 4px rgba(0,0,0,0.02)",
         }}
         onMouseEnter={(e) => {
@@ -1002,7 +1002,7 @@ const CustomSelect = memo(function CustomSelect({
                         textAlign: "left",
                         background:
                           value === val
-                            ? "rgba(243,115,56,0.08)"
+                            ? "rgba(255,86,0,0.08)"
                             : "transparent",
                         border: "none",
                         borderRadius: "8px",
@@ -1048,6 +1048,8 @@ const SmartWarnings = memo(function SmartWarnings({
 }) {
   const warnings = [];
 
+  const hasInstagram = selectedChannels.some(c => c === 'instagram' || c.startsWith('instagram:'));
+
   const mainMedia = mediaFiles[0];
   if (!mainMedia || !mainMedia.dimensions) return null;
 
@@ -1067,7 +1069,7 @@ const SmartWarnings = memo(function SmartWarnings({
   }
 
   if (
-    selectedChannels.includes("instagram") &&
+    hasInstagram &&
     platformData.instagram?.type === "reel" &&
     isHorizontal
   ) {
@@ -1089,8 +1091,8 @@ const SmartWarnings = memo(function SmartWarnings({
           style={{
             padding: "10px 14px",
             borderRadius: 12,
-            background: "rgba(243,115,56,0.06)",
-            border: "1px solid rgba(243,115,56,0.15)",
+            background: "rgba(255,86,0,0.06)",
+            border: "1px solid rgba(255,86,0,0.15)",
             display: "flex",
             alignItems: "center",
             gap: 10,
@@ -1233,6 +1235,8 @@ function ComposerModal({
 
   /* ── State ── */
   const [selectedChannels, setSelectedChannels] = useState([]);
+  const hasInstagram = selectedChannels.some(c => c === "instagram" || c.startsWith("instagram:"));
+  const getBasePlatform = (c) => c?.split(':')[0] || c;
   const [caption, setCaption] = useState("");
   const [mediaFiles, setMediaFiles] = useState([]);
   const [isScheduled, setIsScheduled] = useState(false);
@@ -1336,24 +1340,7 @@ function ComposerModal({
 
   // Free tier restrictions
   const isFree = user?.plan === "Free" || !user?.plan;
-  const [freeBroadcastsCount, setFreeBroadcastsCount] = useState(0);
 
-  useEffect(() => {
-    if (isFree && isOpen) {
-      const fetchCount = async () => {
-        const { count, error } = await supabase
-          .from("broadcasts")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", user.id);
-        if (!error && count !== null) {
-          setFreeBroadcastsCount(count);
-        }
-      };
-      fetchCount();
-    }
-  }, [isFree, isOpen, user?.id]);
-
-  const isFreeLimitReached = isFree && freeBroadcastsCount >= 3;
 
   const [activePreviewPlatform, setActivePreviewPlatform] =
     useState("instagram");
@@ -1432,12 +1419,12 @@ function ComposerModal({
       setActivePreviewPlatform("instagram");
       return;
     }
-    if (!selectedChannels.includes(activePreviewPlatform))
-      setActivePreviewPlatform(selectedChannels[0]);
+    if (!selectedChannels.some(c => getBasePlatform(c) === activePreviewPlatform))
+      setActivePreviewPlatform(getBasePlatform(selectedChannels[0]));
   }, [JSON.stringify(selectedChannels), activePreviewPlatform]);
 
   useEffect(() => {
-    if (!selectedChannels.includes("instagram") && autoDMConfig.enabled) {
+    if (!hasInstagram && autoDMConfig.enabled) {
       setAutoDMConfig((current) => ({ ...current, enabled: false }));
     }
   }, [JSON.stringify(selectedChannels), autoDMConfig.enabled]);
@@ -1652,7 +1639,7 @@ function ComposerModal({
         return false;
       }
     }
-    if (selectedChannels.includes("instagram") && autoDMConfig.enabled) {
+    if (hasInstagram && autoDMConfig.enabled) {
       if (!autoDMConfig.keywords?.length) {
         setError("Add at least one Auto DM keyword or turn Auto DM off.");
         return false;
@@ -1688,7 +1675,7 @@ function ComposerModal({
       formData.append("platformPresets", JSON.stringify(platformPresets));
       formData.append("userTimezone", userTimezone);
       formData.append("isScheduled", isScheduled ? "true" : "false");
-      if (selectedChannels.includes("instagram") && autoDMConfig.enabled) {
+      if (hasInstagram && autoDMConfig.enabled) {
         formData.append("autoDMConfig", JSON.stringify(autoDMConfig));
       }
 
@@ -1929,7 +1916,7 @@ function ComposerModal({
                     padding: "20px",
                     borderRadius: "50%",
                     marginBottom: 20,
-                    boxShadow: "0 10px 25px rgba(243,115,56,0.3)",
+                    boxShadow: "0 10px 25px rgba(255,86,0,0.3)",
                   }}
                 >
                   <Upload size={40} strokeWidth={2.5} />
@@ -1974,7 +1961,7 @@ function ComposerModal({
                 style={{
                   fontSize: 16,
                   fontWeight: 800,
-                  color: "var(--ink,#141413)",
+                  color: "var(--ink,#111111)",
                   margin: 0,
                   letterSpacing: "-0.02em",
                 }}
@@ -2049,9 +2036,9 @@ function ComposerModal({
                     background: "transparent",
                     color:
                       mobileActiveTab === tab.id
-                        ? "var(--ink,#141413)"
+                        ? "var(--ink,#111111)"
                         : "var(--slate,#8a8a82)",
-                    borderBottom: `2.5px solid ${mobileActiveTab === tab.id ? "var(--ink,#141413)" : "transparent"}`,
+                    borderBottom: `2.5px solid ${mobileActiveTab === tab.id ? "var(--ink,#111111)" : "transparent"}`,
                     transition: "all 0.2s",
                     cursor: "pointer",
                   }}
@@ -2226,7 +2213,7 @@ function ComposerModal({
                           fontSize: 14,
                           fontFamily: "inherit",
                           resize: "none",
-                          color: "var(--ink,#141413)",
+                          color: "var(--ink,#111111)",
                           outline: "none",
                           transition: "border-color 0.2s",
                         }}
@@ -2320,7 +2307,7 @@ function ComposerModal({
                             type="button"
                             whileHover={{
                               scale: 1.03,
-                              background: "var(--ink,#141413)",
+                              background: "var(--ink,#111111)",
                               color: "white",
                             }}
                             whileTap={{ scale: 0.97 }}
@@ -2510,7 +2497,7 @@ function ComposerModal({
                               transition:
                                 "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                               boxShadow: isSelected
-                                ? "0 4px 12px rgba(243,115,56,0.12)"
+                                ? "0 4px 12px rgba(255,86,0,0.12)"
                                 : "0 2px 4px rgba(0,0,0,0.02)",
                             }}
                           >
@@ -2604,7 +2591,7 @@ function ComposerModal({
                         size={13}
                         style={{
                           color: isScheduled
-                            ? "var(--arc,#f37338)"
+                            ? "var(--arc,#ff5600)"
                             : "var(--slate,#8a8a82)",
                         }}
                       />
@@ -2614,8 +2601,8 @@ function ComposerModal({
                             fontSize: 12,
                             fontWeight: 700,
                             color: isScheduled
-                              ? "var(--arc,#f37338)"
-                              : "var(--ink,#141413)",
+                              ? "var(--arc,#ff5600)"
+                              : "var(--ink,#111111)",
                             margin: 0,
                           }}
                         >
@@ -2625,7 +2612,7 @@ function ComposerModal({
                           <p
                             style={{
                               fontSize: 10,
-                              color: "var(--arc,#f37338)",
+                              color: "var(--arc,#ff5600)",
                               margin: 0,
                               opacity: 0.8,
                             }}
@@ -2770,19 +2757,19 @@ function ComposerModal({
                               alignItems: "center",
                               gap: 6,
                               padding: "7px 10px",
-                              background: "rgba(243,115,56,0.05)",
+                              background: "rgba(255,86,0,0.05)",
                               borderRadius: 8,
-                              border: "1px solid rgba(243,115,56,0.1)",
+                              border: "1px solid rgba(255,86,0,0.1)",
                             }}
                           >
                             <Clock
                               size={11}
-                              style={{ color: "var(--arc,#f37338)" }}
+                              style={{ color: "var(--arc,#ff5600)" }}
                             />
                             <span
                               style={{
                                 fontSize: 10,
-                                color: "var(--arc,#f37338)",
+                                color: "var(--arc,#ff5600)",
                                 fontWeight: 600,
                               }}
                             >
@@ -2808,8 +2795,8 @@ function ComposerModal({
                   onYoutubeThumbnailChange={setYoutubeThumbnail}
                 />
 
-                {/* ── Smart Warnings ── */}
-                {selectedChannels.includes("instagram") && (
+                {/* ✨ Smart Warnings ✨ */}
+                {hasInstagram && (
                   <Section label="Instagram Auto DM" mb={20}>
                     <AutoDMComposerPanel
                       config={autoDMConfig}
@@ -2951,15 +2938,15 @@ function ComposerModal({
                   animate={{ opacity: 1, y: 0 }}
                   style={{
                     fontSize: 10,
-                    color: "var(--arc,#f37338)",
+                    color: "var(--arc,#ff5600)",
                     fontWeight: 700,
                     display: "flex",
                     alignItems: "center",
                     gap: 5,
-                    background: "rgba(243,115,56,0.06)",
+                    background: "rgba(255,86,0,0.06)",
                     padding: isMobile ? "4px 8px" : "5px 12px",
                     borderRadius: 20,
-                    border: "1px solid rgba(243,115,56,0.15)",
+                    border: "1px solid rgba(255,86,0,0.15)",
                     textAlign: "center",
                   }}
                 >
@@ -3002,27 +2989,6 @@ function ComposerModal({
                 </motion.span>
               )}
 
-              {/* Free Limit Warning */}
-              {isFree && (
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: isFreeLimitReached ? "#dc2626" : "var(--slate)",
-                    fontWeight: 600,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  {isFreeLimitReached ? (
-                    <>
-                      <Lock size={12} /> Limit reached (3/3 posts)
-                    </>
-                  ) : (
-                    <>Free posts: {freeBroadcastsCount}/3</>
-                  )}
-                </div>
-              )}
 
               {/* PUBLISH BUTTON */}
               <motion.button
@@ -3032,7 +2998,7 @@ function ComposerModal({
                         scale: 1.02,
                         y: -2,
                         boxShadow: isScheduled
-                          ? "0 10px 24px rgba(243,115,56,0.3)"
+                          ? "0 10px 24px rgba(255,86,0,0.3)"
                           : "0 10px 24px rgba(20,20,19,0.22)",
                       }
                     : {}
@@ -3040,15 +3006,15 @@ function ComposerModal({
                 whileTap={!publishDisabled ? { scale: 0.97 } : {}}
                 type="button"
                 onClick={handleSubmit}
-                disabled={publishDisabled || isFreeLimitReached}
-                className={`btn-fly ${publishDisabled || isFreeLimitReached || loading ? "" : "hovering"}`}
+                disabled={publishDisabled || loading}
+                className={`btn-fly ${publishDisabled || loading ? "" : "hovering"}`}
                 style={{
                   background:
-                    publishDisabled || isFreeLimitReached
+                    publishDisabled
                       ? "rgba(20,20,19,0.18)"
                       : isScheduled
-                        ? "linear-gradient(135deg,var(--arc,#f37338) 0%,#ff8c5a 100%)"
-                        : "linear-gradient(135deg,var(--ink,#141413) 0%,#3a3a37 100%)",
+                        ? "linear-gradient(135deg,var(--arc,#ff5600) 0%,#ff8c5a 100%)"
+                        : "linear-gradient(135deg,var(--ink,#111111) 0%,#3a3a37 100%)",
                   height: isMobile ? 42 : 48,
                   minWidth: isMobile ? 120 : 175,
                   borderRadius: "16px",
@@ -3061,7 +3027,7 @@ function ComposerModal({
                   color: "white",
                   border: "none",
                   cursor:
-                    publishDisabled || isFreeLimitReached
+                    publishDisabled
                       ? "not-allowed"
                       : "pointer",
                   transition: "all 0.25s cubic-bezier(0.4,0,0.2,1)",

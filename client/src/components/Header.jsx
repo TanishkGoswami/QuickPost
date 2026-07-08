@@ -29,6 +29,8 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
   const [imgError, setImgError] = useState(false);
 
+  const isEditorPage = location.pathname.includes('/dashboard/auto-dm/automations/') && location.pathname !== '/dashboard/auto-dm/automations';
+
   if (!user) return null;
 
   const handleLogout = async () => {
@@ -91,6 +93,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
 
   return (
     <header
+      className="qp-header"
       style={{
         position: "fixed",
         top: 0,
@@ -98,22 +101,24 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
         left: isDesktop && !isTrendsPage ? 240 : 0,
         zIndex: 39,
         height: 56,
-        background: "rgba(255, 255, 255, 0.8)",
+        background: "rgba(245, 241, 236, 0.94)",
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
-        borderBottom: "1px solid rgba(20,20,19,0.06)",
+        borderBottom: "1px solid #d3cec6",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         padding: isDesktop ? "0 24px" : "0 16px",
-        fontFamily: "var(--font)",
+        fontFamily: "var(--font-body)",
         transition: "left 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div id="header-left-portal"></div>
         {/* Back Button on Trends Page */}
         {isTrendsPage && (
           <button
+            className="qp-header-icon-button"
             onClick={() => navigate('/dashboard')}
             aria-label="Go Back"
             style={{
@@ -138,6 +143,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
         {/* Mobile menu toggle */}
         {!isDesktop && !isTrendsPage && (
           <button
+            className="qp-header-icon-button"
             onClick={onMenuClick}
             aria-label="Toggle Menu"
             style={{
@@ -161,8 +167,12 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
 
       {/* Right: Actions + user pill */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ display: "flex", gap: 6 }}>
+        <div id="header-actions-portal" style={{ display: "flex", alignItems: "center", gap: 12 }}></div>
+        {!isEditorPage && (
+          <>
+            <div style={{ display: "flex", gap: 6 }}>
           <button
+            className="qp-header-icon-button"
             onClick={handleSettingsClick}
             title="Connections"
             style={{
@@ -185,21 +195,17 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
           </button>
           <button
             onClick={handleLogout}
-            className="group flex items-center justify-start w-[36px] hover:w-[100px] h-[36px] border-none rounded-full hover:rounded-[18px] cursor-pointer relative overflow-hidden transition-all duration-300 shadow-[1px_1px_5px_rgba(0,0,0,0.08)] bg-[#141413] active:translate-x-[1px] active:translate-y-[1px]"
+            className="qp-header-logout"
+            aria-label="Logout"
+            title="Logout"
           >
-            <div className="flex items-center justify-center w-full group-hover:w-[35%] transition-all duration-300 group-hover:pl-4">
-              <svg viewBox="0 0 512 512" className="w-[16px] fill-white">
-                <path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z" />
-              </svg>
-            </div>
-            <div className="absolute right-0 w-0 group-hover:w-[65%] opacity-0 group-hover:opacity-100 text-white text-[11px] font-semibold transition-all duration-300 group-hover:pr-3 whitespace-nowrap">
-              Logout
-            </div>
+            <LogOut size={18} />
           </button>
         </div>
 
         {/* User pill */}
         <div
+          className="qp-header-user-pill"
           aria-label={`Account: ${user.name || user.email}`}
           style={{
             display: "flex",
@@ -259,6 +265,8 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
             {user.name || "Account"}
           </span>
         </div>
+          </>
+        )}
       </div>
 
       {/* Settings Modal */}

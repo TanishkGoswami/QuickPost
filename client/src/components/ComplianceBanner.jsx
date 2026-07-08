@@ -65,7 +65,7 @@ export default function ComplianceBanner() {
             }}
           >
             <div style={{
-              background: '#FCFBFA',
+              background: '#FFFFFF',
               backdropFilter: 'blur(24px)',
               WebkitBackdropFilter: 'blur(24px)',
               borderRadius: 'var(--r-hero)',
@@ -75,7 +75,7 @@ export default function ComplianceBanner() {
               fontFamily: "'Sofia Sans', Arial, sans-serif",
             }}>
               {/* Top accent line — Signal Orange per Mastercard consent pattern */}
-              <div style={{ height: 3, background: '#F37338' }} />
+              <div style={{ height: 3, background: '#FF5600' }} />
 
               <div style={{ padding: '20px 22px' }}>
                 {/* Main row */}

@@ -70,7 +70,7 @@ const MemeCard = memo(function MemeCard({ meme, index, onUseIdea, saved = false,
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, delay: Math.min(index * 0.035, 0.3), ease: [0.23, 1, 0.32, 1] }}
       style={{
-        background: "#141413", borderRadius: 20, overflow: "hidden",
+        background: "#111111", borderRadius: 20, overflow: "hidden",
         border: "1px solid rgba(255,255,255,0.055)",
         boxShadow: "0 2px 14px rgba(20,20,19,0.18)",
         display: "flex", flexDirection: "column", marginBottom: 20,
@@ -87,13 +87,13 @@ const MemeCard = memo(function MemeCard({ meme, index, onUseIdea, saved = false,
             : <LazyImage src={image} alt={title || "Trending"} style={{ height: "auto", minHeight: 140, width: "100%" }} />
           }
           <div style={{ position: "absolute", top: 10, left: 10 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", background: "rgba(20,20,19,0.72)", backdropFilter: "blur(8px)", borderRadius: 99, fontSize: 9, fontWeight: 900, color: "#f37338", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-              {isVideo ? <Play size={8} fill="#f37338" /> : <Flame size={8} />}
+            <span style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", background: "rgba(20,20,19,0.72)", backdropFilter: "blur(8px)", borderRadius: 99, fontSize: 9, fontWeight: 900, color: "#ff5600", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              {isVideo ? <Play size={8} fill="#ff5600" /> : <Flame size={8} />}
               {isVideo ? "VIDEO" : "MEME"}
             </span>
           </div>
           <div style={{ position: "absolute", top: 10, right: 10 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 9px", background: "rgba(20,20,19,0.72)", backdropFilter: "blur(8px)", borderRadius: 99, fontSize: 10, color: "#f37338", fontWeight: 800 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 4, padding: "4px 9px", background: "rgba(20,20,19,0.72)", backdropFilter: "blur(8px)", borderRadius: 99, fontSize: 10, color: "#ff5600", fontWeight: 800 }}>
               <ArrowUpCircle size={11} />{fmtUp(upvotes)}
             </span>
           </div>
@@ -103,11 +103,11 @@ const MemeCard = memo(function MemeCard({ meme, index, onUseIdea, saved = false,
       {/* Body */}
       <div style={{ padding: "16px 18px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
-          <span style={{ padding: "2px 9px", background: "rgba(243,115,56,0.18)", border: "1px solid rgba(243,115,56,0.22)", borderRadius: 99, fontSize: 9, fontWeight: 800, color: "#f37338" }}>
+          <span style={{ padding: "2px 9px", background: "rgba(255,86,0,0.18)", border: "1px solid rgba(255,86,0,0.22)", borderRadius: 99, fontSize: 9, fontWeight: 800, color: "#ff5600" }}>
             r/{subreddit || "trending"}
           </span>
           {!image && !isVideo && (
-            <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "#f37338", fontWeight: 800 }}>
+            <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "#ff5600", fontWeight: 800 }}>
               <ArrowUpCircle size={11} />{fmtUp(upvotes)}
             </span>
           )}
@@ -120,13 +120,13 @@ const MemeCard = memo(function MemeCard({ meme, index, onUseIdea, saved = false,
         {/* Actions */}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} onClick={handleUse}
-            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 0", background: "#f37338", border: "none", borderRadius: 10, color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 14px rgba(243,115,56,0.3)" }}>
+            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 0", background: "#ff5600", border: "none", borderRadius: 10, color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 14px rgba(255,86,0,0.3)" }}>
             <Sparkles size={12} />Use This
           </motion.button>
 
           <button onClick={e => { e.stopPropagation(); onToggleSave?.(id); }}
             aria-label={saved ? "Remove bookmark" : "Save"}
-            style={{ width: 35, height: 35, display: "flex", alignItems: "center", justifyContent: "center", background: saved ? "rgba(243,115,56,0.2)" : "rgba(255,255,255,0.07)", border: `1px solid ${saved ? "rgba(243,115,56,0.3)" : "rgba(255,255,255,0.1)"}`, borderRadius: 10, color: saved ? "#f37338" : "rgba(242,240,237,0.45)", cursor: "pointer", transition: "all 0.14s" }}>
+            style={{ width: 35, height: 35, display: "flex", alignItems: "center", justifyContent: "center", background: saved ? "rgba(255,86,0,0.2)" : "rgba(255,255,255,0.07)", border: `1px solid ${saved ? "rgba(255,86,0,0.3)" : "rgba(255,255,255,0.1)"}`, borderRadius: 10, color: saved ? "#ff5600" : "rgba(242,240,237,0.45)", cursor: "pointer", transition: "all 0.14s" }}>
             {saved ? <BookmarkCheck size={13} /> : <Bookmark size={13} />}
           </button>
 

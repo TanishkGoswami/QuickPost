@@ -11,6 +11,23 @@ import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
 
+const FREE_ENTITLEMENTS = Object.freeze({
+  plan: { id: 'free', name: 'Free' },
+  subscription: { source: 'standalone', status: 'active' },
+  features: { publishing: true, scheduling: true, analytics: true, autodm: true },
+  limits: {
+    social_accounts: 3,
+    scheduled_queue: 10,
+    team_members: 1,
+    history_days: 7,
+    autodm_accounts: 3,
+    autodm_automations: 1,
+    autodm_replies_per_month: 50,
+    contacts: 100,
+  },
+  usage: {},
+});
+
 // ── Secure Server-Side Sync ──────────────────────────────────────────────────
 // Disabling browser-side sync to prevent CORS errors and protect sensitive env vars
 // (VITE_SOCIAL_SYNC_SECRET) from being exposed in production.
@@ -41,15 +58,10 @@ export function AuthProvider({ children }) {
 
   const fetchConnectedAccounts = useCallback(async () => {
     try {
-      console.log("🔄 Fetching connected accounts...");
-      const response = await apiClient.get("/api/auth/accounts");
+      const response = await apiClient.get(`/api/auth/accounts?t=${Date.now()}`);
       if (response.data.success) {
         const accounts = response.data.accounts;
-        console.log("✅ Accounts fetched successfully:", Object.keys(accounts).filter(k => accounts[k].connected));
-        console.log("📊 Full accounts data:", accounts);
         setConnectedAccounts(accounts);
-      } else {
-        console.error("❌ Failed to fetch accounts:", response.data.error);
       }
     } catch (error) {
       console.error("💥 Error fetching connected accounts:", error.message || error);
@@ -58,37 +70,46 @@ export function AuthProvider({ children }) {
 
   const fetchUserProfile = useCallback(async (sessionUser) => {
     try {
-      // Step 1: Check local users table
-      const { data: localUser } = await supabase
-        .from('users')
-        .select('plan, subscription_status')
-        .eq('id', sessionUser.id)
-        .maybeSingle();
+      // Load standalone entitlements and legacy records in parallel. Standalone
+      // entitlements are authoritative once a paid app subscription exists.
+      const { data } = await apiClient.get('/api/billing/entitlements');
+      const entitlements = data?.entitlements || FREE_ENTITLEMENTS;
 
-      // Step 2: Check hub_subscriptions by EMAIL (hub purchases + social purchases after verify-subscription)
-      const { data: hubSub } = await supabase
-        .from('hub_subscriptions')
-        .select('plan, plan_id, subscription_status')
-        .eq('email', sessionUser.email)
-        .maybeSingle();
+      setUser(prev => prev ? {
+        ...prev,
+        plan: entitlements.plan.name,
+        subscription_status: entitlements.subscription.status,
+        entitlements,
+      } : null);
+      return;
 
+      /*
+       * Disabled legacy migration code retained temporarily for reference.
+       * Hub product labels must never be used as QuickPost plan IDs.
+       *
       // Priority: hub_subscriptions > local users table > auth user_metadata
-      let resolvedPlan   = hubSub?.plan
+      let resolvedPlan   = hasStandalonePaidPlan
+        ? entitlements.plan.name
+        : hubSub?.plan
         || localUser?.plan
         || sessionUser.user_metadata?.plan   // ← set by verify-subscription immediately after payment
         || 'Free';
-      let resolvedStatus = hubSub?.subscription_status
+      let resolvedStatus = hasStandalonePaidPlan
+        ? entitlements.subscription.status
+        : hubSub?.subscription_status
         || localUser?.subscription_status
         || sessionUser.user_metadata?.subscription_status
         || 'active';
 
       // Normalise — if somehow "Pro"/"Enterprise" slipped through from old code, map to new names
-      const p = resolvedPlan.toLowerCase();
-      if (p.includes('monthly') || p.includes('core') || p === 'all_in_one_bundle_monthly') resolvedPlan = 'GAP Core';
-      else if (p.includes('quarterly') || p.includes('pro') || p === 'all_in_one_bundle_quarterly') resolvedPlan = 'GAP Pro';
-      else if (p.includes('half_yearly') || p.includes('max') || p === 'all_in_one_bundle_half_yearly') resolvedPlan = 'GAP Max';
-      else if (p.includes('all_in_one') || p.includes('ultimate') || p.includes('enterprise')) resolvedPlan = 'GAP Ultimate Ecosystem';
-      else if (p === 'pro') resolvedPlan = 'Social Pilot';
+      if (!hasStandalonePaidPlan) {
+        const p = resolvedPlan.toLowerCase();
+        if (p.includes('monthly') || p.includes('core') || p === 'all_in_one_bundle_monthly') resolvedPlan = 'GAP Core';
+        else if (p.includes('quarterly') || p.includes('pro') || p === 'all_in_one_bundle_quarterly') resolvedPlan = 'GAP Pro';
+        else if (p.includes('half_yearly') || p.includes('max') || p === 'all_in_one_bundle_half_yearly') resolvedPlan = 'GAP Max';
+        else if (p.includes('all_in_one') || p.includes('ultimate') || p.includes('enterprise')) resolvedPlan = 'GAP Ultimate Ecosystem';
+        else if (p === 'pro') resolvedPlan = 'Social Pilot';
+      }
 
       if (resolvedPlan !== 'Free') {
         console.log('✅ [AUTH] Plan resolved:', resolvedPlan);
@@ -106,7 +127,9 @@ export function AuthProvider({ children }) {
         ...prev,
         plan: resolvedPlan,
         subscription_status: resolvedStatus,
+        entitlements,
       } : null);
+      */
 
     } catch (error) {
       console.error("Error fetching user profile:", error);
@@ -114,6 +137,7 @@ export function AuthProvider({ children }) {
         ...prev,
         plan: 'Free',
         subscription_status: 'active',
+        entitlements: FREE_ENTITLEMENTS,
       } : null);
     }
   }, []);
@@ -150,8 +174,9 @@ export function AuthProvider({ children }) {
           name:
             session.user.user_metadata?.full_name ||
             session.user.email?.split("@")[0],
-          plan: session.user.user_metadata?.plan || 'Free',
-          subscription_status: session.user.user_metadata?.subscription_status || 'active',
+          plan: 'Free',
+          subscription_status: 'active',
+          entitlements: FREE_ENTITLEMENTS,
           picture: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
         };
         setUser(userData);
@@ -176,8 +201,9 @@ export function AuthProvider({ children }) {
           name:
             session.user.user_metadata?.full_name ||
             session.user.email?.split("@")[0],
-          plan: session.user.user_metadata?.plan || 'Free',
-          subscription_status: session.user.user_metadata?.subscription_status || 'active',
+          plan: 'Free',
+          subscription_status: 'active',
+          entitlements: FREE_ENTITLEMENTS,
           picture: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
         };
         setUser(userData);

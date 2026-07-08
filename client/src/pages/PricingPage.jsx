@@ -27,7 +27,7 @@ const PLANS = [
   {
     name: 'Pro',
     id: '999',
-    price: { 1: 999, 3: 899, 6: 799, 12: 699 },
+    price: { 1: 999, 3: 899, 6: 799, 12: 799 },
     description: 'For creators who broadcast seriously across every platform.',
     icon: <Sparkles size={20} />,
     features: [
@@ -165,7 +165,7 @@ export default function PricingPage() {
         <div style={{
           position: 'absolute', top: '-10%', left: '50%', transform: 'translateX(-50%)',
           width: '80vw', height: '60vh',
-          background: 'radial-gradient(ellipse 60% 50% at 50% 0%, rgba(243,115,56,0.06) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse 60% 50% at 50% 0%, rgba(255,86,0,0.06) 0%, transparent 70%)',
           pointerEvents: 'none',
         }} />
 
@@ -221,7 +221,7 @@ export default function PricingPage() {
                   <span style={{
                     fontSize: 10, fontWeight: 700, padding: '2px 6px',
                     borderRadius: 'var(--r-pill)',
-                    background: billing === months ? 'rgba(243,115,56,0.2)' : 'rgba(243,115,56,0.12)',
+                    background: billing === months ? 'rgba(255,86,0,0.2)' : 'rgba(255,86,0,0.12)',
                     color: 'var(--arc)',
                   }}>
                     -{discount}%
@@ -268,7 +268,7 @@ export default function PricingPage() {
               {/* Icon */}
               <div style={{
                 width: 44, height: 44, borderRadius: '50%',
-                background: plan.highlighted ? 'rgba(243,115,56,0.18)' : 'var(--ink)',
+                background: plan.highlighted ? 'rgba(255,86,0,0.18)' : 'var(--ink)',
                 color: plan.highlighted ? 'var(--arc)' : 'var(--canvas)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 marginBottom: 20,
@@ -341,7 +341,7 @@ export default function PricingPage() {
                   <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                     <span style={{
                       width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                      background: plan.highlighted ? 'rgba(243,115,56,0.18)' : 'rgba(20,20,19,0.06)',
+                      background: plan.highlighted ? 'rgba(255,86,0,0.18)' : 'rgba(20,20,19,0.06)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       marginTop: 1,
                     }}>
@@ -440,9 +440,9 @@ export default function PricingPage() {
           >
             {/* Orbital arc */}
             <svg aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }} viewBox="0 0 1000 360" preserveAspectRatio="none">
-              <path d="M -50 290 Q 250 50 600 250 Q 800 360 1100 120" stroke="#F37338" strokeWidth="1.5" fill="none" opacity="0.45" />
-              <circle cx="600" cy="250" r="4.5" fill="#F37338" opacity="0.65" />
-              <circle cx="250" cy="50" r="3" fill="#F37338" opacity="0.35" />
+              <path d="M -50 290 Q 250 50 600 250 Q 800 360 1100 120" stroke="#FF5600" strokeWidth="1.5" fill="none" opacity="0.45" />
+              <circle cx="600" cy="250" r="4.5" fill="#FF5600" opacity="0.65" />
+              <circle cx="250" cy="50" r="3" fill="#FF5600" opacity="0.35" />
             </svg>
 
             {/* Ghost watermark */}

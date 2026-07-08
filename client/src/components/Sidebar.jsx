@@ -4,19 +4,18 @@ import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
-  CalendarClock,
-  Zap,
+  CalendarDays,
+  LayoutDashboard,
+  Workflow,
   Users,
   Instagram,
   Settings,
-  Plus,
-  Share2,
   ChevronDown,
   X,
   Flame,
   Sparkles,
   Lock,
-  MessageCircle,
+  MessagesSquare,
   Bot,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
@@ -30,7 +29,7 @@ import FacebookSetupModal from "./FacebookSetupModal";
 import apiClient from "../utils/apiClient";
 import { startAutoDMInstagramOAuth } from "../services/autodm/supabaseClient";
 
-// User has paid access if plan is anything other than Free
+// Helper to determine if the user is on the free plan
 function isFree(plan) {
   if (!plan) return true;
   return plan.toLowerCase() === 'free';
@@ -212,19 +211,52 @@ function Sidebar() {
       ),
       onConnect: handleConnectFacebook,
     },
-    {
-      id: "instagram",
-      name: "Instagram",
-      connected: connectedAccounts.instagram?.connected,
-      icon: (
-        <img
-          src="/icons/ig-instagram-icon.svg"
-          style={{ width: 20, height: 20 }}
-          alt=""
-        />
-      ),
-      onConnect: handleConnectInstagram,
-    },
+    ...(connectedAccounts.instagramAccounts?.length > 0 
+      ? connectedAccounts.instagramAccounts.map(acc => ({
+          id: `instagram:${acc.id}`,
+          name: acc.username || "Instagram",
+          connected: true,
+          icon: (
+            <img
+              src="/icons/ig-instagram-icon.svg"
+              style={{ width: 20, height: 20 }}
+              alt=""
+            />
+          ),
+          onConnect: handleConnectInstagram,
+        }))
+      : [
+          {
+            id: "instagram",
+            name: "Instagram",
+            connected: false,
+            icon: (
+              <img
+                src="/icons/ig-instagram-icon.svg"
+                style={{ width: 20, height: 20 }}
+                alt=""
+              />
+            ),
+            onConnect: handleConnectInstagram,
+          }
+        ]),
+    ...(connectedAccounts.instagramAccounts?.length > 0
+      ? [
+          {
+            id: "instagram_connect",
+            name: "Instagram",
+            connected: false,
+            icon: (
+              <img
+                src="/icons/ig-instagram-icon.svg"
+                style={{ width: 20, height: 20 }}
+                alt=""
+              />
+            ),
+            onConnect: handleConnectInstagram,
+          }
+        ]
+      : []),
     {
       id: "x",
       name: "X",
@@ -360,21 +392,25 @@ function Sidebar() {
     },
   ];
 
-  const isActive = (path) =>
-    path === "/dashboard/auto-dm"
-      ? location.pathname.startsWith("/dashboard/auto-dm")
-      : location.pathname === path;
+  const isActive = (path) => {
+    if (path === "/dashboard/auto-dm") {
+      return location.pathname.startsWith("/dashboard/auto-dm") && !location.pathname.startsWith("/dashboard/auto-dm/settings");
+    }
+    if (path === "/dashboard") {
+      return location.pathname === "/dashboard";
+    }
+    return location.pathname.startsWith(path);
+  };
 
   const autoDMSubnav = [
-    { to: "/dashboard/auto-dm/automations", label: "Automations", icon: <Zap size={14} /> },
+    { to: "/dashboard/auto-dm/automations", label: "Automations", icon: <Workflow size={14} /> },
     { to: "/dashboard/auto-dm/contacts", label: "Contacts", icon: <Users size={14} /> },
     { to: "/dashboard/auto-dm/instagram-profile", label: "Profile", icon: <Instagram size={14} /> },
-    { to: "/dashboard/auto-dm/settings", label: "Settings", icon: <Settings size={14} /> },
   ];
 
   return (
     <aside
-      className="flex flex-col custom-scrollbar"
+      className="qp-sidebar flex flex-col custom-scrollbar"
       style={{
         width: 240,
         height: "100%",
@@ -451,18 +487,13 @@ function Sidebar() {
             {
               to: "/dashboard",
               label: "All Channels",
-              icon: <Share2 size={16} />,
+              icon: <LayoutDashboard size={16} />,
             },
             {
               to: "/dashboard/queue",
               label: "Scheduled Queue",
-              icon: <CalendarClock size={16} />,
-            },
-            {
-              to: "/dashboard/trends",
-              label: "All Trends",
-              icon: <Flame size={16} />,
-            },
+              icon: <CalendarDays size={16} />,
+            },           
             {
               to: "/dashboard/instapilot",
               label: "GAP InstaPilot",
@@ -471,11 +502,21 @@ function Sidebar() {
             {
               to: "/dashboard/auto-dm",
               label: "GAP AutoDM",
-              icon: <MessageCircle size={16} />,
+              icon: <MessagesSquare size={16} />,
+            },
+            {
+              to: "/dashboard/auto-dm/settings",
+              label: "Settings",
+              icon: <Settings size={16} />,
+            },
+            {
+              to: "/dashboard/trends",
+              label: "All Trends",
+              icon: <Flame size={16} />,
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);
-            const isLocked = isFree(user?.plan);
+            const isLocked = false;
             const isAutoDM = to === "/dashboard/auto-dm";
 
             const content = (
@@ -525,6 +566,7 @@ function Sidebar() {
             if (isLocked) {
               return (
                 <div
+                  className={`qp-sidebar-nav-item${active ? " is-active" : ""}`}
                   key={to}
                   style={style}
                   onClick={() =>
@@ -540,6 +582,7 @@ function Sidebar() {
               <React.Fragment key={to}>
                 {isAutoDM ? (
                   <div
+                    className={`qp-sidebar-nav-item${active ? " is-active" : ""}`}
                     style={{
                       ...style,
                       padding: 0,
@@ -591,6 +634,7 @@ function Sidebar() {
                 ) : (
                   <Link
                     to={to}
+                    className={`qp-sidebar-nav-item${active ? " is-active" : ""}`}
                     style={style}
                     onMouseEnter={(e) => {
                       if (!active) {
@@ -643,13 +687,9 @@ function Sidebar() {
 
             return (
               <button
+                className="qp-sidebar-connected-toggle"
                 onClick={() => {
-                  if (isFree(user?.plan)) {
-                    alert(
-                      "Please upgrade your Social Pilot plan to manage your social channels.",
-                    );
-                    return;
-                  }
+
                   setConnectedOpen((open) => {
                     const nextOpen = !open;
                     if (nextOpen) setAutoDMOpen(false);
@@ -806,7 +846,7 @@ function Sidebar() {
                         onClick={() =>
                           navigate(`/dashboard?platform=${platform.id}`)
                         }
-                        className="group"
+                        className="qp-sidebar-connected-item group"
                         style={{
                           display: "flex",
                           alignItems: "center",
@@ -902,8 +942,18 @@ function Sidebar() {
               .filter((p) => !p.connected)
               .map((platform) => (
                 <button
+                  className="qp-sidebar-channel-button"
                   key={platform.id}
-                  onClick={platform.onConnect}
+                  onClick={(e) => {
+                    const limit = user?.entitlements?.limits?.social_accounts || 1;
+                    const connectedCount = platforms.filter(p => p.connected).length;
+                    if (connectedCount >= limit) {
+                      e.preventDefault();
+                      alert("Upgrade Required", `You have reached your limit of ${limit} social account${limit === 1 ? '' : 's'} on the ${user?.entitlements?.plan?.name || 'Free'} plan. Please upgrade to connect more channels.`, { intent: "warning" });
+                      return;
+                    }
+                    platform.onConnect();
+                  }}
                   title={`Connect ${platform.name}`}
                   style={{
                     width: 44,
@@ -959,6 +1009,7 @@ function Sidebar() {
       >
         {user && (
           <div
+            className="qp-sidebar-user-card"
             style={{
               display: "flex",
               alignItems: "center",
@@ -1060,6 +1111,7 @@ function Sidebar() {
         {/* ── Upgrade Button ── */}
         {isFree(user?.plan) && (
           <button
+            className="qp-sidebar-upgrade"
             onClick={() => navigate("/dashboard/billing")}
             style={{
               width: "100%",
@@ -1073,7 +1125,7 @@ function Sidebar() {
               fontWeight: 700,
               cursor: "pointer",
               marginBottom: 8,
-              boxShadow: "0 4px 12px rgba(243,115,56,0.2)",
+              boxShadow: "0 4px 12px rgba(255,86,0,0.2)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -1081,7 +1133,7 @@ function Sidebar() {
             }}
           >
             <Sparkles size={14} />
-            Upgrade to Social Pilot
+            Upgrade to QuickPost
           </button>
         )}
 

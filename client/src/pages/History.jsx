@@ -195,9 +195,7 @@ function History() {
       >
         {filteredBroadcasts.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center shadow-sm">
-            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Clock className="w-10 h-10 text-gray-300" />
-            </div>
+            <img src="https://illustrations.popsy.co/amber/success.svg" alt="No posts found" className="h-40 object-contain mx-auto mb-6" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
               No posts found
             </h3>

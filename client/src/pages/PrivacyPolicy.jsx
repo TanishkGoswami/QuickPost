@@ -114,7 +114,7 @@ export default function PrivacyPolicy() {
 
               <div style={{ padding: 24, background: 'var(--ink)', borderRadius: 'var(--r-btn)', color: 'var(--canvas)', position: 'relative', overflow: 'hidden' }}>
                 <svg aria-hidden="true" style={{ position: 'absolute', top: 0, right: 0, width: '100%', height: '100%', pointerEvents: 'none', opacity: 0.2 }} viewBox="0 0 200 200" preserveAspectRatio="none">
-                   <path d="M 100 -50 Q 200 50 250 150" stroke="#F37338" strokeWidth="2" fill="none" />
+                   <path d="M 100 -50 Q 200 50 250 150" stroke="#FF5600" strokeWidth="2" fill="none" />
                 </svg>
                 <div style={{ position: 'relative', zIndex: 1 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--arc)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>Support</p>
@@ -336,7 +336,7 @@ export default function PrivacyPolicy() {
                 <div style={{ background: 'var(--ink)', borderRadius: 'var(--r-hero)', padding: 64, textAlign: 'center', color: 'var(--canvas)', position: 'relative', overflow: 'hidden' }}>
                    {/* Orbital Arc Background */}
                   <svg aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', opacity: 0.4 }} viewBox="0 0 1000 400" preserveAspectRatio="none">
-                    <path d="M -50 320 Q 250 60 600 280 Q 800 400 1100 150" stroke="#F37338" strokeWidth="1.5" fill="none" />
+                    <path d="M -50 320 Q 250 60 600 280 Q 800 400 1100 150" stroke="#FF5600" strokeWidth="1.5" fill="none" />
                   </svg>
                   
                   <div style={{ position: 'relative', zIndex: 1 }}>

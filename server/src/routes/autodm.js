@@ -17,6 +17,7 @@ import {
   getAutomationAnalytics,
   syncAutomationInsights,
 } from '../services/autodm.js';
+import { requireFeature, requireResourceCapacity } from '../middleware/entitlements.js';
 
 
 const router = express.Router();
@@ -53,9 +54,14 @@ router.get('/status', authenticateUser, async (req, res) => {
   }
 });
 
-router.post('/import-instagram', authenticateUser, async (req, res) => {
+router.post(
+  '/import-instagram',
+  authenticateUser,
+  requireFeature('autodm'),
+  requireResourceCapacity('autodm_accounts', 'instagram_accounts', { is_connected: true }),
+  async (req, res) => {
   try {
-    const account = await importInstagramAccountToAutoDM(req.user);
+    const account = await importInstagramAccountToAutoDM(req.user, req.body?.instagramAccountId);
     res.json({
       success: true,
       account,
@@ -67,7 +73,8 @@ router.post('/import-instagram', authenticateUser, async (req, res) => {
       error: error.message || 'Failed to import Instagram account',
     });
   }
-});
+  },
+);
 
 router.post('/oauth-start', authenticateUser, async (req, res) => {
   try {
@@ -118,7 +125,12 @@ router.get('/automations/:id', authenticateUser, async (req, res) => {
   }
 });
 
-router.post('/automations', authenticateUser, async (req, res) => {
+router.post(
+  '/automations',
+  authenticateUser,
+  requireFeature('autodm'),
+  requireResourceCapacity('autodm_automations', 'automations'),
+  async (req, res) => {
   try {
     const automation = await createAutomationForUser(req.user, req.body || {});
     res.status(201).json({ success: true, automation });
@@ -129,9 +141,10 @@ router.post('/automations', authenticateUser, async (req, res) => {
       error: error.message || 'Failed to create Auto DM automation',
     });
   }
-});
+  },
+);
 
-router.patch('/automations/:id', authenticateUser, async (req, res) => {
+router.patch('/automations/:id', authenticateUser, requireFeature('autodm'), async (req, res) => {
   try {
     const automation = await updateAutomationForUser(req.user, req.params.id, req.body || {});
     res.json({ success: true, automation });
@@ -160,8 +173,46 @@ router.delete('/automations/:id', authenticateUser, async (req, res) => {
 router.get('/instagram-media', authenticateUser, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 30;
-    const result = await fetchInstagramMediaForUser(req.user, limit);
+    const result = await fetchInstagramMediaForUser(req.user, limit, req.query.instagramAccountId);
     const media = Array.isArray(result) ? result : result.media || [];
+    
+    if (false && media.length === 0) {
+      media = [
+        {
+          id: 'mock1',
+          media_type: 'IMAGE',
+          media_url: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+          thumbnail_url: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+          caption: 'Beautiful sunset!',
+          permalink: '#'
+        },
+        {
+          id: 'mock2',
+          media_type: 'IMAGE',
+          media_url: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+          thumbnail_url: 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+          caption: 'Coffee time ☕',
+          permalink: '#'
+        },
+        {
+          id: 'mock3',
+          media_type: 'IMAGE',
+          media_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+          thumbnail_url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+          caption: 'My new workspace setup!',
+          permalink: '#'
+        },
+        {
+          id: 'mock4',
+          media_type: 'IMAGE',
+          media_url: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+          thumbnail_url: 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80',
+          caption: 'Abstract art',
+          permalink: '#'
+        }
+      ];
+    }
+    
     res.json({
       success: true,
       media,

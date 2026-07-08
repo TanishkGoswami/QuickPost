@@ -13,10 +13,11 @@ const PLANS = [
     description: 'Perfect for getting started with basic scheduling.',
     icon: <Zap size={20} />,
     features: [
-      "3 connected social accounts",
-      "10 posts per month",
-      "Basic scheduling",
-      "7-day post history",
+      '3 connected social accounts',
+      '10 scheduled posts per channel',
+      '1 active trigger word',
+      '50 automated replies / month',
+      'QuickPost Branding Watermark',
     ],
     cta: "Get started free",
     highlighted: false,
@@ -28,17 +29,36 @@ const PLANS = [
     description: 'For creators who broadcast seriously.',
     icon: <Sparkles size={20} />,
     features: [
-      "10 connected social accounts",
-      "Unlimited posts",
-      "Smart scheduling & timezone sync",
-      "Analytics dashboard",
-      "90-day post history",
-      "Priority email support",
+      '10 connected social accounts',
+      'Unlimited monthly posts',
+      'Up to 10 Instagram Auto-DM accounts',
+      'Unlimited trigger words & replies',
+      'Hinglish & Hindi trigger matching',
+      'Unlimited contacts',
+      'Priority email support',
     ],
     cta: "Upgrade to Pro",
     highlighted: true,
     badge: "Most popular",
   },
+  {
+    name: 'Enterprise',
+    id: 'enterprise',
+    price: { 1: 2999, 3: 2699, 6: 2499, 12: 2499 },
+    description: 'For teams, agencies, and heavy automation users.',
+    icon: <Building2 size={20} />,
+    features: [
+      '30 connected social accounts',
+      'Up to 30 Instagram Auto-DM accounts',
+      'Unlimited posts, replies & contacts',
+      'Hinglish & Hindi trigger matching',
+      'Approval workflows',
+      '10 team members',
+      'Developer API access',
+    ],
+    cta: "Upgrade to Enterprise",
+    highlighted: false,
+  }
 ];
 
 export default function Pricing() {
@@ -169,7 +189,7 @@ export default function Pricing() {
                   <span style={{
                     fontSize: 10, fontWeight: 700, padding: '2px 6px',
                     borderRadius: 'var(--r-pill)',
-                    background: billing === months ? 'rgba(243,115,56,0.2)' : 'rgba(243,115,56,0.12)',
+                    background: billing === months ? 'rgba(255,86,0,0.2)' : 'rgba(255,86,0,0.12)',
                     color: 'var(--arc)',
                   }}>
                     -{discount}%
@@ -186,7 +206,7 @@ export default function Pricing() {
           gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))',
           gap: 20,
           alignItems: 'start',
-          maxWidth: 850,
+          maxWidth: 1100,
           margin: '0 auto',
         }}>
           {PLANS.map((plan, i) => (
@@ -242,7 +262,7 @@ export default function Pricing() {
                   height: 44,
                   borderRadius: "50%",
                   background: plan.highlighted
-                    ? "rgba(243,115,56,0.18)"
+                    ? "rgba(255,86,0,0.18)"
                     : "var(--ink)",
                   color: plan.highlighted ? "var(--arc)" : "var(--canvas)",
                   display: "flex",
@@ -390,7 +410,7 @@ export default function Pricing() {
                         borderRadius: "50%",
                         flexShrink: 0,
                         background: plan.highlighted
-                          ? "rgba(243,115,56,0.18)"
+                          ? "rgba(255,86,0,0.18)"
                           : "rgba(20,20,19,0.06)",
                         display: "flex",
                         alignItems: "center",

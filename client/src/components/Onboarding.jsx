@@ -86,8 +86,8 @@ function OnboardingShell({ children, step }) {
           <div>
             {/* Orbital arc hint */}
             <svg style={{ opacity: 0.25, marginBottom: 24 }} width="200" height="80" viewBox="0 0 200 80" fill="none">
-              <path d="M -20 60 Q 60 10 160 50 Q 190 65 230 30" stroke="#F37338" strokeWidth="1.5" />
-              <circle cx="160" cy="50" r="4" fill="#F37338" />
+              <path d="M -20 60 Q 60 10 160 50 Q 190 65 230 30" stroke="#FF5600" strokeWidth="1.5" />
+              <circle cx="160" cy="50" r="4" fill="#FF5600" />
             </svg>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--arc)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
               Step {step} of 3
@@ -235,8 +235,8 @@ export default function Onboarding() {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--canvas)', fontFamily: 'var(--font)', position: 'relative', overflow: 'hidden' }}>
       {/* Decorative orbital arc */}
       <svg aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} viewBox="0 0 1200 800" preserveAspectRatio="none">
-        <path d="M -80 520 Q 360 120 820 480 Q 1060 680 1500 280" stroke="#F37338" strokeWidth="1.5" fill="none" opacity="0.4" />
-        <path d="M 60 650 Q 380 280 940 560" stroke="#F37338" strokeWidth="1" fill="none" opacity="0.2" />
+        <path d="M -80 520 Q 360 120 820 480 Q 1060 680 1500 280" stroke="#FF5600" strokeWidth="1.5" fill="none" opacity="0.4" />
+        <path d="M 60 650 Q 380 280 940 560" stroke="#FF5600" strokeWidth="1" fill="none" opacity="0.2" />
       </svg>
 
       {/* Ghost platform icons */}

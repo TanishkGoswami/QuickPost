@@ -329,11 +329,11 @@ function PlatformTile({ platform, onClick }) {
         padding: "16px 10px",
         borderRadius: 20,
         border: "none",
-        background: hovered ? "rgba(243, 115, 56, 0.06)" : "rgba(255,255,255,0.92)",
+        background: hovered ? "rgba(255, 86, 0, 0.06)" : "rgba(255,255,255,0.92)",
         cursor: "pointer",
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         transform: hovered ? "translateY(-4px)" : "none",
-        boxShadow: hovered ? "0 14px 26px rgba(243, 115, 56, 0.14)" : "0 8px 24px rgba(20,20,19,0.06)",
+        boxShadow: hovered ? "0 14px 26px rgba(255, 86, 0, 0.14)" : "0 8px 24px rgba(20,20,19,0.06)",
       }}
     >
       <div style={{
