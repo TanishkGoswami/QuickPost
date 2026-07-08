@@ -27,11 +27,7 @@ const PLANS = [
   {
     name: 'Pro',
     id: '999',
-<<<<<<< Updated upstream
     price: { 1: 999, 3: 899, 6: 799, 12: 799 },
-=======
-    price: { 1: 999, 3: 899, 6: 799},
->>>>>>> Stashed changes
     description: 'For creators who broadcast seriously across every platform.',
     icon: <Sparkles size={20} />,
     features: [
