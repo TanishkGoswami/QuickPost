@@ -1,3 +1,4 @@
+import { createClient } from '@supabase/supabase-js';
 import supabase from './supabase.js';
 import { getPlan } from '../config/plans.js';
 import {
@@ -6,7 +7,7 @@ import {
   todayPeriod,
 } from '../config/entitlementPolicy.js';
 
-export async function getEntitlements(userId) {
+export async function getEntitlements(userId, email = null, token = null) {
   const { data: subscriptionsData, error } = await supabase
     .from('app_subscriptions')
     .select('plan_id,source,status,billing_interval,current_period_start,current_period_end,trial_ends_at,cancel_at_period_end,grace_period_ends_at')
@@ -21,17 +22,23 @@ export async function getEntitlements(userId) {
 
   // Also query hub_subscriptions via user's email
   try {
-    const { data: userRow } = await supabase
+    const userEmail = email || (await supabase
       .from('users')
       .select('email')
       .eq('id', userId)
-      .maybeSingle();
+      .maybeSingle()
+      .then(res => res.data?.email));
 
-    if (userRow?.email) {
-      const { data: hubSubscription } = await supabase
+    if (userEmail) {
+      // Scoped client using user's own token to satisfy RLS SELECT policy:
+      // "Anyone can read hub_subscriptions by own email" (USING (email = auth.jwt() ->> 'email'))
+      const clientUrl = process.env.SUPABASE_URL;
+      const clientToUse = token ? createClient(clientUrl, token) : supabase;
+
+      const { data: hubSubscription } = await clientToUse
         .from('hub_subscriptions')
         .select('*')
-        .eq('email', userRow.email)
+        .eq('email', userEmail)
         .maybeSingle();
 
       if (hubSubscription && hubSubscription.subscription_status === 'active') {
