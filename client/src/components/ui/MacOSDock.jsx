@@ -273,7 +273,7 @@ const MacOSDock = ({
                     width: `4px`,
                     height: `4px`,
                     borderRadius: '50%',
-                    backgroundColor: 'var(--arc, #F37338)',
+                    backgroundColor: 'var(--arc, #FF5600)',
                     boxShadow: '0 0 6px var(--arc)'
                   }}
                 />

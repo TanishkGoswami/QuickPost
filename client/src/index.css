@@ -2,25 +2,25 @@
 
 /* shadcn/ui CSS variable definitions — required for bg-background, bg-popover, bg-input, etc. */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222 47% 11%;
+  --background: 30 31% 94%;
+  --foreground: 0 0% 7%;
   --card: 0 0% 100%;
   --card-foreground: 222 47% 11%;
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
-  --primary: 25 95% 53%;        /* orange-500, matches --arc */
+  --primary: 0 0% 7%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222 47% 11%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222 47% 11%;
+  --secondary: 32 18% 90%;
+  --secondary-foreground: 0 0% 7%;
+  --muted: 32 18% 90%;
+  --muted-foreground: 60 1% 38%;
+  --accent: 18 100% 50%;
+  --accent-foreground: 0 0% 100%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 25 95% 53%;
+  --border: 32 10% 80%;
+  --input: 32 10% 80%;
+  --ring: 0 0% 7%;
   --radius: 0.5rem;
 }
 
@@ -28,23 +28,23 @@
 /* [ignoring loop detection] */
 :root {
   /* Colors */
-  --canvas: #f3f0ee;
-  --canvas-lifted: #fcfbfa;
+  --canvas: #f5f1ec;
+  --canvas-lifted: #ffffff;
   --white: #ffffff;
-  --ink: #141413;
-  --slate: #696969;
-  --dust: #d1cdc7;
-  --arc: #f37338;
-  --signal-orange: #cf4500;
+  --ink: #111111;
+  --slate: #626260;
+  --dust: #d3cec6;
+  --arc: #ff5600;
+  --signal-orange: #e84f00;
   
   /* Shadows */
-  --shadow-barely: rgba(0, 0, 0, 0.04) 0px 4px 24px 0px;
-  --shadow-atmospheric: rgba(0, 0, 0, 0.08) 0px 24px 48px 0px;
-  --shadow-deep: rgba(0, 0, 0, 0.15) 0px 30px 60px -12px;
+  --shadow-barely: none;
+  --shadow-atmospheric: none;
+  --shadow-deep: none;
   
   /* Radii */
   --r-btn: 8px;
-  --r-card: 12px;
+  --r-card: 8px;
   --r-pill: 1000px;
   --r-sm: 6px;
   
@@ -103,7 +103,7 @@ body {
 
 .instapilot-input:focus {
   border-color: var(--arc);
-  box-shadow: 0 0 0 3px rgba(243, 115, 56, 0.14);
+  box-shadow: 0 0 0 3px rgba(255, 86, 0, 0.14);
 }
 
 .instapilot-input::placeholder {
@@ -1257,7 +1257,7 @@ body {
 }
 
 .autodm-editor-name input:focus {
-  box-shadow: 0 0 0 3px rgba(243, 115, 56, 0.14);
+  box-shadow: 0 0 0 3px rgba(255, 86, 0, 0.14);
 }
 
 .autodm-editor-name span {
@@ -1736,7 +1736,7 @@ body {
 .autodm-form-grid select:focus,
 .autodm-field-block textarea:focus {
   border-color: var(--arc);
-  box-shadow: 0 0 0 3px rgba(243, 115, 56, 0.14);
+  box-shadow: 0 0 0 3px rgba(255, 86, 0, 0.14);
 }
 
 .autodm-keywords .autodm-editor-inline {
@@ -2190,7 +2190,7 @@ body {
 .autodm-response-editor-body select:focus,
 .autodm-response-editor-body textarea:focus {
   border-color: var(--arc);
-  box-shadow: 0 0 0 3px rgba(243, 115, 56, 0.14);
+  box-shadow: 0 0 0 3px rgba(255, 86, 0, 0.14);
 }
 
 .autodm-response-buttons {
@@ -2391,7 +2391,7 @@ body {
   cursor: pointer;
   font-size: 14px;
   font-weight: 700;
-  box-shadow: 0 8px 18px rgba(243, 115, 56, 0.22);
+  box-shadow: 0 8px 18px rgba(255, 86, 0, 0.22);
 }
 
 .autodm-list-card {
@@ -4759,4 +4759,194 @@ body {
   font-size: 12px !important;
   font-weight: 500 !important;
   letter-spacing: 0 !important;
+}
+
+/* Project-wide Intercom compatibility layer. Keeps old utility-heavy pages on the same UI system. */
+body {
+  background: var(--canvas) !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--ink);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-body);
+}
+
+input,
+select,
+textarea {
+  border-color: var(--dust) !important;
+  border-radius: 8px !important;
+  background: var(--white) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--ink) !important;
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.06) !important;
+  outline: none !important;
+}
+
+[class*="bg-gray-50"],
+[class*="bg-slate-50"],
+[class*="bg-zinc-50"],
+[class*="bg-neutral-50"] {
+  background-color: var(--canvas) !important;
+}
+
+[class*="bg-gray-100"],
+[class*="bg-gray-200"],
+[class*="bg-slate-100"],
+[class*="bg-zinc-100"],
+[class*="bg-neutral-100"] {
+  background-color: #ebe7e1 !important;
+}
+
+[class*="bg-white"] {
+  background-color: var(--white) !important;
+}
+
+[class*="bg-blue-"],
+[class*="hover:bg-blue-"],
+[class*="bg-purple-"],
+[class*="from-purple-"],
+[class*="to-pink-"],
+[class*="bg-pink-"] {
+  background: var(--ink) !important;
+  background-color: var(--ink) !important;
+}
+
+[class*="bg-orange-"],
+[class*="hover:bg-orange-"] {
+  background: var(--arc) !important;
+  background-color: var(--arc) !important;
+}
+
+[class*="bg-blue-50"],
+[class*="bg-blue-100"],
+[class*="bg-purple-50"],
+[class*="bg-purple-100"],
+[class*="bg-pink-50"],
+[class*="bg-pink-100"],
+[class*="bg-orange-50"],
+[class*="bg-orange-100"] {
+  background: #ebe7e1 !important;
+  background-color: #ebe7e1 !important;
+}
+
+[class*="text-gray-900"],
+[class*="text-slate-900"],
+[class*="text-zinc-900"],
+[class*="text-neutral-900"],
+[class*="text-blue-900"],
+[class*="text-blue-950"] {
+  color: var(--ink) !important;
+}
+
+[class*="text-gray-700"],
+[class*="text-gray-600"],
+[class*="text-gray-500"],
+[class*="text-gray-400"],
+[class*="text-slate-"],
+[class*="text-zinc-"],
+[class*="text-neutral-"],
+[class*="text-blue-700"],
+[class*="text-blue-600"],
+[class*="text-blue-500"],
+[class*="text-blue-400"],
+[class*="text-purple-"],
+[class*="text-pink-"] {
+  color: var(--slate) !important;
+}
+
+[class*="text-orange-"],
+[class*="text-amber-"] {
+  color: var(--arc) !important;
+}
+
+[class*="border-gray-"],
+[class*="border-slate-"],
+[class*="border-zinc-"],
+[class*="border-neutral-"],
+[class*="border-blue-"],
+[class*="border-purple-"],
+[class*="border-pink-"],
+[class*="border-orange-"] {
+  border-color: var(--dust) !important;
+}
+
+[class*="ring-blue-"],
+[class*="ring-orange-"],
+[class*="focus:ring-blue-"],
+[class*="focus-visible:ring-primary"] {
+  --tw-ring-color: rgba(17, 17, 17, 0.12) !important;
+}
+
+[class*="rounded-2xl"],
+[class*="rounded-3xl"],
+[class*="rounded-xl"] {
+  border-radius: 8px !important;
+}
+
+[class*="shadow-"],
+.shadow-sm,
+.shadow-md,
+.shadow-lg,
+.shadow-xl,
+.shadow-2xl {
+  box-shadow: none !important;
+}
+
+.card,
+.card-shadow,
+.card-interactive,
+.card-platform,
+.modal-content,
+[class*="border"][class*="bg-white"] {
+  border-color: var(--dust) !important;
+}
+
+.btn-primary,
+.btn-arc,
+[class*="bg-blue-600"],
+[class*="bg-blue-700"] {
+  border: 1px solid var(--ink) !important;
+  border-radius: 8px !important;
+  background: var(--ink) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+.btn-secondary,
+.btn-ghost {
+  border: 1px solid var(--dust) !important;
+  border-radius: 8px !important;
+  background: var(--white) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+.btn-primary:hover,
+.btn-arc:hover,
+.btn-secondary:hover,
+.btn-ghost:hover {
+  transform: translateY(-1px);
 }

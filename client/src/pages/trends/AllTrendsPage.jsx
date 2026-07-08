@@ -35,7 +35,7 @@ const ComposerModal = lazy(() => import("../../components/ComposerModal"));
 
 // ─── PALETTE ────────────────────────────────────────────────────
 const C = {
-  ink:       "#141413",
+  ink:       "#111111",
   ink80:     "rgba(20,20,19,0.8)",
   canvas:    "#f2f0ed",
   white:     "#ffffff",
@@ -43,9 +43,9 @@ const C = {
   dust:      "#c4bfb8",
   muted:     "rgba(20,20,19,0.08)",
   border:    "rgba(20,20,19,0.09)",
-  arc:       "#f37338",         // brand orange
-  arcSoft:   "rgba(243,115,56,0.12)",
-  arcBorder: "rgba(243,115,56,0.25)",
+  arc:       "#ff5600",         // brand orange
+  arcSoft:   "rgba(255,86,0,0.12)",
+  arcBorder: "rgba(255,86,0,0.25)",
   green:     "#059669",
   violet:    "#6366f1",
   yellow:    "#f59e0b",
@@ -340,7 +340,7 @@ const MemeCard = memo(function MemeCard({ item, idx, onUse, saved, onSave }) {
       <div style={{ padding: "16px 17px 17px" }}>
         {/* Subreddit + upvotes (if no image) */}
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 9 }}>
-          <span style={{ padding: "3px 9px", background: "rgba(243,115,56,0.12)", border: "1px solid rgba(243,115,56,0.22)", borderRadius: 99, fontSize: 10, fontWeight: 800, color: C.arc, letterSpacing: 0 }}>
+          <span style={{ padding: "3px 9px", background: "rgba(255,86,0,0.12)", border: "1px solid rgba(255,86,0,0.22)", borderRadius: 99, fontSize: 10, fontWeight: 800, color: C.arc, letterSpacing: 0 }}>
             r/{subreddit || "trending"}
           </span>
           {!image && !isVideo && (
@@ -358,7 +358,7 @@ const MemeCard = memo(function MemeCard({ item, idx, onUse, saved, onSave }) {
         {/* Actions */}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} onClick={handleUse}
-            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 0", background: C.arc, border: "none", borderRadius: 10, color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 14px rgba(243,115,56,0.32)" }}>
+            style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "9px 0", background: C.arc, border: "none", borderRadius: 10, color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", fontFamily: "inherit", boxShadow: "0 4px 14px rgba(255,86,0,0.32)" }}>
             <Sparkles size={12} />Use This
           </motion.button>
 
@@ -367,7 +367,7 @@ const MemeCard = memo(function MemeCard({ item, idx, onUse, saved, onSave }) {
             { icon: <Share2 size={13} />, action: handleShare, active: !!shareLabel },
           ].map((b, i) => (
             <button key={i} onClick={e => { e.stopPropagation(); b.action(); }}
-              style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", background: b.active ? "rgba(243,115,56,0.12)" : C.muted, border: `1px solid ${b.active ? "rgba(243,115,56,0.25)" : C.border}`, borderRadius: 10, color: b.active ? C.arc : C.slate, cursor: "pointer", transition: "all 0.14s" }}>
+              style={{ width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", background: b.active ? "rgba(255,86,0,0.12)" : C.muted, border: `1px solid ${b.active ? "rgba(255,86,0,0.25)" : C.border}`, borderRadius: 10, color: b.active ? C.arc : C.slate, cursor: "pointer", transition: "all 0.14s" }}>
               {b.icon}
             </button>
           ))}
@@ -421,7 +421,7 @@ const VideoCard = memo(function VideoCard({ item, idx, onUse, saved, onSave }) {
       <div style={{ position: "relative", aspectRatio: "16 / 9", background: C.muted, overflow: "hidden" }}>
         {item.thumbnail
           ? <img src={item.thumbnail} alt={item.title} loading="lazy" decoding="async" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          : <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(20,20,19,0.08), rgba(243,115,56,0.18))" }} />
+          : <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, rgba(20,20,19,0.08), rgba(255,86,0,0.18))" }} />
         }
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.18), transparent 42%, rgba(0,0,0,0.34))" }} />
         <div style={{ position: "absolute", top: 9, left: 9 }}>
@@ -516,7 +516,7 @@ const SearchBar = memo(function SearchBar({ value, onChange, onClear }) {
           width: "100%", 
           padding: "14px 44px 14px 46px", 
           background: C.white, 
-          border: `1px solid ${focused ? "rgba(243,115,56,0.55)" : "rgba(20,20,19,0.09)"}`, 
+          border: `1px solid ${focused ? "rgba(255,86,0,0.55)" : "rgba(20,20,19,0.09)"}`, 
           borderRadius: 14, 
           fontSize: 14, 
           fontWeight: 560, 
@@ -1039,12 +1039,12 @@ export default function AllTrendsPage() {
               width: 42, 
               height: 42, 
               background: C.white,
-              border: `1.5px solid rgba(243, 115, 56, 0.15)`,
+              border: `1.5px solid rgba(255, 86, 0, 0.15)`,
               borderRadius: 13, 
               display: "flex", 
               alignItems: "center", 
               justifyContent: "center", 
-              boxShadow: "0 4px 12px rgba(243, 115, 56, 0.08)",
+              boxShadow: "0 4px 12px rgba(255, 86, 0, 0.08)",
             }}>
               <Flame size={22} style={{ color: C.arc, filter: "none" }} aria-hidden />
             </div>

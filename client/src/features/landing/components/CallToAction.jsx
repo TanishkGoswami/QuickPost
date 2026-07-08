@@ -54,21 +54,21 @@ export default function CallToAction() {
           >
             <path
               d="M -50 320 Q 250 60 600 280 Q 800 400 1100 150"
-              stroke="#F37338"
+              stroke="#FF5600"
               strokeWidth="1.5"
               fill="none"
               opacity="0.4"
             />
             <path
               d="M -100 380 Q 200 100 550 320 Q 750 420 1150 180"
-              stroke="#F37338"
+              stroke="#FF5600"
               strokeWidth="0.8"
               fill="none"
               opacity="0.18"
             />
-            <circle cx="600" cy="280" r="5" fill="#F37338" opacity="0.65" />
-            <circle cx="250" cy="60" r="3" fill="#F37338" opacity="0.35" />
-            <circle cx="820" cy="330" r="2" fill="#F37338" opacity="0.25" />
+            <circle cx="600" cy="280" r="5" fill="#FF5600" opacity="0.65" />
+            <circle cx="250" cy="60" r="3" fill="#FF5600" opacity="0.35" />
+            <circle cx="820" cy="330" r="2" fill="#FF5600" opacity="0.25" />
           </svg>
 
           {/* Corner glow */}
@@ -80,7 +80,7 @@ export default function CallToAction() {
               width: "40%",
               height: "80%",
               background:
-                "radial-gradient(ellipse at 70% 30%, rgba(243,115,56,0.12) 0%, transparent 65%)",
+                "radial-gradient(ellipse at 70% 30%, rgba(255,86,0,0.12) 0%, transparent 65%)",
               pointerEvents: "none",
             }}
           />
@@ -129,7 +129,7 @@ export default function CallToAction() {
                   borderRadius: "50%",
                   background: "var(--arc)",
                   display: "inline-block",
-                  boxShadow: "0 0 0 4px rgba(243,115,56,0.2)",
+                  boxShadow: "0 0 0 4px rgba(255,86,0,0.2)",
                   animation: "hero-pulse 2s ease-in-out infinite",
                 }}
               />

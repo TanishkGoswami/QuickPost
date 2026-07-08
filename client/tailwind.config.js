@@ -7,28 +7,27 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Mastercard design system tokens
-        canvas:  '#F3F0EE',
-        lifted:  '#FCFBFA',
-        ink:     '#141413',
-        slate:   '#696969',
-        dust:    '#D1CDC7',
-        signal:  '#CF4500',
-        arc:     '#F37338',
-        link:    '#3860BE',
+        canvas:  '#F5F1EC',
+        lifted:  '#FFFFFF',
+        ink:     '#111111',
+        slate:   '#626260',
+        dust:    '#D3CEC6',
+        signal:  '#E84F00',
+        arc:     '#FF5600',
+        link:    '#0007CB',
         background: '#FFFFFF',
-        foreground: '#141413',
+        foreground: '#111111',
         popover: '#FFFFFF',
-        'popover-foreground': '#141413',
+        'popover-foreground': '#111111',
         card: '#FFFFFF',
-        'card-foreground': '#141413',
+        'card-foreground': '#111111',
         primary: {
-          DEFAULT: '#141413',
-          foreground: '#F3F0EE',
+          DEFAULT: '#111111',
+          foreground: '#F5F1EC',
         },
         secondary: {
           DEFAULT: 'rgba(20,20,19,0.06)',
-          foreground: '#141413',
+          foreground: '#111111',
         },
         destructive: {
           DEFAULT: '#dc2626',
@@ -36,18 +35,18 @@ export default {
         },
         muted: {
           DEFAULT: 'rgba(20,20,19,0.06)',
-          foreground: '#696969',
+          foreground: '#626260',
         },
         input: 'rgba(20,20,19,0.12)',
-        ring: '#F37338',
+        ring: '#111111',
         // Kept for semantic utility classes
         accent: {
           DEFAULT: 'rgba(20,20,19,0.05)',
-          foreground: '#141413',
+          foreground: '#111111',
           success: '#22c55e',
           warning: '#F59E0B',
           error: '#EF4444',
-          info: '#3860BE',
+          info: '#0007CB',
         },
       },
       fontFamily: {

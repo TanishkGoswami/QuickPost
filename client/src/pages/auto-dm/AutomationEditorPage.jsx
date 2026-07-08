@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -790,7 +789,7 @@ export default function AutomationEditorPage() {
             <div className="autodm-editor-card overflow-hidden">
               <div className="autodm-editor-card-head p-4">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#141413] text-sm font-bold text-white">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#111111] text-sm font-bold text-white">
                     2
                   </span>
                   <div>

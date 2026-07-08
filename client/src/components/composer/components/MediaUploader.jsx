@@ -80,7 +80,7 @@ const MediaThumb = memo(function MediaThumb({ item, index, onRemove }) {
             letterSpacing: "0.06em",
             padding: "2px 6px",
             borderRadius: 4,
-            background: "var(--ink, #141413)",
+            background: "var(--ink, #111111)",
             color: "white",
             textTransform: "uppercase",
           }}
@@ -305,7 +305,7 @@ const MediaUploader = memo(function MediaUploader({
       <motion.div
         animate={{
           borderColor: dragActive
-            ? "var(--ink, #141413)"
+            ? "var(--ink, #111111)"
             : dropSuccess
               ? "#059669"
               : "rgba(20,20,19,0.18)",
@@ -370,13 +370,13 @@ const MediaUploader = memo(function MediaUploader({
             }}
           >
             {dragActive ? (
-              <span style={{ color: "var(--ink, #141413)", fontWeight: 700 }}>
+              <span style={{ color: "var(--ink, #111111)", fontWeight: 700 }}>
                 Drop it! 🎯
               </span>
             ) : (
               <>
                 Drag & drop or{" "}
-                <span style={{ color: "var(--arc, #f37338)", fontWeight: 700 }}>
+                <span style={{ color: "var(--arc, #ff5600)", fontWeight: 700 }}>
                   browse
                 </span>
               </>

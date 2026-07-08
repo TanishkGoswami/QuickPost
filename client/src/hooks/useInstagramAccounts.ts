@@ -1,17 +1,25 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchInstagramAccounts, importSocialInstagramAccount } from "@/services/instagramApi";
 
+let cachedAccounts: any[] | null = null;
+let inFlightRefresh: Promise<any[]> | null = null;
+
 export function useInstagramAccounts({ autoSync = false } = {}) {
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [accounts, setAccounts] = useState<any[]>(() => cachedAccounts || []);
+  const [loading, setLoading] = useState(!cachedAccounts);
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
   const refresh = useCallback(async () => {
-    setLoading(true);
+    if (!cachedAccounts) setLoading(true);
     setError(null);
     try {
-      let nextAccounts = await fetchInstagramAccounts();
+      if (!inFlightRefresh) {
+        inFlightRefresh = fetchInstagramAccounts().finally(() => {
+          inFlightRefresh = null;
+        });
+      }
+      let nextAccounts = await inFlightRefresh;
       if (autoSync) {
         setSyncing(true);
         try {
@@ -30,6 +38,7 @@ export function useInstagramAccounts({ autoSync = false } = {}) {
           setSyncing(false);
         }
       }
+      cachedAccounts = nextAccounts;
       setAccounts(nextAccounts);
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || "Failed to load Instagram accounts");
@@ -47,7 +56,9 @@ export function useInstagramAccounts({ autoSync = false } = {}) {
     setError(null);
     try {
       await importSocialInstagramAccount();
-      setAccounts(await fetchInstagramAccounts());
+      const nextAccounts = await fetchInstagramAccounts();
+      cachedAccounts = nextAccounts;
+      setAccounts(nextAccounts);
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || "Instagram sync failed");
       throw err;

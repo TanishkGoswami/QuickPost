@@ -1012,7 +1012,7 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
                     fontSize: 9,
                     fontWeight: 800,
                     color: css.arc,
-                    background: "rgba(243, 115, 56, 0.08)",
+                    background: "rgba(255, 86, 0, 0.08)",
                     padding: "2px 8px",
                     borderRadius: css.r_pill,
                     textTransform: "uppercase",
@@ -1071,9 +1071,9 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
       {expanded && (
         <div
           style={{
-            borderTop: "1.5px solid rgba(243, 115, 56, 0.1)",
+            borderTop: "1.5px solid rgba(255, 86, 0, 0.1)",
             background:
-              "linear-gradient(to bottom, rgba(243, 115, 56, 0.02), transparent)",
+              "linear-gradient(to bottom, rgba(255, 86, 0, 0.02), transparent)",
             padding: "24px",
           }}
         >
@@ -1196,8 +1196,8 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
                 background: css.white,
                 padding: "20px",
                 borderRadius: css.r_btn,
-                border: "1.2px solid rgba(243, 115, 56, 0.1)",
-                boxShadow: "0 8px 24px rgba(243, 115, 56, 0.05)",
+                border: "1.2px solid rgba(255, 86, 0, 0.1)",
+                boxShadow: "0 8px 24px rgba(255, 86, 0, 0.05)",
               }}
             >
               <div

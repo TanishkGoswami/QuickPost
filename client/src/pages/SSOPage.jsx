@@ -121,7 +121,7 @@ function SSOPage() {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
             <div style={{
               width: 60, height: 60, borderRadius: '50%',
-              background: 'rgba(243,115,56,0.1)',
+              background: 'rgba(255,86,0,0.1)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <Loader2

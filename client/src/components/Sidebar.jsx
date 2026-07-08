@@ -1116,7 +1116,7 @@ function Sidebar() {
               fontWeight: 700,
               cursor: "pointer",
               marginBottom: 8,
-              boxShadow: "0 4px 12px rgba(243,115,56,0.2)",
+              boxShadow: "0 4px 12px rgba(255,86,0,0.2)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",

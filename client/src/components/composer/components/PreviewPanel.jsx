@@ -170,7 +170,7 @@ const UserAvatar = ({ user, picture, size = 28, background = "#eee" }) => {
         height: size,
         borderRadius: "50%",
         flexShrink: 0,
-        background: (imgError || !displayPicture) ? "var(--ink, #141413)" : background,
+        background: (imgError || !displayPicture) ? "var(--ink, #111111)" : background,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

@@ -314,7 +314,7 @@ function FloatingPaths({ position }) {
         } ${343 - i * 18}C${616 - i * 15 * position} ${470 - i * 18} ${
           684 - i * 15 * position
         } ${875 - i * 18} ${684 - i * 15 * position} ${875 - i * 18}`,
-        color: `rgba(243, 115, 56, ${0.1 + i * 0.05})`,
+        color: `rgba(255, 86, 0, ${0.1 + i * 0.05})`,
         width: 1 + i * 0.1,
         duration: 15 + Math.random() * 10,
       })),

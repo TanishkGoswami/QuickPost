@@ -55,22 +55,19 @@ const PageLoader = () => (
   <div
     style={{
       minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
       background: 'var(--canvas)',
+      padding: '88px 24px 40px',
     }}
   >
-    <div
-      style={{
-        width: 32,
-        height: 32,
-        border: '2px solid rgba(20,20,19,0.08)',
-        borderTopColor: 'var(--arc)',
-        borderRadius: '50%',
-        animation: 'spin 0.7s linear infinite',
-      }}
-    />
+    <div style={{ maxWidth: 1120, margin: '0 auto', display: 'grid', gap: 18 }}>
+      <div className="skeleton-shimmer" style={{ height: 132, borderRadius: 8 }} />
+      <div className="skeleton-shimmer" style={{ height: 88, borderRadius: 8 }} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+        <div className="skeleton-shimmer" style={{ height: 220, borderRadius: 8 }} />
+        <div className="skeleton-shimmer" style={{ height: 220, borderRadius: 8 }} />
+        <div className="skeleton-shimmer" style={{ height: 220, borderRadius: 8 }} />
+      </div>
+    </div>
   </div>
 );
 
