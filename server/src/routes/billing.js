@@ -15,7 +15,7 @@ router.get('/plans', (_req, res) => {
 
 router.get('/entitlements', authenticateUser, async (req, res, next) => {
   try {
-    const entitlements = await getEntitlements(req.user.authUserId || req.user.userId);
+    const entitlements = await getEntitlements(req.user.authUserId || req.user.userId, req.user.email, req.token);
     res.json({ success: true, entitlements });
   } catch (error) {
     next(error);

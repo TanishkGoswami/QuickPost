@@ -11,7 +11,7 @@ const PLANS = [
   {
     name: 'Free',
     id: 'free',
-    price: { 1: 0, 3: 0, 6: 0, 12: 0 },
+    price: { 1: 0, 3: 0, 6: 0 },
     description: 'Perfect for getting started with basic scheduling.',
     icon: <Zap size={20} />,
     features: [
@@ -201,7 +201,6 @@ export default function PricingPage() {
               { months: 1, discount: 0 },
               { months: 3, discount: 10 },
               { months: 6, discount: 20 },
-              { months: 12, discount: 30 },
             ].map(({ months, discount }) => (
               <button
                 key={months}

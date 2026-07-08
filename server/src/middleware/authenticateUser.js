@@ -94,6 +94,7 @@ export async function authenticateUser(req, res, next) {
     }
 
     req.user = userInfo;
+    req.token = token;
     next();
 
   } catch (error) {
