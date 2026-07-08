@@ -11,7 +11,7 @@ const PLANS = [
   {
     name: 'Free',
     id: 'free',
-    price: { 1: 0, 3: 0, 6: 0, 12: 0 },
+    price: { 1: 0, 3: 0, 6: 0 },
     description: 'Perfect for getting started with basic scheduling.',
     icon: <Zap size={20} />,
     features: [
@@ -27,7 +27,11 @@ const PLANS = [
   {
     name: 'Pro',
     id: '999',
+<<<<<<< Updated upstream
     price: { 1: 999, 3: 899, 6: 799, 12: 799 },
+=======
+    price: { 1: 999, 3: 899, 6: 799},
+>>>>>>> Stashed changes
     description: 'For creators who broadcast seriously across every platform.',
     icon: <Sparkles size={20} />,
     features: [
@@ -201,7 +205,6 @@ export default function PricingPage() {
               { months: 1, discount: 0 },
               { months: 3, discount: 10 },
               { months: 6, discount: 20 },
-              { months: 12, discount: 30 },
             ].map(({ months, discount }) => (
               <button
                 key={months}

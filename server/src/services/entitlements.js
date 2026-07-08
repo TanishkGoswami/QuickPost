@@ -7,7 +7,7 @@ import {
 } from '../config/entitlementPolicy.js';
 
 export async function getEntitlements(userId) {
-  const { data: subscriptions, error } = await supabase
+  const { data: subscriptionsData, error } = await supabase
     .from('app_subscriptions')
     .select('plan_id,source,status,billing_interval,current_period_start,current_period_end,trial_ends_at,cancel_at_period_end,grace_period_ends_at')
     .eq('user_id', userId)
@@ -15,6 +15,54 @@ export async function getEntitlements(userId) {
 
   if (error && error.code !== '42P01') {
     throw new Error(`Failed to load subscription: ${error.message}`);
+  }
+
+  const subscriptions = subscriptionsData || [];
+
+  // Also query hub_subscriptions via user's email
+  try {
+    const { data: userRow } = await supabase
+      .from('users')
+      .select('email')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (userRow?.email) {
+      const { data: hubSubscription } = await supabase
+        .from('hub_subscriptions')
+        .select('*')
+        .eq('email', userRow.email)
+        .maybeSingle();
+
+      if (hubSubscription && hubSubscription.subscription_status === 'active') {
+        const expiresAt = hubSubscription.expires_at;
+        const isNotExpired = !expiresAt || new Date(expiresAt) > new Date();
+        if (isNotExpired) {
+          // Map hub plan to QuickPost plans: free, pro, enterprise
+          const p = String(hubSubscription.plan_id || hubSubscription.plan || '').toLowerCase();
+          let mappedPlanId = 'free';
+          if (p.includes('ultimate') || p.includes('ecosystem') || p.includes('max') || p.includes('half_yearly') || p.includes('enterprise')) {
+            mappedPlanId = 'enterprise';
+          } else if (p.includes('pro') || p.includes('core') || p.includes('quarterly') || p.includes('monthly')) {
+            mappedPlanId = 'pro';
+          }
+
+          if (mappedPlanId !== 'free') {
+            subscriptions.push({
+              plan_id: mappedPlanId,
+              source: 'hub',
+              status: 'active',
+              billing_interval: p.includes('half_yearly') ? 'six_months' : (p.includes('quarterly') ? 'quarterly' : 'monthly'),
+              current_period_end: expiresAt || null,
+              cancel_at_period_end: false,
+              grace_period_ends_at: null,
+            });
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('Failed to load hub subscription: ', err.message);
   }
 
   const subscription = selectBestSubscription(subscriptions);
