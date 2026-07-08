@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
-import { X, AlertCircle, Info, CheckCircle2, ExternalLink, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Eye, EyeOff, Key, User, ShieldCheck } from 'lucide-react';
 import apiClient from '../utils/apiClient';
+import PlatformSetupModalLayout from './platforms/PlatformSetupModalLayout';
 
-function BlueskyConnectModal({ isOpen, onClose, onSuccess }) {
+export default function BlueskyConnectModal({ isOpen, onClose, onSuccess }) {
   const [handle, setHandle] = useState('');
   const [appPassword, setAppPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-
-  if (!isOpen) return null;
 
   const handleConnect = async (e) => {
     e.preventDefault();
@@ -17,9 +16,7 @@ function BlueskyConnectModal({ isOpen, onClose, onSuccess }) {
     setIsLoading(true);
 
     try {
-      // Remove @ symbol if user included it
       const cleanHandle = handle.trim().replace(/^@/, '');
-      
       const response = await apiClient.post(
         '/api/auth/bluesky/connect',
         { handle: cleanHandle, appPassword }
@@ -31,166 +28,150 @@ function BlueskyConnectModal({ isOpen, onClose, onSuccess }) {
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to connect to Bluesky');
-      console.error('Bluesky connection error:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleBackdropClick = (e) => {
-    if (!isLoading) {
-      onClose();
-    }
-  };
+  const footer = (
+    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div className="text-left w-full sm:w-auto">
+        <p className="text-sm font-semibold text-gray-900">App Password</p>
+        <p className="text-xs text-gray-500 mt-0.5">Required for third-party access.</p>
+      </div>
+      <div className="flex items-center gap-3 w-full sm:w-auto">
+        <button
+          onClick={onClose}
+          disabled={isLoading}
+          type="button"
+          className="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleConnect}
+          disabled={isLoading || !handle || !appPassword}
+          type="submit"
+          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-2 bg-[#0085ff] hover:bg-[#0070d6] text-white text-sm font-bold rounded-xl shadow-md shadow-[#0085ff]/20 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0"
+        >
+          {isLoading ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Connecting...
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="w-4 h-4" />
+              Connect
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
 
   return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" 
-      onClick={handleBackdropClick}
+    <PlatformSetupModalLayout
+      isOpen={isOpen}
+      onClose={() => !isLoading && onClose()}
+      title="Connect Bluesky"
+      icon="/icons/bluesky-circle-color-icon.svg"
+      iconBgColor="bg-blue-50"
+      footer={footer}
     >
-      <div 
-        className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 bg-white">
-          <h2 className="text-xl font-semibold text-gray-900">Connect Bluesky Account</h2>
-          <button
-            onClick={onClose}
-            disabled={isLoading}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 disabled:opacity-50"
-          >
-            <X className="w-5 h-5" />
-          </button>
+      <div className="space-y-6">
+        {/* About */}
+        <div className="text-center mb-6">
+          <p className="text-sm text-gray-600 max-w-sm mx-auto leading-relaxed">
+            Connect your Bluesky account to automatically share your posts to the decentralized AT Protocol network.
+          </p>
         </div>
 
-        {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* Info Alert */}
-          {/* <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex gap-3">
-            <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-blue-900">App Password Required</p>
-              <p className="text-sm text-blue-700 mt-1">
-                For security, Bluesky requires an App Password for third-party applications. Your main account password won't work here.
-              </p>
-            </div>
-          </div> */}
-
-          {/* What is Bluesky */}
+        <form onSubmit={handleConnect} className="space-y-5">
+          {/* Handle Input */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">About Bluesky</h3>
-            <p className="text-sm text-gray-700">
-              Bluesky is a decentralized social network built on the AT Protocol. It offers features similar to Twitter/X 
-              with a focus on user control and open standards.
-            </p>
-          </div>
-
-
-          {/* Form */}
-          <form onSubmit={handleConnect} className="space-y-4">
-            {/* Handle Input */}
-            <div>
-              <label htmlFor="handle" className="block text-sm font-medium text-gray-700 mb-2">
-                Bluesky Handle
-              </label>
+            <label htmlFor="handle" className="block text-sm font-bold text-gray-700 mb-2">
+              Bluesky Handle
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                <User className="w-5 h-5" />
+              </div>
               <input
                 type="text"
                 id="handle"
                 value={handle}
                 onChange={(e) => setHandle(e.target.value)}
                 placeholder="username.bsky.social"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0085ff]/20 focus:border-[#0085ff] transition-all shadow-sm placeholder:text-gray-400 text-sm font-medium"
                 required
                 disabled={isLoading}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Your full Bluesky handle without @ (e.g., alice.bsky.social or custom domain)
-              </p>
             </div>
+          </div>
 
-            {/* App Password Input */}
-            <div>
-              <label htmlFor="appPassword" className="block text-sm font-medium text-gray-700 mb-2">
+          {/* App Password Input */}
+          <div>
+            <div className="flex justify-between items-end mb-2">
+              <label htmlFor="appPassword" className="block text-sm font-bold text-gray-700">
                 App Password
               </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="appPassword"
-                  value={appPassword}
-                  onChange={(e) => setAppPassword(e.target.value)}
-                  placeholder="xxxx-xxxx-xxxx-xxxx"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
-                  required
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  disabled={isLoading}
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Not your main password - use the app password you created in Settings
-              </p>
+              <a 
+                href="https://bsky.app/settings/app-passwords" 
+                target="_blank" 
+                rel="noreferrer"
+                className="text-xs font-semibold text-[#0085ff] hover:underline"
+              >
+                Get App Password
+              </a>
             </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex gap-2">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-                <p className="text-sm text-red-700">{error}</p>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                <Key className="w-5 h-5" />
               </div>
-            )}
-
-            {/* Buttons */}
-            <div className="flex gap-3 pt-2">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                id="appPassword"
+                value={appPassword}
+                onChange={(e) => setAppPassword(e.target.value)}
+                placeholder="xxxx-xxxx-xxxx-xxxx"
+                className="w-full pl-11 pr-12 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#0085ff]/20 focus:border-[#0085ff] transition-all shadow-sm placeholder:text-gray-400 text-sm font-medium font-mono"
+                required
+                disabled={isLoading}
+              />
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100 transition-colors"
                 disabled={isLoading}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading || !handle || !appPassword}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Connecting...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-5 h-5" />
-                    Connect Account
-                  </>
-                )}
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-          </form>
+          </div>
 
-          {/* Additional Info */}
-          <div className="p-4 bg-gray-50 rounded-lg space-y-2">
-            <h4 className="font-semibold text-gray-900 text-sm">Security Notes</h4>
-            <ul className="text-xs text-gray-600 space-y-1">
-              <li>• App passwords can be revoked anytime from your Bluesky settings</li>
-              <li>• Each app password works only for the app it was created for</li>
-              <li>• Your credentials are stored securely and encrypted</li>
-              <li>• You can disconnect your account anytime from QuickPost</li>
-            </ul>
+          {/* Error Message */}
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+              <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+              <p className="text-sm font-medium text-red-800">{error}</p>
+            </div>
+          )}
+        </form>
+
+        {/* Security Info */}
+        <div className="flex items-start gap-3 p-4 bg-gray-100/80 rounded-2xl border border-gray-200/60 mt-8">
+          <div className="p-2 bg-white rounded-lg shadow-sm shrink-0">
+            <ShieldCheck className="w-5 h-5 text-gray-600" />
+          </div>
+          <div className="space-y-1 mt-0.5">
+            <h4 className="font-semibold text-gray-900 text-xs uppercase tracking-wider">Secure Connection</h4>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              We never ask for your main password. Your app password is encrypted and only used for posting on your behalf.
+            </p>
           </div>
         </div>
       </div>
-    </div>
+    </PlatformSetupModalLayout>
   );
 }
-
-export default BlueskyConnectModal;

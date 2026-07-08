@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { X, Globe, AlertCircle } from 'lucide-react';
+import { AlertCircle, Globe, ShieldCheck, ArrowRight } from 'lucide-react';
 import apiClient from '../utils/apiClient';
+import PlatformSetupModalLayout from './platforms/PlatformSetupModalLayout';
 
-function MastodonConnectModal({ isOpen, onClose }) {
+export default function MastodonConnectModal({ isOpen, onClose }) {
   const [instanceUrl, setInstanceUrl] = useState('mastodon.social');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  if (!isOpen) return null;
-
-  const handleConnect = async () => {
+  const handleConnect = async (e) => {
+    e.preventDefault();
     if (!instanceUrl) {
       setError('Please enter a Mastodon instance URL');
       return;
@@ -25,103 +25,113 @@ function MastodonConnectModal({ isOpen, onClose }) {
       );
 
       if (response.data.success && response.data.authUrl) {
-        // Redirect to Mastodon OAuth flow
         window.location.href = response.data.authUrl;
       } else {
         setError('Failed to initialize Mastodon connection');
       }
     } catch (err) {
-      console.error('Mastodon connection error:', err);
       setError(err.response?.data?.error || 'Failed to connect to the Mastodon instance. Check the URL and try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget && !isLoading) {
-      onClose();
-    }
-  };
-
-  return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" 
-      onClick={handleBackdropClick}
-    >
-      <div 
-        className="bg-white rounded-lg shadow-xl w-full max-w-md"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-              <Globe className="text-indigo-600" size={24} />
-            </div>
-            <h2 className="text-xl font-semibold text-gray-900">Connect Mastodon</h2>
-          </div>
-          <button
-            onClick={onClose}
-            disabled={isLoading}
-            className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
-          >
-            <X size={24} />
-          </button>
-        </div>
-
-        <div className="p-6">
-          <p className="text-sm text-gray-600 mb-6">
-            Mastodon is decentralized. Please enter your instance URL (e.g., mastodon.social) to connect your account.
-          </p>
-
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="instanceUrl" className="block text-sm font-medium text-gray-700 mb-1">
-                Instance URL
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  id="instanceUrl"
-                  placeholder="e.g., mastodon.social"
-                  value={instanceUrl}
-                  onChange={(e) => setInstanceUrl(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            {error && (
-              <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-100 rounded-md text-red-600 text-sm">
-                <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
-                <p>{error}</p>
-              </div>
-            )}
-
-            <button
-              onClick={handleConnect}
-              disabled={isLoading}
-              className="w-full bg-indigo-600 text-white py-3 px-4 rounded-md hover:bg-indigo-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed font-medium flex items-center justify-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Registering App...
-                </>
-              ) : (
-                'Connect Account'
-              )}
-            </button>
-          </div>
-
-          <p className="text-xs text-gray-500 mt-6 text-center">
-            By connecting, you'll be redirected to your instance to authorize QuickPost to post on your behalf.
-          </p>
-        </div>
+  const footer = (
+    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div className="text-left w-full sm:w-auto">
+        <p className="text-sm font-semibold text-gray-900">Ready to connect?</p>
+        <p className="text-xs text-gray-500 mt-0.5">You will be redirected to your instance.</p>
+      </div>
+      <div className="flex items-center gap-3 w-full sm:w-auto">
+        <button
+          onClick={onClose}
+          disabled={isLoading}
+          type="button"
+          className="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleConnect}
+          disabled={isLoading || !instanceUrl}
+          type="submit"
+          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-2 bg-[#6364FF] hover:bg-[#5051e6] text-white text-sm font-bold rounded-xl shadow-md shadow-[#6364FF]/20 transition-all hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0"
+        >
+          {isLoading ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Registering...
+            </>
+          ) : (
+            <>
+              Connect
+              <ArrowRight className="w-4 h-4" />
+            </>
+          )}
+        </button>
       </div>
     </div>
   );
-}
 
-export default MastodonConnectModal;
+  return (
+    <PlatformSetupModalLayout
+      isOpen={isOpen}
+      onClose={() => !isLoading && onClose()}
+      title="Connect Mastodon"
+      icon="/icons/mastodon-color-icon.svg"
+      iconBgColor="bg-indigo-50"
+      footer={footer}
+    >
+      <div className="space-y-6">
+        <div className="text-center mb-6">
+          <p className="text-sm text-gray-600 max-w-sm mx-auto leading-relaxed">
+            Mastodon is decentralized. Please enter your instance URL (e.g., <span className="font-medium text-gray-900">mastodon.social</span>) to connect your account.
+          </p>
+        </div>
+
+        <form onSubmit={handleConnect} className="space-y-5">
+          <div>
+            <label htmlFor="instanceUrl" className="block text-sm font-bold text-gray-700 mb-2">
+              Instance URL
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                <Globe className="w-5 h-5" />
+              </div>
+              <input
+                type="text"
+                id="instanceUrl"
+                placeholder="mastodon.social"
+                value={instanceUrl}
+                onChange={(e) => setInstanceUrl(e.target.value)}
+                className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#6364FF]/20 focus:border-[#6364FF] transition-all shadow-sm placeholder:text-gray-400 text-sm font-medium"
+                disabled={isLoading}
+                required
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+              <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+              <p className="text-sm font-medium text-red-800">{error}</p>
+            </div>
+          )}
+        </form>
+
+        {/* Security Info */}
+        <div className="flex items-start gap-3 p-4 bg-gray-100/80 rounded-2xl border border-gray-200/60 mt-8">
+          <div className="p-2 bg-white rounded-lg shadow-sm shrink-0">
+            <ShieldCheck className="w-5 h-5 text-gray-600" />
+          </div>
+          <div className="space-y-1 mt-0.5">
+            <h4 className="font-semibold text-gray-900 text-xs uppercase tracking-wider">Secure Connection</h4>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              By connecting, you'll be redirected to your instance to securely authorize QuickPost to post on your behalf.
+            </p>
+          </div>
+        </div>
+      </div>
+    </PlatformSetupModalLayout>
+  );
+}

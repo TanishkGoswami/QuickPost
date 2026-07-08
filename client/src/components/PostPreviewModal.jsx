@@ -768,7 +768,7 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      className="post-preview-backdrop fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
       style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(12px)' }}
       onClick={handleBackdrop}
     >
@@ -777,17 +777,17 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ type: 'spring', duration: 0.5, bounce: 0.3 }}
-        className="bg-white rounded-[2rem] shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col"
+        className="post-preview-modal bg-white rounded-[2rem] shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col"
       >
 
         {/* ── Modal Header ── */}
-        <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+        <div className="post-preview-header flex items-center justify-between px-8 py-5 border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-4">
-             <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+             <div className="post-preview-header-icon w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
                 <Play className="w-5 h-5 text-blue-600 fill-blue-600" />
              </div>
              <div>
-              <h2 className="text-lg font-bold text-gray-900 leading-tight">{post.caption?.split('\n')[0] || 'Post Preview'}</h2>
+              <h2 className="post-preview-title text-lg font-bold text-gray-900 leading-tight">{post.caption?.split('\n')[0] || 'Post Preview'}</h2>
               <div className="flex items-center gap-2 mt-0.5">
                 <span className="text-xs text-gray-400 font-medium">{formatDate(post.posted_at)}</span>
                 <span className="w-1 h-1 rounded-full bg-gray-300" />
@@ -803,22 +803,22 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
                     onDelete(post.id);
                   }
                 }} 
-                className="p-2.5 hover:bg-red-50 rounded-full transition-all group"
+                className="post-preview-icon-button p-2.5 hover:bg-red-50 rounded-full transition-all group"
                 title="Delete Post"
               >
                 <Trash2 className="w-5 h-5 text-gray-400 group-hover:text-red-500 transition-all duration-300" />
               </button>
             )}
-            <button onClick={onClose} className="p-2.5 hover:bg-gray-100 rounded-full transition-all group">
+            <button onClick={onClose} className="post-preview-close p-2.5 hover:bg-gray-100 rounded-full transition-all group">
               <X className="w-5 h-5 text-gray-400 group-hover:text-gray-900 group-hover:rotate-90 transition-all duration-300" />
             </button>
           </div>
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
+        <div className="post-preview-shell flex flex-1 overflow-hidden">
 
           {/* ── Left: Platform list ── */}
-          <div className="w-64 border-r border-gray-100 overflow-y-auto flex-shrink-0 bg-gray-50/30">
+          <div className="post-preview-sidebar w-64 border-r border-gray-100 overflow-y-auto flex-shrink-0 bg-gray-50/30">
             <div className="p-5">
               <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.1em] mb-4">Platforms</p>
               <div className="space-y-2">
@@ -829,7 +829,7 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
                     <button
                       key={p.id}
                       onClick={() => handlePlatformChange(i)}
-                      className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all duration-200 ${
+                    className={`post-preview-platform-option w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all duration-200 ${
                         i === activePlatformIdx
                         ? 'bg-white shadow-lg shadow-gray-200/50 border border-gray-100 scale-[1.02]'
                         : 'hover:bg-gray-100/50'
@@ -853,7 +853,7 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
           </div>
 
           {/* ── Right: Preview + formats ── */}
-          <div className="flex-1 overflow-y-auto bg-white">
+          <div className="post-preview-main flex-1 overflow-y-auto bg-white">
             {!activePlatform ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-300 p-10 text-center">
                 <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center mb-4">
@@ -862,17 +862,17 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
                 <p className="text-sm font-medium">Select a platform to preview your post</p>
               </div>
             ) : (
-              <div className="p-8">
+              <div className="post-preview-main-inner p-8">
                 {/* Format selection */}
                 {activePlatform.formats.length > 1 && (
-                  <div className="mb-10">
+                  <div className="post-preview-format-section mb-10">
                     <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.1em] mb-4">Preview Format</p>
                     <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide">
                       {activePlatform.formats.map((fmt, i) => (
                         <button
                           key={i}
                           onClick={() => setActiveFormatIdx(i)}
-                          className={`flex-shrink-0 px-5 py-3 rounded-2xl text-[13px] font-bold border-2 transition-all duration-200 ${
+                          className={`post-preview-format-tab flex-shrink-0 px-5 py-3 rounded-2xl text-[13px] font-bold border-2 transition-all duration-200 ${
                             i === activeFormatIdx
                               ? 'bg-gray-900 text-white border-gray-900 shadow-xl shadow-gray-200 scale-105'
                               : 'bg-white text-gray-600 border-gray-100 hover:border-gray-200 hover:bg-gray-50'
@@ -889,7 +889,7 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
                 )}
 
                 {/* Phone preview area */}
-                <div className="flex flex-col lg:flex-row gap-10 items-start justify-center">
+                <div className="post-preview-stage flex flex-col lg:flex-row gap-10 items-start justify-center">
 
                   <div className="flex-shrink-0">
                     <PreviewContainer
@@ -952,8 +952,8 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
                   </div>
 
                   {/* Status and Actions Card */}
-                  <div className="flex-1 w-full max-w-md space-y-6">
-                    <div className={`p-8 rounded-[2rem] border-2 transition-all shadow-sm ${
+                  <div className="post-preview-side-stack flex-1 w-full max-w-md space-y-6">
+                    <div className={`post-preview-status-card p-8 rounded-[2rem] border-2 transition-all shadow-sm ${
                       activePlatform.success
                       ? 'bg-green-50/20 border-green-100/50 shadow-green-900/5'
                       : 'bg-red-50/20 border-red-100/50 shadow-red-900/5'
@@ -983,7 +983,7 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
                             href={activePlatform.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="bg-white border border-gray-100 px-5 py-2.5 rounded-xl text-xs font-black text-gray-800 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm uppercase tracking-tighter"
+                            className="post-preview-live-link bg-white border border-gray-100 px-5 py-2.5 rounded-xl text-xs font-black text-gray-800 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm uppercase tracking-tighter"
                           >
                             View Live <ExternalLink className="w-3.5 h-3.5" />
                           </a>
@@ -999,7 +999,7 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
                     </div>
 
                     {post.caption && (
-                      <div className="bg-gray-50 rounded-[1.5rem] p-6 border border-gray-100 shadow-sm">
+                      <div className="post-preview-content-card bg-gray-50 rounded-[1.5rem] p-6 border border-gray-100 shadow-sm">
                         <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.1em] mb-3">Post Content</p>
                         <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                           {post.caption}
@@ -1008,11 +1008,11 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
                     )}
 
                     <div className="grid grid-cols-2 gap-4">
-                       <div className="bg-white rounded-2xl p-4 border border-gray-100 flex flex-col gap-1">
+                       <div className="post-preview-spec-card bg-white rounded-2xl p-4 border border-gray-100 flex flex-col gap-1">
                           <span className="text-[10px] font-black text-gray-400 uppercase">Aspect Ratio</span>
                           <span className="text-sm font-bold text-gray-800">{activeFormat?.ratio}</span>
                        </div>
-                       <div className="bg-white rounded-2xl p-4 border border-gray-100 flex flex-col gap-1">
+                       <div className="post-preview-spec-card bg-white rounded-2xl p-4 border border-gray-100 flex flex-col gap-1">
                           <span className="text-[10px] font-black text-gray-400 uppercase">Resolution</span>
                           <span className="text-sm font-bold text-gray-800">{activeFormat?.w}×{activeFormat?.h}px</span>
                        </div>

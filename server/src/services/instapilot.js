@@ -877,7 +877,7 @@ async function handleInboundMessage({ senderId, recipientId, messaging }) {
     return { skipped: true, reason: 'monthly_reply_limit_reached' };
   }
   if (usage.entitlements?.plan?.id === 'free') {
-    sendText += '\n\n_⚡ This automation is from SocialPilot (social.getaipilot.in)_';
+    sendText += '\n\n_⚡ Automation is powered by @Getaipilot_';
   }
 
   await sendInstagramMessage({ account, recipientId: senderId, text: sendText, messagingType: 'RESPONSE' });

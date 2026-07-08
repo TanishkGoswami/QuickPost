@@ -1,6 +1,7 @@
-import { Instagram, Loader2, MessageCircle, RefreshCw, Zap } from "lucide-react";
+import { Instagram, Loader2, MessageCircle, RefreshCw, Zap, MessageSquare, Send } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -25,13 +26,24 @@ export const defaultComposerAutoDMConfig = {
   commentReplyEnabled: true,
   commentReplyText: "Sent you the details in DM.",
   responseFlow: {
-    opening_message_enabled: false,
-    opening_message: "",
+    opening_message_enabled: true,
+    opening_message: "Hey there! Thanks for your interest ✨\nClick below to get the details.",
+    opening_button: "Send me the link",
     nodes: [
       {
-        id: "composer_text_1",
-        type: "text",
-        content: "Hey! Thanks for commenting. Here are the details.",
+        id: "composer_card_1",
+        type: "card",
+        card_title: "Here is what you requested",
+        card_subtitle: "",
+        card_image_url: "",
+        buttons: [
+          {
+            id: "btn_1",
+            type: "web_url",
+            title: "Visit Website",
+            url: "https://"
+          }
+        ]
       },
     ],
   },
@@ -74,122 +86,174 @@ export function AutoDMComposerPanel({ config, onChange, postType }) {
   }, [postType]);
 
   return (
-    <div className="space-y-4 overflow-hidden rounded-[18px] border border-black/10 bg-white p-4 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-[var(--arc)]/10 text-[var(--arc)]">
-              <MessageCircle className="h-4 w-4" />
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-[var(--ink)]">Auto DM for this Instagram post</p>
-              <p className="mt-1 text-xs leading-5 text-[var(--slate)]">
-                Turn comments on this post into DM replies, leads, and follow-up flows.
-              </p>
-            </div>
+    <div className={`overflow-hidden rounded-[20px] border transition-all duration-300 ${config.enabled ? 'border-[var(--arc)] shadow-sm' : 'border-black/10 bg-white shadow-sm'}`}>
+      
+      {/* Header Area */}
+      <div className={`flex items-center justify-between p-5 transition-colors ${config.enabled ? 'bg-[var(--arc)]/5' : ''}`}>
+        <div className="flex items-center gap-3.5">
+          <div className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${config.enabled ? 'bg-[var(--arc)] text-white' : 'bg-black/5 text-[var(--slate)]'}`}>
+            <Zap className="h-5 w-5" />
           </div>
-          <Switch checked={config.enabled} onCheckedChange={(checked) => update({ enabled: checked })} />
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--ink)]">Auto DM Setup</h3>
+            <p className="text-xs text-[var(--slate)] mt-0.5">Automate replies and DMs for this post</p>
+          </div>
         </div>
+        <Switch checked={config.enabled} onCheckedChange={(checked) => update({ enabled: checked })} />
+      </div>
 
-        {config.enabled ? (
-          <div className="space-y-4">
-            <div className="rounded-[14px] border border-black/10 bg-[var(--canvas-lifted)] p-3">
-              {checking ? (
-                <div className="flex items-center gap-2 text-xs font-semibold text-[var(--slate)]">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Checking Auto DM account...
-                </div>
-              ) : instagramReady ? (
-                <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
-                  <Instagram className="h-4 w-4" />
-                  Auto DM account ready
-                </div>
-              ) : (
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-[var(--ink)]">Auto DM account not imported</p>
-                    <p className="mt-1 text-xs text-[var(--slate)]">
-                      Import your Social Pilot Instagram connection once, then this post can auto-bind after publishing.
-                    </p>
+      {/* Expanded Content Area */}
+      <AnimatePresence>
+        {config.enabled && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-t border-black/5 overflow-hidden"
+          >
+            <div className="p-5 space-y-8 bg-white">
+              
+              {/* Account Status Banner */}
+              <div className="rounded-xl border border-black/5 bg-gray-50/80 p-4">
+                {checking ? (
+                  <div className="flex items-center gap-2 text-xs font-medium text-[var(--slate)]">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Checking Instagram connection...
                   </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={!canImport || syncing}
-                    onClick={async () => {
-                      setSyncing(true);
-                      try {
-                        await importInstagramAccountFromSocial();
-                        const nextStatus = await getAutoDMStatus();
-                        setStatus(nextStatus);
-                        toast.success("Instagram imported into Auto DM");
-                      } catch (error) {
-                        toast.error(error.message || "Failed to import Instagram");
-                      } finally {
-                        setSyncing(false);
-                      }
-                    }}
-                  >
-                    {syncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                    Import
-                  </Button>
-                </div>
-              )}
-            </div>
+                ) : instagramReady ? (
+                  <div className="flex items-center gap-2 text-xs font-medium text-emerald-600">
+                    <Instagram className="h-4 w-4" />
+                    Instagram connected and ready for Auto DM
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-semibold text-rose-600">Instagram not linked to Auto DM</p>
+                      <p className="mt-1 text-xs text-[var(--slate)]">
+                        Please import your Instagram account to enable automations.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="bg-white"
+                      disabled={!canImport || syncing}
+                      onClick={async () => {
+                        setSyncing(true);
+                        try {
+                          await importInstagramAccountFromSocial();
+                          const nextStatus = await getAutoDMStatus();
+                          setStatus(nextStatus);
+                          toast.success("Instagram imported successfully!");
+                        } catch (error) {
+                          toast.error(error.message || "Failed to import Instagram");
+                        } finally {
+                          setSyncing(false);
+                        }
+                      }}
+                    >
+                      {syncing ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-2 h-3.5 w-3.5" />}
+                      Import Account
+                    </Button>
+                  </div>
+                )}
+              </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
+              {/* Step 1: Trigger */}
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Trigger</Label>
-                  <Select value={config.triggerType} onValueChange={(value) => update({ triggerType: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {triggerOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          <span className="flex items-center gap-2">
-                            <Zap className="h-4 w-4 text-[var(--arc)]" />
-                            {option.label}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-black/5 text-[10px] font-bold text-[var(--slate)]">1</div>
+                  <h4 className="text-sm font-semibold text-[var(--ink)]">When someone comments</h4>
                 </div>
-
-                <KeywordInput
-                  keywords={config.keywords}
-                  onChange={(keywords) => update({ keywords })}
-                  caseSensitive={config.isCaseSensitive}
-                  onCaseSensitiveChange={(isCaseSensitive) => update({ isCaseSensitive })}
-                />
-
-                <div className="rounded-[14px] border border-black/10 bg-[var(--canvas-lifted)] p-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <Label>Public comment reply</Label>
-                    <Switch checked={config.commentReplyEnabled} onCheckedChange={(commentReplyEnabled) => update({ commentReplyEnabled })} />
+                
+                <div className="pl-8 space-y-5">
+                  <div className="grid gap-2">
+                    <Label className="text-xs text-[var(--slate)]">Trigger Source</Label>
+                    <Select value={config.triggerType} onValueChange={(value) => update({ triggerType: value })}>
+                      <SelectTrigger className="w-full sm:w-[240px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {triggerOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  {config.commentReplyEnabled ? (
-                    <Textarea
-                      className="mt-3"
-                      rows={3}
-                      value={config.commentReplyText}
-                      onChange={(event) => update({ commentReplyText: event.target.value })}
-                      placeholder="Sent you the details in DM."
+
+                  <div className="grid gap-2">
+                    <Label className="text-xs text-[var(--slate)]">Trigger Keywords</Label>
+                    <KeywordInput
+                      keywords={config.keywords}
+                      onChange={(keywords) => update({ keywords })}
+                      caseSensitive={config.isCaseSensitive}
+                      onCaseSensitiveChange={(isCaseSensitive) => update({ isCaseSensitive })}
                     />
-                  ) : null}
+                  </div>
                 </div>
               </div>
 
-              <ResponseFlowBuilder
-                responseFlow={config.responseFlow}
-                onChange={(responseFlow) => update({ responseFlow })}
-                compact={true}
-              />
+              {/* Step 2: Public Reply */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-black/5 text-[10px] font-bold text-[var(--slate)]">2</div>
+                  <h4 className="text-sm font-semibold text-[var(--ink)]">Publicly reply to them</h4>
+                </div>
+                
+                <div className="pl-8">
+                  <div className="rounded-xl border border-black/10 bg-white p-4 shadow-sm transition-all focus-within:border-[var(--arc)] focus-within:ring-1 focus-within:ring-[var(--arc)]">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4 text-[var(--slate)]" />
+                        <span className="text-xs font-medium text-[var(--ink)]">Enable public reply</span>
+                      </div>
+                      <Switch checked={config.commentReplyEnabled} onCheckedChange={(commentReplyEnabled) => update({ commentReplyEnabled })} />
+                    </div>
+                    {config.commentReplyEnabled && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
+                        <Textarea
+                          className="mt-2 min-h-[80px] resize-none border-none bg-gray-50/50 focus-visible:ring-0 p-3 text-sm rounded-lg"
+                          value={config.commentReplyText}
+                          onChange={(event) => update({ commentReplyText: event.target.value })}
+                          placeholder="e.g. Sent you the details in DM!"
+                        />
+                      </motion.div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3: Private DM */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-black/5 text-[10px] font-bold text-[var(--slate)]">3</div>
+                  <h4 className="text-sm font-semibold text-[var(--ink)]">Privately send them a DM</h4>
+                </div>
+                
+                <div className="pl-8">
+                  <div className="rounded-xl border border-black/10 bg-white shadow-sm overflow-hidden">
+                    <div className="bg-gray-50/50 border-b border-black/5 px-4 py-3 flex items-center gap-2">
+                       <Send className="h-4 w-4 text-[var(--slate)]" />
+                       <span className="text-xs font-medium text-[var(--ink)]">Direct Message Flow</span>
+                    </div>
+                    <div className="p-4 bg-[var(--canvas-lifted)]">
+                      <ResponseFlowBuilder
+                        responseFlow={config.responseFlow}
+                        onChange={(responseFlow) => update({ responseFlow })}
+                        compact={true}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
             </div>
-          </div>
-        ) : null}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

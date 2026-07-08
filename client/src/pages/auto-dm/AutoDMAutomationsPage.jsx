@@ -130,7 +130,7 @@ function AnalyticsModal({ automation, analytics, loading, onClose, onSync, onEdi
   const hasIssues = recentErrors.length > 0 || (analytics?.failed || 0) > 0;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay autodm-analytics-overlay" onClick={onClose}>
       <div className="modal-content autodm-analytics-modal" onClick={(event) => event.stopPropagation()}>
         <header className="autodm-analytics-header">
           <AutomationThumb automation={automation} />
@@ -208,17 +208,17 @@ function AnalyticsModal({ automation, analytics, loading, onClose, onSync, onEdi
                   </div>
                   <div className="autodm-metrics-row">
                     <div className="autodm-metric-line">
-                      <CheckCircle2 size={16} />
+                      <span><CheckCircle2 size={16} /></span>
                       <p>Successful</p>
                       <strong>{sent}</strong>
                     </div>
                     <div className="autodm-metric-line">
-                      <X size={16} />
+                      <span><X size={16} /></span>
                       <p>Send Failed</p>
                       <strong>{analytics?.failed || 0}</strong>
                     </div>
                     <div className="autodm-metric-line">
-                      <Clock size={16} />
+                      <span><Clock size={16} /></span>
                       <p>Awaiting Reply</p>
                       <strong>{analytics?.awaiting_reply || 0}</strong>
                     </div>
@@ -258,7 +258,7 @@ function AnalyticsModal({ automation, analytics, loading, onClose, onSync, onEdi
                   </div>
                   <div className="autodm-caption-box">
                     <p>Caption</p>
-                    <strong>{automation.media_caption || 'No caption saved yet. Click Sync Meta Data to fetch it.'}</strong>
+                    <strong className="autodm-caption-text">{automation.media_caption || 'No caption saved yet. Click Sync Meta Data to fetch it.'}</strong>
                   </div>
                 </section>
               </div>

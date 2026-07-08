@@ -16,13 +16,13 @@ describe('Auto-DM delivery policy', () => {
       true,
     );
     expect(actions[0].text).toBe(`Here is your guide${SOCIALPILOT_WATERMARK}`);
-    expect(String(actions[0].text).match(/SocialPilot/g)).toHaveLength(1);
+    expect(String(actions[0].text).match(/@Getaipilot/g)).toHaveLength(1);
   });
 
   it('removes legacy or stored branding for paid users', () => {
     const oldQuickPost = 'Hello\n\n_⚡ Automated via QuickPost.co (Get it Free)_';
     const oldSocialPilot =
-      'Hello\n\n_⚡ This automation is from SocialPilot (social.getaipilot.in)_';
+      'Hello\n\n_⚡ Automation is powered by @Getaipilot_';
     expect(stripBrandingWatermark(oldQuickPost)).toBe('Hello');
     expect(stripBrandingWatermark(oldSocialPilot)).toBe('Hello');
     expect(
