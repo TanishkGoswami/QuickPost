@@ -58,15 +58,10 @@ export function AuthProvider({ children }) {
 
   const fetchConnectedAccounts = useCallback(async () => {
     try {
-      console.log("🔄 Fetching connected accounts...");
-      const response = await apiClient.get("/api/auth/accounts");
+      const response = await apiClient.get(`/api/auth/accounts?t=${Date.now()}`);
       if (response.data.success) {
         const accounts = response.data.accounts;
-        console.log("✅ Accounts fetched successfully:", Object.keys(accounts).filter(k => accounts[k].connected));
-        console.log("📊 Full accounts data:", accounts);
         setConnectedAccounts(accounts);
-      } else {
-        console.error("❌ Failed to fetch accounts:", response.data.error);
       }
     } catch (error) {
       console.error("💥 Error fetching connected accounts:", error.message || error);

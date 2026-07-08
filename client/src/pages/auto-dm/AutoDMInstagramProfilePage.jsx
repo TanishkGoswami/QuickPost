@@ -84,7 +84,7 @@ function MediaGrid({ items, loading, emptyLabel, error, onReconnect }) {
   if (items.length === 0) {
     return (
       <div className="autodm-empty autodm-media-empty">
-        <ImageIcon size={38} />
+        <img src="https://illustrations.popsy.co/amber/graphic-design.svg" alt="No Media" className="h-32 object-contain mx-auto mb-4" />
         <p>{emptyLabel}</p>
         <span>Refresh after posting content on Instagram.</span>
       </div>
@@ -198,9 +198,7 @@ export default function AutoDMInstagramProfilePage() {
     return (
       <div className="autodm-page">
         <section className="card-shadow autodm-connect-state">
-          <span className="autodm-connect-icon">
-            <Instagram size={28} />
-          </span>
+          <img src="https://illustrations.popsy.co/amber/student-going-to-school.svg" alt="No Instagram Account" className="h-40 object-contain mx-auto mb-6" />
           <h1>No Instagram Account</h1>
           <p>
             {hasSocialInstagramConnection

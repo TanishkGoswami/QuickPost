@@ -392,16 +392,20 @@ function Sidebar() {
     },
   ];
 
-  const isActive = (path) =>
-    path === "/dashboard/auto-dm"
-      ? location.pathname.startsWith("/dashboard/auto-dm")
-      : location.pathname === path;
+  const isActive = (path) => {
+    if (path === "/dashboard/auto-dm") {
+      return location.pathname.startsWith("/dashboard/auto-dm") && !location.pathname.startsWith("/dashboard/auto-dm/settings");
+    }
+    if (path === "/dashboard") {
+      return location.pathname === "/dashboard";
+    }
+    return location.pathname.startsWith(path);
+  };
 
   const autoDMSubnav = [
     { to: "/dashboard/auto-dm/automations", label: "Automations", icon: <Workflow size={14} /> },
     { to: "/dashboard/auto-dm/contacts", label: "Contacts", icon: <Users size={14} /> },
     { to: "/dashboard/auto-dm/instagram-profile", label: "Profile", icon: <Instagram size={14} /> },
-    { to: "/dashboard/auto-dm/settings", label: "Settings", icon: <Settings size={14} /> },
   ];
 
   return (
@@ -499,6 +503,11 @@ function Sidebar() {
               to: "/dashboard/auto-dm",
               label: "GAP AutoDM",
               icon: <MessagesSquare size={16} />,
+            },
+            {
+              to: "/dashboard/auto-dm/settings",
+              label: "Settings",
+              icon: <Settings size={16} />,
             },
             {
               to: "/dashboard/trends",

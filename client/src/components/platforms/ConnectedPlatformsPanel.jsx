@@ -163,16 +163,17 @@ export default function ConnectedPlatformsPanel({
     );
   };
 
-  const disconnectPlatform = async (platform) => {
+  const disconnectPlatform = async (platform, accountId = null) => {
     const ok = await confirm(
       `Disconnect ${platform.name}?`,
       `${platform.name} disconnect karne par related posting, AutoDM, ya bot features pause ho sakte hain.`,
       { intent: "warning", confirmText: "Disconnect", cancelText: "Keep connected" },
     );
     if (!ok) return;
-    setBusy(platform.id);
+    setBusy(accountId || platform.id);
     try {
-      await apiClient.delete(`/api/auth/disconnect/${platform.id}`);
+      const url = accountId ? `/api/auth/disconnect/${platform.id}?accountId=${accountId}` : `/api/auth/disconnect/${platform.id}`;
+      await apiClient.delete(url);
       await refreshAccounts();
     } catch (err) {
       await alert("Disconnect failed", err.response?.data?.error || err.message || "Please try again.", {
@@ -284,20 +285,45 @@ export default function ConnectedPlatformsPanel({
                       <span>{autoDMState.autoDMStorageError}</span>
                     </div>
                   ) : null}
+                  {isInstagram && connectedAccounts?.instagramAccounts?.length > 1 && (
+                    <div className="mt-4 flex flex-col gap-2 border-t border-black/5 pt-4">
+                      <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Connected Accounts</span>
+                      {connectedAccounts.instagramAccounts.map((acc) => (
+                        <div key={acc.id} className="flex items-center justify-between rounded-lg border border-black/5 bg-white p-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {acc.profilePicture ? (
+                              <img src={acc.profilePicture} alt="" className="h-6 w-6 shrink-0 rounded-full bg-gray-100 object-cover" />
+                            ) : (
+                              <div className="h-6 w-6 shrink-0 rounded-full bg-gray-100" />
+                            )}
+                            <span className="truncate text-sm font-medium text-[var(--ink)]">@{acc.username}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => disconnectPlatform(platform, acc.id)}
+                            disabled={busy === acc.id}
+                            className="shrink-0 text-xs font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
+                          >
+                            {busy === acc.id ? "Disconnecting..." : "Disconnect"}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 {isConnected ? (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => disconnectPlatform(platform)}
-                      disabled={busy === platform.id}
-                      className="inline-flex h-10 items-center gap-2 rounded-full border border-red-200 bg-white px-4 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
-                    >
-                      <Unlink className="h-4 w-4" />
-                      {busy === platform.id ? "Disconnecting..." : "Disconnect"}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => disconnectPlatform(platform)}
+                        disabled={busy === platform.id}
+                        className="inline-flex h-10 items-center gap-2 rounded-full border border-red-200 bg-white px-4 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                      >
+                        <Unlink className="h-4 w-4" />
+                        {busy === platform.id ? "Disconnecting..." : (isInstagram && connectedAccounts?.instagramAccounts?.length > 1 ? "Disconnect All" : "Disconnect")}
+                      </button>
                     {canSyncAutoDM ? (
                       <button
                         type="button"

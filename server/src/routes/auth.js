@@ -252,7 +252,7 @@ router.get("/instagram", async (req, res) => {
       { userId },
       CLIENT_URL,
       `Bearer ${token}`,
-      true,
+      false,
     );
     return res.redirect(redirectTo);
   } catch (error) {
@@ -1020,7 +1020,11 @@ router.get("/me", authenticateUser, (req, res) => {
 router.get("/accounts", authenticateUser, async (req, res) => {
   try {
     const accounts = await getConnectedAccounts(req.user);
-    res.json({ success: true, accounts });
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.json({
+      success: true,
+      accounts,
+    });
   } catch (error) {
     console.error("Get accounts error:", error);
     res
@@ -1053,11 +1057,42 @@ router.delete("/disconnect/:provider", authenticateUser, async (req, res) => {
         .json({ success: false, error: "Invalid provider" });
     }
 
-    const { error } = await supabase
+    const { accountId } = req.query;
+    console.log(`[DISCONNECT] provider=${provider}, accountId=${accountId}, userId=${req.user.userId}`);
+
+    if (provider === "instagram") {
+      let igQuery = supabase
+        .from("instagram_accounts")
+        .delete()
+        .eq("user_id", req.user.userId);
+
+      if (accountId) {
+        igQuery = igQuery.eq("id", accountId);
+      }
+      const { data: igData, error: igError } = await igQuery.select();
+      console.log(`[DISCONNECT] igData=${JSON.stringify(igData)} error=${JSON.stringify(igError)}`);
+      
+      if (igError) throw igError;
+      
+      if (accountId) {
+        return res.json({
+          success: true,
+          message: `Instagram account disconnected successfully`,
+        });
+      }
+    }
+
+    let query = supabase
       .from("social_tokens")
       .delete()
       .eq("user_id", req.user.userId)
       .eq("provider", provider);
+
+    if (accountId && provider !== "instagram") {
+      query = query.eq("id", accountId);
+    }
+
+    const { error } = await query;
 
     if (error) throw error;
 

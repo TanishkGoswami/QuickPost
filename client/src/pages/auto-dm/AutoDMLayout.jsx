@@ -4,14 +4,14 @@ import { AutoDMProvider, useAutoDM } from '../../context/AutoDMContext';
 import { AlertCircle } from 'lucide-react';
 
 function AutoDMWorkspace() {
-  const { hasSocialInstagramConnection } = useAutoDM();
+  const { hasSocialInstagramConnection, loading } = useAutoDM();
   const location = useLocation();
   const isEditorPage = location.pathname.includes('/automations/new') || (location.pathname.includes('/automations/') && location.pathname.split('/').length > 4);
 
   return (
     <section className={`autodm-shell ${isEditorPage ? '!p-0 !max-w-none' : ''}`}>
-      {!hasSocialInstagramConnection && !isEditorPage ? (
-        <div className="autodm-warning">
+      {!hasSocialInstagramConnection && !loading && !isEditorPage ? (
+        <div className="autodm-warning max-w-5xl mx-auto mt-6 w-[calc(100%-48px)]">
           <AlertCircle size={16} />
           Connect Instagram in Social Pilot to sync AutoDM accounts and automations.
         </div>

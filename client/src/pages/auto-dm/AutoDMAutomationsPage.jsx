@@ -401,7 +401,7 @@ export default function AutoDMAutomationsPage() {
           </div>
         ) : rows.length === 0 ? (
           <div className="autodm-empty">
-            <MessageCircle size={38} />
+            <img src="https://illustrations.popsy.co/amber/web-design.svg" className="h-40 object-contain mx-auto mb-4" alt="No Automations" />
             <p>No automations yet</p>
             <span>Create your first Instagram automation to start sending DMs.</span>
           </div>
