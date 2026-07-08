@@ -954,7 +954,7 @@ export async function getAutomationForUser(user, automationId) {
 }
 
 const STORED_BRANDING_PATTERN =
-  /\n*\s*_(?:⚡\s*)?(?:This automation is from SocialPilot \(social\.getaipilot\.in\)|Automated via QuickPost\.co \(Get it Free\))_\s*$/i;
+  /\n*\s*_(?:⚡\s*)?(?:Automation is powered by @Getaipilot|This automation powered by @getaipilot|This automation is from SocialPilot \(social\.getaipilot\.in\)|Automated via QuickPost\.co \(Get it Free\))_\s*$/i;
 
 function removeStoredBranding(value) {
   if (typeof value === 'string') return value.replace(STORED_BRANDING_PATTERN, '').trimEnd();

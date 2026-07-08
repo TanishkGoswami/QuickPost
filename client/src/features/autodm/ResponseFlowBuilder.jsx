@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { GripVertical, MessageCircle, Pencil, Plus, Trash2, X, Clock, FileText, Image as ImageIcon, Layers, MousePointer, Type } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -97,6 +98,16 @@ function ResponseFlowBuilder({ responseFlow, onChange, step, hideHeader = false,
     setEditingNode(node);
   };
 
+  const onDragEnd = (result) => {
+    if (!result.destination) return;
+    
+    const items = Array.from(nodes);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    
+    onChange({ ...responseFlow, nodes: items });
+  };
+
   return (
     <Card className={`overflow-hidden ${hideHeader ? "border-0 shadow-none bg-transparent" : "rounded-lg border-black/10 shadow-sm"}`}>
       {!hideHeader && (
@@ -114,59 +125,76 @@ function ResponseFlowBuilder({ responseFlow, onChange, step, hideHeader = false,
       )}
       <CardContent className={`space-y-3 ${hideHeader ? 'p-0' : 'p-5'}`}>
 
-          <div className="space-y-3">
-          {nodes.length === 0 && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-center text-amber-900">
-              <MessageCircle className="mx-auto mb-2 h-8 w-8 text-amber-500 opacity-80" />
-              <p className="font-medium">No response added</p>
-              <p className="mt-1 text-sm opacity-90">Please add at least one response (like Text or Card) below so the automation can reply.</p>
-            </div>
-          )}
-          {nodes.map((node, index) => {
-            const config = responseTypes.find((item) => item.type === node.type) || responseTypes[0];
-            const Icon = config.icon;
-            return (
-              <div
-                key={node.id}
-                className={`grid items-center rounded-lg border border-black/10 bg-white ${
-                  compact
-                    ? 'grid-cols-[16px_30px_32px_minmax(0,1fr)_36px_32px] gap-2 p-3'
-                    : 'grid-cols-[18px_32px_34px_minmax(0,1fr)_36px_36px] gap-2 p-3 sm:grid-cols-[20px_34px_36px_minmax(0,1fr)_auto_auto] sm:gap-3'
-                }`}
-              >
-                <GripVertical className="h-4 w-4 shrink-0 text-[var(--slate)]/60" />
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--ink)] text-sm font-semibold text-white">
-                  {index + 1}
-                </span>
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <Icon className="h-4 w-4" />
-                </span>
-                <div className="min-w-0 flex-1 overflow-hidden">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <p className="min-w-0 truncate font-medium text-[var(--ink)]">{config.shortLabel}</p>
-                    {!compact && <span className="text-xs font-medium text-primary">Editable</span>}
-                  </div>
-                  <p className="line-clamp-2 break-words text-sm leading-5 text-[var(--slate)]">{responseSummary(node)}</p>
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="response-nodes">
+              {(provided) => (
+                <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-3">
+                  {nodes.length === 0 && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-center text-amber-900">
+                      <MessageCircle className="mx-auto mb-2 h-8 w-8 text-amber-500 opacity-80" />
+                      <p className="font-medium">No response added</p>
+                      <p className="mt-1 text-sm opacity-90">Please add at least one response (like Text or Card) below so the automation can reply.</p>
+                    </div>
+                  )}
+                  {nodes.map((node, index) => {
+                    const config = responseTypes.find((item) => item.type === node.type) || responseTypes[0];
+                    const Icon = config.icon;
+                    return (
+                      <Draggable key={node.id} draggableId={node.id} index={index}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            style={{ ...provided.draggableProps.style }}
+                            className={`grid items-center rounded-lg border border-black/10 bg-white ${
+                              snapshot.isDragging ? 'shadow-lg z-10' : ''
+                            } ${
+                              compact
+                                ? 'grid-cols-[16px_30px_32px_minmax(0,1fr)_36px_32px] gap-2 p-3'
+                                : 'grid-cols-[18px_32px_34px_minmax(0,1fr)_36px_36px] gap-2 p-3 sm:grid-cols-[20px_34px_36px_minmax(0,1fr)_auto_auto] sm:gap-3'
+                            }`}
+                          >
+                            <div {...provided.dragHandleProps} className="flex h-full w-full items-center justify-center cursor-grab active:cursor-grabbing outline-none">
+                              <GripVertical className="h-4 w-4 shrink-0 text-[var(--slate)]/60" />
+                            </div>
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--ink)] text-sm font-semibold text-white">
+                              {index + 1}
+                            </span>
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                              <Icon className="h-4 w-4" />
+                            </span>
+                            <div className="min-w-0 flex-1 overflow-hidden">
+                              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                <p className="min-w-0 truncate font-medium text-[var(--ink)]">{config.shortLabel}</p>
+                                {!compact && <span className="text-xs font-medium text-primary">Editable</span>}
+                              </div>
+                              <p className="line-clamp-2 break-words text-sm leading-5 text-[var(--slate)]">{responseSummary(node)}</p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              aria-label="Edit response"
+                              title="Edit response"
+                              className={`h-9 rounded-md ${compact ? 'w-9' : 'w-9 sm:w-auto sm:px-3'}`}
+                              onClick={() => setEditingNode({ ...node })}
+                            >
+                              <Pencil className={`h-4 w-4 ${compact ? '' : 'sm:mr-2'}`} />
+                              <span className={compact ? 'sr-only' : 'hidden sm:inline'}>Edit response</span>
+                            </Button>
+                            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-md text-red-600" onClick={() => removeNode(node.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </Draggable>
+                    );
+                  })}
+                  {provided.placeholder}
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  aria-label="Edit response"
-                  title="Edit response"
-                  className={`h-9 rounded-md ${compact ? 'w-9' : 'w-9 sm:w-auto sm:px-3'}`}
-                  onClick={() => setEditingNode({ ...node })}
-                >
-                  <Pencil className={`h-4 w-4 ${compact ? '' : 'sm:mr-2'}`} />
-                  <span className={compact ? 'sr-only' : 'hidden sm:inline'}>Edit response</span>
-                </Button>
-                <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-md text-red-600" onClick={() => removeNode(node.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            );
-          })}
-        </div>
+              )}
+            </Droppable>
+          </DragDropContext>
 
         <Button type="button" variant="outline" className="h-11 w-full rounded-md border-dashed" onClick={() => setPickerOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />

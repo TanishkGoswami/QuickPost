@@ -3,10 +3,10 @@ export type DeliveryPlanId = "free" | "pro" | "enterprise";
 export type BrandableAction = { type: string; text?: string };
 
 export const SOCIALPILOT_WATERMARK =
-  "\n\n_⚡ This automation is from SocialPilot (social.getaipilot.in)_";
+  "\n\n⚡ Automation is powered by @Getaipilot";
 
 export const STORED_BRANDING_PATTERN =
-  /\n*\s*_(?:⚡\s*)?(?:This automation is from SocialPilot \(social\.getaipilot\.in\)|Automated via QuickPost\.co \(Get it Free\))_\s*$/i;
+  /\n*\s*_?(?:⚡\s*)?(?:Automation is powered by @Getaipilot|This automation powered by @getaipilot|This automation is from SocialPilot \(social\.getaipilot\.in\)|Automated via QuickPost\.co \(Get it Free\))_?\s*$/i;
 
 export const stripBrandingWatermark = (text: string) =>
   String(text || "")

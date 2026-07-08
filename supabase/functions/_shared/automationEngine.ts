@@ -493,16 +493,21 @@ const buildResponseActions = (
         profile,
       );
       actions.push({
-        type: "text",
-        text: msgText,
-        quickReplies: buildQuickReplies([
+        type: "template",
+        elements: [
           {
-            type: "postback",
-            title: flow.opening_button,
-            payload: flow.opening_button,
+            title: msgText,
+            buttons: [
+              {
+                type: "postback",
+                title: flow.opening_button,
+                payload: flow.opening_button,
+              },
+            ],
           },
-        ]),
+        ],
       });
+      return actions; // Stop processing further nodes, wait for user reply
     } else {
       actions.push({
         type: "text",
@@ -652,15 +657,19 @@ const buildResponseActions = (
         profile,
       );
       actions.push({
-        type: "text",
-        text: msgText,
-        quickReplies: buildQuickReplies([
+        type: "template",
+        elements: [
           {
-            type: "postback",
-            title: flow.opening_button,
-            payload: flow.opening_button,
+            title: msgText,
+            buttons: [
+              {
+                type: "postback",
+                title: flow.opening_button,
+                payload: flow.opening_button,
+              },
+            ],
           },
-        ]),
+        ],
       });
     } else {
       actions.push({
@@ -734,7 +743,7 @@ const templateToFallbackText = (
         ...(element.buttons ?? []).map((button) =>
           button.type === "web_url" && cleanText(button.url)
             ? `${cleanText(button.title)}: ${cleanText(button.url)}`
-            : cleanText(button.title),
+            : `> Type "${cleanText(button.title)}" to continue`,
         ),
       ]
         .filter(Boolean)
