@@ -102,15 +102,15 @@ export function AutoDMProvider({ children }) {
     return startAutoDMInstagramOAuth(window.location.origin);
   }, []);
 
-  const loadAutomations = useCallback(async () => {
+  const loadAutomations = useCallback(async (skipLoading = false) => {
     if (!activeAccount?.id) {
       setAutomations([]);
-      setAutomationsLoading(false);
+      if (!skipLoading) setAutomationsLoading(false);
       return;
     }
 
     try {
-      setAutomationsLoading(true);
+      if (!skipLoading) setAutomationsLoading(true);
       const res = await apiClient.get('/api/autodm/automations', {
         params: { instagramAccountId: activeAccount.id },
       });
@@ -118,7 +118,7 @@ export function AutoDMProvider({ children }) {
     } catch (err) {
       console.error('[AutoDM] Automations load error:', err);
     } finally {
-      setAutomationsLoading(false);
+      if (!skipLoading) setAutomationsLoading(false);
     }
   }, [activeAccount?.id]);
 

@@ -2561,14 +2561,16 @@ body {
 }
 
 .autodm-switch {
+  --duration: 500ms;
   position: relative;
   width: 46px;
   height: 26px;
   border: 0;
   border-radius: 999px;
-  background: #d1d5db;
+  background: #e5e7eb;
   cursor: pointer;
   flex: 0 0 auto;
+  transition: background-color var(--duration) cubic-bezier(0.075, 0.82, 0.165, 1);
 }
 
 .autodm-switch span {
@@ -2577,18 +2579,32 @@ body {
   left: 3px;
   width: 20px;
   height: 20px;
-  border-radius: 50%;
+  border-radius: 20px;
   background: white;
   box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-  transition: left var(--transition-fast);
+  transform-origin: right;
+  animation: reverse-wobble var(--duration) cubic-bezier(0.075, 0.82, 0.165, 1) forwards;
 }
 
 .autodm-switch.is-on {
-  background: #fb6f3d;
+  background: #34C759;
 }
 
 .autodm-switch.is-on span {
-  left: 23px;
+  transform-origin: left;
+  animation: wobble var(--duration) cubic-bezier(0.075, 0.82, 0.165, 1) forwards;
+}
+
+@keyframes wobble {
+  0% { transform: scale(1, 1) translateX(0); }
+  50% { transform: scale(1.6, 1) translateX(1px); }
+  100% { transform: scale(1, 1) translateX(20px); }
+}
+
+@keyframes reverse-wobble {
+  0% { transform: scale(1, 1) translateX(20px); }
+  50% { transform: scale(1.6, 1) translateX(10px); }
+  100% { transform: scale(1, 1) translateX(0); }
 }
 
 .autodm-menu-anchor {
@@ -3188,7 +3204,7 @@ body {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: #22c55e;
+  background: #34C759;
 }
 
 .autodm-section-title {
@@ -3565,7 +3581,7 @@ body {
 }
 
 .autodm-mini-row > span.active {
-  background: #22c55e;
+  background: #34C759;
 }
 
 .autodm-mini-row strong,
@@ -4455,7 +4471,7 @@ body {
 }
 
 .autodm-switch.is-on {
-  background: var(--autodm-ink);
+  background: #34C759;
 }
 
 .autodm-settings-tabs {

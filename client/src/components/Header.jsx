@@ -195,11 +195,12 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
           </button>
           <button
             onClick={handleLogout}
-            className="qp-header-logout"
+            className="flex items-center gap-2 px-4 h-9 bg-red-50 hover:bg-red-500 text-red-600 hover:text-white font-semibold rounded-lg transition-all duration-200 border border-red-200 hover:border-red-500 shadow-sm"
             aria-label="Logout"
             title="Logout"
           >
-            <LogOut size={18} />
+            <LogOut size={16} strokeWidth={2.5} />
+            <span className="text-[13px] tracking-wide">Logout</span>
           </button>
         </div>
 
