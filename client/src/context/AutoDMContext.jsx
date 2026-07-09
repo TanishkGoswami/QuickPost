@@ -12,9 +12,9 @@ export function AutoDMProvider({ children }) {
   const [error, setError] = useState(null);
   const [activeAccount, setActiveAccount] = useState(null);
   const [automations, setAutomations] = useState([]);
-  const [automationsLoading, setAutomationsLoading] = useState(false);
+  const [automationsLoading, setAutomationsLoading] = useState(true);
   const [contacts, setContacts] = useState([]);
-  const [contactsLoading, setContactsLoading] = useState(false);
+  const [contactsLoading, setContactsLoading] = useState(true);
   const loadedRef = useRef(false);
   const autoSyncAttemptedRef = useRef(false);
   const hasPostingInstagram = Boolean(connectedAccounts?.instagram?.connected);
@@ -105,6 +105,7 @@ export function AutoDMProvider({ children }) {
   const loadAutomations = useCallback(async () => {
     if (!activeAccount?.id) {
       setAutomations([]);
+      setAutomationsLoading(false);
       return;
     }
 
@@ -122,7 +123,10 @@ export function AutoDMProvider({ children }) {
   }, [activeAccount?.id]);
 
   const loadContacts = useCallback(async () => {
-    if (!activeAccount?.id) return;
+    if (!activeAccount?.id) {
+      setContactsLoading(false);
+      return;
+    }
     try {
       setContactsLoading(true);
       const res = await apiClient.get('/api/autodm/contacts', {

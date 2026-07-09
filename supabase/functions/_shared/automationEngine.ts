@@ -881,20 +881,28 @@ const expireFinishedAutomations = async (
   }
 };
 
-const getMatchingAutomation = (
+const getAllMatchingAutomations = (
   automations: AutomationRecord[],
   messageText: string,
-) => {
+): AutomationRecord[] => {
   const normalizedText = (messageText || "").toLowerCase().trim();
 
-  return automations.find((automation) => {
+  return automations.filter((automation) => {
     const keywords = automation.keywords || [];
     return keywords.some((k) => {
       const normalizedK = k.trim().toLowerCase();
+      if (normalizedK === '*') return true;
       return normalizedK.length > 0 && normalizedText.includes(normalizedK);
     });
   });
 };
+
+// Legacy single-match helper kept for continuation session usage
+const getMatchingAutomation = (
+  automations: AutomationRecord[],
+  messageText: string,
+) => getAllMatchingAutomations(automations, messageText)[0] ?? null;
+
 
 const getSessionKeywordMatches = (
   session: PendingAutomationSession,
@@ -1600,12 +1608,17 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
     })),
   });
 
-  const matched =
-    continuationAutomation ??
-    getMatchingAutomation(
-      filteredAutomations as AutomationRecord[],
-      payload.messageText,
-    );
+  // Get ALL matching automations (not just first) so multiple keyword automations fire simultaneously
+  const allMatched: AutomationRecord[] = continuationAutomation
+    ? [continuationAutomation]
+    : getAllMatchingAutomations(
+        filteredAutomations as AutomationRecord[],
+        payload.messageText,
+      );
+
+  // Primary matched automation (used for the main processing flow below)
+  const matched = allMatched[0] ?? null;
+
   if (!matched) {
     logInfo("No automation match", {
       requestId: payload.requestId,
@@ -1617,6 +1630,16 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
       .eq("dedupe_key", payload.dedupeKey);
     return { status: "no_match" as const };
   }
+
+  // Log if multiple automations matched (different keywords in one comment)
+  if (allMatched.length > 1) {
+    logInfo("Multiple automations matched for single event", {
+      requestId: payload.requestId,
+      matchCount: allMatched.length,
+      automationIds: allMatched.map((a) => a.id),
+    });
+  }
+
 
   const canReply = await checkRateLimit(payload.igId, payload.senderId);
   if (!canReply) {
@@ -1702,9 +1725,24 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
   const deliveryPlan = automationOwnerUserId
     ? await resolveDeliveryPlan(automationOwnerUserId)
     : { id: "free", replyLimit: 50 };
+  const isWaitingForUserReply = (actions: MessageAction[]): boolean => {
+    for (const action of actions) {
+      if (action.type === "template") {
+        for (const element of (action as any).elements ?? []) {
+          if ((element.buttons ?? []).some((b: any) => b.type === "postback")) {
+            return true;
+          }
+        }
+      } else if (action.type === "text" && (action as any).quickReplies?.length > 0) {
+        return true;
+      }
+    }
+    return false;
+  };
+
   responseActions = applyDeliveryBranding(
     responseActions,
-    deliveryPlan.id === "free",
+    deliveryPlan.id === "free" && !isWaitingForUserReply(responseActions),
   );
   const primaryReplyText = getFirstMessageText(responseActions);
   if (responseActions.length === 0) {
@@ -2363,9 +2401,100 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
     });
   }
 
+  // ── Fire remaining matched automations (different keywords, same comment) ─
+  // Runs when a comment contains keywords matching multiple different automations.
+  // Example: comment "info price" triggers both an 'info' automation AND a 'price' automation.
+  const secondaryMatches = allMatched.slice(1);
+  for (const secondaryAutomation of secondaryMatches) {
+    try {
+      const secondaryAccount =
+        (connectedAccounts.find(
+          (a: any) => a.id === secondaryAutomation.instagram_account_id,
+        ) as InstagramAccountRecord | undefined) ?? primaryAccount;
+
+      const secondaryTokenBundle = await refreshAccountTokenIfNeeded(
+        secondaryAccount,
+        payload.requestId,
+      );
+
+      const secondaryActions =
+        payload.triggerType === "comment"
+          ? getCommentPrivateReplyActions(
+              buildResponseActions(secondaryAutomation, senderProfile),
+            )
+          : buildResponseActions(secondaryAutomation, senderProfile);
+
+      const secondaryBrandedActions = applyDeliveryBranding(
+        secondaryActions,
+        deliveryPlan.id === "free" && !isWaitingForUserReply(secondaryActions),
+      );
+
+      if (secondaryBrandedActions.length > 0) {
+        for (const [idx, action] of secondaryBrandedActions.entries()) {
+          if (action.type === "delay") { await sleep((action as any).seconds); continue; }
+          const usePrivate = payload.triggerType === "comment" && idx === 0 && Boolean(payload.eventId);
+          await sendAction(action, secondaryTokenBundle, usePrivate);
+        }
+
+        // Public comment reply for secondary automation (if enabled)
+        if (
+          payload.triggerType === "comment" &&
+          payload.eventId &&
+          secondaryAutomation.comment_reply_enabled &&
+          secondaryAutomation.comment_reply_text?.trim()
+        ) {
+          const secReplyText = renderMessageTemplate(
+            stripBrandingWatermark(secondaryAutomation.comment_reply_text.trim()),
+            senderProfile,
+          ).trim();
+          await sendInstagramCommentReply(
+            payload.eventId,
+            secReplyText,
+            secondaryTokenBundle.pageAccessToken,
+            payload.requestId,
+          ).catch((e: unknown) => {
+            logError("Secondary automation comment reply failed", {
+              requestId: payload.requestId,
+              automationId: secondaryAutomation.id,
+              error: e instanceof Error ? e.message : String(e),
+            });
+          });
+        }
+
+        // reply_log entry for secondary automation
+        const { error: secLogError } = await supabase.from("reply_logs").insert({
+          ig_id: secondaryAccount.ig_id,
+          sender_id: payload.senderId,
+          automation_id: secondaryAutomation.id,
+        });
+        if (secLogError) {
+          logError("Failed writing secondary reply log", {
+            requestId: payload.requestId,
+            automationId: secondaryAutomation.id,
+            error: secLogError.message,
+          });
+        }
+
+        logInfo("Secondary automation fired successfully", {
+          requestId: payload.requestId,
+          automationId: secondaryAutomation.id,
+        });
+      }
+    } catch (secondaryError) {
+      // Log but continue — one secondary automation failing should not block others
+      logError("Secondary automation processing failed", {
+        requestId: payload.requestId,
+        automationId: secondaryAutomation.id,
+        error: secondaryError instanceof Error ? secondaryError.message : String(secondaryError),
+      });
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────
+
   return {
     status: "sent" as const,
     automationId: matched.id,
     contactId,
   };
 };
+

@@ -363,6 +363,7 @@ export default function AutomationEditorPage() {
   const [triggerType, setTriggerType] = useState(searchParams.get('trigger') || 'comment_on_post');
   const [selectedMedia, setSelectedMedia] = useState(null);
   const [applyToAllMedia, setApplyToAllMedia] = useState(true);
+  const [keywordMatchType, setKeywordMatchType] = useState('specific');
   const [keywords, setKeywords] = useState([]);
   const [isCaseSensitive, setIsCaseSensitive] = useState(false);
   const [commentReplyEnabled, setCommentReplyEnabled] = useState(true);
@@ -375,6 +376,7 @@ export default function AutomationEditorPage() {
   const [isActive, setIsActive] = useState(false);
   const [recentMedia, setRecentMedia] = useState([]);
   const [isLoadingRecentMedia, setIsLoadingRecentMedia] = useState(false);
+  const [activePreviewTab, setActivePreviewTab] = useState('Post');
 
   useEffect(() => {
     let mounted = true;
@@ -414,11 +416,20 @@ export default function AutomationEditorPage() {
                 thumbnail_url: data.media_thumbnail || '',
                 caption: data.media_caption || '',
                 permalink: data.media_permalink || '',
+                like_count: data.media_like_count || 0,
+                comments_count: data.media_comments_count || 0,
               }
             : null
         );
         setApplyToAllMedia(!data.media_id);
-        setKeywords(data.keywords || []);
+        const savedKeywords = data.keywords || [];
+        if (savedKeywords.length === 1 && savedKeywords[0] === '*') {
+          setKeywordMatchType('any');
+          setKeywords([]);
+        } else {
+          setKeywordMatchType('specific');
+          setKeywords(savedKeywords);
+        }
         setIsCaseSensitive(Boolean(data.is_case_sensitive));
         setCommentReplyEnabled(data.comment_reply_enabled !== false);
         setCommentReplyText(data.comment_reply_text || 'Sent it to your DM. Tap SETUP to continue.');
@@ -488,7 +499,7 @@ export default function AutomationEditorPage() {
       toast.error('Please select a post/reel or choose all posts.');
       return;
     }
-    if (!keywords.length) {
+    if (keywordMatchType === 'specific' && !keywords.length) {
       toast.error('Please add at least one keyword');
       return;
     }
@@ -516,7 +527,7 @@ export default function AutomationEditorPage() {
         media_comments_count: applyToAllMedia ? null : selectedMedia?.comments_count ?? null,
         media_caption: applyToAllMedia ? null : selectedMedia?.caption ?? null,
         media_permalink: applyToAllMedia ? null : selectedMedia?.permalink ?? null,
-        keywords,
+        keywords: keywordMatchType === 'any' ? ['*'] : keywords,
         is_case_sensitive: isCaseSensitive,
         comment_reply_enabled: commentReplyEnabled,
         comment_reply_text: commentReplyEnabled ? commentReplyText : null,
@@ -616,7 +627,7 @@ export default function AutomationEditorPage() {
         <div className="autodm-editor-scroll flex-1 overflow-y-auto p-6 space-y-8">
           
           {/* Section 1: When someone comments on */}
-          <div className="space-y-4">
+          <div className="space-y-4" onFocusCapture={() => setActivePreviewTab('Post')} onClickCapture={() => setActivePreviewTab('Post')}>
             <h3 className="autodm-editor-heading text-lg flex items-center gap-2">
               <Instagram className="w-5 h-5" />
               When someone comments on
@@ -642,11 +653,12 @@ export default function AutomationEditorPage() {
                         {selectedMedia ? (
                             <div className="flex flex-col gap-3">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-16 h-16 rounded-md overflow-hidden bg-black flex-shrink-0">
-                                      {selectedMedia.media_type === 'VIDEO' ? (
-                                        <video src={selectedMedia.media_url || selectedMedia.thumbnail_url} className="w-full h-full object-cover" />
-                                      ) : (
-                                        <img src={selectedMedia.thumbnail_url || selectedMedia.media_url} alt="Media" className="w-full h-full object-cover" />
+                                    <div className="w-16 h-16 rounded-md overflow-hidden bg-gray-100 flex-shrink-0 relative">
+                                      <img src={selectedMedia.thumbnail_url || selectedMedia.media_url} alt="Media" className="w-full h-full object-cover" />
+                                      {selectedMedia.media_type === 'VIDEO' && (
+                                        <div className="absolute top-1 right-1 bg-black/50 rounded-full p-1">
+                                          <Video className="w-3 h-3 text-white" />
+                                        </div>
                                       )}
                                     </div>
                                     <p className="text-xs text-gray-500 line-clamp-3">{selectedMedia.caption || 'No caption'}</p>
@@ -669,12 +681,13 @@ export default function AutomationEditorPage() {
                                             <div 
                                               key={media.id} 
                                               onClick={() => setSelectedMedia(media)}
-                                              className="aspect-square bg-gray-100 rounded-md overflow-hidden cursor-pointer hover:opacity-80 transition-opacity border border-gray-200"
+                                              className="relative aspect-square bg-gray-100 rounded-md overflow-hidden cursor-pointer hover:opacity-80 transition-opacity border border-gray-200"
                                             >
-                                                {media.media_type === 'VIDEO' ? (
-                                                    <video src={media.thumbnail_url || media.media_url} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <img src={media.thumbnail_url || media.media_url} alt="Media" className="w-full h-full object-cover" />
+                                                <img src={media.thumbnail_url || media.media_url} alt="Media" className="w-full h-full object-cover" />
+                                                {media.media_type === 'VIDEO' && (
+                                                    <div className="absolute top-1 right-1 bg-black/50 rounded-full p-1">
+                                                        <Video className="w-3 h-3 text-white" />
+                                                    </div>
                                                 )}
                                             </div>
                                         ))}
@@ -706,27 +719,40 @@ export default function AutomationEditorPage() {
           </div>
 
           {/* Section 2: And this comment has */}
-          <div className="space-y-4">
+          <div className="space-y-4" onFocusCapture={() => setActivePreviewTab('Comments')} onClickCapture={() => setActivePreviewTab('Comments')}>
             <h3 className="autodm-editor-heading text-lg">And this comment has</h3>
-            <div className="autodm-editor-card p-5 space-y-4">
-                <label className="flex items-center gap-3 cursor-pointer">
-                    <input type="radio" checked={true} readOnly className="w-4 h-4 text-primary" />
-                    <span className="font-medium text-gray-700">a specific word or words</span>
-                </label>
-                <div className="ml-7 space-y-2">
-                    <KeywordInput 
-                        keywords={keywords}
-                        onChange={setKeywords}
-                        caseSensitive={isCaseSensitive}
-                        onCaseSensitiveChange={setIsCaseSensitive}
-                    />
+            <div className="autodm-editor-card flex flex-col">
+                <div className="p-1">
+                    <div className={`p-4 rounded-xl transition-all ${keywordMatchType === 'specific' ? 'bg-black/[0.02]' : 'hover:bg-gray-50'}`}>
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <input type="radio" checked={keywordMatchType === 'specific'} onChange={() => setKeywordMatchType('specific')} className="w-4 h-4 text-primary" />
+                            <span className="font-medium text-gray-800">A specific word or words</span>
+                        </label>
+                        {keywordMatchType === 'specific' && (
+                            <div className="mt-4 ml-7">
+                                <KeywordInput 
+                                    keywords={keywords}
+                                    onChange={setKeywords}
+                                    caseSensitive={isCaseSensitive}
+                                    onCaseSensitiveChange={setIsCaseSensitive}
+                                />
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div className={`p-4 mt-1 rounded-xl transition-all ${keywordMatchType === 'any' ? 'bg-black/[0.02]' : 'hover:bg-gray-50'}`}>
+                        <label className="flex items-center gap-3 cursor-pointer">
+                            <input type="radio" checked={keywordMatchType === 'any'} onChange={() => setKeywordMatchType('any')} className="w-4 h-4 text-primary" />
+                            <span className="font-medium text-gray-800">Any word or comment</span>
+                        </label>
+                    </div>
                 </div>
                 
                 {/* Public comment reply */}
-                <div className="ml-7 mt-6 border-t border-black/5 pt-5">
-                   <div className="flex items-center justify-between mb-3">
+                <div className="p-5 border-t border-gray-100 bg-gray-50/50">
+                   <div className="flex items-center justify-between">
                       <div>
-                        <Label className="text-sm font-semibold text-gray-800">Public Comment Reply</Label>
+                        <Label className="text-sm font-semibold text-gray-800 block">Public Comment Reply</Label>
                         <p className="text-xs text-gray-500 mt-1">Reply to the triggering comment publicly.</p>
                       </div>
                       <Switch 
@@ -735,12 +761,12 @@ export default function AutomationEditorPage() {
                       />
                    </div>
                    {commentReplyEnabled && (
-                      <div className="mt-3">
+                      <div className="mt-4">
                           <Textarea 
                               value={commentReplyText}
                               onChange={(e) => setCommentReplyText(e.target.value)}
                               placeholder="Sent it to your DM. Tap SETUP to continue."
-                              className="w-full text-sm resize-none rounded-lg border-black/10 min-h-[60px]"
+                              className="w-full text-sm resize-none rounded-xl border-gray-200 focus:ring-1 focus:ring-primary focus:border-primary min-h-[60px] p-3 bg-white"
                           />
                       </div>
                    )}
@@ -749,7 +775,7 @@ export default function AutomationEditorPage() {
           </div>
 
           {/* Section 3: Two-step DM flow */}
-          <div className="space-y-4 pb-20">
+          <div className="space-y-4 pb-20" onFocusCapture={() => setActivePreviewTab('DM')} onClickCapture={() => setActivePreviewTab('DM')}>
             <h3 className="autodm-editor-heading text-lg">They will get</h3>
 
             <div className="autodm-editor-card overflow-hidden">
@@ -815,8 +841,8 @@ export default function AutomationEditorPage() {
       </div>
 
       {/* Right Canvas - Mobile Preview */}
-      <div className="autodm-preview-canvas flex-1 relative overflow-hidden flex justify-end items-start pt-12 pr-12 lg:pt-20 lg:pr-24 xl:pr-32">
-         <div className="absolute inset-0 pattern-dots" />
+      <div className="autodm-preview-canvas flex-1 relative overflow-y-auto flex justify-center items-start pt-12 pb-12">
+         <div className="absolute inset-0 pattern-dots pointer-events-none" />
          <div className="relative z-10 transition-transform duration-300 flex justify-center w-[400px]">
             <MobilePreview 
                 triggerType={triggerType}
@@ -825,6 +851,8 @@ export default function AutomationEditorPage() {
                 responseFlow={responseFlow}
                 commentReplyText={commentReplyText}
                 commentReplyEnabled={commentReplyEnabled}
+                activeTab={activePreviewTab}
+                onTabChange={setActivePreviewTab}
             />
          </div>
       </div>

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { GripVertical, MessageCircle, Pencil, Plus, Trash2, X, Clock, FileText, Image as ImageIcon, Layers, MousePointer, Type } from 'lucide-react';
+import { GripVertical, MessageCircle, Pencil, Plus, Trash2, X, Clock, FileText, Image as ImageIcon, Layers, MousePointer, Type, UploadCloud } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import apiClient from '@/utils/apiClient';
 
 function generateId(prefix = 'item') {
   return prefix + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
@@ -15,6 +16,52 @@ function generateId(prefix = 'item') {
 
 const StepBadge = ({ step }) => <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#111111] text-sm font-semibold text-white">{step}</span>;
 const EditorInfo = ({ text }) => <span className="hidden"/>;
+
+function ImageUrlField({ label, value, onChange, placeholder = 'https://...' }) {
+  const inputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+
+  const uploadImage = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    setError('');
+
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const { data } = await apiClient.post('/api/autodm/assets', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      onChange(data.url);
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Image upload failed');
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = '';
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label className="block">{label}</Label>
+      <div className="rounded-lg border border-[#d3cec6] bg-[#f5f1ec] p-2">
+        {value ? (
+          <img src={value} alt="" className="mb-2 h-28 w-full rounded-md border border-[#d3cec6] bg-white object-cover" />
+        ) : null}
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+          <Input value={value || ''} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
+          <Button type="button" variant="outline" className="rounded-md" disabled={uploading} onClick={() => inputRef.current?.click()}>
+            <UploadCloud className="mr-2 h-4 w-4" />
+            {uploading ? 'Uploading...' : 'Upload'}
+          </Button>
+        </div>
+        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(event) => uploadImage(event.target.files?.[0])} />
+        {error ? <p className="mt-2 text-xs text-red-600">{error}</p> : null}
+      </div>
+    </div>
+  );
+}
 
 const responseTypes = [
   { type: 'text', label: 'Text Message', shortLabel: 'Text', icon: Type, description: 'Send a simple text message' },
@@ -311,10 +358,7 @@ function ResponseEditorDialog({ node, open, onOpenChange, onSave }) {
 
           {draft.type === 'image' && (
             <>
-              <div>
-                <Label className="mb-2 block">Image URL</Label>
-                <Input value={draft.image_url || ''} onChange={(event) => setDraft({ ...draft, image_url: event.target.value })} placeholder="https://..." />
-              </div>
+              <ImageUrlField label="Image" value={draft.image_url || ''} onChange={(image_url) => setDraft({ ...draft, image_url })} />
               <div>
                 <Label className="mb-2 block">Caption</Label>
                 <Textarea value={draft.content || ''} onChange={(event) => setDraft({ ...draft, content: event.target.value })} rows={3} />
@@ -324,10 +368,7 @@ function ResponseEditorDialog({ node, open, onOpenChange, onSave }) {
 
           {draft.type === 'card' && (
             <>
-              <div>
-                <Label className="mb-2 block">Card image URL</Label>
-                <Input value={draft.card_image_url || ''} onChange={(event) => setDraft({ ...draft, card_image_url: event.target.value })} placeholder="https://..." />
-              </div>
+              <ImageUrlField label="Card image" value={draft.card_image_url || ''} onChange={(card_image_url) => setDraft({ ...draft, card_image_url })} />
               <div>
                 <Label className="mb-2 block">Card title</Label>
                 <Input value={draft.card_title || ''} onChange={(event) => setDraft({ ...draft, card_title: event.target.value })} />
@@ -402,7 +443,7 @@ function ResponseEditorDialog({ node, open, onOpenChange, onSave }) {
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                  <Input value={item.image_url || ''} onChange={(event) => updateCarouselItem(item.id, { image_url: event.target.value })} placeholder="Image URL" />
+                  <ImageUrlField label="Card image" value={item.image_url || ''} onChange={(image_url) => updateCarouselItem(item.id, { image_url })} />
                   <Input value={item.title || ''} onChange={(event) => updateCarouselItem(item.id, { title: event.target.value })} placeholder="Card title" />
                   <Textarea
                     value={item.subtitle || ''}

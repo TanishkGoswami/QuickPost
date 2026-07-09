@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   ArrowLeft,
   Image as ImageIcon,
   Instagram,
@@ -12,7 +13,7 @@ import {
   Tv2,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -24,10 +25,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { createAutomation, getAutomationById, updateAutomation } from "@/services/autodm/automations";
+import { createAutomation, getAutomationById, listAutomations, updateAutomation } from "@/services/autodm/automations";
 import { useAutoDM } from "./AutoDMContext";
 import { AutoDMConnectionGate } from "./AutoDMConnectionGate";
 import { KeywordInput } from "./KeywordInput";
+import type { KeywordConflict } from "./KeywordInput";
 import { MediaSelector } from "./MediaSelector";
 import { ResponseFlowBuilder } from "./ResponseFlowBuilder";
 
@@ -59,6 +61,18 @@ export default function AutomationEditorPage() {
   const [commentReplyText, setCommentReplyText] = useState("");
   const [responseFlow, setResponseFlow] = useState({ nodes: [], opening_message_enabled: false, opening_message: "" });
   const [isActive, setIsActive] = useState(false);
+
+  // All existing automations for conflict detection
+  const [allAutomations, setAllAutomations] = useState([]);
+
+  useEffect(() => {
+    if (!socialUser?.userId || !activeAccount?.id) return;
+
+    // Load all existing automations for conflict detection
+    listAutomations({ instagramAccountId: activeAccount.id })
+      .then(setAllAutomations)
+      .catch(() => {/* non-critical */});
+  }, [socialUser?.userId, activeAccount?.id]);
 
   useEffect(() => {
     if (isNew || !socialUser?.userId) {
@@ -100,6 +114,51 @@ export default function AutomationEditorPage() {
     })();
   }, [id, isNew, socialUser?.userId]);
 
+  // Compute keyword conflicts — check other automations on the same post
+  const conflictingKeywords = useMemo<KeywordConflict[]>(() => {
+    if (!keywords.length || !allAutomations.length) return [];
+
+    const currentMediaId = applyToAllMedia ? null : (selectedMedia?.id ?? null);
+
+    const conflicts: KeywordConflict[] = [];
+
+    for (const automation of allAutomations) {
+      // Skip self when editing
+      if (!isNew && automation.id === id) continue;
+
+      // Only check automations on the same post (or "all posts" scope)
+      const otherMediaId = automation.media_id ?? null;
+      const sameScope =
+        currentMediaId === otherMediaId ||
+        // "All posts" automation conflicts with specific post automation on same trigger
+        currentMediaId === null ||
+        otherMediaId === null;
+
+      if (!sameScope) continue;
+
+      for (const kw of keywords) {
+        const otherKeywords: string[] = automation.keywords ?? [];
+        const conflictFound = otherKeywords.some(
+          (ok) => ok.trim().toLowerCase() === kw.trim().toLowerCase()
+        );
+        if (conflictFound) {
+          // Avoid duplicate conflict entries for the same keyword
+          if (!conflicts.find((c) => c.keyword.toLowerCase() === kw.toLowerCase())) {
+            conflicts.push({
+              keyword: kw,
+              automationName: automation.name || "Unnamed Automation",
+              automationId: automation.id,
+            });
+          }
+        }
+      }
+    }
+
+    return conflicts;
+  }, [keywords, allAutomations, selectedMedia, applyToAllMedia, id, isNew]);
+
+  const hasConflicts = conflictingKeywords.length > 0;
+
   const handleSave = async () => {
     if (!keywords.length) {
       toast.error("Add at least one keyword");
@@ -109,6 +168,16 @@ export default function AutomationEditorPage() {
       toast.error("Add at least one response");
       return;
     }
+    if (hasConflicts) {
+      const conflictNames = [...new Set(conflictingKeywords.map((c) => `"${c.automationName}"`))]
+        .join(", ");
+      toast.error(
+        `Keyword conflict with ${conflictNames}. Please use different keywords.`,
+        { duration: 5000 }
+      );
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
@@ -196,7 +265,7 @@ export default function AutomationEditorPage() {
               </div>
               <Button
                 onClick={handleSave}
-                disabled={saving}
+                disabled={saving || hasConflicts}
                 className="rounded-xl gap-1.5"
               >
                 {saving ? (
@@ -208,6 +277,24 @@ export default function AutomationEditorPage() {
               </Button>
             </div>
           </div>
+
+          {/* Conflict banner */}
+          {hasConflicts && (
+            <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <div>
+                <p className="font-semibold">Keyword conflict detected</p>
+                <p className="mt-0.5 text-red-600">
+                  {conflictingKeywords.map((c) => (
+                    <span key={c.keyword}>
+                      &ldquo;<strong>{c.keyword}</strong>&rdquo; is already used in &ldquo;{c.automationName}&rdquo;.{" "}
+                    </span>
+                  ))}
+                  Each automation on the same post must have unique keywords.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             {/* Left column */}
@@ -351,6 +438,7 @@ export default function AutomationEditorPage() {
                     onChange={setKeywords}
                     caseSensitive={isCaseSensitive}
                     onCaseSensitiveChange={setIsCaseSensitive}
+                    conflictingKeywords={conflictingKeywords}
                   />
                 </CardContent>
               </Card>
