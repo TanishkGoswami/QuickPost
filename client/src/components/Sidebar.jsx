@@ -162,9 +162,12 @@ function Sidebar() {
     window.location.href = `${apiUrl}/api/auth/googleBusiness?token=${token}`;
   };
   const handleDisconnect = async (platform) => {
+    const message = platform === "instagram"
+      ? `Are you sure you want to disconnect your ${platform} account? This will stop all scheduled posts and pause any active automations. Your automations will be restored when you reconnect.`
+      : `Are you sure you want to disconnect your ${platform} account? This will stop all scheduled posts to this channel.`;
     const confirmed = await confirm(
       "Disconnect Account",
-      `Are you sure you want to disconnect your ${platform} account? This will stop all scheduled posts to this channel.`,
+      message,
       {
         intent: "danger",
         confirmText: "Disconnect",

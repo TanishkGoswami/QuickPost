@@ -164,9 +164,13 @@ export default function ConnectedPlatformsPanel({
   };
 
   const disconnectPlatform = async (platform, accountId = null) => {
+    const isInstagramPlatform = platform.id === "instagram";
+    const body = isInstagramPlatform
+      ? `${platform.name} disconnect karne par related posting, AutoDM, ya bot features pause ho jayenge. Aapke automations safe rahenge aur reconnect karne par restore ho jayenge.`
+      : `${platform.name} disconnect karne par related posting, AutoDM, ya bot features pause ho sakte hain.`;
     const ok = await confirm(
       `Disconnect ${platform.name}?`,
-      `${platform.name} disconnect karne par related posting, AutoDM, ya bot features pause ho sakte hain.`,
+      body,
       { intent: "warning", confirmText: "Disconnect", cancelText: "Keep connected" },
     );
     if (!ok) return;

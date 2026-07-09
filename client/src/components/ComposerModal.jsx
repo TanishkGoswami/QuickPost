@@ -769,7 +769,7 @@ const CalendarView = memo(function CalendarView({ value, onChange }) {
               onMouseLeave={(e) => {
                 if (!isSelected) {
                   e.target.style.background = isToday
-                    ? "rgba(255,86,0,0.08)"
+                    ? "rgba(243,115,56,0.08)"
                     : "transparent";
                 }
               }}
@@ -871,7 +871,7 @@ const CustomSelect = memo(function CustomSelect({
           minWidth: isTime ? 130 : 160,
           transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
           boxShadow: open
-            ? "0 4px 12px rgba(255,86,0,0.08)"
+            ? "0 4px 12px rgba(243,115,56,0.08)"
             : "0 2px 4px rgba(0,0,0,0.02)",
         }}
         onMouseEnter={(e) => {
@@ -1002,7 +1002,7 @@ const CustomSelect = memo(function CustomSelect({
                         textAlign: "left",
                         background:
                           value === val
-                            ? "rgba(255,86,0,0.08)"
+                            ? "rgba(243,115,56,0.08)"
                             : "transparent",
                         border: "none",
                         borderRadius: "8px",
@@ -1091,8 +1091,8 @@ const SmartWarnings = memo(function SmartWarnings({
           style={{
             padding: "10px 14px",
             borderRadius: 12,
-            background: "rgba(255,86,0,0.06)",
-            border: "1px solid rgba(255,86,0,0.15)",
+            background: "rgba(243,115,56,0.06)",
+            border: "1px solid rgba(243,115,56,0.15)",
             display: "flex",
             alignItems: "center",
             gap: 10,
@@ -1916,7 +1916,7 @@ function ComposerModal({
                     padding: "20px",
                     borderRadius: "50%",
                     marginBottom: 20,
-                    boxShadow: "0 10px 25px rgba(255,86,0,0.3)",
+                    boxShadow: "0 10px 25px rgba(243,115,56,0.3)",
                   }}
                 >
                   <Upload size={40} strokeWidth={2.5} />
@@ -1961,7 +1961,7 @@ function ComposerModal({
                 style={{
                   fontSize: 16,
                   fontWeight: 800,
-                  color: "var(--ink,#111111)",
+                  color: "var(--ink,#141413)",
                   margin: 0,
                   letterSpacing: "-0.02em",
                 }}
@@ -2036,9 +2036,9 @@ function ComposerModal({
                     background: "transparent",
                     color:
                       mobileActiveTab === tab.id
-                        ? "var(--ink,#111111)"
+                        ? "var(--ink,#141413)"
                         : "var(--slate,#8a8a82)",
-                    borderBottom: `2.5px solid ${mobileActiveTab === tab.id ? "var(--ink,#111111)" : "transparent"}`,
+                    borderBottom: `2.5px solid ${mobileActiveTab === tab.id ? "var(--ink,#141413)" : "transparent"}`,
                     transition: "all 0.2s",
                     cursor: "pointer",
                   }}
@@ -2213,7 +2213,7 @@ function ComposerModal({
                           fontSize: 14,
                           fontFamily: "inherit",
                           resize: "none",
-                          color: "var(--ink,#111111)",
+                          color: "var(--ink,#141413)",
                           outline: "none",
                           transition: "border-color 0.2s",
                         }}
@@ -2307,7 +2307,7 @@ function ComposerModal({
                             type="button"
                             whileHover={{
                               scale: 1.03,
-                              background: "var(--ink,#111111)",
+                              background: "var(--ink,#141413)",
                               color: "white",
                             }}
                             whileTap={{ scale: 0.97 }}
@@ -2497,7 +2497,7 @@ function ComposerModal({
                               transition:
                                 "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                               boxShadow: isSelected
-                                ? "0 4px 12px rgba(255,86,0,0.12)"
+                                ? "0 4px 12px rgba(243,115,56,0.12)"
                                 : "0 2px 4px rgba(0,0,0,0.02)",
                             }}
                           >
@@ -2591,7 +2591,7 @@ function ComposerModal({
                         size={13}
                         style={{
                           color: isScheduled
-                            ? "var(--arc,#ff5600)"
+                            ? "var(--arc,#f37338)"
                             : "var(--slate,#8a8a82)",
                         }}
                       />
@@ -2601,8 +2601,8 @@ function ComposerModal({
                             fontSize: 12,
                             fontWeight: 700,
                             color: isScheduled
-                              ? "var(--arc,#ff5600)"
-                              : "var(--ink,#111111)",
+                              ? "var(--arc,#f37338)"
+                              : "var(--ink,#141413)",
                             margin: 0,
                           }}
                         >
@@ -2612,7 +2612,7 @@ function ComposerModal({
                           <p
                             style={{
                               fontSize: 10,
-                              color: "var(--arc,#ff5600)",
+                              color: "var(--arc,#f37338)",
                               margin: 0,
                               opacity: 0.8,
                             }}
@@ -2757,19 +2757,19 @@ function ComposerModal({
                               alignItems: "center",
                               gap: 6,
                               padding: "7px 10px",
-                              background: "rgba(255,86,0,0.05)",
+                              background: "rgba(243,115,56,0.05)",
                               borderRadius: 8,
-                              border: "1px solid rgba(255,86,0,0.1)",
+                              border: "1px solid rgba(243,115,56,0.1)",
                             }}
                           >
                             <Clock
                               size={11}
-                              style={{ color: "var(--arc,#ff5600)" }}
+                              style={{ color: "var(--arc,#f37338)" }}
                             />
                             <span
                               style={{
                                 fontSize: 10,
-                                color: "var(--arc,#ff5600)",
+                                color: "var(--arc,#f37338)",
                                 fontWeight: 600,
                               }}
                             >
@@ -2938,15 +2938,15 @@ function ComposerModal({
                   animate={{ opacity: 1, y: 0 }}
                   style={{
                     fontSize: 10,
-                    color: "var(--arc,#ff5600)",
+                    color: "var(--arc,#f37338)",
                     fontWeight: 700,
                     display: "flex",
                     alignItems: "center",
                     gap: 5,
-                    background: "rgba(255,86,0,0.06)",
+                    background: "rgba(243,115,56,0.06)",
                     padding: isMobile ? "4px 8px" : "5px 12px",
                     borderRadius: 20,
-                    border: "1px solid rgba(255,86,0,0.15)",
+                    border: "1px solid rgba(243,115,56,0.15)",
                     textAlign: "center",
                   }}
                 >
@@ -2998,7 +2998,7 @@ function ComposerModal({
                         scale: 1.02,
                         y: -2,
                         boxShadow: isScheduled
-                          ? "0 10px 24px rgba(255,86,0,0.3)"
+                          ? "0 10px 24px rgba(243,115,56,0.3)"
                           : "0 10px 24px rgba(20,20,19,0.22)",
                       }
                     : {}
@@ -3013,8 +3013,8 @@ function ComposerModal({
                     publishDisabled
                       ? "rgba(20,20,19,0.18)"
                       : isScheduled
-                        ? "linear-gradient(135deg,var(--arc,#ff5600) 0%,#ff8c5a 100%)"
-                        : "linear-gradient(135deg,var(--ink,#111111) 0%,#3a3a37 100%)",
+                        ? "linear-gradient(135deg,var(--arc,#f37338) 0%,#ff8c5a 100%)"
+                        : "linear-gradient(135deg,var(--ink,#141413) 0%,#3a3a37 100%)",
                   height: isMobile ? 42 : 48,
                   minWidth: isMobile ? 120 : 175,
                   borderRadius: "16px",

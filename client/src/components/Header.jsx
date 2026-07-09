@@ -50,9 +50,12 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
   };
 
   const handleDisconnect = async (platform) => {
+    const message = platform === "instagram"
+      ? `Are you sure you want to disconnect your ${platform} account? This will pause any active automations. Your automations will be restored when you reconnect.`
+      : `Are you sure you want to disconnect your ${platform} account?`;
     const confirmed = await confirm(
       "Disconnect Account",
-      `Are you sure you want to disconnect your ${platform} account?`,
+      message,
       {
         intent: "danger",
         confirmText: "Disconnect",

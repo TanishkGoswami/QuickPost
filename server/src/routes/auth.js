@@ -1061,9 +1061,16 @@ router.delete("/disconnect/:provider", authenticateUser, async (req, res) => {
     console.log(`[DISCONNECT] provider=${provider}, accountId=${accountId}, userId=${req.user.userId}`);
 
     if (provider === "instagram") {
+      // Soft-disconnect: preserve automations, contacts, sessions, metrics
+      // (previously this was .delete() which triggered ON DELETE CASCADE
+      //  and permanently destroyed all automations — see instapilot.js for the safe pattern)
       let igQuery = supabase
         .from("instagram_accounts")
-        .delete()
+        .update({
+          is_connected: false,
+          token_status: "disconnected",
+          updated_at: new Date().toISOString(),
+        })
         .eq("user_id", req.user.userId);
 
       if (accountId) {
@@ -1073,6 +1080,21 @@ router.delete("/disconnect/:provider", authenticateUser, async (req, res) => {
       console.log(`[DISCONNECT] igData=${JSON.stringify(igData)} error=${JSON.stringify(igError)}`);
       
       if (igError) throw igError;
+
+      // Pause all active automations for disconnected account(s)
+      // so they don't attempt to run with invalid/null tokens
+      const disconnectedIds = (igData || []).map(a => a.id);
+      if (disconnectedIds.length > 0) {
+        const { error: pauseError } = await supabase
+          .from("automations")
+          .update({ is_active: false, updated_at: new Date().toISOString() })
+          .in("instagram_account_id", disconnectedIds);
+        if (pauseError) {
+          console.warn(`[DISCONNECT] Failed to pause automations: ${pauseError.message}`);
+        } else {
+          console.log(`[DISCONNECT] Paused automations for account(s): ${disconnectedIds.join(", ")}`);
+        }
+      }
       
       if (accountId) {
         return res.json({
