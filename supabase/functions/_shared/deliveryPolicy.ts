@@ -26,18 +26,12 @@ export const applyDeliveryBranding = <T extends BrandableAction>(
   if (!isFreePlan) return cleaned;
 
   const firstTextIndex = cleaned.findIndex((action) => action.type === "text");
-  if (firstTextIndex === -1) {
-    return [
-      ...cleaned,
-      { type: "text", text: SOCIALPILOT_WATERMARK.trim() } as T,
-    ];
-  }
-
-  return cleaned.map((action, index) =>
-    index === firstTextIndex && action.type === "text"
-      ? { ...action, text: `${action.text || ""}${SOCIALPILOT_WATERMARK}` }
-      : action,
-  ) as T[];
+  
+  // Send the watermark as a separate message action
+  return [
+    ...cleaned,
+    { type: "text", text: SOCIALPILOT_WATERMARK.trim() } as T,
+  ];
 };
 
 export const getDeliveryPlan = (

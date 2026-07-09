@@ -284,6 +284,7 @@ export default function AutoDMAutomationsPage() {
   const {
     activeAccount,
     automations,
+    setAutomations,
     automationsLoading,
     loadAutomations,
     updateAutomation,
@@ -318,12 +319,20 @@ export default function AutoDMAutomationsPage() {
     }
   };
 
-  const toggleActive = async (automation) => {
+    const toggleActive = async (automation) => {
+    // Optimistic UI update for instant toggle
+    setAutomations(prev => prev.map(a => 
+      a.id === automation.id ? { ...a, is_active: !a.is_active } : a
+    ));
+
     try {
       await updateAutomation(automation.id, { is_active: !automation.is_active });
-      await loadAutomations();
     } catch (error) {
       console.error('[AutoDM] Toggle automation error:', error);
+      // Revert on failure
+      setAutomations(prev => prev.map(a => 
+        a.id === automation.id ? { ...a, is_active: automation.is_active } : a
+      ));
     }
   };
 
@@ -354,7 +363,6 @@ export default function AutoDMAutomationsPage() {
       console.error('[AutoDM] Delete automation error:', error);
     }
   };
-
   const syncSelected = async () => {
     if (!selectedAutomation) return;
     setAnalyticsLoading(true);

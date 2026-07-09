@@ -19,8 +19,10 @@ cloudinary.config({
 const CHUNK_SIZE = 20 * 1024 * 1024;
 
 // Cloudinary free-tier hard limit (100 MB). We compress at 95 MB to leave headroom.
-const CLOUDINARY_MAX_BYTES = 100 * 1024 * 1024;
-const COMPRESS_THRESHOLD = 95 * 1024 * 1024;
+const CLOUDINARY_VIDEO_MAX_BYTES = 100 * 1024 * 1024;
+const VIDEO_COMPRESS_THRESHOLD = 95 * 1024 * 1024;
+const CLOUDINARY_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+const IMAGE_COMPRESS_THRESHOLD = 9 * 1024 * 1024;
 
 /**
  * Compress a video file using FFmpeg so it fits under Cloudinary's 100 MB limit.
@@ -65,6 +67,20 @@ async function compressVideo(inputPath, onProgress) {
   });
 }
 
+async function compressImage(inputPath) {
+  const tmpOutput = path.join(os.tmpdir(), `qp_compressed_${Date.now()}.jpg`);
+  console.log(`Compressing image: ${inputPath} -> ${tmpOutput}`);
+
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .outputOptions(['-frames:v 1', '-q:v 4'])
+      .output(tmpOutput)
+      .on('end', () => resolve(tmpOutput))
+      .on('error', (err) => reject(new Error(`Image compression failed: ${err.message}`)))
+      .run();
+  });
+}
+
 /**
  * Upload a file to Cloudinary.
  * Automatically compresses videos that exceed the 95 MB threshold.
@@ -80,20 +96,37 @@ export async function uploadToCloudinary(filePath, resourceType = 'auto', onProg
   try {
     console.log(`☁️  Uploading ${resourceType} to Cloudinary...`);
 
+    if (resourceType === 'image') {
+      const fileSizeBytes = fs.statSync(filePath).size;
+
+      if (fileSizeBytes > IMAGE_COMPRESS_THRESHOLD) {
+        compressedTmp = await compressImage(filePath);
+        const compressedSize = fs.statSync(compressedTmp).size;
+        if (compressedSize > CLOUDINARY_IMAGE_MAX_BYTES) {
+          throw new Error(
+            `Image is too large even after compression ` +
+            `(${(compressedSize / 1024 / 1024).toFixed(1)} MB). ` +
+            `Please use a smaller image (max 10 MB).`
+          );
+        }
+        uploadPath = compressedTmp;
+      }
+    }
+
     // ── Auto-compress oversized videos ──────────────────────────────────────
     if (resourceType === 'video') {
       const fileSizeBytes = fs.statSync(filePath).size;
       const fileSizeMB = (fileSizeBytes / 1024 / 1024).toFixed(1);
       console.log(`📏 Video size: ${fileSizeMB} MB`);
 
-      if (fileSizeBytes > COMPRESS_THRESHOLD) {
-        console.log(`⚠️  File exceeds ${COMPRESS_THRESHOLD / 1024 / 1024} MB — compressing before upload...`);
+      if (fileSizeBytes > VIDEO_COMPRESS_THRESHOLD) {
+        console.log(`⚠️  File exceeds ${VIDEO_COMPRESS_THRESHOLD / 1024 / 1024} MB — compressing before upload...`);
         compressedTmp = await compressVideo(filePath, (pct) => {
           if (onProgress) onProgress({ phase: 'compressing', percent: pct });
         });
 
         const compressedSize = fs.statSync(compressedTmp).size;
-        if (compressedSize > CLOUDINARY_MAX_BYTES) {
+        if (compressedSize > CLOUDINARY_VIDEO_MAX_BYTES) {
           throw new Error(
             `Video is too large even after compression ` +
             `(${(compressedSize / 1024 / 1024).toFixed(1)} MB). ` +

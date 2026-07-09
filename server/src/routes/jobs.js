@@ -1,5 +1,5 @@
 import express from 'express';
-import { getJob, getJobsForUser } from '../services/jobQueue.js';
+import { clearTerminalJobsForUser, deleteJob, getJob, getJobsForUser } from '../services/jobQueue.js';
 import { authenticateUser } from '../middleware/authenticateUser.js';
 import supabase from '../services/supabase.js';
 
@@ -56,6 +56,26 @@ router.get('/jobs/:jobId', authenticateUser, async (req, res) => {
       .json({ success: true, job: safeJob(job) });
   } catch (err) {
     console.error('❌ [JOBS_ROUTE] GET /jobs/:jobId error:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.delete('/jobs', authenticateUser, (req, res) => {
+  try {
+    const removed = clearTerminalJobsForUser(req.user.userId);
+    return res.json({ success: true, removed });
+  } catch (err) {
+    console.error('❌ [JOBS_ROUTE] DELETE /jobs error:', err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.delete('/jobs/:jobId', authenticateUser, (req, res) => {
+  try {
+    const removed = deleteJob(req.params.jobId, req.user.userId);
+    return res.json({ success: true, removed });
+  } catch (err) {
+    console.error('❌ [JOBS_ROUTE] DELETE /jobs/:jobId error:', err);
     return res.status(500).json({ success: false, error: err.message });
   }
 });

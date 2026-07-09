@@ -58,7 +58,7 @@ function PhoneFrame({ children }) {
         <div className="absolute -right-[2.5px] top-[180px] h-[75px] w-[2.5px] rounded-r-sm bg-[#c5c3be]" />
 
         {/* Screen Background with Inner Bezel */}
-        <div className="relative h-full w-full overflow-hidden rounded-[8px] border-[5px] border-[#1a1a1a] bg-white">
+        <div className="relative h-full w-full overflow-hidden rounded-[8px] border-[5px] border-[#1a1a1a] bg-white" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}>
           
           {/* Hole Punch Camera */}
           <div className="absolute left-1/2 top-[10px] z-40 flex h-[11px] w-[11px] -translate-x-1/2 items-center justify-center rounded-full bg-[#111] border border-black shadow-[inset_0_0_2px_rgba(255,255,255,0.2)]">
@@ -93,9 +93,8 @@ function Avatar({ src, username, className = 'h-7 w-7' }) {
   );
 }
 
-export default function MobilePreview({ selectedMedia, keywords, responseFlow, commentReplyText, commentReplyEnabled }) {
+export default function MobilePreview({ selectedMedia, keywords, responseFlow, commentReplyText, commentReplyEnabled, activeTab = 'Post', onTabChange }) {
   const { activeAccount } = useAutoDM();
-  const [activeTab, setActiveTab] = useState('DM');
 
   const username = activeAccount?.username || 'cricboss121';
   const avatar = activeAccount?.profile_picture_url || '';
@@ -121,8 +120,8 @@ export default function MobilePreview({ selectedMedia, keywords, responseFlow, c
     return (
       <div key={node.id || index} className="mt-2 flex w-full flex-col items-start gap-1">
         <div className="flex w-full items-start gap-2">
-          <Avatar src={avatar} username={username} className="mt-1 h-5 w-5 shrink-0" />
-          <div className="max-w-[205px] overflow-hidden rounded-[18px] rounded-tl-sm bg-[#f0f0f0] text-[14px] font-normal text-black">
+          <Avatar src={avatar} username={username} className="mt-1 h-6 w-6 shrink-0" />
+          <div className="max-w-[205px] overflow-hidden rounded-[20px] rounded-bl-sm bg-[#efefef] text-[11px] font-normal text-black" style={{ letterSpacing: '-0.02em' }}>
             {nodeType === 'image' ? (
               <>
                 {node.image_url ? (
@@ -132,28 +131,28 @@ export default function MobilePreview({ selectedMedia, keywords, responseFlow, c
                     Image
                   </div>
                 )}
-                {node.content ? <p className="whitespace-pre-wrap px-3 py-2">{node.content}</p> : null}
+                {node.content ? <p className="whitespace-pre-wrap px-3.5 py-2.5 leading-[1.3]">{node.content}</p> : null}
               </>
             ) : nodeType === 'card' ? (
               <>
                 {node.card_image_url ? <img src={node.card_image_url} alt="" className="h-[110px] w-full object-cover" /> : null}
                 <div className="space-y-0.5 px-3 py-2">
-                  <p className="font-semibold text-[13px]">{node.card_title || 'Card title'}</p>
-                  <p className="text-[12px] text-gray-500">{node.card_subtitle || 'Card subtitle'}</p>
+                  <p className="font-semibold text-[10px]">{node.card_title || 'Card title'}</p>
+                  <p className="text-[9px] text-gray-500">{node.card_subtitle || 'Card subtitle'}</p>
                 </div>
               </>
             ) : nodeType === 'lead_form' ? (
               <div className="space-y-0.5 px-3 py-2">
-                <p className="font-semibold text-[13px]">{node.form_title || 'Lead form'}</p>
-                <p className="text-[12px] text-gray-500">Form fields will appear here.</p>
+                <p className="font-semibold text-[10px]">{node.form_title || 'Lead form'}</p>
+                <p className="text-[9px] text-gray-500">Form fields will appear here.</p>
               </div>
             ) : nodeType === 'carousel' ? (
               <div className="space-y-0.5 px-3 py-2">
-                <p className="font-semibold text-[13px]">Carousel</p>
-                <p className="text-[12px] text-gray-500">{node.items?.length || 1} item(s)</p>
+                <p className="font-semibold text-[10px]">Carousel</p>
+                <p className="text-[9px] text-gray-500">{node.items?.length || 1} item(s)</p>
               </div>
             ) : (
-              <div className="whitespace-pre-wrap px-3 py-2">
+              <div className="whitespace-pre-wrap px-3.5 py-2.5 leading-[1.3]">
                 {node.content || 'Write a message'}
               </div>
             )}
@@ -161,9 +160,9 @@ export default function MobilePreview({ selectedMedia, keywords, responseFlow, c
         </div>
 
         {buttons.length > 0 ? (
-          <div className="ml-7 flex w-full max-w-[205px] flex-col gap-1.5 mt-1">
+          <div className="ml-8 flex w-full max-w-[205px] flex-col gap-1.5 mt-1">
             {buttons.map((btn, btnIdx) => (
-              <div key={btn.id || btnIdx} className="rounded-xl bg-white border border-gray-200 shadow-sm px-3 py-1.5 text-center text-[13px] font-semibold text-black">
+              <div key={btn.id || btnIdx} className="rounded-[16px] bg-[#efefef] px-4 py-2 text-center text-[11px] font-semibold text-black" style={{ letterSpacing: '-0.01em' }}>
                 {btn.title || 'Button'}
               </div>
             ))}
@@ -175,21 +174,20 @@ export default function MobilePreview({ selectedMedia, keywords, responseFlow, c
 
   const renderPost = () => (
     <div className="flex h-full flex-col bg-white text-black">
-      <div className="border-b border-gray-200 px-3 pb-2 pt-1 bg-white">
-        <div className="relative flex items-center justify-center">
-          <ChevronLeft className="absolute left-0 h-5 w-5 text-black" />
-          <div className="text-center leading-none">
-            <p className="text-[10px] font-bold uppercase text-gray-500">{username}</p>
-            <p className="mt-0.5 text-[14px] font-extrabold tracking-tight">Posts</p>
-          </div>
+      <div className="border-b border-gray-200 px-3 pb-2 pt-1 bg-white flex items-center justify-between">
+        <ChevronLeft className="h-6 w-6 text-black" strokeWidth={1.5} />
+        <div className="text-center leading-none flex-1">
+          <p className="text-[14px] font-bold tracking-tight">Posts</p>
+          <p className="mt-0.5 text-[11px] text-gray-500 font-semibold">{username}</p>
         </div>
+        <div className="w-6" />
       </div>
       <div className="flex items-center justify-between px-3 py-2 bg-white">
-        <div className="flex items-center gap-2">
-          <Avatar src={avatar} username={username} className="h-7 w-7" />
-          <span className="text-[12px] font-bold">{username}</span>
+        <div className="flex items-center gap-2.5">
+          <Avatar src={avatar} username={username} className="h-8 w-8" />
+          <span className="text-[13px] font-semibold">{username}</span>
         </div>
-        <MoreHorizontal className="h-4 w-4 text-black" />
+        <MoreHorizontal className="h-5 w-5 text-black" strokeWidth={1.5} />
       </div>
       <div className="h-[280px] w-full bg-gray-100 border-y border-gray-200">
         {selectedMediaSrc ? (
@@ -202,21 +200,37 @@ export default function MobilePreview({ selectedMedia, keywords, responseFlow, c
           <EmptyPostMedia />
         )}
       </div>
-      <div className="px-3 py-2 bg-white flex-1">
+      <div className="px-3 py-2 bg-white flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
         <div className="flex items-center justify-between pt-1">
-          <div className="flex items-center gap-3">
-            <Heart className="h-[22px] w-[22px] text-black" />
-            <MessageCircle className="h-[22px] w-[22px] text-black" />
-            <Send className="h-[22px] w-[22px] text-black" />
+          <div className="flex items-center gap-3.5">
+            <Heart className="h-[24px] w-[24px] text-black" strokeWidth={1.5} />
+            <MessageCircle className="h-[24px] w-[24px] text-black" strokeWidth={1.5} style={{ transform: 'scaleX(-1)' }} />
+            <Send className="h-[24px] w-[24px] text-black" strokeWidth={1.5} />
           </div>
-          <Bookmark className="h-[22px] w-[22px] text-black" />
+          <Bookmark className="h-[24px] w-[24px] text-black" strokeWidth={1.5} />
+        </div>
+        
+        {/* Likes */}
+        <div className="mt-2 text-[13px] font-semibold tracking-tight">
+          {selectedMedia?.like_count ? `${selectedMedia.like_count.toLocaleString()} likes` : '1,234 likes'}
+        </div>
+        
+        {/* Caption */}
+        <div className="mt-1 text-[13px] leading-tight">
+          <span className="font-semibold mr-1.5 tracking-tight">{username}</span>
+          <span className="text-gray-900">{selectedMedia?.caption || 'This is a preview of your Instagram post...'}</span>
+        </div>
+
+        {/* Comments count */}
+        <div className="mt-1 text-[13px] text-gray-500 font-medium">
+          View all {selectedMedia?.comments_count ? selectedMedia.comments_count.toLocaleString() : '89'} comments
         </div>
       </div>
-      <div className="mt-auto grid h-[46px] grid-cols-5 items-center border-t border-gray-200 bg-white px-5 text-black pb-1">
-        <Home className="h-[22px] w-[22px] fill-black" />
-        <Search className="h-[22px] w-[22px] text-black mx-auto" />
-        <PlusCircle className="h-[22px] w-[22px] text-black mx-auto" />
-        <Grid3X3 className="h-[22px] w-[22px] text-black mx-auto" />
+      <div className="mt-auto grid h-[46px] grid-cols-5 items-center border-t border-gray-200 bg-white px-5 text-black pb-1 shrink-0">
+        <Home className="h-[24px] w-[24px] fill-black" strokeWidth={1.5} />
+        <Search className="h-[24px] w-[24px] text-black mx-auto" strokeWidth={1.5} />
+        <PlusCircle className="h-[24px] w-[24px] text-black mx-auto" strokeWidth={1.5} />
+        <Grid3X3 className="h-[24px] w-[24px] text-black mx-auto" strokeWidth={1.5} />
         <Avatar src={avatar} username={username} className="h-6 w-6 ml-auto" />
       </div>
     </div>
@@ -224,69 +238,80 @@ export default function MobilePreview({ selectedMedia, keywords, responseFlow, c
 
   const renderComments = () => (
     <div className="relative h-full overflow-hidden bg-white text-black">
-      <div className="absolute inset-x-0 top-0 h-[250px] opacity-90">
+      <div className="absolute inset-x-0 top-0 h-[250px] bg-black">
         {selectedMediaSrc ? (
           <img
             src={selectedMediaSrc}
             alt="Instagram post"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover opacity-70 blur-[3px] scale-105"
           />
         ) : (
-          <EmptyPostMedia />
+          <div className="h-full w-full opacity-70 blur-[3px] scale-105">
+            <EmptyPostMedia />
+          </div>
         )}
       </div>
-      <div className="absolute inset-x-0 top-0 z-10 border-b border-gray-200 bg-white/80 backdrop-blur-md px-3 pb-2 pt-1">
-        <div className="relative flex items-center justify-center">
-          <ChevronLeft className="absolute left-0 h-5 w-5 text-black" />
-          <div className="text-center leading-none">
-            <p className="text-[10px] font-bold uppercase text-gray-500">{username}</p>
-            <p className="mt-0.5 text-[14px] font-extrabold tracking-tight">Posts</p>
-          </div>
+      <div className="absolute inset-x-0 top-0 z-10 border-b border-gray-200 bg-white/80 backdrop-blur-md px-3 pb-2 pt-1 flex items-center justify-between">
+        <ChevronLeft className="h-6 w-6 text-black" strokeWidth={1.5} />
+        <div className="text-center leading-none flex-1">
+          <p className="text-[14px] font-bold tracking-tight">Posts</p>
+          <p className="mt-0.5 text-[11px] text-gray-500 font-semibold">{username}</p>
         </div>
+        <div className="w-6" />
       </div>
       <div className="absolute bottom-0 left-0 right-0 z-20 h-[375px] rounded-t-[22px] bg-white shadow-[0_-16px_45px_rgba(0,0,0,0.1)]">
-        <div className="relative flex h-[52px] items-center justify-center border-b border-gray-100">
-          <span className="absolute top-12 left-1/2 h-1 w-8 -translate-x-1/2 -translate-y-10 rounded-full bg-gray-300" />
-          <span className="text-[14px] font-extrabold">Comments</span>
-          <Send className="absolute right-4 h-5 w-5 text-black" />
+        <div className="relative flex items-center justify-center pt-3 pb-2 border-b border-gray-100">
+          <span className="absolute top-2 left-1/2 h-1 w-8 -translate-x-1/2 rounded-full bg-gray-300" />
+          <span className="text-[15px] font-bold mt-2">Comments</span>
+          <Send className="absolute right-4 top-4 h-[22px] w-[22px] text-black" strokeWidth={1.5} />
         </div>
         <div className="px-4 pt-4">
-          <div className="flex gap-2.5">
-            <div className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-gray-200">
-              <span className="h-2.5 w-2.5 rounded-full bg-gray-400" />
+          <div className="flex gap-3">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-gray-200 overflow-hidden">
+              <span className="h-full w-full bg-gray-300" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[11px] leading-tight">
-                <span className="font-bold">Username</span> <span className="text-gray-500">Now</span>
+                <span className="font-semibold">username</span> <span className="text-gray-500 text-[10px]">1h</span>
               </p>
-              <p className="text-[11px] font-bold leading-tight">{triggerKeyword}</p>
-              <p className="mt-1 text-[11px] font-bold text-gray-500">Reply</p>
+              <p className="text-[11px] leading-[1.3] mt-0.5 text-black">{triggerKeyword}</p>
+              <p className="mt-1 text-[10px] font-semibold text-gray-500 flex gap-4">
+                <span>Reply</span>
+                <span>See Translation</span>
+              </p>
             </div>
-            <Heart className="mt-1 h-4 w-4 text-gray-400" />
+            <Heart className="mt-1 h-[14px] w-[14px] text-gray-400" strokeWidth={1.5} />
           </div>
           {commentReplyEnabled ? (
-            <div className="mt-4 flex gap-2.5 pl-7">
-              <Avatar src={avatar} username={username} className="h-5 w-5" />
+            <div className="mt-4 flex gap-3 pl-11">
+              <Avatar src={avatar} username={username} className="h-7 w-7" />
               <div className="min-w-0 flex-1">
                 <p className="text-[11px] leading-tight">
-                  <span className="font-bold">{username}</span> <span className="text-gray-500">Now</span>
+                  <span className="font-semibold">{username}</span> <span className="text-gray-500 text-[10px]">Now</span>
                 </p>
-                <p className="text-[11px] font-bold leading-tight">{commentReplyText || 'Check your DM'}</p>
-                <p className="mt-1 text-[11px] font-bold text-gray-500">Reply</p>
+                <p className="text-[11px] leading-[1.3] mt-0.5 text-black">{commentReplyText || 'Check your DM'}</p>
+                <p className="mt-1 text-[10px] font-semibold text-gray-500 flex gap-4">
+                  <span>Reply</span>
+                  <span>See Translation</span>
+                </p>
               </div>
-              <Heart className="mt-1 h-4 w-4 text-gray-400" />
+              <Heart className="mt-1 h-[14px] w-[14px] text-gray-400" strokeWidth={1.5} />
             </div>
           ) : null}
         </div>
-        <div className="absolute bottom-[52px] left-3 right-3 flex justify-between text-[22px]">
+        <div className="absolute bottom-[60px] left-4 right-4 flex justify-between text-[26px]">
           {['❤️', '🙌', '🔥', '👏', '😢', '😍', '😮', '😂'].map((emoji) => (
             <span key={emoji}>{emoji}</span>
           ))}
         </div>
-        <div className="absolute bottom-3 left-3 right-3 flex items-center gap-2">
-          <Avatar src={avatar} username={username} className="h-8 w-8" />
-          <div className="flex h-9 flex-1 items-center rounded-full border border-gray-200 bg-gray-50 px-3 text-[11px] text-gray-500">
-            Add a comment for username...
+        <div className="absolute bottom-4 left-3 right-3 flex items-center gap-3">
+          <Avatar src={avatar} username={username} className="h-8 w-8 shrink-0" />
+          <div className="flex h-10 flex-1 items-center rounded-full border border-gray-300 bg-white px-4">
+            <span className="flex-1 text-[14px] text-gray-400">Add a comment...</span>
+            <div className="flex items-center gap-3 text-black opacity-60">
+              <ImageIcon className="h-[20px] w-[20px]" strokeWidth={1.5} />
+              <div className="rounded-[4px] border-[1.5px] border-current px-1 text-[10px] font-bold">GIF</div>
+            </div>
           </div>
         </div>
       </div>
@@ -310,19 +335,19 @@ export default function MobilePreview({ selectedMedia, keywords, responseFlow, c
         <div className="flex max-w-[240px] items-end gap-2">
           <Avatar src={avatar} username={username} className="h-5 w-5 shrink-0" />
           <div className="rounded-[18px] rounded-tl-sm bg-[#f0f0f0] p-3">
-            <p className="whitespace-pre-line text-[14px] font-normal leading-[1.35]">{openingMessage}</p>
-            <div className="mt-2 rounded-lg bg-white border border-gray-200 px-3 py-1.5 text-center text-[13px] font-semibold text-[#0095f6]">
+            <p className="whitespace-pre-line text-[11px] font-normal leading-[1.35]">{openingMessage}</p>
+            <div className="mt-2 rounded-lg bg-white border border-gray-200 px-3 py-1.5 text-center text-[10px] font-semibold text-[#0095f6]">
               {openingButton}
             </div>
           </div>
         </div>
-        <div className="ml-auto rounded-[18px] rounded-br-sm bg-[#7357f6] px-4 py-2 text-[14px] font-normal text-white max-w-[220px] text-left leading-[1.35]">
+        <div className="ml-auto rounded-[18px] rounded-br-sm bg-[#7357f6] px-4 py-2 text-[11px] font-normal text-white max-w-[220px] text-left leading-[1.35]">
           {openingButton}
         </div>
         {(!responseFlow?.nodes || !Array.isArray(responseFlow.nodes) || responseFlow.nodes.length === 0) ? (
             <div className="mt-4 flex items-center gap-2">
               <Avatar src={avatar} username={username} className="h-5 w-5 shrink-0" />
-              <div className="rounded-[18px] rounded-tl-sm bg-[#f0f0f0] px-4 py-2 text-[14px] font-normal text-gray-500">
+              <div className="rounded-[18px] rounded-tl-sm bg-[#f0f0f0] px-4 py-2 text-[11px] font-normal text-gray-500">
                 Write a message
               </div>
             </div>
@@ -335,7 +360,7 @@ export default function MobilePreview({ selectedMedia, keywords, responseFlow, c
           <span className="grid h-7 w-7 place-items-center rounded-full bg-[#0095f6]">
             <Camera className="h-4 w-4 text-white" />
           </span>
-          <span className="ml-3 flex-1 text-[13px] text-gray-500">Message...</span>
+          <span className="ml-3 flex-1 text-[10px] text-gray-500">Message...</span>
           <div className="flex items-center gap-2 text-black">
             <ImageIcon className="h-5 w-5" />
             <MessageCircle className="h-5 w-5" />
@@ -358,7 +383,7 @@ export default function MobilePreview({ selectedMedia, keywords, responseFlow, c
           <button
             key={tab}
             type="button"
-            onClick={() => setActiveTab(tab)}
+            onClick={() => onTabChange ? onTabChange(tab) : null}
             className={`h-6 min-w-[62px] rounded-full px-3 transition ${
               activeTab === tab ? 'bg-white text-black shadow-sm font-bold' : ''
             } ${activeTab === 'DM' && tab === 'DM' ? 'ring-2 ring-blue-500' : ''}`}

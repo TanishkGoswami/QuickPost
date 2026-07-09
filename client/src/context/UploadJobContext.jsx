@@ -294,6 +294,9 @@ export function UploadJobProvider({ children }) {
    * Remove completed/failed jobs from the panel.
    */
   const clearCompleted = useCallback(() => {
+    apiClient.delete('/api/jobs').catch((err) => {
+      console.warn('[UploadJobContext] Failed to clear server jobs:', err);
+    });
     setJobs((prev) =>
       prev.filter((j) => {
         const isDone =
@@ -312,6 +315,9 @@ export function UploadJobProvider({ children }) {
    */
   const dismissJob = useCallback(
     (jobId) => {
+      apiClient.delete(`/api/jobs/${jobId}`).catch((err) => {
+        console.warn('[UploadJobContext] Failed to dismiss server job:', err);
+      });
       stopPolling(jobId);
       callbacksRef.current.delete(jobId);
       setJobs((prev) => prev.filter((j) => j.id !== jobId));
