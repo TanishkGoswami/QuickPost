@@ -137,20 +137,22 @@ export async function uploadToCloudinary(filePath, resourceType = 'auto', onProg
       }
     }
 
+    const isGif = uploadPath.toLowerCase().endsWith('.gif');
+    
     const uploadOptions = {
       resource_type: resourceType,
       folder: 'quickpost',
       use_filename: false,
       unique_filename: true,
       // Chunked upload for videos avoids 413 payload-too-large errors
-      ...(resourceType === 'video' && {
+      ...(resourceType === 'video' && !isGif && {
         chunk_size: CHUNK_SIZE,
       }),
     };
 
     // Use upload_large for videos (handles chunking transparently)
     const result = await new Promise((resolve, reject) => {
-      if (resourceType === 'video') {
+      if (resourceType === 'video' && !isGif) {
          cloudinary.uploader.upload_large(uploadPath, uploadOptions, (error, res) => {
             if (error) reject(error);
             else resolve(res);

@@ -1,9 +1,9 @@
 import fs from 'fs';
 import { getTokensForUser } from './supabase.js';
-import { postToInstagram, postImageToInstagram, postCarouselToInstagram } from './instagram.js';
+import { postToInstagram, postImageToInstagram, postCarouselToInstagram, postStoryToInstagram } from './instagram.js';
 import { postToYouTube, setVideoThumbnail } from './youtube.js';
 import { postToPinterest } from './pinterest.js';
-import { postToFacebook, postVideoToFacebook } from './facebook.js';
+import { postFacebookReel, postFacebookStory, postToFacebook, postVideoToFacebook } from './facebook.js';
 import { postToBluesky } from './bluesky.js';
 import { postToLinkedIn } from './linkedin.js';
 import mastodon from './mastodon.js';
@@ -18,6 +18,8 @@ import { resolveMentions } from './mentions.js';
 import { createOrUpdateComposerAutomation } from './autodm.js';
 import { getValidInstagramTokensForPosting, isInstagramAuthError } from './instagramToken.js';
 import { decryptToken } from './instapilot.js';
+import { resolveInstagramPublishChannels } from '../utils/instagramChannels.js';
+import { resolvePublishPostType } from '../utils/postType.js';
 
 /**
  * Core function to broadcast to platforms
@@ -27,6 +29,14 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
     const tokens = await getTokensForUser(userId);
     const isVideo = mediaType === 'video';
     const primaryMediaUrl = mediaUrls[0];
+    const hasInstagramChannel = (channels || []).some((channel) =>
+      channel === 'instagram' || String(channel).startsWith('instagram:')
+    );
+    const instagramPostType = resolvePublishPostType({
+      hasInstagramChannel,
+      postType: platData?.postType,
+      platformData: platData,
+    });
 
     // Detect videos and images from filePaths/mediaUrls
     // This is a bit tricky if we only have URLs. For scheduled posts, we might need to download them or keep local paths.
@@ -57,13 +67,13 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
     }
     
     // Instagram
-    const instagramChannels = channels.filter(c => c === 'instagram' || c.startsWith('instagram:'));
+    const instagramChannels = resolveInstagramPublishChannels(channels, tokens.instagramAccounts || []);
     if (instagramChannels.length > 0 && (tokens.instagram || tokens.instagramAccounts?.length > 0)) {
       const postedBusinessIds = new Set();
       
       for (const igChannel of instagramChannels) {
         let currentTokens;
-        let platformKey = 'instagram';
+        let platformKey = igChannel;
         
         if (igChannel === 'instagram') {
           currentTokens = tokens.instagram;
@@ -80,9 +90,6 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
                 tokenExpiry: igAccount.token_expires_at,
                 username: igAccount.instagram_username
               };
-              if (igAccount.instagram_username) {
-                platformKey = `instagram (@${igAccount.instagram_username})`;
-              }
             } catch (err) {
               console.error(`Failed to decrypt token for IG account ${accountId}:`, err);
             }
@@ -97,14 +104,19 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
           const freshInstagramTokens = await getValidInstagramTokensForPosting(userId, currentTokens);
           const resolvedCaption = resolveMentions(caption, 'instagram', freshInstagramTokens);
           let instagramAction;
-          if (mediaUrls.length > 1 && !isVideo) {
-            instagramAction = postCarouselToInstagram(mediaUrls, resolvedCaption, freshInstagramTokens);
+          if (instagramPostType === 'story') {
+            const storyUrl = isVideo
+              ? mediaUrls[filePaths.findIndex(p => p.includes('video-'))] || primaryMediaUrl
+              : primaryMediaUrl;
+            instagramAction = postStoryToInstagram(storyUrl, resolvedCaption, freshInstagramTokens, mediaType, null, platData?.instagramAspectRatio);
+          } else if (mediaUrls.length > 1) {
+            instagramAction = postCarouselToInstagram(mediaUrls, resolvedCaption, freshInstagramTokens, platData?.instagramAspectRatio);
           } else if (isVideo) {
             const igTokens = { ...freshInstagramTokens, coverUrl: coverImageUrl };
             const videoUrl = mediaUrls[filePaths.findIndex(p => p.includes('video-'))] || primaryMediaUrl;
-            instagramAction = postToInstagram(videoUrl, resolvedCaption, igTokens);
+            instagramAction = postToInstagram(videoUrl, resolvedCaption, igTokens, null, platData?.instagramAspectRatio);
           } else {
-            instagramAction = postImageToInstagram(primaryMediaUrl, resolvedCaption, freshInstagramTokens);
+            instagramAction = postImageToInstagram(primaryMediaUrl, resolvedCaption, freshInstagramTokens, platData?.instagramAspectRatio);
           }
           platformPromises.push(instagramAction.then(result => ({ platform: platformKey, result })));
         }
@@ -114,9 +126,14 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
     // Facebook
     if (channels.includes('facebook') && tokens.facebook?.pageId) {
       const resolvedCaption = resolveMentions(caption, 'facebook', tokens.facebook);
-      const fbAction = isVideo
-        ? postVideoToFacebook(tokens.facebook.accessToken, tokens.facebook.pageId, resolvedCaption, mediaUrls[filePaths.findIndex(p => p.includes('video-'))] || primaryMediaUrl, coverImageUrl)
-        : postToFacebook(tokens.facebook.accessToken, tokens.facebook.pageId, resolvedCaption, mediaUrls);
+      const videoUrl = mediaUrls[filePaths.findIndex(p => p.includes('video-'))] || primaryMediaUrl;
+      const fbAction = instagramPostType === 'story'
+        ? postFacebookStory(tokens.facebook.accessToken, tokens.facebook.pageId, resolvedCaption, isVideo ? videoUrl : primaryMediaUrl, mediaType)
+        : instagramPostType === 'reel'
+          ? postFacebookReel(tokens.facebook.accessToken, tokens.facebook.pageId, resolvedCaption, videoUrl)
+          : isVideo
+            ? postVideoToFacebook(tokens.facebook.accessToken, tokens.facebook.pageId, resolvedCaption, videoUrl, coverImageUrl)
+            : postToFacebook(tokens.facebook.accessToken, tokens.facebook.pageId, resolvedCaption, mediaUrls);
       platformPromises.push(fbAction.then(result => ({ platform: 'facebook', result })));
     }
 
@@ -238,6 +255,12 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
     }
 
     // Broadcast concurrently
+    if (platformPromises.length === 0) {
+      const message = 'No publishable platforms were resolved. Reconnect/select the target account and try again.';
+      await updateBroadcastResults(broadcastId, { ...results, unknown: { success: false, error: message } }, 'failed');
+      throw new Error(message);
+    }
+
     const platformResults = await Promise.allSettled(platformPromises);
     for (const promiseResult of platformResults) {
       if (promiseResult.status === 'fulfilled') {
@@ -250,9 +273,20 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
         };
       }
     }
+    const instagramResults = Object.entries(results)
+      .filter(([platform]) => platform === 'instagram' || platform.startsWith('instagram:'))
+      .map(([, result]) => result);
+    if (instagramResults.length > 0) {
+      results.instagram = instagramResults.find((result) => result?.success) || instagramResults[0];
+      results.instagramAccounts = instagramResults;
+    }
 
     const failedPlatformEntries = Object.entries(results)
-      .filter(([platform, result]) => platform !== 'mediaUrl' && platform !== 'mediaUrls' && result?.success === false)
+      .filter(([platform, result]) =>
+        !['mediaUrl', 'mediaUrls', 'instagramAccounts'].includes(platform) &&
+        !(platform === 'instagram' && results.instagramAccounts) &&
+        result?.success === false
+      )
       .map(([platform, result]) => ({
         platform,
         error: result.error || 'Unknown error',
@@ -263,7 +297,7 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
       const status = failedPlatforms.length === platformPromises.length ? 'failed' : 'sent';
       await updateBroadcastResults(broadcastId, results, status);
       const requiresReconnect = failedPlatformEntries.some((failure) =>
-        failure.platform === 'instagram' && isInstagramAuthError(failure.error)
+        (failure.platform === 'instagram' || failure.platform.startsWith('instagram:')) && isInstagramAuthError(failure.error)
       );
       const error = new Error(
         `${requiresReconnect ? 'REAUTH_REQUIRED: ' : ''}Platform publishing failed - ${failedPlatforms.join(' | ')}`
@@ -278,7 +312,7 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
     // Update DB with results
     await updateBroadcastResults(broadcastId, results, 'sent');
 
-    if (platData?.autoDMConfig?.enabled && results.instagram?.success) {
+    if (platData?.autoDMConfig?.enabled && instagramPostType !== 'story' && results.instagram?.success) {
       try {
         await createOrUpdateComposerAutomation({
           user: { userId },

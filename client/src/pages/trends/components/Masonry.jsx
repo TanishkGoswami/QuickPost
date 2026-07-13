@@ -104,7 +104,7 @@ export function BalancedMasonry({ items, renderItem, estimateHeight = estimateTr
           const filler = {
             type: "filler",
             height,
-            key: `gap-filler-\${columnIndex}-\${fillerIndex}-\${items.length}`,
+            key: `gap-filler-${columnIndex}-${fillerIndex}-${items.length}`,
           };
 
           column.items.push(filler);
@@ -122,7 +122,7 @@ export function BalancedMasonry({ items, renderItem, estimateHeight = estimateTr
     <div className="flex items-start -ml-6">
       {columns.map((column, columnIndex) => (
         // Increased padding left for wider gaps
-        <div className="flex-1 min-w-0 pl-6 bg-clip-padding" key={`col-\${columnIndex}`}>
+        <div className="flex-1 min-w-0 pl-6 bg-clip-padding" key={`col-${columnIndex}`}>
           {column.items.map((item, index) => renderItem(item, index, columnIndex))}
         </div>
       ))}

@@ -741,15 +741,56 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
 
   if (!post) return null;
 
+  const selectedBasePlatforms = new Set([
+    ...(post.selected_channels || []),
+    ...(post.platform_data?.selectedChannels || []),
+  ].map((channel) => String(channel).split(':')[0]));
+  const postType = post.platform_data?.postType || post.platform_data?.instagram?.type;
+
   const postedPlatforms = Object.entries(PLATFORM_CONFIG)
-    .map(([id, cfg]) => ({
-      id,
-      ...cfg,
-      success: post[`${id}_success`],
-      error:   post[`${id}_error`],
-      url:     post[`${id}_url`] || post[`${id}_shorts_url`],
-    }))
-    .filter(p => p.success || (p.error && p.error !== 'Not selected'));
+    .map(([id, cfg]) => {
+      let finalFormats = cfg.formats;
+      const presetId = post?.platform_data?.parsedPresets?.[id]
+        || (id === 'instagram' && postType === 'story' ? 'ig-story' : '');
+      if (presetId) {
+        let matchedIndex = -1;
+        if (id === 'instagram') {
+           if (presetId.includes('square')) matchedIndex = cfg.formats.findIndex(f => f.id === 'ig_post');
+           else if (presetId.includes('portrait')) matchedIndex = cfg.formats.findIndex(f => f.id === 'ig_port');
+           else if (presetId.includes('reel')) matchedIndex = cfg.formats.findIndex(f => f.id === 'ig_reel');
+           else if (presetId.includes('story')) matchedIndex = cfg.formats.findIndex(f => f.id === 'ig_story');
+           else if (presetId.includes('landscape')) matchedIndex = cfg.formats.findIndex(f => f.id === 'ig_post');
+        } else if (id === 'linkedin') {
+           if (presetId.includes('square')) matchedIndex = cfg.formats.findIndex(f => f.id === 'li_sq');
+           else if (presetId.includes('portrait')) matchedIndex = cfg.formats.findIndex(f => f.id === 'li_port');
+           else if (presetId.includes('feed') || presetId.includes('image')) matchedIndex = cfg.formats.findIndex(f => f.id === 'li_feed');
+        } else if (id === 'facebook') {
+           if (presetId.includes('image') || presetId.includes('feed')) matchedIndex = cfg.formats.findIndex(f => f.id === 'fb_feed');
+           else if (presetId.includes('reel')) matchedIndex = cfg.formats.findIndex(f => f.id === 'fb_reel');
+           else if (presetId.includes('story')) matchedIndex = cfg.formats.findIndex(f => f.id === 'fb_story');
+           else if (presetId.includes('square')) matchedIndex = cfg.formats.findIndex(f => f.id === 'fb_sq');
+        } else if (id === 'x') {
+           if (presetId.includes('square')) matchedIndex = cfg.formats.findIndex(f => f.id === 'x_square');
+           else if (presetId.includes('image')) matchedIndex = cfg.formats.findIndex(f => f.id === 'x_post');
+        } else if (id === 'youtube') {
+           if (presetId.includes('shorts')) matchedIndex = cfg.formats.findIndex(f => f.id === 'yt_short');
+           else if (presetId.includes('community') || presetId.includes('video')) matchedIndex = cfg.formats.findIndex(f => f.id === 'yt_thumb');
+        }
+        if (matchedIndex !== -1) {
+           finalFormats = [cfg.formats[matchedIndex]];
+        }
+      }
+      return {
+        id,
+        ...cfg,
+        formats: finalFormats,
+        success: post[`${id}_success`] || (selectedBasePlatforms.has(id) && post.status === 'sent'),
+        error:   post[`${id}_error`],
+        url:     post[`${id}_url`] || post[`${id}_shorts_url`],
+        selected: selectedBasePlatforms.has(id),
+      };
+    })
+    .filter(p => p.selected || p.success || (p.error && p.error !== 'Not selected'));
 
   const activePlatform = postedPlatforms[activePlatformIdx];
   const activeFormat   = activePlatform?.formats?.[activeFormatIdx] || activePlatform?.formats?.[0];

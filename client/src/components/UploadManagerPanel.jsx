@@ -44,8 +44,8 @@ function cleanUploadError(error = '') {
     return 'The file size exceeds the limit. Please use a smaller file or compress it to continue.';
   }
 
-  // Professional masking of raw errors
-  return 'We encountered a brief interruption while processing your request. Please try again.';
+  // Professional masking of raw errors - wait, no, show the actual error for debugging!
+  return message || 'We encountered a brief interruption while processing your request. Please try again.';
 }
 
 function StatusDot({ colorClass }) {

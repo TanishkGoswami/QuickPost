@@ -49,7 +49,28 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
     }
   };
 
-  const handleDisconnect = async (platform) => {
+  const connectedRows = [
+    ...(connectedAccounts.instagramAccounts || []).map((account) => ({
+      id: `instagram:${account.id}`,
+      provider: "instagram",
+      accountId: account.id,
+      label: "Instagram",
+      username: account.username,
+      profilePicture: account.profilePicture,
+    })),
+    ...Object.entries(connectedAccounts || {})
+      .filter(([id, data]) => id !== "instagram" && id !== "instagramAccounts" && data?.connected)
+      .map(([id, data]) => ({
+        id,
+        provider: id,
+        accountId: null,
+        label: id,
+        username: data.username,
+        profilePicture: data.profilePicture,
+      })),
+  ];
+
+  const handleDisconnect = async (platform, accountId = null) => {
     const message = platform === "instagram"
       ? `Are you sure you want to disconnect your ${platform} account? This will pause any active automations. Your automations will be restored when you reconnect.`
       : `Are you sure you want to disconnect your ${platform} account?`;
@@ -63,9 +84,12 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
       },
     );
     if (!confirmed) return;
-    setDisconnectingPlatform(platform);
+    const busyKey = accountId || platform;
+    setDisconnectingPlatform(busyKey);
     try {
-      const response = await apiClient.delete(`/api/auth/disconnect/${platform}`);
+      const response = await apiClient.delete(
+        `/api/auth/disconnect/${platform}${accountId ? `?accountId=${accountId}` : ""}`,
+      );
       if (response.data.success) {
         await refreshAccounts();
         alert("Success", `Disconnected from ${platform}`, { intent: "primary" });
@@ -284,31 +308,37 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
             <div style={{ padding: "24px 32px" }}>
               <div className="eyebrow" style={{ marginBottom: 12 }}>Connected Accounts</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {Object.entries(connectedAccounts || {}).filter(([_, data]) => data?.connected).map(([id, data]) => (
-                  <div key={id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: "var(--r-btn)", background: "var(--canvas)", border: "1px solid rgba(20,20,19,0.08)" }}>
+                {connectedRows.map((row) => (
+                  <div key={row.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: "var(--r-btn)", background: "var(--canvas)", border: "1px solid rgba(20,20,19,0.08)" }}>
                     <div style={{ width: 34, height: 34, borderRadius: "var(--r-sm)", background: "var(--white)", border: "1px solid rgba(20,20,19,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {PLATFORM_ICONS[id] ? (
+                      {row.profilePicture ? (
                         <img
-                          src={PLATFORM_ICONS[id]}
-                          alt={`${id} logo`}
+                          src={row.profilePicture}
+                          alt=""
+                          style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }}
+                        />
+                      ) : PLATFORM_ICONS[row.provider] ? (
+                        <img
+                          src={PLATFORM_ICONS[row.provider]}
+                          alt={`${row.provider} logo`}
                           style={{ width: 22, height: 22, objectFit: "contain" }}
                         />
                       ) : (
                         <span style={{ fontSize: 12, fontWeight: 800, color: "var(--slate)", textTransform: "uppercase" }}>
-                          {id.slice(0, 1)}
+                          {row.label.slice(0, 1)}
                         </span>
                       )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", margin: 0, textTransform: 'capitalize' }}>{id}</p>
-                      <p style={{ fontSize: 12, color: 'var(--slate)', margin: 0 }}>{data.username || 'Connected'}</p>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", margin: 0, textTransform: 'capitalize' }}>{row.label}</p>
+                      <p style={{ fontSize: 12, color: 'var(--slate)', margin: 0 }}>{row.username ? `@${row.username}` : 'Connected'}</p>
                     </div>
                     <button
-                      onClick={() => handleDisconnect(id)}
-                      disabled={disconnectingPlatform === id}
+                      onClick={() => handleDisconnect(row.provider, row.accountId)}
+                      disabled={disconnectingPlatform === (row.accountId || row.provider)}
                       style={{ fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: "var(--r-btn)", border: "1px solid #dc2626", color: "#dc2626", background: "none", cursor: "pointer" }}
                     >
-                      {disconnectingPlatform === id ? "..." : "Disconnect"}
+                      {disconnectingPlatform === (row.accountId || row.provider) ? "..." : "Disconnect"}
                     </button>
                   </div>
                 ))}

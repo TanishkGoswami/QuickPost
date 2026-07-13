@@ -110,9 +110,9 @@ export default function AllTrendsPage() {
 
   const { newsItems, memeItems, videoItems } = useMemo(() => {
     return {
-      newsItems: news.map((n, i) => ({ ...n, _type: "news", _sid: n.url || `n-\${i}` })),
-      memeItems: memes.map((m, i) => ({ ...m, _type: "meme", _sid: m.url || m.link || `m-\${i}` })),
-      videoItems: videos.map((v, i) => ({ ...v, _type: "video", _sid: v.url || v.id || `v-\${i}` })),
+      newsItems: news.map((n, i) => ({ ...n, _type: "news", _sid: n.url || `n-${i}` })),
+      memeItems: memes.map((m, i) => ({ ...m, _type: "meme", _sid: m.url || m.link || `m-${i}` })),
+      videoItems: videos.map((v, i) => ({ ...v, _type: "video", _sid: v.url || v.id || `v-${i}` })),
     };
   }, [news, memes, videos]);
 
@@ -155,7 +155,7 @@ export default function AllTrendsPage() {
       ...LOAD_MORE_SKH.map((height, index) => ({
         type: "skeleton",
         height,
-        key: `trend-load-\${feed.length}-\${index}`,
+        key: `trend-load-${feed.length}-${index}`,
       })),
     ];
   }, [feed, loadingMore]);
@@ -247,7 +247,7 @@ export default function AllTrendsPage() {
         {/* Loading skeletons */}
         {loading && feed.length === 0 && (
           <BalancedMasonry
-            items={SKH.map((height, index) => ({ type: "skeleton", height, key: `initial-\${index}` }))}
+            items={SKH.map((height, index) => ({ type: "skeleton", height, key: `initial-${index}` }))}
             renderItem={(entry, index, columnIndex) => (
               <Skeleton key={entry.key} dark={(index + columnIndex) % 3 === 1} imgH={entry.height} />
             )}

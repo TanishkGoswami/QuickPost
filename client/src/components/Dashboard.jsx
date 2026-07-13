@@ -822,7 +822,7 @@ function PinterestCard({ post, onOpen, formatDate }) {
               pointerEvents: "none",
             }}
           >
-            {post.media_type || "media"}
+            {post.platform_data?.postType || post.postType || post.post_type || post.media_type || "media"}
           </div>
         </div>
       ) : (
@@ -1021,6 +1021,19 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
                   Scheduled
                 </div>
               )}
+              <div
+                style={{
+                  fontSize: 9,
+                  fontWeight: 800,
+                  color: css.arc,
+                  background: "rgba(255, 86, 0, 0.08)",
+                  padding: "2px 8px",
+                  borderRadius: css.r_pill,
+                  textTransform: "uppercase",
+                }}
+              >
+                {post.platform_data?.postType || post.postType || post.post_type || post.media_type || "media"}
+              </div>
               {expanded ? (
                 <ChevronUp size={16} style={{ color: css.arc }} />
               ) : (
@@ -1301,7 +1314,7 @@ function Dashboard() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState("grid");
+  const [viewMode, setViewMode] = useState("list");
   const [selectedPost, setSelectedPost] = useState(null);
   const [queueCount, setQueueCount] = useState(0);
 

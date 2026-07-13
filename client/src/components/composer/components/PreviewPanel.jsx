@@ -100,7 +100,7 @@ const MediaCarousel = memo(function MediaCarousel({ mediaFiles, cssClass }) {
           {current.isVideo ? (
             <video
               src={current.url}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain bg-black"
               muted
               playsInline
               autoPlay
@@ -109,7 +109,7 @@ const MediaCarousel = memo(function MediaCarousel({ mediaFiles, cssClass }) {
           ) : (
             <img
               src={current.url}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain bg-black"
               alt=""
             />
           )}
@@ -457,7 +457,7 @@ const YouTubePreview = memo(
           {thumbUrl ? (
             <img
               src={thumbUrl}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-contain bg-black"
               alt="Thumbnail"
             />
           ) : (
@@ -882,6 +882,11 @@ const PreviewPanel = memo(function PreviewPanel({
   connectedAccounts,
 }) {
   const activeId = activePlatform || selectedChannels[0] || null;
+  const baseActiveId = String(activeId || "").split(":")[0];
+  const selectedInstagramId = selectedChannels.find((channel) => String(channel).startsWith("instagram:"))?.split(":")[1];
+  const selectedInstagramAccount = selectedInstagramId
+    ? connectedAccounts?.instagramAccounts?.find((account) => String(account.id) === selectedInstagramId)
+    : null;
 
   // Compute CSS class for the media container from the selected ratio
   const cssClass = useMemo(() => {
@@ -889,9 +894,9 @@ const PreviewPanel = memo(function PreviewPanel({
     return found?.cssClass || "aspect-square";
   }, [selectedRatio]);
 
-  const PreviewComponent = PREVIEW_MAP[activeId] || GenericPreview;
-  const platformUsername = connectedAccounts?.[activeId]?.username || "your_account";
-  const platformPicture = connectedAccounts?.[activeId]?.profilePicture || user?.picture;
+  const PreviewComponent = PREVIEW_MAP[baseActiveId] || GenericPreview;
+  const platformUsername = selectedInstagramAccount?.username || connectedAccounts?.[baseActiveId]?.username || "your_account";
+  const platformPicture = selectedInstagramAccount?.profilePicture || connectedAccounts?.[baseActiveId]?.profilePicture || user?.picture;
 
   return (
     <div
@@ -916,7 +921,8 @@ const PreviewPanel = memo(function PreviewPanel({
           }}
         >
           {selectedChannels.map((pid) => {
-            const meta = PLATFORM_META[pid];
+            const basePid = String(pid || "").split(":")[0];
+            const meta = PLATFORM_META[basePid];
             if (!meta) return null;
             const isActive = activeId === pid;
             return (
