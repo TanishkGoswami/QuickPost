@@ -29,6 +29,8 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
   const [imgError, setImgError] = useState(false);
 
+  const isEditorPage = location.pathname.includes('/dashboard/auto-dm/automations/') && location.pathname !== '/dashboard/auto-dm/automations';
+
   if (!user) return null;
 
   const handleLogout = async () => {
@@ -47,10 +49,34 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
     }
   };
 
-  const handleDisconnect = async (platform) => {
+  const connectedRows = [
+    ...(connectedAccounts.instagramAccounts || []).map((account) => ({
+      id: `instagram:${account.id}`,
+      provider: "instagram",
+      accountId: account.id,
+      label: "Instagram",
+      username: account.username,
+      profilePicture: account.profilePicture,
+    })),
+    ...Object.entries(connectedAccounts || {})
+      .filter(([id, data]) => id !== "instagram" && id !== "instagramAccounts" && data?.connected)
+      .map(([id, data]) => ({
+        id,
+        provider: id,
+        accountId: null,
+        label: id,
+        username: data.username,
+        profilePicture: data.profilePicture,
+      })),
+  ];
+
+  const handleDisconnect = async (platform, accountId = null) => {
+    const message = platform === "instagram"
+      ? `Are you sure you want to disconnect your ${platform} account? This will pause any active automations. Your automations will be restored when you reconnect.`
+      : `Are you sure you want to disconnect your ${platform} account?`;
     const confirmed = await confirm(
       "Disconnect Account",
-      `Are you sure you want to disconnect your ${platform} account?`,
+      message,
       {
         intent: "danger",
         confirmText: "Disconnect",
@@ -58,9 +84,12 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
       },
     );
     if (!confirmed) return;
-    setDisconnectingPlatform(platform);
+    const busyKey = accountId || platform;
+    setDisconnectingPlatform(busyKey);
     try {
-      const response = await apiClient.delete(`/api/auth/disconnect/${platform}`);
+      const response = await apiClient.delete(
+        `/api/auth/disconnect/${platform}${accountId ? `?accountId=${accountId}` : ""}`,
+      );
       if (response.data.success) {
         await refreshAccounts();
         alert("Success", `Disconnected from ${platform}`, { intent: "primary" });
@@ -91,6 +120,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
 
   return (
     <header
+      className="qp-header"
       style={{
         position: "fixed",
         top: 0,
@@ -98,22 +128,24 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
         left: isDesktop && !isTrendsPage ? 240 : 0,
         zIndex: 39,
         height: 56,
-        background: "rgba(255, 255, 255, 0.8)",
+        background: "rgba(245, 241, 236, 0.94)",
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
-        borderBottom: "1px solid rgba(20,20,19,0.06)",
+        borderBottom: "1px solid #d3cec6",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         padding: isDesktop ? "0 24px" : "0 16px",
-        fontFamily: "var(--font)",
+        fontFamily: "var(--font-body)",
         transition: "left 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div id="header-left-portal"></div>
         {/* Back Button on Trends Page */}
         {isTrendsPage && (
           <button
+            className="qp-header-icon-button"
             onClick={() => navigate('/dashboard')}
             aria-label="Go Back"
             style={{
@@ -138,6 +170,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
         {/* Mobile menu toggle */}
         {!isDesktop && !isTrendsPage && (
           <button
+            className="qp-header-icon-button"
             onClick={onMenuClick}
             aria-label="Toggle Menu"
             style={{
@@ -161,8 +194,12 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
 
       {/* Right: Actions + user pill */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ display: "flex", gap: 6 }}>
+        <div id="header-actions-portal" style={{ display: "flex", alignItems: "center", gap: 12 }}></div>
+        {!isEditorPage && (
+          <>
+            <div style={{ display: "flex", gap: 6 }}>
           <button
+            className="qp-header-icon-button"
             onClick={handleSettingsClick}
             title="Connections"
             style={{
@@ -185,21 +222,18 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
           </button>
           <button
             onClick={handleLogout}
-            className="group flex items-center justify-start w-[36px] hover:w-[100px] h-[36px] border-none rounded-full hover:rounded-[18px] cursor-pointer relative overflow-hidden transition-all duration-300 shadow-[1px_1px_5px_rgba(0,0,0,0.08)] bg-[#141413] active:translate-x-[1px] active:translate-y-[1px]"
+            className="flex items-center gap-2 px-4 h-9 bg-red-50 hover:bg-red-500 text-red-600 hover:text-white font-semibold rounded-lg transition-all duration-200 border border-red-200 hover:border-red-500 shadow-sm"
+            aria-label="Logout"
+            title="Logout"
           >
-            <div className="flex items-center justify-center w-full group-hover:w-[35%] transition-all duration-300 group-hover:pl-4">
-              <svg viewBox="0 0 512 512" className="w-[16px] fill-white">
-                <path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z" />
-              </svg>
-            </div>
-            <div className="absolute right-0 w-0 group-hover:w-[65%] opacity-0 group-hover:opacity-100 text-white text-[11px] font-semibold transition-all duration-300 group-hover:pr-3 whitespace-nowrap">
-              Logout
-            </div>
+            <LogOut size={16} strokeWidth={2.5} />
+            <span className="text-[13px] tracking-wide">Logout</span>
           </button>
         </div>
 
         {/* User pill */}
         <div
+          className="qp-header-user-pill"
           aria-label={`Account: ${user.name || user.email}`}
           style={{
             display: "flex",
@@ -259,6 +293,8 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
             {user.name || "Account"}
           </span>
         </div>
+          </>
+        )}
       </div>
 
       {/* Settings Modal */}
@@ -272,31 +308,37 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
             <div style={{ padding: "24px 32px" }}>
               <div className="eyebrow" style={{ marginBottom: 12 }}>Connected Accounts</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {Object.entries(connectedAccounts || {}).filter(([_, data]) => data?.connected).map(([id, data]) => (
-                  <div key={id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: "var(--r-btn)", background: "var(--canvas)", border: "1px solid rgba(20,20,19,0.08)" }}>
+                {connectedRows.map((row) => (
+                  <div key={row.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: "var(--r-btn)", background: "var(--canvas)", border: "1px solid rgba(20,20,19,0.08)" }}>
                     <div style={{ width: 34, height: 34, borderRadius: "var(--r-sm)", background: "var(--white)", border: "1px solid rgba(20,20,19,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {PLATFORM_ICONS[id] ? (
+                      {row.profilePicture ? (
                         <img
-                          src={PLATFORM_ICONS[id]}
-                          alt={`${id} logo`}
+                          src={row.profilePicture}
+                          alt=""
+                          style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }}
+                        />
+                      ) : PLATFORM_ICONS[row.provider] ? (
+                        <img
+                          src={PLATFORM_ICONS[row.provider]}
+                          alt={`${row.provider} logo`}
                           style={{ width: 22, height: 22, objectFit: "contain" }}
                         />
                       ) : (
                         <span style={{ fontSize: 12, fontWeight: 800, color: "var(--slate)", textTransform: "uppercase" }}>
-                          {id.slice(0, 1)}
+                          {row.label.slice(0, 1)}
                         </span>
                       )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", margin: 0, textTransform: 'capitalize' }}>{id}</p>
-                      <p style={{ fontSize: 12, color: 'var(--slate)', margin: 0 }}>{data.username || 'Connected'}</p>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", margin: 0, textTransform: 'capitalize' }}>{row.label}</p>
+                      <p style={{ fontSize: 12, color: 'var(--slate)', margin: 0 }}>{row.username ? `@${row.username}` : 'Connected'}</p>
                     </div>
                     <button
-                      onClick={() => handleDisconnect(id)}
-                      disabled={disconnectingPlatform === id}
+                      onClick={() => handleDisconnect(row.provider, row.accountId)}
+                      disabled={disconnectingPlatform === (row.accountId || row.provider)}
                       style={{ fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: "var(--r-btn)", border: "1px solid #dc2626", color: "#dc2626", background: "none", cursor: "pointer" }}
                     >
-                      {disconnectingPlatform === id ? "..." : "Disconnect"}
+                      {disconnectingPlatform === (row.accountId || row.provider) ? "..." : "Disconnect"}
                     </button>
                   </div>
                 ))}

@@ -109,7 +109,7 @@ export default function TermsOfService() {
 
               <div style={{ padding: 24, background: 'var(--ink)', borderRadius: 'var(--r-btn)', color: 'var(--canvas)', position: 'relative', overflow: 'hidden' }}>
                  <svg aria-hidden="true" style={{ position: 'absolute', bottom: -20, left: -20, opacity: 0.15, pointerEvents: 'none' }} width="150" height="150" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="45" stroke="#F37338" strokeWidth="2" fill="none" />
+                    <circle cx="50" cy="50" r="45" stroke="#FF5600" strokeWidth="2" fill="none" />
                  </svg>
                  <div style={{ position: 'relative', zIndex: 1 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--arc)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>Legal Affairs</p>
@@ -213,7 +213,7 @@ export default function TermsOfService() {
                       <strong style={{ fontWeight: 700 }}>YouTube:</strong> By using YouTube broadcasting, you agree to the <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--signal)', textDecoration: 'underline' }}>YouTube Terms of Service</a>.
                     </p>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: 24, background: 'rgba(243,115,56,0.05)', borderRadius: 'var(--r-btn)', border: '1px solid rgba(243,115,56,0.2)' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: 24, background: 'rgba(255,86,0,0.05)', borderRadius: 'var(--r-btn)', border: '1px solid rgba(255,86,0,0.2)' }}>
                     <Info size={20} color="var(--arc)" style={{ marginTop: 2, flexShrink: 0 }} />
                     <p style={{ fontSize: 15, fontWeight: 500, color: 'var(--ink)', margin: 0, lineHeight: 1.6 }}>
                       <strong style={{ fontWeight: 700 }}>Meta:</strong> Access to Facebook and Instagram is subject to <a href="https://www.facebook.com/terms.php" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--arc)', textDecoration: 'underline' }}>Meta's Terms</a> and Developer Policies.
@@ -257,7 +257,7 @@ export default function TermsOfService() {
                  <div style={{ background: 'var(--ink)', borderRadius: 'var(--r-hero)', padding: 64, textAlign: 'center', color: 'var(--canvas)', position: 'relative', overflow: 'hidden' }}>
                     {/* Orbital Arc Background */}
                    <svg aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', opacity: 0.4 }} viewBox="0 0 1000 400" preserveAspectRatio="none">
-                     <path d="M -50 320 Q 250 60 600 280 Q 800 400 1100 150" stroke="#F37338" strokeWidth="1.5" fill="none" />
+                     <path d="M -50 320 Q 250 60 600 280 Q 800 400 1100 150" stroke="#FF5600" strokeWidth="1.5" fill="none" />
                    </svg>
                    
                    <div style={{ position: 'relative', zIndex: 1 }}>

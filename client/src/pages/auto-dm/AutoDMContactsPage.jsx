@@ -91,7 +91,7 @@ function MessageHistoryDialog({ contact, messages, loading, onClose }) {
             <div className="autodm-empty">Loading messages...</div>
           ) : messages.length === 0 ? (
             <div className="autodm-empty">
-              <MessageCircle size={34} />
+              <img src="https://illustrations.popsy.co/amber/graphic-design.svg" className="h-32 object-contain mx-auto mb-4" alt="No Message History" />
               <p>No message history yet</p>
             </div>
           ) : (
@@ -184,7 +184,7 @@ export default function AutoDMContactsPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <AutoDMAccountSwitcher />
-          <button type="button" className="btn-secondary" onClick={exportCSV} disabled={contacts.length === 0}>
+          <button type="button" className="btn-secondary flex items-center justify-center gap-2 px-4" onClick={exportCSV} disabled={contacts.length === 0}>
             <Download size={15} />
             Export
           </button>
@@ -220,7 +220,7 @@ export default function AutoDMContactsPage() {
           </div>
         ) : paginated.length === 0 ? (
           <div className="autodm-empty">
-            <MessageCircle size={36} />
+            <img src="https://illustrations.popsy.co/amber/product-launch.svg" className="h-40 object-contain mx-auto mb-4" alt="No Contacts" />
             <p>No contacts found</p>
             <span>Contacts appear after someone interacts with an automation.</span>
           </div>

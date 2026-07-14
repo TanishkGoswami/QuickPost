@@ -14,7 +14,7 @@ import { motion } from "framer-motion";
 import { Search, X, Zap, Cpu, BarChart2, Activity, Trophy, Tv2, TrendingUp, Music, Globe, Flame } from "lucide-react";
 import { NICHES, PLATFORMS, CONTENT_TYPES } from "../data/trendsData";
 
-const C = { ink: "#141413", canvas: "#f2f0ed", white: "#ffffff", slate: "#6b6b68", dust: "#c4bfb8", arc: "#f37338", border: "rgba(20,20,19,0.09)" };
+const C = { ink: "#111111", canvas: "#f2f0ed", white: "#ffffff", slate: "#6b6b68", dust: "#c4bfb8", arc: "#ff5600", border: "rgba(20,20,19,0.09)" };
 
 const NICHE_ICONS = {
   "All": <Zap size={13} />, "AI & Tech": <Cpu size={13} />, "Trading": <BarChart2 size={13} />,

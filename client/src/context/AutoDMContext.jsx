@@ -12,9 +12,9 @@ export function AutoDMProvider({ children }) {
   const [error, setError] = useState(null);
   const [activeAccount, setActiveAccount] = useState(null);
   const [automations, setAutomations] = useState([]);
-  const [automationsLoading, setAutomationsLoading] = useState(false);
+  const [automationsLoading, setAutomationsLoading] = useState(true);
   const [contacts, setContacts] = useState([]);
-  const [contactsLoading, setContactsLoading] = useState(false);
+  const [contactsLoading, setContactsLoading] = useState(true);
   const loadedRef = useRef(false);
   const autoSyncAttemptedRef = useRef(false);
   const hasPostingInstagram = Boolean(connectedAccounts?.instagram?.connected);
@@ -102,14 +102,15 @@ export function AutoDMProvider({ children }) {
     return startAutoDMInstagramOAuth(window.location.origin);
   }, []);
 
-  const loadAutomations = useCallback(async () => {
+  const loadAutomations = useCallback(async (skipLoading = false) => {
     if (!activeAccount?.id) {
       setAutomations([]);
+      if (!skipLoading) setAutomationsLoading(false);
       return;
     }
 
     try {
-      setAutomationsLoading(true);
+      if (!skipLoading) setAutomationsLoading(true);
       const res = await apiClient.get('/api/autodm/automations', {
         params: { instagramAccountId: activeAccount.id },
       });
@@ -117,12 +118,15 @@ export function AutoDMProvider({ children }) {
     } catch (err) {
       console.error('[AutoDM] Automations load error:', err);
     } finally {
-      setAutomationsLoading(false);
+      if (!skipLoading) setAutomationsLoading(false);
     }
   }, [activeAccount?.id]);
 
   const loadContacts = useCallback(async () => {
-    if (!activeAccount?.id) return;
+    if (!activeAccount?.id) {
+      setContactsLoading(false);
+      return;
+    }
     try {
       setContactsLoading(true);
       const res = await apiClient.get('/api/autodm/contacts', {

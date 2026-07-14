@@ -17,6 +17,8 @@ const platforms = [
   { id: "instagram",  name: "Instagram",       icon: "/icons/ig-instagram-icon.svg",              type: "oauth-instagram" },
   { id: "facebook",   name: "Facebook",         icon: "/icons/facebook-round-color-icon.svg",      type: "oauth-facebook" },
   { id: "linkedin",   name: "LinkedIn",         icon: "/icons/linkedin-icon.svg",                  type: "modal-linkedin" },
+
+
   { id: "youtube",    name: "YouTube",          icon: "/icons/youtube-color-icon.svg",             type: "oauth" },
   { id: "threads",    name: "Threads",          icon: "/icons/threads-icon.svg",                   type: "oauth" },
   { id: "mastodon",   name: "Mastodon",         icon: "/icons/mastodon-round-icon.svg",            type: "modal-mastodon" },
@@ -89,99 +91,54 @@ export default function ConnectChannelsModal() {
     <>
       <AnimatePresence>
         {visible && (
-          <>
-            {/* Backdrop + centering container */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={dismiss}
+            className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6"
+          >
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={dismiss}
-              style={{
-                position: "fixed",
-                inset: 0,
-                background: "rgba(20,20,19,0.55)",
-                backdropFilter: "blur(6px)",
-                zIndex: 9998,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-            {/* Modal */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.92, y: 24 }}
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, y: 16 }}
-              transition={{ type: "spring", stiffness: 340, damping: 28 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", stiffness: 320, damping: 25 }}
               onClick={(e) => e.stopPropagation()}
-              style={{
-                zIndex: 9999,
-                width: "min(520px, 92vw)",
-                background: "rgba(255, 255, 255, 0.95)",
-                backdropFilter: "blur(20px)",
-                borderRadius: 32,
-                boxShadow: "0 36px 110px rgba(20,20,19,0.32), 0 10px 34px rgba(20,20,19,0.12)",
-                overflow: "hidden",
-              }}
+              className="relative w-full max-w-xl bg-white shadow-2xl rounded-3xl overflow-hidden flex flex-col max-h-[90vh]"
             >
-              {/* Header gradient strip */}
-              <div style={{
-                backgroundImage: 'linear-gradient(90deg, rgba(0,0,0,0.58) 0%, rgba(0,0,0,0.32) 42%, rgba(0,0,0,0.48) 100%), linear-gradient(180deg, rgba(0,0,0,0.04), rgba(0,0,0,0.18)), url("/download (2).jpg")',
-                backgroundSize: 'cover',
-                backgroundPosition: '20% 50%',
-                padding: "32px 28px 28px",
-                position: "relative",
-              }}>
+              {/* Header */}
+              <div 
+                className="relative p-8 overflow-hidden bg-cover bg-center"
+                style={{ backgroundImage: "linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.6)), url('/connect-bg.jpg')" }}
+              >
+                
                 <button
                   onClick={dismiss}
-                  style={{
-                    position: "absolute",
-                    top: 16,
-                    right: 16,
-                    width: 32,
-                    height: 32,
-                    borderRadius: "50%",
-                    background: "rgba(255,255,255,0.18)",
-                    backdropFilter: "blur(10px)",
-                    border: "none",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#fff",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.3)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.2)"}
+                  className="absolute top-4 right-4 p-2 bg-black/10 hover:bg-black/20 text-white/90 hover:text-white rounded-full transition-colors backdrop-blur-md"
                 >
-                  <X size={16} />
+                  <X className="w-5 h-5" />
                 </button>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                  
-                  <span style={{ color: "#fff", fontSize: 12, fontWeight: 800, letterSpacing: 1.2, textTransform: "uppercase", textShadow: "0 1px 12px rgba(0,0,0,0.45)" }}>
+                <div className="relative z-10">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/20 text-white/90 text-xs font-semibold tracking-wide uppercase mb-4">
+                    <Sparkles className="w-3.5 h-3.5" />
                     Onboarding
-                  </span>
+                  </div>
+                  <h2 className="text-3xl font-extrabold text-white tracking-tight mb-2">
+                    Connect your channels
+                  </h2>
+                  <p className="text-white/80 font-medium max-w-sm text-sm leading-relaxed">
+                    Post to all your networks from one place. Connect at least one channel to unlock your dashboard.
+                  </p>
                 </div>
-
-                <h2 style={{ color: "#fff", fontSize: 26, fontWeight: 800, margin: 0, lineHeight: 1.2, letterSpacing: "-0.02em", textShadow: "0 2px 18px rgba(0,0,0,0.45)" }}>
-                  Connect your social channels
-                </h2>
-                <p style={{ color: "rgba(255,255,255,0.96)", fontSize: 14, margin: "8px 0 0", lineHeight: 1.5, fontWeight: 650, maxWidth: 420, textShadow: "0 1px 14px rgba(0,0,0,0.48)" }}>
-                  Post to all your networks from one place. Connect at least one channel to unlock your dashboard.
-                </p>
               </div>
 
-              {/* Platform grid */}
-              <div style={{ padding: "24px 28px 12px" }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--slate)", letterSpacing: 1, textTransform: "uppercase", margin: "0 0 16px" }}>
-                  Choose platforms to connect
+              {/* Platform Grid */}
+              <div className="p-8 pb-4 bg-gray-50/50 flex-1 overflow-y-auto">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">
+                  Available Platforms
                 </p>
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))",
-                  gap: 12,
-                }}>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4">
                   {unconnectedPlatforms.map((platform) => (
                     <PlatformTile
                       key={platform.id}
@@ -190,69 +147,35 @@ export default function ConnectChannelsModal() {
                     />
                   ))}
                   {unconnectedPlatforms.length === 0 && (
-                    <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "24px 0", background: "rgba(20,20,19,0.02)", borderRadius: 16 }}>
-                      <p style={{ color: "var(--ink)", fontWeight: 600, fontSize: 14, margin: 0 }}>
-                        All channels connected! 🎉
-                      </p>
+                    <div className="col-span-full py-12 flex flex-col items-center justify-center text-center bg-gray-100/50 rounded-2xl border border-gray-200 border-dashed">
+                      <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-3">
+                        <Sparkles className="w-6 h-6" />
+                      </div>
+                      <p className="text-gray-900 font-semibold">All channels connected! 🎉</p>
+                      <p className="text-sm text-gray-500 mt-1">You're ready to start posting.</p>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Footer */}
-              <div style={{
-                padding: "16px 28px 32px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}>
+              <div className="p-6 bg-white border-t border-gray-100 flex items-center justify-between shrink-0">
                 <button
                   onClick={dismiss}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "var(--slate)",
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    padding: "8px 0",
-                    transition: "color 0.2s",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.color = "var(--ink)"}
-                  onMouseLeave={e => e.currentTarget.style.color = "var(--slate)"}
+                  className="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors rounded-xl hover:bg-gray-100"
                 >
                   Skip for now
                 </button>
                 <button
                   onClick={dismiss}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    backgroundImage: 'linear-gradient(90deg, rgba(0,0,0,0.64), rgba(0,0,0,0.26)), url("/download (2).jpg")',
-                    backgroundSize: 'cover',
-                    backgroundPosition: '20% 50%',
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 14,
-                    padding: "12px 24px",
-                    fontSize: 14,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    boxShadow: "0 10px 28px rgba(0, 0, 0, 0.24)",
-                    textShadow: "0 1px 10px rgba(0,0,0,0.5)",
-                    transition: "transform 0.2s, brightness 0.2s",
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.filter = "brightness(1.1)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.filter = "brightness(1)"; }}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-900 hover:bg-black text-white text-sm font-bold rounded-xl shadow-lg shadow-gray-900/20 transition-all hover:-translate-y-0.5"
                 >
                   Go to Dashboard
-                  <ArrowRight size={16} />
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </motion.div>
-            </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -313,48 +236,20 @@ export default function ConnectChannelsModal() {
 }
 
 function PlatformTile({ platform, onClick }) {
-  const [hovered, setHovered] = useState(false);
-
   return (
     <button
       onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       title={`Connect ${platform.name}`}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 8,
-        padding: "16px 10px",
-        borderRadius: 20,
-        border: "none",
-        background: hovered ? "rgba(243, 115, 56, 0.06)" : "rgba(255,255,255,0.92)",
-        cursor: "pointer",
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        transform: hovered ? "translateY(-4px)" : "none",
-        boxShadow: hovered ? "0 14px 26px rgba(243, 115, 56, 0.14)" : "0 8px 24px rgba(20,20,19,0.06)",
-      }}
+      className="group flex flex-col items-center justify-center gap-3 p-4 bg-white border border-gray-200/60 rounded-2xl cursor-pointer transition-all duration-300 hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/10 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
     >
-      <div style={{
-        width: 40,
-        height: 40,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        transition: "transform 0.3s ease",
-        transform: hovered ? "scale(1.1)" : "none",
-      }}>
-        <img src={platform.icon} alt={platform.name} style={{ width: 32, height: 32, objectFit: "contain" }} />
+      <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-gray-50 group-hover:bg-indigo-50/50 transition-colors duration-300">
+        <img 
+          src={platform.icon} 
+          alt={platform.name} 
+          className="w-7 h-7 object-contain transform transition-transform duration-300 group-hover:scale-110" 
+        />
       </div>
-      <span style={{
-        fontSize: 11,
-        fontWeight: 700,
-        color: hovered ? "var(--ink)" : "var(--slate)",
-        textAlign: "center",
-        lineHeight: 1.2,
-        transition: "color 0.2s",
-      }}>
+      <span className="text-xs font-bold text-gray-600 group-hover:text-indigo-600 transition-colors duration-300 text-center leading-tight">
         {platform.name}
       </span>
     </button>

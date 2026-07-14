@@ -876,10 +876,10 @@ async function handleInboundMessage({ senderId, recipientId, messaging }) {
   if (!usage.allowed) {
     return { skipped: true, reason: 'monthly_reply_limit_reached' };
   }
-  if (usage.entitlements?.plan?.id === 'free') {
-    sendText += '\n\n_⚡ This automation is from SocialPilot (social.getaipilot.in)_';
-  }
+  const isFreePlan = usage.entitlements?.plan?.id === 'free';
+  const watermark = '_⚡ Automation is powered by @Getaipilot_';
 
+  // Send main message
   await sendInstagramMessage({ account, recipientId: senderId, text: sendText, messagingType: 'RESPONSE' });
   await supabase.from('instagram_messages').insert({
     user_id: account.user_id,
@@ -894,6 +894,24 @@ async function handleInboundMessage({ senderId, recipientId, messaging }) {
     confidence_score: reply.confidence,
     status: 'sent',
   });
+
+  // Send watermark as separate message if free plan
+  if (isFreePlan) {
+    await sendInstagramMessage({ account, recipientId: senderId, text: watermark, messagingType: 'RESPONSE' });
+    await supabase.from('instagram_messages').insert({
+      user_id: account.user_id,
+      bot_id: bot.id,
+      instagram_account_id: account.id,
+      conversation_id: conversation.id,
+      sender_id: recipientId,
+      recipient_id: senderId,
+      message_text: watermark,
+      direction: 'outbound',
+      ai_generated: true,
+      confidence_score: reply.confidence,
+      status: 'sent',
+    });
+  }
   await supabase
     .from('instagram_bots')
     .update({ replies_sent_today: quotaBot.repliesSentToday + 1 })

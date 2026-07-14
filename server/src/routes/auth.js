@@ -252,7 +252,7 @@ router.get("/instagram", async (req, res) => {
       { userId },
       CLIENT_URL,
       `Bearer ${token}`,
-      true,
+      false,
     );
     return res.redirect(redirectTo);
   } catch (error) {
@@ -1020,7 +1020,11 @@ router.get("/me", authenticateUser, (req, res) => {
 router.get("/accounts", authenticateUser, async (req, res) => {
   try {
     const accounts = await getConnectedAccounts(req.user);
-    res.json({ success: true, accounts });
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.json({
+      success: true,
+      accounts,
+    });
   } catch (error) {
     console.error("Get accounts error:", error);
     res
@@ -1053,11 +1057,64 @@ router.delete("/disconnect/:provider", authenticateUser, async (req, res) => {
         .json({ success: false, error: "Invalid provider" });
     }
 
-    const { error } = await supabase
+    const { accountId } = req.query;
+    console.log(`[DISCONNECT] provider=${provider}, accountId=${accountId}, userId=${req.user.userId}`);
+
+    if (provider === "instagram") {
+      // Soft-disconnect: preserve automations, contacts, sessions, metrics
+      // (previously this was .delete() which triggered ON DELETE CASCADE
+      //  and permanently destroyed all automations — see instapilot.js for the safe pattern)
+      let igQuery = supabase
+        .from("instagram_accounts")
+        .update({
+          is_connected: false,
+          token_status: "disconnected",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", req.user.userId);
+
+      if (accountId) {
+        igQuery = igQuery.eq("id", accountId);
+      }
+      const { data: igData, error: igError } = await igQuery.select();
+      console.log(`[DISCONNECT] igData=${JSON.stringify(igData)} error=${JSON.stringify(igError)}`);
+      
+      if (igError) throw igError;
+
+      // Pause all active automations for disconnected account(s)
+      // so they don't attempt to run with invalid/null tokens
+      const disconnectedIds = (igData || []).map(a => a.id);
+      if (disconnectedIds.length > 0) {
+        const { error: pauseError } = await supabase
+          .from("automations")
+          .update({ is_active: false, updated_at: new Date().toISOString() })
+          .in("instagram_account_id", disconnectedIds);
+        if (pauseError) {
+          console.warn(`[DISCONNECT] Failed to pause automations: ${pauseError.message}`);
+        } else {
+          console.log(`[DISCONNECT] Paused automations for account(s): ${disconnectedIds.join(", ")}`);
+        }
+      }
+      
+      if (accountId) {
+        return res.json({
+          success: true,
+          message: `Instagram account disconnected successfully`,
+        });
+      }
+    }
+
+    let query = supabase
       .from("social_tokens")
       .delete()
       .eq("user_id", req.user.userId)
       .eq("provider", provider);
+
+    if (accountId && provider !== "instagram") {
+      query = query.eq("id", accountId);
+    }
+
+    const { error } = await query;
 
     if (error) throw error;
 

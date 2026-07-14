@@ -1,5 +1,8 @@
 import express from 'express';
+import fs from 'fs';
 import { authenticateUser } from '../middleware/authenticateUser.js';
+import { upload, handleUploadError } from '../middleware/upload.js';
+import { uploadToCloudinary, isCloudinaryConfigured } from '../services/cloudinary.js';
 import {
   getAutoDMStatus,
   importInstagramAccountToAutoDM,
@@ -21,6 +24,38 @@ import { requireFeature, requireResourceCapacity } from '../middleware/entitleme
 
 
 const router = express.Router();
+
+router.post(
+  '/assets',
+  authenticateUser,
+  requireFeature('autodm'),
+  (req, res, next) => {
+    upload.single('image')(req, res, (err) => {
+      if (err) return handleUploadError(err, req, res, next);
+      next();
+    });
+  },
+  async (req, res) => {
+    if (!req.file) return res.status(400).json({ success: false, error: 'No image uploaded' });
+    if (!req.file.mimetype?.startsWith('image/')) {
+      fs.unlink(req.file.path, () => {});
+      return res.status(400).json({ success: false, error: 'Only image uploads are allowed' });
+    }
+    if (!isCloudinaryConfigured()) {
+      fs.unlink(req.file.path, () => {});
+      return res.status(500).json({ success: false, error: 'Image upload storage is not configured' });
+    }
+
+    try {
+      const result = await uploadToCloudinary(req.file.path, 'image');
+      return res.json({ success: true, url: result.url });
+    } catch (error) {
+      return res.status(400).json({ success: false, error: error.message || 'Image upload failed' });
+    } finally {
+      fs.unlink(req.file.path, () => {});
+    }
+  },
+);
 
 router.get('/bridge-token', authenticateUser, async (req, res) => {
   try {

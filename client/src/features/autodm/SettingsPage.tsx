@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
+import BillingPage from "../../pages/BillingPage";
 import { useAutoDM } from "./AutoDMContext";
 
 export default function SettingsPage() {
@@ -23,13 +24,6 @@ export default function SettingsPage() {
     disconnectAccount,
   } = useAutoDM();
   const [disconnectId, setDisconnectId] = useState(null);
-
-  const planName = socialUser?.entitlements?.plan?.name || "Free";
-  const limits = socialUser?.entitlements?.limits || {
-    autodm_automations: 1,
-    autodm_replies_per_month: 50,
-    autodm_accounts: 1,
-  };
 
   return (
     <div className="space-y-6">
@@ -127,32 +121,7 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="billing" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Plan Access</CardTitle>
-              <CardDescription>Auto DM follows your QuickPost subscription tier.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                <div className="rounded-xl border p-4">
-                  <p className="text-sm text-muted-foreground">Plan</p>
-                  <p className="mt-2 text-xl font-semibold capitalize">{planName}</p>
-                </div>
-                <div className="rounded-xl border p-4">
-                  <p className="text-sm text-muted-foreground">Automations</p>
-                  <p className="mt-2 text-xl font-semibold">{limits.autodm_automations}</p>
-                </div>
-                <div className="rounded-xl border p-4">
-                  <p className="text-sm text-muted-foreground">DMs / Day</p>
-                  <p className="mt-2 text-xl font-semibold">{limits.autodm_replies_per_month}</p>
-                </div>
-                <div className="rounded-xl border p-4">
-                  <p className="text-sm text-muted-foreground">Instagram Accounts</p>
-                  <p className="mt-2 text-xl font-semibold">{limits.autodm_accounts}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <BillingPage embedded />
         </TabsContent>
       </Tabs>
 

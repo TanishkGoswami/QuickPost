@@ -189,7 +189,7 @@ export default function Pricing() {
                   <span style={{
                     fontSize: 10, fontWeight: 700, padding: '2px 6px',
                     borderRadius: 'var(--r-pill)',
-                    background: billing === months ? 'rgba(243,115,56,0.2)' : 'rgba(243,115,56,0.12)',
+                    background: billing === months ? 'rgba(255,86,0,0.2)' : 'rgba(255,86,0,0.12)',
                     color: 'var(--arc)',
                   }}>
                     -{discount}%
@@ -262,7 +262,7 @@ export default function Pricing() {
                   height: 44,
                   borderRadius: "50%",
                   background: plan.highlighted
-                    ? "rgba(243,115,56,0.18)"
+                    ? "rgba(255,86,0,0.18)"
                     : "var(--ink)",
                   color: plan.highlighted ? "var(--arc)" : "var(--canvas)",
                   display: "flex",
@@ -410,7 +410,7 @@ export default function Pricing() {
                         borderRadius: "50%",
                         flexShrink: 0,
                         background: plan.highlighted
-                          ? "rgba(243,115,56,0.18)"
+                          ? "rgba(255,86,0,0.18)"
                           : "rgba(20,20,19,0.06)",
                         display: "flex",
                         alignItems: "center",

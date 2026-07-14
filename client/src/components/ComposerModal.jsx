@@ -87,6 +87,12 @@ const SUGGESTED_HASHTAGS = [
   "#branding",
 ];
 
+const INSTAGRAM_POST_TYPE_PRESETS = {
+  post: "ig-post-square",
+  story: "ig-story",
+  reel: "ig-reel",
+};
+
 const ClockView = memo(function ClockView({ value, onChange, minTime }) {
   const [mode, setMode] = useState("hours"); // 'hours' or 'minutes'
   const initialH = parseInt(value.split(":")[0]) || 0;
@@ -1237,11 +1243,16 @@ function ComposerModal({
   const [selectedChannels, setSelectedChannels] = useState([]);
   const hasInstagram = selectedChannels.some(c => c === "instagram" || c.startsWith("instagram:"));
   const getBasePlatform = (c) => c?.split(':')[0] || c;
+  const normalizeSelectedChannels = (channels) =>
+    channels.some((channel) => String(channel).startsWith("instagram:"))
+      ? channels.filter((channel) => channel !== "instagram")
+      : channels;
   const [caption, setCaption] = useState("");
   const [mediaFiles, setMediaFiles] = useState([]);
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [postType, setPostType] = useState("post");
+  const postTypeRef = useRef("post");
   const [quickSuggestions, setQuickSuggestions] = useState(QUICK_SUGGESTIONS);
   const [suggestedHashtags, setSuggestedHashtags] = useState(SUGGESTED_HASHTAGS);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -1265,6 +1276,32 @@ function ComposerModal({
     reddit: { subreddit: "", title: "", flairId: "" },
     mastodon: { type: "post" },
   });
+  const effectivePostType = hasInstagram
+    ? platformData.instagram?.type || postType
+    : postType;
+  const isInstagramStoryOnly =
+    hasInstagram &&
+    effectivePostType === "story" &&
+    selectedChannels.length > 0 &&
+    selectedChannels.every((channel) => getBasePlatform(channel) === "instagram");
+  const updateInstagramData = useCallback((field, value) => {
+    if (field === "type") {
+      postTypeRef.current = value;
+      setPostType(value);
+      setActivePreviewPlatform("instagram");
+      setPlatformPresets((current) => ({
+        ...current,
+        instagram: INSTAGRAM_POST_TYPE_PRESETS[value] || current.instagram,
+      }));
+    }
+    setPlatformData((current) => ({
+      ...current,
+      instagram: {
+        ...current.instagram,
+        [field]: value,
+      },
+    }));
+  }, []);
   const [autoDMConfig, setAutoDMConfig] = useState(() => ({
     ...defaultComposerAutoDMConfig,
     responseFlow: {
@@ -1374,7 +1411,7 @@ function ComposerModal({
     mediaFiles,
     platformData,
     youtubeThumbnail,
-    postType,
+    postType: effectivePostType,
     caption,
     scheduledAt,
     isScheduled,
@@ -1382,14 +1419,15 @@ function ComposerModal({
   });
 
   /* ── Smart size engine ── */
+  const activePreviewBasePlatform = getBasePlatform(activePreviewPlatform);
   const { smartSizes, availablePresets, selectedRatio } = useSmartSizes({
     selectedChannels,
-    activePlatform: activePreviewPlatform,
-    selectedSizePreset: platformPresets[activePreviewPlatform],
+    activePlatform: activePreviewBasePlatform,
+    selectedSizePreset: platformPresets[activePreviewBasePlatform],
     setSelectedSizePreset: (val) =>
       setPlatformPresets((prev) => ({
         ...prev,
-        [activePreviewPlatform]: val,
+        [activePreviewBasePlatform]: val,
       })),
     onAutoFixed: (msg) => {
       setAutoFixMsg(msg);
@@ -1400,17 +1438,20 @@ function ComposerModal({
   /* ── Available post types (intersection) ── */
   const availablePostTypes = useMemo(() => {
     if (selectedChannels.length === 0) return ["post", "story", "reel"];
-    let common = PLATFORM_POST_TYPES[selectedChannels[0]] || ["post"];
+    let common = PLATFORM_POST_TYPES[getBasePlatform(selectedChannels[0])] || ["post"];
     for (let i = 1; i < selectedChannels.length; i++) {
-      const types = PLATFORM_POST_TYPES[selectedChannels[i]] || ["post"];
+      const types = PLATFORM_POST_TYPES[getBasePlatform(selectedChannels[i])] || ["post"];
       common = common.filter((t) => types.includes(t));
     }
     return common.length > 0 ? common : ["post"];
   }, [JSON.stringify(selectedChannels)]);
 
   useEffect(() => {
-    if (!availablePostTypes.includes(postType))
-      setPostType(availablePostTypes[0] || "post");
+    if (!availablePostTypes.includes(postType)) {
+      const nextType = availablePostTypes[0] || "post";
+      postTypeRef.current = nextType;
+      setPostType(nextType);
+    }
   }, [availablePostTypes, postType]);
 
   /* ── Platform preview sync ── */
@@ -1424,18 +1465,23 @@ function ComposerModal({
   }, [JSON.stringify(selectedChannels), activePreviewPlatform]);
 
   useEffect(() => {
-    if (!hasInstagram && autoDMConfig.enabled) {
+    if ((!hasInstagram || effectivePostType === "story") && autoDMConfig.enabled) {
       setAutoDMConfig((current) => ({ ...current, enabled: false }));
     }
-  }, [JSON.stringify(selectedChannels), autoDMConfig.enabled]);
+  }, [JSON.stringify(selectedChannels), autoDMConfig.enabled, hasInstagram, effectivePostType]);
 
   /* ── Auto-select connected channels on open ── */
   useEffect(() => {
     if (isOpen && selectedChannels.length === 0) {
-      const connected = Object.keys(connectedAccounts).filter(
-        (k) => connectedAccounts[k]?.connected && PLATFORM_META[k],
-      );
-      setSelectedChannels(connected);
+      const instagramChannels = (connectedAccounts.instagramAccounts || [])
+        .map((account) => `instagram:${account.id}`);
+      const connected = [
+        ...instagramChannels,
+        ...Object.keys(connectedAccounts).filter(
+          (key) => key !== "instagram" && connectedAccounts[key]?.connected && PLATFORM_META[key],
+        ),
+      ];
+      setSelectedChannels(normalizeSelectedChannels(connected));
     }
   }, [isOpen]);
 
@@ -1574,13 +1620,13 @@ function ComposerModal({
   /* ── Handlers ── */
   const handleChannelToggle = useCallback((id) => {
     setSelectedChannels((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
+      normalizeSelectedChannels(prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]),
     );
     setError(null);
   }, []);
 
   const handleBulkSelect = useCallback((ids) => {
-    setSelectedChannels(ids);
+    setSelectedChannels(normalizeSelectedChannels(ids));
     setError(null);
   }, []);
 
@@ -1590,7 +1636,7 @@ function ComposerModal({
       setError("Please select at least one platform");
       return false;
     }
-    if (!caption.trim()) {
+    if (!isInstagramStoryOnly && !caption.trim()) {
       setError("Please add a caption");
       return false;
     }
@@ -1602,6 +1648,14 @@ function ComposerModal({
     const hasImg = mediaFiles.some((m) => m.file?.type?.startsWith("image/"));
     const hasVid = mediaFiles.some((m) => m.file?.type?.startsWith("video/"));
 
+    if (effectivePostType === "reel" && !hasVid) {
+      setError("Reels require a video file.");
+      return false;
+    }
+    if (effectivePostType === "story" && mediaFiles.length > 1) {
+      setError("Stories support one image or video at a time.");
+      return false;
+    }
     if (selectedChannels.includes("youtube") && hasImg && !hasVid) {
       setError(
         "YouTube only supports video — please upload a video or deselect YouTube.",
@@ -1639,7 +1693,7 @@ function ComposerModal({
         return false;
       }
     }
-    if (hasInstagram && autoDMConfig.enabled) {
+    if (hasInstagram && effectivePostType !== "story" && autoDMConfig.enabled) {
       if (!autoDMConfig.keywords?.length) {
         setError("Add at least one Auto DM keyword or turn Auto DM off.");
         return false;
@@ -1658,6 +1712,9 @@ function ComposerModal({
     isScheduled,
     scheduledAt,
     autoDMConfig,
+    hasInstagram,
+    effectivePostType,
+    isInstagramStoryOnly,
   ]);
 
   const handleSubmit = async () => {
@@ -1668,14 +1725,33 @@ function ComposerModal({
     try {
       // 1. Prep data
       const formData = new FormData();
-      formData.append("caption", caption);
-      formData.append("selectedChannels", JSON.stringify(selectedChannels));
-      formData.append("postType", postType);
-      formData.append("platformData", JSON.stringify(platformData));
-      formData.append("platformPresets", JSON.stringify(platformPresets));
+      formData.append("caption", isInstagramStoryOnly ? "" : caption);
+      const publishChannels = normalizeSelectedChannels(selectedChannels);
+      const publishPostType = hasInstagram ? postTypeRef.current : effectivePostType;
+      const publishPlatformData = hasInstagram
+        ? {
+            ...platformData,
+            instagram: {
+              ...platformData.instagram,
+              type: publishPostType,
+            },
+          }
+        : platformData;
+      formData.append("selectedChannels", JSON.stringify(publishChannels));
+      formData.append("postType", publishPostType);
+      formData.append("platformData", JSON.stringify(publishPlatformData));
+      
+      formData.append("platformPresets", JSON.stringify(
+        hasInstagram && publishPostType !== 'post'
+          ? {
+              ...platformPresets,
+              instagram: INSTAGRAM_POST_TYPE_PRESETS[publishPostType] || platformPresets.instagram,
+            }
+          : platformPresets
+      ));
       formData.append("userTimezone", userTimezone);
       formData.append("isScheduled", isScheduled ? "true" : "false");
-      if (hasInstagram && autoDMConfig.enabled) {
+      if (hasInstagram && publishPostType !== "story" && autoDMConfig.enabled) {
         formData.append("autoDMConfig", JSON.stringify(autoDMConfig));
       }
 
@@ -1696,7 +1772,7 @@ function ComposerModal({
       formData.append("selectedAspectRatio", selectedRatio || "1:1");
       formData.append(
         "selectedPostSizePreset",
-        platformPresets[activePreviewPlatform] || ""
+        platformPresets[activePreviewBasePlatform] || ""
       );
 
       // 2. Start broadcast via API
@@ -1716,13 +1792,14 @@ function ComposerModal({
 
       // 3. Add to background manager
       const firstMedia = mediaFiles[0];
-      const detectedMediaType = firstMedia?.file?.type?.startsWith("video/")
+      const isGif = firstMedia?.file?.type === "image/gif";
+      const detectedMediaType = (firstMedia?.file?.type?.startsWith("video/") || isGif)
         ? "video"
         : "image";
 
       addJob(res.data.jobId, {
         caption,
-        channels: selectedChannels,
+        channels: publishChannels,
         fileCount: mediaFiles.length,
         mediaType: detectedMediaType,
         previewUrl:
@@ -2130,7 +2207,7 @@ function ComposerModal({
                   caption={caption}
                   mediaFiles={mediaFiles}
                   selectedRatio={selectedRatio}
-                  selectedSizePreset={platformPresets[activePreviewPlatform]}
+                  selectedSizePreset={platformPresets[activePreviewBasePlatform]}
                   youtubeThumbnail={youtubeThumbnail}
                   activePlatform={activePreviewPlatform}
                   onActivePlatformChange={setActivePreviewPlatform}
@@ -2194,236 +2271,301 @@ function ComposerModal({
                       />
                     </Section>
 
-                    {/* Caption */}
-                    <div style={{ position: "relative", marginBottom: 16 }}>
-                      <textarea
-                        value={caption}
-                        onChange={(e) => {
-                          setCaption(e.target.value);
-                          setError(null);
-                        }}
-                        placeholder="What's on your mind?"
-                        style={{
-                          width: "100%",
-                          minHeight: 120,
-                          padding: 14,
-                          background: "white",
-                          border: "1px solid rgba(20,20,19,0.1)",
-                          borderRadius: "var(--r-hero,16px)",
-                          fontSize: 14,
-                          fontFamily: "inherit",
-                          resize: "none",
-                          color: "var(--ink,#141413)",
-                          outline: "none",
-                          transition: "border-color 0.2s",
-                        }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor = "var(--ink)")
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor = "rgba(20,20,19,0.1)")
-                        }
-                      />
-                      {/* Caption helpers */}
-                      {!isMobile && (
+                    {hasInstagram && (
+                      <Section label="Instagram" mb={16}>
                         <div
                           style={{
-                            position: "absolute",
-                            bottom: 12,
-                            right: 12,
-                            display: "flex",
-                            gap: 8,
+                            background: "white",
+                            border: "1px solid rgba(20,20,19,0.08)",
+                            borderRadius: 14,
+                            padding: 14,
                           }}
                         >
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setCaption((p) =>
-                                p
-                                  ? `${p} {{MENTION_SELF}}`
-                                  : "{{MENTION_SELF}}",
-                              )
-                            }
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: "#4f46e5",
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 3,
-                              letterSpacing: "0.05em",
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            <AtSign size={9} /> Mention
-                          </button>
-                          <button
-                            onClick={() => setCaption("")}
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: "var(--slate,#8a8a82)",
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              letterSpacing: "0.05em",
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            Clear
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+                            <img src="/icons/ig-instagram-icon.svg" alt="" style={{ width: 18, height: 18 }} />
+                            <span style={{ fontSize: 14, fontWeight: 800, color: "var(--ink,#141413)" }}>
+                              Instagram
+                            </span>
+                          </div>
 
-                    {/* Quick suggestions */}
-                    <div style={{ marginTop: 10 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <RowLabel>Quick Ideas</RowLabel>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button type="button" onClick={() => scrollContainer(ideasScrollRef, 'left')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronLeft size={14} /></button>
-                          <button type="button" onClick={() => scrollContainer(ideasScrollRef, 'right')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronRight size={14} /></button>
-                          <button type="button" onClick={fetchMoreIdeas} disabled={isFetchingMoreIdeas} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {isFetchingMoreIdeas ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                          </button>
+                          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 16, marginBottom: 16 }}>
+                            {[
+                              ["post", "Feed Post"],
+                              ["story", "Story"],
+                              ["reel", "Reel"],
+                            ].map(([value, label]) => (
+                              <label key={value} className="flex items-center gap-2 cursor-pointer group">
+                                <input
+                                  type="radio"
+                                  name="ig-type"
+                                  checked={(platformData.instagram?.type || "post") === value}
+                                  onChange={() => updateInstagramData("type", value)}
+                                  className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                                />
+                                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
+                                  {label}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+
+                          {effectivePostType !== "story" && (
+                            <>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                First Comment (for hashtags)
+                              </label>
+                              <textarea
+                                value={platformData.instagram?.firstComment || ""}
+                                onChange={(e) => updateInstagramData("firstComment", e.target.value)}
+                                placeholder="Add hashtags as a first comment to keep your caption clean..."
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm resize-none placeholder:text-gray-400 transition-all"
+                                rows={3}
+                                maxLength={2200}
+                              />
+                            </>
+                          )}
                         </div>
-                      </div>
-                      <div
-                        ref={ideasScrollRef}
-                        style={{
-                          display: "flex",
-                          gap: 6,
-                          overflowX: "auto",
-                          paddingBottom: 4,
-                          scrollbarWidth: "none",
-                        }}
-                      >
-                        {quickSuggestions.map((s, i) => (
-                          <motion.button
-                            key={i}
-                            type="button"
-                            whileHover={{
-                              scale: 1.03,
-                              background: "var(--ink,#141413)",
-                              color: "white",
+                      </Section>
+                    )}
+
+                    {!isInstagramStoryOnly && (
+                      <>
+                        {/* Caption */}
+                        <div style={{ position: "relative", marginBottom: 16 }}>
+                          <textarea
+                            value={caption}
+                            onChange={(e) => {
+                              setCaption(e.target.value);
+                              setError(null);
                             }}
-                            whileTap={{ scale: 0.97 }}
-                            onClick={() =>
-                              setCaption(s)
-                            }
+                            placeholder="What's on your mind?"
                             style={{
-                              flexShrink: 0,
-                              padding: "6px 14px",
-                              background: "var(--canvas-lifted,#f5f5f4)",
+                              width: "100%",
+                              minHeight: 120,
+                              padding: 14,
+                              background: "white",
                               border: "1px solid rgba(20,20,19,0.1)",
-                              borderRadius: 20,
-                              fontSize: 13,
-                              color: "var(--slate,#8a8a82)",
-                              cursor: "pointer",
-                              whiteSpace: "nowrap",
+                              borderRadius: "var(--r-hero,16px)",
+                              fontSize: 14,
                               fontFamily: "inherit",
-                              fontWeight: 500,
-                              transition: "all 0.15s",
+                              resize: "none",
+                              color: "var(--ink,#141413)",
+                              outline: "none",
+                              transition: "border-color 0.2s",
                             }}
-                          >
-                            {s}
-                          </motion.button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Hashtags */}
-                    <div style={{ marginTop: 10 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <RowLabel>Hashtags</RowLabel>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button type="button" onClick={() => scrollContainer(hashtagsScrollRef, 'left')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronLeft size={14} /></button>
-                          <button type="button" onClick={() => scrollContainer(hashtagsScrollRef, 'right')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronRight size={14} /></button>
-                          <button type="button" onClick={fetchMoreHashtags} disabled={isFetchingMoreHashtags} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {isFetchingMoreHashtags ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                          </button>
+                            onFocus={(e) =>
+                              (e.target.style.borderColor = "var(--ink)")
+                            }
+                            onBlur={(e) =>
+                              (e.target.style.borderColor = "rgba(20,20,19,0.1)")
+                            }
+                          />
+                          {/* Caption helpers */}
+                          {!isMobile && (
+                            <div
+                              style={{
+                                position: "absolute",
+                                bottom: 12,
+                                right: 12,
+                                display: "flex",
+                                gap: 8,
+                              }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCaption((p) =>
+                                    p
+                                      ? `${p} {{MENTION_SELF}}`
+                                      : "{{MENTION_SELF}}",
+                                  )
+                                }
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  color: "#4f46e5",
+                                  background: "none",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 3,
+                                  letterSpacing: "0.05em",
+                                  textTransform: "uppercase",
+                                }}
+                              >
+                                <AtSign size={9} /> Mention
+                              </button>
+                              <button
+                                onClick={() => setCaption("")}
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  color: "var(--slate,#8a8a82)",
+                                  background: "none",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  letterSpacing: "0.05em",
+                                  textTransform: "uppercase",
+                                }}
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      <div
-                        ref={hashtagsScrollRef}
-                        style={{
-                          display: "flex",
-                          gap: 6,
-                          overflowX: "auto",
-                          alignItems: "center",
-                          scrollbarWidth: "none",
-                        }}
-                      >
-                        <input
-                          type="text"
-                          placeholder="+ Add tag (Enter)"
-                          style={{
-                            fontSize: 13,
-                            padding: "6px 14px",
-                            border: "1px dashed rgba(20,20,19,0.2)",
-                            borderRadius: 20,
-                            background: "transparent",
-                            outline: "none",
-                            width: 140,
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              const val = e.target.value.trim();
-                              if (val) {
-                                const tag = val.startsWith("#")
-                                  ? val
-                                  : `#${val}`;
-                                setCaption((p) => (p ? `${p} ${tag}` : tag));
-                                e.target.value = "";
-                              }
-                            }
-                          }}
-                        />
-                        {suggestedHashtags.map((h, i) => (
-                          <button
-                            key={i}
-                            onClick={() =>
-                              setCaption((p) => (p ? `${p} ${h}` : h))
-                            }
+                      </>
+                    )}
+
+                    {effectivePostType !== "story" && (
+                      <>
+                        {/* Quick suggestions */}
+                        <div style={{ marginTop: 10 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                            <RowLabel>Quick Ideas</RowLabel>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button type="button" onClick={() => scrollContainer(ideasScrollRef, 'left')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronLeft size={14} /></button>
+                              <button type="button" onClick={() => scrollContainer(ideasScrollRef, 'right')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronRight size={14} /></button>
+                              <button type="button" onClick={fetchMoreIdeas} disabled={isFetchingMoreIdeas} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {isFetchingMoreIdeas ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                              </button>
+                            </div>
+                          </div>
+                          <div
+                            ref={ideasScrollRef}
                             style={{
-                              flexShrink: 0,
-                              fontSize: 12,
-                              fontWeight: 700,
-                              color: "#4f46e5",
-                              background: "rgba(79,70,229,0.06)",
-                              border: "none",
-                              padding: "6px 14px",
-                              borderRadius: 20,
-                              cursor: "pointer",
+                              display: "flex",
+                              gap: 6,
+                              overflowX: "auto",
+                              paddingBottom: 4,
+                              scrollbarWidth: "none",
                             }}
                           >
-                            {h}
-                          </button>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCaption((p) =>
-                              p ? `${p} #getaipilot` : "#getaipilot",
-                            )
-                          }
-                          className="btn-signal"
-                          style={{
-                            fontSize: 10,
-                            padding: "4px 10px",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 4,
-                            flexShrink: 0,
-                          }}
-                        >
-                          #getaipilot <Sparkles size={9} />
-                        </button>
-                      </div>
-                    </div>
+                            {quickSuggestions.map((s, i) => (
+                              <motion.button
+                                key={i}
+                                type="button"
+                                whileHover={{
+                                  scale: 1.03,
+                                  background: "var(--ink,#141413)",
+                                  color: "white",
+                                }}
+                                whileTap={{ scale: 0.97 }}
+                                onClick={() =>
+                                  setCaption(s)
+                                }
+                                style={{
+                                  flexShrink: 0,
+                                  padding: "6px 14px",
+                                  background: "var(--canvas-lifted,#f5f5f4)",
+                                  border: "1px solid rgba(20,20,19,0.1)",
+                                  borderRadius: 20,
+                                  fontSize: 13,
+                                  color: "var(--slate,#8a8a82)",
+                                  cursor: "pointer",
+                                  whiteSpace: "nowrap",
+                                  fontFamily: "inherit",
+                                  fontWeight: 500,
+                                  transition: "all 0.15s",
+                                }}
+                              >
+                                {s}
+                              </motion.button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Hashtags */}
+                        <div style={{ marginTop: 10 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                            <RowLabel>Hashtags</RowLabel>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button type="button" onClick={() => scrollContainer(hashtagsScrollRef, 'left')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronLeft size={14} /></button>
+                              <button type="button" onClick={() => scrollContainer(hashtagsScrollRef, 'right')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronRight size={14} /></button>
+                              <button type="button" onClick={fetchMoreHashtags} disabled={isFetchingMoreHashtags} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {isFetchingMoreHashtags ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                              </button>
+                            </div>
+                          </div>
+                          <div
+                            ref={hashtagsScrollRef}
+                            style={{
+                              display: "flex",
+                              gap: 6,
+                              overflowX: "auto",
+                              alignItems: "center",
+                              scrollbarWidth: "none",
+                            }}
+                          >
+                            <input
+                              type="text"
+                              placeholder="+ Add tag (Enter)"
+                              style={{
+                                fontSize: 13,
+                                padding: "6px 14px",
+                                border: "1px dashed rgba(20,20,19,0.2)",
+                                borderRadius: 20,
+                                background: "transparent",
+                                outline: "none",
+                                width: 140,
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  const val = e.target.value.trim();
+                                  if (val) {
+                                    const tag = val.startsWith("#")
+                                      ? val
+                                      : `#${val}`;
+                                    setCaption((p) => (p ? `${p} ${tag}` : tag));
+                                    e.target.value = "";
+                                  }
+                                }
+                              }}
+                            />
+                            {suggestedHashtags.map((h, i) => (
+                              <button
+                                key={i}
+                                onClick={() =>
+                                  setCaption((p) => (p ? `${p} ${h}` : h))
+                                }
+                                style={{
+                                  flexShrink: 0,
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  color: "#4f46e5",
+                                  background: "rgba(79,70,229,0.06)",
+                                  border: "none",
+                                  padding: "6px 14px",
+                                  borderRadius: 20,
+                                  cursor: "pointer",
+                                }}
+                              >
+                                {h}
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setCaption((p) =>
+                                  p ? `${p} #getaipilot` : "#getaipilot",
+                                )
+                              }
+                              className="btn-signal"
+                              style={{
+                                fontSize: 10,
+                                padding: "4px 10px",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                                flexShrink: 0,
+                              }}
+                            >
+                              #getaipilot <Sparkles size={9} />
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -2443,7 +2585,7 @@ function ComposerModal({
                 {/* ── Smart Size ── */}
                 <Section
                   label="Content Format"
-                  hint={`Format for ${PLATFORM_META[activePreviewPlatform]?.label || "active platform"}`}
+                  hint={`Format for ${PLATFORM_META[activePreviewBasePlatform]?.label || "active platform"}`}
                   mb={20}
                 >
                   <div
@@ -2460,13 +2602,13 @@ function ComposerModal({
                       msOverflowStyle: "none",
                     }}
                   >
-                    {(PLATFORM_LAYOUT_PRESETS[activePreviewPlatform] || []).map(
+                    {(PLATFORM_LAYOUT_PRESETS[activePreviewBasePlatform] || []).map(
                       (preset) => {
                         const sizeInfo = smartSizes.find(
                           (s) => s.id === preset.ratio,
                         );
                         const isSelected =
-                          platformPresets[activePreviewPlatform] === preset.id;
+                          platformPresets[activePreviewBasePlatform] === preset.id;
                         return (
                           <motion.button
                             key={preset.id}
@@ -2475,7 +2617,7 @@ function ComposerModal({
                             onClick={() =>
                               setPlatformPresets((prev) => ({
                                 ...prev,
-                                [activePreviewPlatform]: preset.id,
+                                [activePreviewBasePlatform]: preset.id,
                               }))
                             }
                             style={{
@@ -2796,12 +2938,12 @@ function ComposerModal({
                 />
 
                 {/* ✨ Smart Warnings ✨ */}
-                {hasInstagram && (
+                {hasInstagram && effectivePostType !== "story" && (
                   <Section label="Instagram Auto DM" mb={20}>
                     <AutoDMComposerPanel
                       config={autoDMConfig}
                       onChange={setAutoDMConfig}
-                      postType={postType}
+                      postType={effectivePostType}
                     />
                   </Section>
                 )}

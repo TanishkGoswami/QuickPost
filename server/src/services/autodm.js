@@ -954,7 +954,7 @@ export async function getAutomationForUser(user, automationId) {
 }
 
 const STORED_BRANDING_PATTERN =
-  /\n*\s*_(?:⚡\s*)?(?:This automation is from SocialPilot \(social\.getaipilot\.in\)|Automated via QuickPost\.co \(Get it Free\))_\s*$/i;
+  /\n*\s*_?(?:⚡\s*)?(?:Automation is powered by @Getaipilot|This automation powered by @getaipilot|This automation is from SocialPilot \(social\.getaipilot\.in\)|Automated via QuickPost\.co \(Get it Free\))_?\s*$/i;
 
 function removeStoredBranding(value) {
   if (typeof value === 'string') return value.replace(STORED_BRANDING_PATTERN, '').trimEnd();
@@ -967,9 +967,66 @@ function removeStoredBranding(value) {
   return value;
 }
 
+/**
+ * Checks if any OTHER automation on the same account+post scope already uses
+ * one of the given keywords. Returns the first conflicting automation found, or null.
+ */
+async function findKeywordConflict(autoDMSupabase, { instagramAccountId, mediaId, keywords, excludeAutomationId = null }) {
+  if (!instagramAccountId || !Array.isArray(keywords) || keywords.length === 0) return null;
+
+  let query = autoDMSupabase
+    .from('automations')
+    .select('id, name, keywords, media_id')
+    .eq('instagram_account_id', instagramAccountId)
+    .eq('is_active', true);
+
+  if (excludeAutomationId) {
+    query = query.neq('id', excludeAutomationId);
+  }
+
+  const { data: otherAutomations, error } = await query;
+  if (error || !otherAutomations) return null;
+
+  const incomingMediaId = mediaId ? String(mediaId).trim() : null;
+  const incomingKeywordsLower = keywords.map((k) => String(k).trim().toLowerCase()).filter(Boolean);
+
+  for (const other of otherAutomations) {
+    const otherMediaId = other.media_id ? String(other.media_id).trim() : null;
+
+    // Scope match: same specific post, or either one is "all posts" (null media_id)
+    const sameScope =
+      incomingMediaId === otherMediaId ||
+      incomingMediaId === null ||
+      otherMediaId === null;
+
+    if (!sameScope) continue;
+
+    const otherKeywordsLower = (other.keywords || []).map((k) => String(k).trim().toLowerCase());
+    const overlap = incomingKeywordsLower.find((k) => otherKeywordsLower.includes(k));
+
+    if (overlap) {
+      return { automationId: other.id, automationName: other.name || 'Unnamed Automation', conflictKeyword: overlap };
+    }
+  }
+
+  return null;
+}
+
 export async function createAutomationForUser(user, payload) {
   const autoDMSupabase = getAutoDMSupabaseForUserMutation();
   const cleanPayload = removeStoredBranding(cleanAutomationPayload(payload, user));
+
+  // Server-side keyword conflict guard
+  const conflict = await findKeywordConflict(autoDMSupabase, {
+    instagramAccountId: cleanPayload.instagram_account_id,
+    mediaId: cleanPayload.media_id,
+    keywords: cleanPayload.keywords || [],
+  });
+  if (conflict) {
+    throw new Error(
+      `Keyword "${conflict.conflictKeyword}" is already used by automation "${conflict.automationName}". Each automation on the same post must have unique keywords.`
+    );
+  }
 
   try {
     const automation = await insertAutomationWithUserFallback(autoDMSupabase, cleanPayload, user);
@@ -993,6 +1050,19 @@ export async function updateAutomationForUser(user, automationId, payload) {
   const cleanPayload = removeStoredBranding(
     cleanAutomationPayload(payload, user, { includeUserId: false }),
   );
+
+  // Server-side keyword conflict guard (exclude self)
+  const conflict = await findKeywordConflict(autoDMSupabase, {
+    instagramAccountId: cleanPayload.instagram_account_id || existing.instagram_account_id,
+    mediaId: cleanPayload.media_id !== undefined ? cleanPayload.media_id : existing.media_id,
+    keywords: cleanPayload.keywords || existing.keywords || [],
+    excludeAutomationId: automationId,
+  });
+  if (conflict) {
+    throw new Error(
+      `Keyword "${conflict.conflictKeyword}" is already used by automation "${conflict.automationName}". Each automation on the same post must have unique keywords.`
+    );
+  }
 
   const { data, error } = await autoDMSupabase
     .from('automations')

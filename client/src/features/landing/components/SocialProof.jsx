@@ -11,7 +11,7 @@ const TESTIMONIALS = [
     title: "Content Creator",
     sub: "180K followers",
     initials: "SK",
-    color: "#f37338",
+    color: "#ff5600",
   },
   {
     quote:
@@ -20,7 +20,7 @@ const TESTIMONIALS = [
     title: "Digital Marketing Lead",
     sub: "Agency",
     initials: "MT",
-    color: "#3860be",
+    color: "#0007cb",
   },
   {
     quote:
@@ -67,7 +67,7 @@ function StarRow() {
   return (
     <div style={{ display: "flex", gap: 3, marginBottom: 16 }}>
       {[...Array(5)].map((_, i) => (
-        <Star key={i} size={14} fill="#f37338" color="#f37338" />
+        <Star key={i} size={14} fill="#ff5600" color="#ff5600" />
       ))}
     </div>
   );
@@ -253,7 +253,7 @@ export default function SocialProof() {
           <div
             className="hide-scrollbar"
             style={{
-              padding: "20px 0",
+              padding: "60px 0 20px",
               overflowX: "auto",
               overflowY: "visible",
               WebkitOverflowScrolling: "touch",

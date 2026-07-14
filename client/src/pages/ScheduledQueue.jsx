@@ -644,9 +644,15 @@ export default function ScheduledQueue() {
               animate={{ opacity: 1, y: 0 }}
               className="bg-white rounded-2xl border border-dashed border-gray-200 p-20 text-center shadow-sm"
             >
-              <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CalendarClock className="w-8 h-8 text-blue-300" />
-              </div>
+              <img 
+                src={`https://illustrations.popsy.co/amber/${
+                  activeFilter === 'failed' ? 'designer' :
+                  activeFilter === 'cancelled' ? 'creative-work' :
+                  'surreal-hourglass'
+                }.svg`} 
+                alt={`No ${activeFilter} posts`} 
+                className="h-32 object-contain mx-auto mb-6" 
+              />
               <h3 className="text-lg font-bold text-gray-900 mb-2">
                 {activeFilter === "all"
                   ? "No scheduled posts yet"

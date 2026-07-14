@@ -150,7 +150,7 @@ function CustomDialog({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.98, y: 8 }}
         transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
-        className="relative w-full max-w-[440px] overflow-hidden rounded-2xl border border-black/10 bg-white text-[var(--ink)] shadow-[0_28px_80px_rgba(20,20,19,0.28)]"
+        className="relative w-full max-w-[440px] overflow-hidden rounded-[24px] border border-black/5 bg-[var(--canvas-lifted)] text-[var(--ink)] shadow-[0_24px_80px_rgba(0,0,0,0.12)]"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -184,7 +184,7 @@ function CustomDialog({
               <button
                 type="button"
                 onClick={() => onClose(false)}
-                className="inline-flex h-10 items-center justify-center rounded-lg border border-black/10 bg-white px-4 text-sm font-semibold text-[var(--ink)] shadow-sm transition hover:bg-black/[0.04] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="inline-flex h-10 items-center justify-center rounded-full border border-black/10 bg-white px-5 text-sm font-semibold text-[var(--ink)] shadow-sm transition hover:bg-black/[0.04] focus:outline-none"
               >
                 {cancelText}
               </button>
@@ -193,7 +193,7 @@ function CustomDialog({
             <button
               type="button"
               onClick={() => onClose(true)}
-              className={`inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold shadow-sm transition focus:outline-none focus:ring-2 focus:ring-offset-2 ${config.confirmClass}`}
+              className={`inline-flex h-10 items-center justify-center rounded-full px-5 text-sm font-semibold shadow-sm transition focus:outline-none ${config.confirmClass}`}
             >
               {confirmText}
             </button>

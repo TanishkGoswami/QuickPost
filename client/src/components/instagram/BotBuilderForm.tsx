@@ -27,10 +27,12 @@ const defaultForm = {
 
 export default function BotBuilderForm({
   accounts,
+  accountsBusy = false,
   selectedBot,
   onSaved,
 }: {
   accounts: any[];
+  accountsBusy?: boolean;
   selectedBot?: any;
   onSaved: (bot?: any) => void;
 }) {
@@ -146,9 +148,16 @@ export default function BotBuilderForm({
         </div>
       </div>
 
-      {!activeAccountOptions.length ? (
+      {!activeAccountOptions.length && !accountsBusy ? (
         <div className="m-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           Connect and import an Instagram Professional account before saving a bot.
+        </div>
+      ) : null}
+
+      {!activeAccountOptions.length && accountsBusy ? (
+        <div className="m-5 rounded-lg border border-black/10 bg-white p-4">
+          <div className="h-4 w-80 max-w-full animate-pulse rounded bg-black/[0.08]" />
+          <div className="mt-3 h-3 w-[520px] max-w-full animate-pulse rounded bg-black/[0.06]" />
         </div>
       ) : null}
 
@@ -160,6 +169,7 @@ export default function BotBuilderForm({
               <Field label="Instagram account">
                 <AccountSelect
                   accounts={activeAccountOptions}
+                  busy={accountsBusy}
                   value={form.instagram_account_id || ""}
                   onChange={(value) => setField("instagram_account_id", value)}
                 />
@@ -261,15 +271,26 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function AccountSelect({
   accounts,
+  busy = false,
   value,
   onChange,
 }: {
   accounts: any[];
+  busy?: boolean;
   value: string;
   onChange: (value: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const selected = accounts.find((account) => account.id === value);
+
+  if (!accounts.length && busy) {
+    return (
+      <div className="min-h-[52px] rounded-lg border border-black/10 bg-white px-4 py-3">
+        <div className="h-4 w-52 animate-pulse rounded bg-black/[0.08]" />
+        <div className="mt-2 h-3 w-64 max-w-full animate-pulse rounded bg-black/[0.05]" />
+      </div>
+    );
+  }
 
   if (!accounts.length) {
     return (

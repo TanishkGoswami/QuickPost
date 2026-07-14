@@ -16,7 +16,7 @@ export default function InstagramBots() {
   const { connectedAccounts } = useAuth();
   const { confirm } = useDialog();
   const hasPostingInstagram = Boolean(connectedAccounts.instagram?.connected);
-  const { accounts, syncing, refresh: refreshAccounts, syncFromSocialPilot } = useInstagramAccounts({
+  const { accounts, loading: accountsLoading, syncing, refresh: refreshAccounts, syncFromSocialPilot } = useInstagramAccounts({
     autoSync: hasPostingInstagram,
   });
   const { bots, loading, error, refresh: refreshBots } = useInstagramBots();
@@ -34,6 +34,7 @@ export default function InstagramBots() {
 
   const selectedBot = useMemo(() => bots.find((bot) => bot.id === selectedBotId), [bots, selectedBotId]);
   const connectedAccount = accounts.find((account) => account.is_connected);
+  const accountsBusy = accountsLoading || syncing;
   const activeBots = bots.filter((bot) => bot.is_active).length;
   const currentStep = !connectedAccount ? 0 : !selectedBot?.id ? 1 : 2;
   const hasBot = bots.length > 0;
@@ -148,7 +149,9 @@ export default function InstagramBots() {
         </section>
 
         {error ? <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div> : null}
-        {!connectedAccount ? (
+        {!connectedAccount && hasPostingInstagram && accountsBusy ? (
+          <SyncSkeleton />
+        ) : !connectedAccount ? (
           <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
@@ -267,6 +270,7 @@ export default function InstagramBots() {
             <BotBuilderForm
               key={selectedBot?.id || "new"}
               accounts={accounts}
+              accountsBusy={accountsBusy}
               selectedBot={selectedBot}
               onSaved={(savedBot) => {
                 if (savedBot?.id) setSelectedBotId(savedBot.id);
@@ -281,6 +285,23 @@ export default function InstagramBots() {
       </div>
       <PreviewDrawer open={previewOpen} onClose={() => setPreviewOpen(false)} botId={selectedBot?.id} />
     </div>
+  );
+}
+
+function SyncSkeleton() {
+  return (
+    <section className="rounded-xl border border-black/10 bg-white p-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-3">
+          <div className="h-4 w-72 max-w-full animate-pulse rounded bg-black/[0.08]" />
+          <div className="h-3 w-[520px] max-w-full animate-pulse rounded bg-black/[0.06]" />
+        </div>
+        <div className="flex gap-2">
+          <div className="h-9 w-24 animate-pulse rounded-lg bg-black/[0.06]" />
+          <div className="h-9 w-36 animate-pulse rounded-lg bg-black/[0.08]" />
+        </div>
+      </div>
+    </section>
   );
 }
 

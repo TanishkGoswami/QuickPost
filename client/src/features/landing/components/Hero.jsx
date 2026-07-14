@@ -247,10 +247,10 @@ export default function Hero() {
         >
           <defs>
             <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#F37338" stopOpacity="0" />
-              <stop offset="30%" stopColor="#F37338" stopOpacity="0.6" />
-              <stop offset="70%" stopColor="#F37338" stopOpacity="0.6" />
-              <stop offset="100%" stopColor="#F37338" stopOpacity="0" />
+              <stop offset="0%" stopColor="#FF5600" stopOpacity="0" />
+              <stop offset="30%" stopColor="#FF5600" stopOpacity="0.6" />
+              <stop offset="70%" stopColor="#FF5600" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#FF5600" stopOpacity="0" />
             </linearGradient>
           </defs>
 
@@ -272,7 +272,7 @@ export default function Hero() {
               strokeDashoffset: useTransform(travelProgress, (v) => -v),
             }}
             d="M 100 680 Q 450 300 1000 600 Q 1300 800 1700 400"
-            stroke="#F37338"
+            stroke="#FF5600"
             strokeWidth="1.5"
             fill="none"
             opacity="0.2"
@@ -284,7 +284,7 @@ export default function Hero() {
               strokeDashoffset: useTransform(travelProgress, (v) => v * 0.5),
             }}
             d="M -200 400 Q 300 50 800 450"
-            stroke="#F37338"
+            stroke="#FF5600"
             strokeWidth="1"
             fill="none"
             opacity="0.15"
@@ -302,7 +302,7 @@ export default function Hero() {
             cx="820"
             cy="480"
             r="5"
-            fill="#F37338"
+            fill="#FF5600"
           />
           <motion.circle
             animate={{
@@ -314,7 +314,7 @@ export default function Hero() {
             cx="360"
             cy="120"
             r="4"
-            fill="#F37338"
+            fill="#FF5600"
           />
         </svg>
       </div>

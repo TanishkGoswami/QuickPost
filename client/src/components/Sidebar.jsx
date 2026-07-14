@@ -4,19 +4,18 @@ import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
-  CalendarClock,
-  Zap,
+  CalendarDays,
+  LayoutDashboard,
+  Workflow,
   Users,
   Instagram,
   Settings,
-  Plus,
-  Share2,
   ChevronDown,
   X,
   Flame,
   Sparkles,
   Lock,
-  MessageCircle,
+  MessagesSquare,
   Bot,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
@@ -163,9 +162,12 @@ function Sidebar() {
     window.location.href = `${apiUrl}/api/auth/googleBusiness?token=${token}`;
   };
   const handleDisconnect = async (platform) => {
+    const message = platform === "instagram"
+      ? `Are you sure you want to disconnect your ${platform} account? This will stop all scheduled posts and pause any active automations. Your automations will be restored when you reconnect.`
+      : `Are you sure you want to disconnect your ${platform} account? This will stop all scheduled posts to this channel.`;
     const confirmed = await confirm(
       "Disconnect Account",
-      `Are you sure you want to disconnect your ${platform} account? This will stop all scheduled posts to this channel.`,
+      message,
       {
         intent: "danger",
         confirmText: "Disconnect",
@@ -393,21 +395,25 @@ function Sidebar() {
     },
   ];
 
-  const isActive = (path) =>
-    path === "/dashboard/auto-dm"
-      ? location.pathname.startsWith("/dashboard/auto-dm")
-      : location.pathname === path;
+  const isActive = (path) => {
+    if (path === "/dashboard/auto-dm") {
+      return location.pathname.startsWith("/dashboard/auto-dm") && !location.pathname.startsWith("/dashboard/auto-dm/settings");
+    }
+    if (path === "/dashboard") {
+      return location.pathname === "/dashboard";
+    }
+    return location.pathname.startsWith(path);
+  };
 
   const autoDMSubnav = [
-    { to: "/dashboard/auto-dm/automations", label: "Automations", icon: <Zap size={14} /> },
+    { to: "/dashboard/auto-dm/automations", label: "Automations", icon: <Workflow size={14} /> },
     { to: "/dashboard/auto-dm/contacts", label: "Contacts", icon: <Users size={14} /> },
     { to: "/dashboard/auto-dm/instagram-profile", label: "Profile", icon: <Instagram size={14} /> },
-    { to: "/dashboard/auto-dm/settings", label: "Settings", icon: <Settings size={14} /> },
   ];
 
   return (
     <aside
-      className="flex flex-col custom-scrollbar"
+      className="qp-sidebar flex flex-col custom-scrollbar"
       style={{
         width: 240,
         height: "100%",
@@ -484,18 +490,13 @@ function Sidebar() {
             {
               to: "/dashboard",
               label: "All Channels",
-              icon: <Share2 size={16} />,
+              icon: <LayoutDashboard size={16} />,
             },
             {
               to: "/dashboard/queue",
               label: "Scheduled Queue",
-              icon: <CalendarClock size={16} />,
-            },
-            {
-              to: "/dashboard/trends",
-              label: "All Trends",
-              icon: <Flame size={16} />,
-            },
+              icon: <CalendarDays size={16} />,
+            },           
             {
               to: "/dashboard/instapilot",
               label: "GAP InstaPilot",
@@ -504,7 +505,17 @@ function Sidebar() {
             {
               to: "/dashboard/auto-dm",
               label: "GAP AutoDM",
-              icon: <MessageCircle size={16} />,
+              icon: <MessagesSquare size={16} />,
+            },
+            {
+              to: "/dashboard/auto-dm/settings",
+              label: "Settings",
+              icon: <Settings size={16} />,
+            },
+            {
+              to: "/dashboard/trends",
+              label: "All Trends",
+              icon: <Flame size={16} />,
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);
@@ -558,6 +569,7 @@ function Sidebar() {
             if (isLocked) {
               return (
                 <div
+                  className={`qp-sidebar-nav-item${active ? " is-active" : ""}`}
                   key={to}
                   style={style}
                   onClick={() =>
@@ -573,6 +585,7 @@ function Sidebar() {
               <React.Fragment key={to}>
                 {isAutoDM ? (
                   <div
+                    className={`qp-sidebar-nav-item${active ? " is-active" : ""}`}
                     style={{
                       ...style,
                       padding: 0,
@@ -624,6 +637,7 @@ function Sidebar() {
                 ) : (
                   <Link
                     to={to}
+                    className={`qp-sidebar-nav-item${active ? " is-active" : ""}`}
                     style={style}
                     onMouseEnter={(e) => {
                       if (!active) {
@@ -676,6 +690,7 @@ function Sidebar() {
 
             return (
               <button
+                className="qp-sidebar-connected-toggle"
                 onClick={() => {
 
                   setConnectedOpen((open) => {
@@ -834,7 +849,7 @@ function Sidebar() {
                         onClick={() =>
                           navigate(`/dashboard?platform=${platform.id}`)
                         }
-                        className="group"
+                        className="qp-sidebar-connected-item group"
                         style={{
                           display: "flex",
                           alignItems: "center",
@@ -930,6 +945,7 @@ function Sidebar() {
               .filter((p) => !p.connected)
               .map((platform) => (
                 <button
+                  className="qp-sidebar-channel-button"
                   key={platform.id}
                   onClick={(e) => {
                     const limit = user?.entitlements?.limits?.social_accounts || 1;
@@ -996,6 +1012,7 @@ function Sidebar() {
       >
         {user && (
           <div
+            className="qp-sidebar-user-card"
             style={{
               display: "flex",
               alignItems: "center",
@@ -1097,6 +1114,7 @@ function Sidebar() {
         {/* ── Upgrade Button ── */}
         {isFree(user?.plan) && (
           <button
+            className="qp-sidebar-upgrade"
             onClick={() => navigate("/dashboard/billing")}
             style={{
               width: "100%",
@@ -1110,7 +1128,7 @@ function Sidebar() {
               fontWeight: 700,
               cursor: "pointer",
               marginBottom: 8,
-              boxShadow: "0 4px 12px rgba(243,115,56,0.2)",
+              boxShadow: "0 4px 12px rgba(255,86,0,0.2)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
