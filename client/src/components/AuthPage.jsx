@@ -314,8 +314,8 @@ function FloatingPaths({ position }) {
         } ${343 - i * 18}C${616 - i * 15 * position} ${470 - i * 18} ${
           684 - i * 15 * position
         } ${875 - i * 18} ${684 - i * 15 * position} ${875 - i * 18}`,
-        color: `rgba(255, 86, 0, ${0.1 + i * 0.05})`,
-        width: 1 + i * 0.1,
+        color: `rgba(255, 86, 0, ${0.3 + i * 0.05})`,
+        width: 1.5 + i * 0.1,
         duration: 15 + Math.random() * 10,
       })),
     [position],
@@ -324,7 +324,7 @@ function FloatingPaths({ position }) {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden">
       <svg
-        className="h-full w-full opacity-40"
+        className="h-full w-full opacity-100"
         viewBox="0 0 696 316"
         fill="none"
         style={{ willChange: "transform" }}
@@ -339,7 +339,7 @@ function FloatingPaths({ position }) {
             initial={{ pathLength: 0.3, opacity: 0 }}
             animate={{
               pathLength: 1,
-              opacity: [0, 0.4, 0],
+              opacity: [0, 0.8, 0],
               pathOffset: [0, 1],
             }}
             transition={{

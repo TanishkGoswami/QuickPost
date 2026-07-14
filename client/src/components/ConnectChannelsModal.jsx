@@ -107,10 +107,10 @@ export default function ConnectChannelsModal() {
               className="relative w-full max-w-xl bg-white shadow-2xl rounded-3xl overflow-hidden flex flex-col max-h-[90vh]"
             >
               {/* Header */}
-              <div className="relative p-8 overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600">
-                {/* Decorative blobs */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4"></div>
+              <div 
+                className="relative p-8 overflow-hidden bg-cover bg-center"
+                style={{ backgroundImage: "linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.6)), url('/connect-bg.jpg')" }}
+              >
                 
                 <button
                   onClick={dismiss}
