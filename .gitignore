@@ -11,3 +11,4 @@ uploads/*.mov
 uploads/*.avi
 !uploads/.gitkeep
 .codex-history
+.graph-it/

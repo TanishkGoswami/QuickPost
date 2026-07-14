@@ -50,7 +50,8 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-body)', '"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', '"ESKlarheit"', '"Plus Jakarta Sans"', 'sans-serif'],
       },
       animation: {
         'gradient': 'gradient 8s linear infinite',
