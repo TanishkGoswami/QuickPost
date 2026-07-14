@@ -25,6 +25,8 @@ export const defaultComposerAutoDMConfig = {
   isCaseSensitive: false,
   commentReplyEnabled: true,
   commentReplyText: "Sent you the details in DM.",
+  requireFollow: false,
+  fallbackCommentReply: "Please follow our account to receive the link!",
   responseFlow: {
     opening_message_enabled: true,
     opening_message: "Hey there! Thanks for your interest ✨\nClick below to get the details.",
@@ -226,10 +228,43 @@ export function AutoDMComposerPanel({ config, onChange, postType }) {
                 </div>
               </div>
 
-              {/* Step 3: Private DM */}
+              {/* Step 3: Follow Gate */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-black/5 text-[10px] font-bold text-[var(--slate)]">3</div>
+                  <h4 className="text-sm font-semibold text-[var(--ink)]">Instagram Follow Gate</h4>
+                </div>
+                
+                <div className="pl-8">
+                  <div className="rounded-xl border border-black/10 bg-white p-4 shadow-sm transition-all focus-within:border-[var(--arc)] focus-within:ring-1 focus-within:ring-[var(--arc)]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-medium text-[var(--ink)]">Only send DM if they follow</div>
+                        <p className="text-xs text-[var(--slate)] mt-1">Require users to follow your account before sending them a DM.</p>
+                      </div>
+                      <Switch checked={config.requireFollow} onCheckedChange={(requireFollow) => update({ requireFollow })} />
+                    </div>
+                    {config.requireFollow && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
+                        <div className="mt-4 pt-4 border-t border-black/5">
+                          <Label className="text-xs text-[var(--slate)] mb-2 block">Fallback Comment Reply</Label>
+                          <Textarea
+                            className="min-h-[60px] resize-none border-none bg-gray-50/50 focus-visible:ring-0 p-3 text-sm rounded-lg"
+                            value={config.fallbackCommentReply}
+                            onChange={(event) => update({ fallbackCommentReply: event.target.value })}
+                            placeholder="Please follow our account to receive the link!"
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 4: Private DM */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-black/5 text-[10px] font-bold text-[var(--slate)]">4</div>
                   <h4 className="text-sm font-semibold text-[var(--ink)]">Privately send them a DM</h4>
                 </div>
                 

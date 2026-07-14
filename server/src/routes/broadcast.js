@@ -970,7 +970,11 @@ async function processBroadcastJob({
 
   const successCount = platformPromises.length - failedPlatforms.length;
   const anyFailed = hasPlatformFailures;
-  const failedStr = failedPlatforms.map(f => `${f.platform}: ${f.error}`).join(" | ");
+  const failedStr = failedPlatforms.map(f => {
+    let pName = f.platform.split(':')[0];
+    pName = pName.charAt(0).toUpperCase() + pName.slice(1);
+    return `${pName}: ${f.error}`;
+  }).join(" | ");
 
   const finalStatus = anyFailed ? "failed" : "completed";
   const finalStep = anyFailed ? "Some platforms failed." : "Broadcast complete!";

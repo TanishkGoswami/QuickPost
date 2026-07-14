@@ -26,12 +26,12 @@ import { useDialog } from "../context/DialogContext";
 // ─── Platform icon helper ────────────────────────────────────────────────────
 function getPlatformIcon(id) {
   const cls = "w-4 h-4 object-contain";
+  const baseId = (id || "").split(":")[0].toLowerCase();
   const icons = {
     facebook: "/icons/facebook-round-color-icon.svg",
     instagram: "/icons/ig-instagram-icon.svg",
     x: "/icons/x-social-media-round-icon.svg",
     linkedin: "/icons/linkedin-icon.svg",
-
     youtube: "/icons/youtube-color-icon.svg",
     pinterest: "/icons/pinterest-round-color-icon.svg",
     threads: "/icons/threads-icon.svg",
@@ -39,8 +39,8 @@ function getPlatformIcon(id) {
     bluesky: "/icons/bluesky-circle-color-icon.svg",
     reddit: "/icons/reddit-icon.svg",
   };
-  return icons[id] ? (
-    <img src={icons[id]} alt={id} className={cls} />
+  return icons[baseId] ? (
+    <img src={icons[baseId]} alt={baseId} className={cls} />
   ) : (
     <Share2 className="w-4 h-4" />
   );
@@ -122,6 +122,13 @@ function timeUntil(utcString) {
   if (days > 0) return `in ${days}d ${hrs % 24}h`;
   if (hrs > 0) return `in ${hrs}h ${mins % 60}m`;
   return `in ${mins}m`;
+}
+
+function cleanError(errorMsg) {
+  if (!errorMsg) return "";
+  return String(errorMsg)
+    .replace(/(Failed\s*—\s*[a-z]+):[a-f0-9\-]+:/gi, '$1:')
+    .trim();
 }
 
 // ─── Thumbnail ───────────────────────────────────────────────────────────────
@@ -237,11 +244,21 @@ function QueueCard({ post, onCancel, onRetry, onRefresh }) {
         <QueueThumb post={post} />
         <div className="flex-1 min-w-0">
           {/* Caption */}
-          <p className="text-sm font-semibold text-gray-900 line-clamp-2 mb-2 leading-normal">
+          <p className="text-sm font-semibold text-gray-900 line-clamp-2 leading-normal mb-1">
             {post.caption || (
               <span className="text-gray-400 italic">No caption</span>
             )}
           </p>
+
+          {/* Error Message Inline (if failed) */}
+          {post.status === "failed" && post.last_error && (
+            <div className="mb-2 inline-flex items-start gap-1.5 p-1.5 bg-red-50/80 rounded-md border border-red-100 max-w-full">
+              <AlertTriangle className="w-3.5 h-3.5 text-red-600 mt-0.5 shrink-0" />
+              <span className="text-[12px] font-medium text-red-700 leading-tight">
+                {cleanError(post.last_error)}
+              </span>
+            </div>
+          )}
 
           {/* Meta: time + timezone */}
           <div className="flex items-center gap-2 flex-wrap mb-2">
@@ -269,6 +286,7 @@ function QueueCard({ post, onCancel, onRetry, onRefresh }) {
               {channels.map((id) => (
                 <span
                   key={id}
+                  title={(id || "").split(":")[0]}
                   className="w-5 h-5 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden"
                 >
                   {getPlatformIcon(id)}
@@ -325,22 +343,24 @@ function QueueCard({ post, onCancel, onRetry, onRefresh }) {
               )}
             </button>
           )}
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-          >
-            {expanded ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
-          </button>
+          {post.status === "scheduled" && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            >
+              {expanded ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+            </button>
+          )}
         </div>
       </div>
 
       {/* Expanded / Edit panel */}
       <AnimatePresence>
-        {expanded && (
+        {expanded && post.status === "scheduled" && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
@@ -349,20 +369,8 @@ function QueueCard({ post, onCancel, onRetry, onRefresh }) {
             className="overflow-hidden"
           >
             <div className="border-t border-gray-100 bg-gray-50/50 px-4 pb-4 pt-3 space-y-3">
-              {/* Error message for failed posts */}
-              {post.status === "failed" && post.last_error && (
-                <div className="p-3 bg-red-50 rounded-xl border border-red-100">
-                  <p className="text-[10px] font-bold text-red-600 uppercase tracking-wider mb-1">
-                    Last Error
-                  </p>
-                  <p className="text-xs text-red-700 font-mono break-all">
-                    {post.last_error}
-                  </p>
-                </div>
-              )}
-
               {/* Edit form */}
-              {editing && post.status === "scheduled" && (
+              {editing && (
                 <div className="p-3 bg-white rounded-xl border border-blue-100 space-y-3">
                   <p className="text-[10px] font-bold text-blue-700 uppercase tracking-wider">
                     Edit Scheduled Post
@@ -412,26 +420,6 @@ function QueueCard({ post, onCancel, onRetry, onRefresh }) {
                     >
                       Cancel
                     </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Platform details */}
-              {channels.length > 0 && (
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
-                    Target Platforms
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {channels.map((id) => (
-                      <div
-                        key={id}
-                        className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-600"
-                      >
-                        {getPlatformIcon(id)}
-                        <span className="capitalize">{id}</span>
-                      </div>
-                    ))}
                   </div>
                 </div>
               )}
@@ -613,7 +601,7 @@ export default function ScheduledQueue() {
       </div>
 
       {/* ── Content ── */}
-      <div className="px-8 md:px-16 py-8 mx-auto max-w-[1600px]">
+      <div className="px-8 md:px-16 py-8 mx-auto max-w-4xl">
         <Skeleton
           name="scheduled-queue"
           loading={loading}

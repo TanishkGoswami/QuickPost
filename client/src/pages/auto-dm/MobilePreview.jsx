@@ -18,6 +18,7 @@ import {
   Wifi,
 } from 'lucide-react';
 import { useAutoDM } from '../../context/AutoDMContext';
+import { Switch } from '@/components/ui/switch';
 
 function EmptyPostMedia() {
   return (
@@ -93,8 +94,9 @@ function Avatar({ src, username, className = 'h-7 w-7' }) {
   );
 }
 
-export default function MobilePreview({ selectedMedia, keywords, responseFlow, commentReplyText, commentReplyEnabled, activeTab = 'Post', onTabChange }) {
+export default function MobilePreview({ selectedMedia, keywords, responseFlow, commentReplyText, commentReplyEnabled, requireFollow, fallbackCommentReply, activeTab = 'Post', onTabChange }) {
   const { activeAccount } = useAutoDM();
+  const [previewAsFollower, setPreviewAsFollower] = useState(true);
 
   const username = activeAccount?.username || 'cricboss121';
   const avatar = activeAccount?.profile_picture_url || '';
@@ -289,7 +291,11 @@ export default function MobilePreview({ selectedMedia, keywords, responseFlow, c
                 <p className="text-[11px] leading-tight">
                   <span className="font-semibold">{username}</span> <span className="text-gray-500 text-[10px]">Now</span>
                 </p>
-                <p className="text-[11px] leading-[1.3] mt-0.5 text-black">{commentReplyText || 'Check your DM'}</p>
+                <p className="text-[11px] leading-[1.3] mt-0.5 text-black">
+                  {requireFollow && !previewAsFollower 
+                    ? fallbackCommentReply || 'Please follow our account to receive the link!' 
+                    : commentReplyText || 'Check your DM'}
+                </p>
                 <p className="mt-1 text-[10px] font-semibold text-gray-500 flex gap-4">
                   <span>Reply</span>
                   <span>See Translation</span>
@@ -373,6 +379,16 @@ export default function MobilePreview({ selectedMedia, keywords, responseFlow, c
 
   return (
     <div className="flex flex-col items-center transform scale-[1.2] origin-top transition-all duration-300">
+      {requireFollow && activeTab === 'Comments' && (
+        <div className="mb-6 flex items-center gap-2 rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-black/5 text-[11px]">
+          <span className={previewAsFollower ? "font-semibold text-primary" : "text-gray-400"}>Following</span>
+          <Switch 
+            checked={!previewAsFollower} 
+            onCheckedChange={(c) => setPreviewAsFollower(!c)} 
+          />
+          <span className={!previewAsFollower ? "font-semibold text-primary" : "text-gray-400"}>Not Following</span>
+        </div>
+      )}
       <PhoneFrame>
         {activeTab === 'Post' ? renderPost() : null}
         {activeTab === 'Comments' ? renderComments() : null}

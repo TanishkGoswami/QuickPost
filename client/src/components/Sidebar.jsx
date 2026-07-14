@@ -425,7 +425,6 @@ function Sidebar() {
       <div
         style={{
           padding: "20px 20px 16px",
-          borderBottom: "1px solid rgba(20,20,19,0.08)",
         }}
       >
         <Link
