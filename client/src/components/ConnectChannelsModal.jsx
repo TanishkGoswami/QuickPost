@@ -120,9 +120,9 @@ export default function ConnectChannelsModal() {
                 </button>
 
                 <div className="relative z-10">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/20 text-white/90 text-xs font-semibold tracking-wide uppercase mb-4">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Onboarding
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/25 backdrop-blur-md border border-white/15 text-white text-xs font-semibold tracking-wide uppercase mb-4 shadow-sm">
+                    <Sparkles className="w-3.5 h-3.5 text-white/80" />
+                    <span>Onboarding</span>
                   </div>
                   <h2 className="text-3xl font-extrabold text-white tracking-tight mb-2">
                     Connect your channels
