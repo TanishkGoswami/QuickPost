@@ -33,6 +33,7 @@ import { getValidInstagramTokensForPosting } from "../services/instagramToken.js
 import { decryptToken } from "../services/instapilot.js";
 import { enqueueBroadcastJob, isBroadcastQueueEnabled } from "../services/broadcastQueue.js";
 import { requireFeature, reserveUsage } from "../middleware/entitlements.js";
+import { supermailbox } from "../services/supermailbox.js";
 import { resolveInstagramPublishChannels } from "../utils/instagramChannels.js";
 import { resolvePublishPostType } from "../utils/postType.js";
 
@@ -994,6 +995,22 @@ async function processBroadcastJob({
     result: results,
   });
   console.log(`🎉 [JOB:${jobId}] Broadcast job finished. Success: ${successCount}/${platformPromises.length}${anyFailed ? ` | Errors: ${failedStr}` : ''}`);
+
+  // Dispatch broadcast summary email via SupermailBox
+  if (user?.email) {
+    supermailbox.sendEmail({
+      to: user.email,
+      templateKey: 'broadcast_notification',
+      idempotencyKey: `broadcast_${jobId}`,
+      variables: {
+        campaign_name: 'Broadcast Published successfully',
+        full_name: user.name || user.email,
+        email: user.email,
+        caption: caption?.substring(0, 100) || 'New post published',
+        platforms: channels?.join(', ') || 'Connected channels'
+      }
+    }).catch(err => console.warn('[SupermailBox SDK] Broadcast notification email failed:', err?.message));
+  }
 }
 
 function getJob_internal(jobId) {

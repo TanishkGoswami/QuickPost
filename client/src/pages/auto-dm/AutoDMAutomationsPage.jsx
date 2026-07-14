@@ -53,10 +53,15 @@ function statValue(automation, keys) {
 }
 
 function AutomationThumb({ automation }) {
+  const [imgError, setImgError] = useState(false);
   const src = automation.media_thumbnail || automation.media_url || automation.post_thumbnail || automation.thumbnail_url;
   return (
     <div className="autodm-list-thumb">
-      {src ? <img src={src} alt="" /> : <MessageCircle size={18} />}
+      {src && !imgError ? (
+        <img src={src} alt="" referrerPolicy="no-referrer" onError={() => setImgError(true)} />
+      ) : (
+        <MessageCircle size={18} />
+      )}
     </div>
   );
 }
