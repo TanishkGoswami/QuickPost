@@ -86,6 +86,7 @@ export default function BillingPage() {
 
     try {
       setUpgrading(plan.id);
+      console.log(`💳 [PAYMENT INITIATED] Plan: ${plan.name} | Interval: ${billing} month(s) | Amount to be charged: ₹${plan.price[billing] * billing}`);
       
       const { data, error } = await supabase.functions.invoke('create-payment-link', {
         body: {

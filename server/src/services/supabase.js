@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { supermailbox } from './supermailbox.js';
 
 dotenv.config();
 
@@ -306,6 +307,15 @@ export async function createOrUpdateUser(email, name, externalId = null, profile
         .single();
 
       if (error) throw error;
+
+      // Sync updated profile with SupermailBox central contact repository
+      supermailbox.syncUser({
+        id: data.id,
+        email: data.email,
+        fullName: data.name,
+        attributes: { project: 'QuickPost' }
+      }).catch(err => console.warn('[SupermailBox SDK] Contact sync failed:', err?.message));
+
       return data;
     }
 
@@ -324,6 +334,24 @@ export async function createOrUpdateUser(email, name, externalId = null, profile
       .single();
 
     if (error) throw error;
+
+    // 1. Sync new user profile with SupermailBox
+    supermailbox.syncUser({
+      id: data.id,
+      email: data.email,
+      fullName: data.name,
+      attributes: { project: 'QuickPost', new_user: true }
+    }).catch(err => console.warn('[SupermailBox SDK] Contact sync failed:', err?.message));
+
+    // 2. Send Welcome Email via SupermailBox
+    supermailbox.sendEmail({
+      to: data.email,
+      templateKey: 'auth_welcome',
+      variables: {
+        name: data.name || data.email,
+        otp_code: 'VERIFIED'
+      }
+    }).catch(err => console.warn('[SupermailBox SDK] Send welcome email failed:', err?.message));
 
     return data;
   } catch (err) {
