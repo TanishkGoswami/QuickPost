@@ -38,6 +38,7 @@ function cleanUploadError(error = '') {
   const message = String(error || '')
     .replace(/Cloudinary upload failed:\s*/gi, '')
     .replace(/Ordinary upload failed:\s*/gi, '')
+    .replace(/(Failed\s*—\s*[a-z]+):[a-f0-9\-]+:/gi, '$1:')
     .trim();
 
   if (/Maximum is 10485760/i.test(message)) {

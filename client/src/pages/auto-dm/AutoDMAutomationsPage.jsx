@@ -241,6 +241,30 @@ function AnalyticsModal({ automation, analytics, loading, onClose, onSync, onEdi
                   ) : (
                     <div className="autodm-good-box">No recent processing errors found for this automation.</div>
                   )}
+
+                  {/* Follow Gate Stats */}
+                  <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #eaeaea' }}>
+                    <div className="autodm-panel-head" style={{ marginBottom: '12px' }}>
+                      <div>
+                        <h3 style={{ fontSize: '14px', margin: '0 0 4px', color: '#111' }}>Follow Gate Stats</h3>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#666' }}>Follower interactions for this automation.</p>
+                      </div>
+                    </div>
+                    <div className="autodm-metrics-row">
+                      <div className="autodm-metric-line">
+                        <p>Followers Commented</p>
+                        <strong>{analytics?.followersCommented || 0}</strong>
+                      </div>
+                      <div className="autodm-metric-line">
+                        <p>Non-Followers Blocked</p>
+                        <strong>{analytics?.followGateBlockedCount || 0}</strong>
+                      </div>
+                      <div className="autodm-metric-line">
+                        <p>New Followers</p>
+                        <strong>{analytics?.followerGrowth > 0 ? '+' + analytics.followerGrowth : (analytics?.followerGrowth || 0)}</strong>
+                      </div>
+                    </div>
+                  </div>
                 </section>
 
                 <section className="autodm-panel">

@@ -368,6 +368,8 @@ export default function AutomationEditorPage() {
   const [isCaseSensitive, setIsCaseSensitive] = useState(false);
   const [commentReplyEnabled, setCommentReplyEnabled] = useState(true);
   const [commentReplyText, setCommentReplyText] = useState('Sent it to your DM. Tap SETUP to continue.');
+  const [requireFollow, setRequireFollow] = useState(false);
+  const [fallbackCommentReply, setFallbackCommentReply] = useState('');
   const [scheduleType, setScheduleType] = useState('duration');
   const [durationDays, setDurationDays] = useState('7');
   const [startsAt, setStartsAt] = useState('');
@@ -433,6 +435,8 @@ export default function AutomationEditorPage() {
         setIsCaseSensitive(Boolean(data.is_case_sensitive));
         setCommentReplyEnabled(data.comment_reply_enabled !== false);
         setCommentReplyText(data.comment_reply_text || 'Sent it to your DM. Tap SETUP to continue.');
+        setRequireFollow(Boolean(data.require_follow));
+        setFallbackCommentReply(data.fallback_comment_reply || '');
         setScheduleType(data.schedule_type || 'manual');
         setStartsAt(toDateTimeLocalValue(data.starts_at));
         setEndsAt(toDateTimeLocalValue(data.ends_at));
@@ -531,6 +535,8 @@ export default function AutomationEditorPage() {
         is_case_sensitive: isCaseSensitive,
         comment_reply_enabled: commentReplyEnabled,
         comment_reply_text: commentReplyEnabled ? commentReplyText : null,
+        require_follow: requireFollow,
+        fallback_comment_reply: fallbackCommentReply,
         response_flow: responseFlow,
         is_active: isActive,
         ...schedule.value,
@@ -771,6 +777,32 @@ export default function AutomationEditorPage() {
                       </div>
                    )}
                 </div>
+
+                {/* Follow Gate */}
+                <div className="p-5 border-t border-gray-100 bg-gray-50/50">
+                   <div className="flex items-center justify-between">
+                      <div>
+                        <Label className="text-sm font-semibold text-gray-800 block">Instagram Follow Gate</Label>
+                        <p className="text-xs text-gray-500 mt-1">Require users to follow your account before sending a DM.</p>
+                      </div>
+                      <Switch 
+                          checked={requireFollow} 
+                          onCheckedChange={setRequireFollow} 
+                      />
+                   </div>
+                   {requireFollow && (
+                      <div className="mt-4 pt-4 border-t border-gray-200/60">
+                          <Label className="text-sm font-semibold text-gray-800 block">Fallback Comment Reply</Label>
+                          <p className="text-xs text-gray-500 mt-1 mb-3">If they don't follow you, we'll reply to their comment with this text instead of sending a DM.</p>
+                          <Textarea 
+                              value={fallbackCommentReply}
+                              onChange={(e) => setFallbackCommentReply(e.target.value)}
+                              placeholder="Please follow our account to receive the link!"
+                              className="w-full text-sm resize-none rounded-xl border-gray-200 focus:ring-1 focus:ring-primary focus:border-primary min-h-[60px] p-3 bg-white"
+                          />
+                      </div>
+                   )}
+                </div>
             </div>
           </div>
 
@@ -851,6 +883,8 @@ export default function AutomationEditorPage() {
                 responseFlow={responseFlow}
                 commentReplyText={commentReplyText}
                 commentReplyEnabled={commentReplyEnabled}
+                requireFollow={requireFollow}
+                fallbackCommentReply={fallbackCommentReply}
                 activeTab={activePreviewTab}
                 onTabChange={setActivePreviewTab}
             />

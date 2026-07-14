@@ -59,6 +59,8 @@ export default function AutomationEditorPage() {
   const [isCaseSensitive, setIsCaseSensitive] = useState(false);
   const [commentReplyEnabled, setCommentReplyEnabled] = useState(false);
   const [commentReplyText, setCommentReplyText] = useState("");
+  const [requireFollow, setRequireFollow] = useState(false);
+  const [fallbackCommentReply, setFallbackCommentReply] = useState("");
   const [responseFlow, setResponseFlow] = useState({ nodes: [], opening_message_enabled: false, opening_message: "" });
   const [isActive, setIsActive] = useState(false);
 
@@ -104,6 +106,8 @@ export default function AutomationEditorPage() {
         setIsCaseSensitive(Boolean(automation.is_case_sensitive));
         setCommentReplyEnabled(Boolean(automation.comment_reply_enabled));
         setCommentReplyText(automation.comment_reply_text || "");
+        setRequireFollow(Boolean(automation.require_follow));
+        setFallbackCommentReply(automation.fallback_comment_reply || "");
         setResponseFlow(automation.response_flow || { nodes: [], opening_message_enabled: false, opening_message: "" });
         setIsActive(Boolean(automation.is_active));
       } catch (error) {
@@ -192,6 +196,8 @@ export default function AutomationEditorPage() {
         is_case_sensitive: isCaseSensitive,
         comment_reply_enabled: commentReplyEnabled,
         comment_reply_text: commentReplyEnabled ? commentReplyText : null,
+        require_follow: requireFollow,
+        fallback_comment_reply: fallbackCommentReply,
         response_flow: responseFlow,
         is_active: isActive,
       };
@@ -476,6 +482,52 @@ export default function AutomationEditorPage() {
                         placeholder="Check your DM!"
                         className="resize-none rounded-xl border-black/10 text-sm"
                       />
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Follow Gate */}
+              {["comment_on_post", "comment_on_reel"].includes(
+                triggerType,
+              ) && (
+                <Card className="overflow-hidden rounded-2xl border-black/8 shadow-sm">
+                  <CardHeader className="border-b border-black/5 bg-slate-50/60 pb-3 pt-4">
+                    <CardTitle className="text-sm font-semibold text-slate-900">
+                      Instagram Follow Gate
+                    </CardTitle>
+                    <p className="text-xs text-slate-400">
+                      Require users to follow your account before sending them a DM.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm text-slate-700">
+                        Only send DM if they follow
+                      </Label>
+                      <Switch
+                        checked={requireFollow}
+                        onCheckedChange={setRequireFollow}
+                      />
+                    </div>
+                    {requireFollow && (
+                      <div className="space-y-2 mt-2 pt-2 border-t border-black/5">
+                        <Label className="text-sm text-slate-700">
+                          Fallback Comment Reply
+                        </Label>
+                        <p className="text-xs text-slate-400 mb-2">
+                          If they don't follow you, we'll reply to their comment with this text instead of sending a DM.
+                        </p>
+                        <Textarea
+                          value={fallbackCommentReply}
+                          onChange={(event) =>
+                            setFallbackCommentReply(event.target.value)
+                          }
+                          rows={2}
+                          placeholder="Please follow our account to receive the link!"
+                          className="resize-none rounded-xl border-black/10 text-sm"
+                        />
+                      </div>
                     )}
                   </CardContent>
                 </Card>

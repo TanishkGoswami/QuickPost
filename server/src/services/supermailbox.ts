@@ -23,6 +23,15 @@ export interface SendBroadcastRequest {
   webhookUrl?: string;
   scheduledAt?: string;
 }
+
+function logSdkError(action: string, error: any) {
+  if (error?.cause?.code === 'ECONNREFUSED' || error?.code === 'ECONNREFUSED') {
+    console.warn(`[SupermailBox SDK] ${action} failed: Service not reachable (ECONNREFUSED)`);
+  } else {
+    console.error(`[SupermailBox SDK] ${action} failed:`, error);
+  }
+}
+
 export class SupermailboxClient {
   private baseUrl: string;
   private apiKey: string;
@@ -52,7 +61,7 @@ export class SupermailboxClient {
       });
       return await response.json();
     } catch (error) {
-      console.error('[SupermailBox SDK] Contact sync failed:', error);
+      logSdkError('Contact sync', error);
       return { success: false };
     }
   }
@@ -76,7 +85,7 @@ export class SupermailboxClient {
       });
       return await response.json();
     } catch (error) {
-      console.error('[SupermailBox SDK] Send email failed:', error);
+      logSdkError('Send email', error);
       return { success: false };
     }
   }
@@ -95,7 +104,7 @@ export class SupermailboxClient {
       });
       return await response.json();
     } catch (error) {
-      console.error('[SupermailBox SDK] Send broadcast failed:', error);
+      logSdkError('Send broadcast', error);
       return { success: false };
     }
   }

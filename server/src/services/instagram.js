@@ -322,6 +322,9 @@ export async function postStoryToInstagram(mediaUrl, caption, tokens, mediaType 
 
     if (isVideo) {
       await waitForInstagramContainer(graphBaseUrl, containerId, accessToken, onProgress, http);
+    } else {
+      console.log('Step 2: Waiting 3 seconds for image processing...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
     }
 
     const publishResponse = await http.post(
