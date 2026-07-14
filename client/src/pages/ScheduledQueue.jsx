@@ -229,15 +229,14 @@ function QueueCard({ post, onCancel, onRetry, onRefresh }) {
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97, y: -6 }}
-      className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-shadow hover:shadow-md ${
-        post.status === "processing"
-          ? "border-amber-200 ring-1 ring-amber-100"
-          : post.status === "failed"
-            ? "border-red-200"
-            : post.status === "cancelled"
-              ? "border-gray-200 opacity-60"
-              : "border-gray-100"
-      }`}
+      className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-shadow hover:shadow-md ${post.status === "processing"
+        ? "border-amber-200 ring-1 ring-amber-100"
+        : post.status === "failed"
+          ? "border-red-200"
+          : post.status === "cancelled"
+            ? "border-gray-200 opacity-60"
+            : "border-gray-100"
+        }`}
     >
       {/* Main row */}
       <div className="p-4 flex items-start gap-4">
@@ -267,9 +266,8 @@ function QueueCard({ post, onCancel, onRetry, onRefresh }) {
               {formatScheduledTime(post.scheduled_for)}
               {until && (
                 <span
-                  className={`ml-1 font-bold ${
-                    until === "overdue" ? "text-red-500" : "text-blue-500"
-                  }`}
+                  className={`ml-1 font-bold ${until === "overdue" ? "text-red-500" : "text-blue-500"
+                    }`}
                 >
                   ({until})
                 </span>
@@ -447,11 +445,11 @@ function groupByDate(posts) {
   for (const post of posts) {
     const d = post.scheduled_for
       ? new Date(post.scheduled_for).toLocaleDateString(undefined, {
-          weekday: "long",
-          month: "long",
-          day: "numeric",
-          year: "numeric",
-        })
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })
       : "No date";
     if (!groups[d]) groups[d] = [];
     groups[d].push(post);
@@ -516,40 +514,106 @@ export default function ScheduledQueue() {
   const grouped = groupByDate(filtered);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: "var(--canvas)" }}>
       {/* ── Header ── */}
-      <div className="bg-white border-b border-gray-200 px-8 md:px-16 py-6">
-        <div className="flex items-center justify-between">
+      <div
+        style={{
+          background: "#ffffff",
+          borderBottom: "1px solid #d3cec6",
+          padding: "clamp(24px, 4vw, 30px) clamp(18px, 3vw, 32px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 16,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            flex: 1,
+            minWidth: 200,
+          }}
+        >
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Scheduled Queue</h1>
-            <p className="text-xs text-gray-400 mt-0.5">
+            <div className="eyebrow" style={{ marginBottom: 2 }}>
+              Overview
+            </div>
+            <h1
+              style={{
+                fontSize: "clamp(36px, 5vw, 56px)",
+                fontWeight: 500,
+                color: "#111111",
+                margin: 0,
+                letterSpacing: "-0.025em",
+                lineHeight: 1.08,
+                fontFamily: "var(--font)",
+              }}
+            >
+              Scheduled Queue
+            </h1>
+            <p className="text-xs text-gray-400 mt-1.5">
               {stats.pending} pending · auto-refreshes every 30s
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => fetchQueue(true)}
-              disabled={refreshing}
-              className="p-2 rounded-lg border border-gray-200 text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-              title="Refresh"
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
-              />
-            </button>
-            <button
-              onClick={() => setComposerOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg transition-colors shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              Schedule Post
-            </button>
-          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button
+            onClick={() => fetchQueue(true)}
+            disabled={refreshing}
+            style={{
+              padding: 8,
+              borderRadius: "8px",
+              border: "1px solid #d3cec6",
+              background: "#ffffff",
+              color: "#626260",
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.color = "#111111";
+              e.currentTarget.style.background = "#ebe7e1";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.color = "#626260";
+              e.currentTarget.style.background = "#ffffff";
+            }}
+            className="disabled:opacity-50"
+            title="Refresh"
+          >
+            <RefreshCw
+              className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
+            />
+          </button>
+          <button
+            onClick={() => setComposerOpen(true)}
+            className="btn-ink"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 14,
+              padding: "10px 20px",
+              borderRadius: "8px",
+            }}
+          >
+            <Plus size={16} />
+            <span className="hidden sm:inline">Schedule Post</span>
+            <span className="sm:hidden">Schedule</span>
+          </button>
         </div>
       </div>
 
       {/* ── Stats strip ── */}
-      <div className="bg-white border-b border-gray-100 px-8 md:px-16 py-4">
+      <div
+        style={{
+          background: "#ffffff",
+          borderBottom: "1px solid #ebe7e1",
+          padding: "16px clamp(18px, 3vw, 32px)",
+        }}
+      >
         <div className="flex items-center gap-6">
           {[
             {
@@ -582,17 +646,34 @@ export default function ScheduledQueue() {
       </div>
 
       {/* ── Filter tabs ── */}
-      <div className="bg-white border-b border-gray-100 px-8 md:px-16">
+      <div
+        style={{
+          background: "#ffffff",
+          borderBottom: "1px solid #d3cec6",
+          padding: "0 clamp(18px, 3vw, 32px)",
+        }}
+      >
         <div className="flex items-center gap-6">
           {FILTERS.map((f) => (
             <button
               key={f.id}
               onClick={() => setActiveFilter(f.id)}
-              className={`py-3 text-xs font-bold uppercase tracking-widest border-b-2 transition-all ${
-                activeFilter === f.id
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-400 hover:text-gray-600"
-              }`}
+              style={{
+                padding: "14px 0",
+                fontSize: 11,
+                fontWeight: 700,
+                textTransform: "none",
+                letterSpacing: 0,
+                color: activeFilter === f.id ? "#111111" : "#626260",
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                borderBottom: `2.5px solid ${activeFilter === f.id ? "#111111" : "transparent"}`,
+                marginBottom: -1,
+                transition: "all 0.2s",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+              }}
             >
               {f.label}
             </button>
@@ -601,7 +682,13 @@ export default function ScheduledQueue() {
       </div>
 
       {/* ── Content ── */}
-      <div className="px-8 md:px-16 py-8 mx-auto max-w-4xl">
+      <div
+        style={{
+          padding: "32px clamp(18px, 3vw, 32px)",
+          margin: "0 auto",
+          maxWidth: "1600px",
+        }}
+      >
         <Skeleton
           name="scheduled-queue"
           loading={loading}
@@ -632,14 +719,13 @@ export default function ScheduledQueue() {
               animate={{ opacity: 1, y: 0 }}
               className="bg-white rounded-2xl border border-dashed border-gray-200 p-20 text-center shadow-sm"
             >
-              <img 
-                src={`https://illustrations.popsy.co/amber/${
-                  activeFilter === 'failed' ? 'designer' :
+              <img
+                src={`https://illustrations.popsy.co/amber/${activeFilter === 'failed' ? 'designer' :
                   activeFilter === 'cancelled' ? 'creative-work' :
-                  'surreal-hourglass'
-                }.svg`} 
-                alt={`No ${activeFilter} posts`} 
-                className="h-32 object-contain mx-auto mb-6" 
+                    'surreal-hourglass'
+                  }.svg`}
+                alt={`No ${activeFilter} posts`}
+                className="h-32 object-contain mx-auto mb-6"
               />
               <h3 className="text-lg font-bold text-gray-900 mb-2">
                 {activeFilter === "all"
