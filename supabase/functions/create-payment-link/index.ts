@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
     }
 
     // 4. Store payment link in DB
-    const { error: dbError } = await supabase.from("payments").insert({
+    const { error: dbError } = await supabase.from("social_payments").insert({
       user_id: userId,
       razorpay_payment_link_id: razorpayData.id,
       plan: planId === "999" || planId === "pro" ? "Pro" : "Enterprise",

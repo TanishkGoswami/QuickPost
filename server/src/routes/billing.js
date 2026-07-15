@@ -62,7 +62,7 @@ router.get('/invoices', authenticateUser, async (req, res, next) => {
   try {
     const ids = [req.user.authUserId, req.user.userId].filter(Boolean);
     let query = supabase
-      .from('payments')
+      .from('social_payments')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(24);
