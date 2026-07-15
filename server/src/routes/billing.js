@@ -18,12 +18,15 @@ router.get('/plans', async (_req, res) => {
     const enterprisePlan = JSON.parse(JSON.stringify(PLANS.enterprise));
 
     if (starterPlan) {
+      const base = starterPlan.amount;
       proPlan.prices = {
-        month: starterPlan.amount / 100,
-        year: null // No matching annual plan in Hub pricing, checkout disabled
+        month: base / 100,
+        quarterly: Math.round(base * 3 * 0.90) / 100 / 3,
+        six_months: Math.round(base * 6 * 0.80) / 100 / 6,
+        year: Math.round(base * 12 * 0.70) / 100 / 12
       };
     } else {
-      proPlan.prices = { month: null, year: null };
+      proPlan.prices = { month: null, quarterly: null, six_months: null, year: null };
     }
 
     // No matching Enterprise plan in Hub, checkout disabled
@@ -39,8 +42,8 @@ router.get('/plans', async (_req, res) => {
     const proPlan = JSON.parse(JSON.stringify(PLANS.pro));
     const enterprisePlan = JSON.parse(JSON.stringify(PLANS.enterprise));
 
-    proPlan.prices = { month: null, year: null };
-    enterprisePlan.prices = { month: null, year: null };
+    proPlan.prices = { month: null, quarterly: null, six_months: null, year: null };
+    enterprisePlan.prices = { month: null, quarterly: null, six_months: null, year: null };
 
     res.json({
       success: true,
