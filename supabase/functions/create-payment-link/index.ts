@@ -30,9 +30,9 @@ Deno.serve(async (req) => {
       throw new Error("Enterprise and invalid plan checkouts are disabled because no matching Hub pricing plan exists");
     }
 
-    // Only monthly interval is supported. Non-monthly cycles are fail-closed.
-    if (intervalMonths !== 1) {
-      throw new Error("Non-monthly intervals are disabled because no matching Hub pricing plan exists");
+    // Validate supported billing intervals.
+    if (![1, 3, 6, 12].includes(intervalMonths)) {
+      throw new Error("Invalid billing interval requested");
     }
 
     const HUB_SUPABASE_URL = Deno.env.get("HUB_SUPABASE_URL");
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
         throw new Error(`Invalid amount found in Hub plan: ${plan.plan_name}`);
       }
       if (plan.currency !== "INR") {
-        throw new Error(`Unsupported currency found in Hub plan: ${plan.plan_name}`);
+        throw new Error("Unsupported currency found in Hub plan");
       }
     }
 
@@ -91,7 +91,12 @@ Deno.serve(async (req) => {
       throw new Error("Active social_pilot_starter pricing plan not found in GetAiPilot catalog");
     }
 
-    const amount = Math.round(starterPlan.amount * intervalMonths);
+    let discountMultiplier = 1.0;
+    if (intervalMonths === 3) discountMultiplier = 0.90;
+    else if (intervalMonths === 6) discountMultiplier = 0.80;
+    else if (intervalMonths === 12) discountMultiplier = 0.70;
+
+    const amount = Math.round(starterPlan.amount * intervalMonths * discountMultiplier);
     const description = `QuickPost Pro Plan Subscription (${intervalMonths} Month${intervalMonths > 1 ? 's' : ''})`;
 
     // 2. Initialize Supabase client

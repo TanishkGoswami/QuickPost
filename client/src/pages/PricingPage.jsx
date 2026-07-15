@@ -355,7 +355,7 @@ export default function PricingPage() {
                     {currentPrice !== null && currentPrice !== undefined ? (
                       <>
                         <span style={{ fontSize: 'clamp(40px, 5vw, 52px)', fontWeight: 600, color: plan.highlighted ? 'var(--canvas)' : 'var(--ink)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                          ₹{currentPrice}
+                          ₹{Math.round(currentPrice)}
                         </span>
                         <span style={{ fontSize: 14, fontWeight: 450, color: plan.highlighted ? 'rgba(243,240,238,0.5)' : 'var(--slate)', marginBottom: 6 }}>
                           {currentPrice === 0 ? 'forever' : `/ mo`}
@@ -369,7 +369,7 @@ export default function PricingPage() {
                   </div>
                   {billing > 1 && currentPrice !== null && currentPrice !== undefined && currentPrice > 0 && plan.price?.[1] > 0 && (
                     <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--arc)', marginTop: 4 }}>
-                      Billed ₹{currentPrice * billing} every {billing} months · Save ₹{(plan.price[1] - currentPrice) * billing}
+                      Billed ₹{Math.round(currentPrice * billing)} every {billing} months · Save ₹{Math.round((plan.price[1] - currentPrice) * billing)}
                     </div>
                   )}
                 </div>

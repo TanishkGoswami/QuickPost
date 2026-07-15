@@ -89,8 +89,8 @@ Deno.serve(async (req) => {
         }
 
         const interval = Number(razorpayData.notes?.interval || "1");
-        if (interval !== 1) {
-          throw new Error("Non-monthly intervals are disabled because no matching Hub pricing plan exists");
+        if (![1, 3, 6, 12].includes(interval)) {
+          throw new Error("Invalid billing interval verified");
         }
 
         const HUB_SUPABASE_URL = Deno.env.get("HUB_SUPABASE_URL");
@@ -149,7 +149,12 @@ Deno.serve(async (req) => {
           throw new Error("Active social_pilot_starter pricing plan not found in GetAiPilot catalog");
         }
 
-        const expectedAmount = Math.round(starterPlan.amount * interval);
+        let discountMultiplier = 1.0;
+        if (interval === 3) discountMultiplier = 0.90;
+        else if (interval === 6) discountMultiplier = 0.80;
+        else if (interval === 12) discountMultiplier = 0.70;
+
+        const expectedAmount = Math.round(starterPlan.amount * interval * discountMultiplier);
         if (amountPaid !== expectedAmount) {
           throw new Error("Razorpay payment amount is incomplete or inconsistent with authoritative Hub pricing.");
         }

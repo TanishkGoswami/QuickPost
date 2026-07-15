@@ -381,7 +381,7 @@ export default function Pricing() {
                             letterSpacing: "-0.04em",
                           }}
                         >
-                          ₹{currentPrice}
+                          ₹{Math.round(currentPrice)}
                         </span>
                         <span
                           style={{
@@ -404,7 +404,7 @@ export default function Pricing() {
                   </div>
                   {billing > 1 && currentPrice !== null && currentPrice !== undefined && currentPrice > 0 && plan.price?.[1] > 0 && (
                     <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--arc)', marginTop: 4 }}>
-                      Billed ₹{currentPrice * billing} every {billing} months · Save ₹{(plan.price[1] - currentPrice) * billing}
+                      Billed ₹{Math.round(currentPrice * billing)} every {billing} months · Save ₹{Math.round((plan.price[1] - currentPrice) * billing)}
                     </div>
                   )}
                 </div>
