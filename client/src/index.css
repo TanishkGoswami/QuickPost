@@ -4810,7 +4810,8 @@ body {
 }
 
 .post-preview-modal {
-  max-width: min(1080px, calc(100vw - 40px)) !important;
+  width: fit-content !important;
+  max-width: min(980px, calc(100vw - 32px)) !important;
   max-height: min(90vh, 860px) !important;
   border: 1px solid #d3cec6;
   border-radius: 8px !important;
@@ -4819,22 +4820,17 @@ body {
 }
 
 .post-preview-header {
-  padding: 18px 22px !important;
+  min-height: 72px;
+  padding: 14px 20px !important;
   border-bottom-color: #d3cec6 !important;
   background: #fff !important;
-}
-
-.post-preview-header-icon {
-  border: 1px solid #d3cec6;
-  border-radius: 8px !important;
-  background: #ebe7e1 !important;
 }
 
 .post-preview-title {
   max-width: min(620px, 58vw);
   overflow: hidden;
   color: #111 !important;
-  font-size: 18px !important;
+  font-size: 17px !important;
   font-weight: 600 !important;
   letter-spacing: -0.01em;
   text-overflow: ellipsis;
@@ -4856,17 +4852,18 @@ body {
 }
 
 .post-preview-sidebar {
-  width: 256px !important;
+  width: 232px !important;
   border-right-color: #d3cec6 !important;
   background: #f5f1ec !important;
 }
 
 .post-preview-sidebar > div,
 .post-preview-main-inner {
-  padding: 22px !important;
+  padding: 18px 20px !important;
 }
 
 .post-preview-platform-option {
+  min-height: 58px;
   border: 1px solid transparent;
   border-radius: 8px !important;
   background: transparent;
@@ -4880,7 +4877,7 @@ body {
 }
 
 .post-preview-platform-option.bg-white {
-  border-color: #d3cec6 !important;
+  border-color: #111 !important;
   background: #fff !important;
 }
 
@@ -4906,55 +4903,8 @@ body {
 }
 
 .post-preview-stage {
-  gap: 34px !important;
-  justify-content: space-between !important;
-}
-
-.post-preview-side-stack {
-  max-width: 330px !important;
-}
-
-.post-preview-status-card,
-.post-preview-content-card,
-.post-preview-spec-card {
-  border-width: 1px !important;
-  border-radius: 8px !important;
-  box-shadow: none !important;
-}
-
-.post-preview-status-card {
-  padding: 28px !important;
-}
-
-.post-preview-status-card.bg-green-50\/20 {
-  border-color: #a7f3c4 !important;
-  background: #effdf5 !important;
-}
-
-.post-preview-status-card.bg-red-50\/20 {
-  border-color: #fecaca !important;
-  background: #fff1f1 !important;
-}
-
-.post-preview-live-link {
-  border-color: #d3cec6 !important;
-  border-radius: 8px !important;
-  box-shadow: none !important;
-}
-
-.post-preview-content-card {
-  max-height: 160px;
-  overflow: auto;
-  background: #f5f1ec !important;
-}
-
-.post-preview-content-card p:last-child {
-  color: #444 !important;
-  line-height: 1.55;
-}
-
-.post-preview-spec-card {
-  background: #fff !important;
+  gap: 24px !important;
+  justify-content: center !important;
 }
 
 @media (max-width: 1024px) {
@@ -4987,9 +4937,6 @@ body {
     align-items: center !important;
   }
 
-  .post-preview-side-stack {
-    max-width: 100% !important;
-  }
 }
 
 @media (max-width: 768px) {

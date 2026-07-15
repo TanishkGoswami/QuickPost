@@ -49,6 +49,14 @@ const PLATFORM_META = [
     connectLabel: "Open connector",
   },
   {
+    id: "threads",
+    name: "Threads",
+    icon: "/icons/threads-icon.svg",
+    prerequisite: "Threads profile authorization required hai. Multiple Threads accounts ko separately connect kar sakte hain.",
+    connectLabel: "Connect Threads",
+    oauth: true,
+  },
+  {
     id: "pinterest",
     name: "Pinterest",
     icon: "/icons/pinterest-round-color-icon.svg",
@@ -124,9 +132,8 @@ export default function ConnectedPlatformsPanel({
           count += 1;
         }
       } else {
-        if (connectedAccounts?.[platform.id]?.connected) {
-          count += 1;
-        }
+        const accounts = connectedAccounts?.[`${platform.id}Accounts`] || [];
+        count += accounts.length || (connectedAccounts?.[platform.id]?.connected ? 1 : 0);
       }
     });
     return count;
@@ -258,8 +265,11 @@ export default function ConnectedPlatformsPanel({
       <div className={`grid gap-3 p-5 ${compact ? "md:grid-cols-2" : "lg:grid-cols-2"}`}>
         {PLATFORM_META.map((platform) => {
           const account = connectedAccounts?.[platform.id] || {};
-          const status = getStatus(platform, account, autoDMState);
-          const isConnected = Boolean(account.connected);
+          const platformAccounts = platform.id === "instagram"
+            ? connectedAccounts?.instagramAccounts || []
+            : connectedAccounts?.[`${platform.id}Accounts`] || [];
+          const status = getStatus(platform, platformAccounts.length ? { ...platformAccounts[0], connected: true } : account, autoDMState);
+          const isConnected = Boolean(account.connected || platformAccounts.length);
           const isInstagram = platform.id === "instagram";
           const canSyncAutoDM =
             isInstagram &&
@@ -289,10 +299,10 @@ export default function ConnectedPlatformsPanel({
                       <span>{autoDMState.autoDMStorageError}</span>
                     </div>
                   ) : null}
-                  {isInstagram && connectedAccounts?.instagramAccounts?.length > 1 && (
+                  {platformAccounts.length > 0 && (
                     <div className="mt-4 flex flex-col gap-2 border-t border-black/5 pt-4">
                       <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Connected Accounts</span>
-                      {connectedAccounts.instagramAccounts.map((acc) => (
+                      {platformAccounts.map((acc) => (
                         <div key={acc.id} className="flex items-center justify-between rounded-lg border border-black/5 bg-white p-2">
                           <div className="flex items-center gap-2 min-w-0">
                             {acc.profilePicture ? (
@@ -300,7 +310,7 @@ export default function ConnectedPlatformsPanel({
                             ) : (
                               <div className="h-6 w-6 shrink-0 rounded-full bg-gray-100" />
                             )}
-                            <span className="truncate text-sm font-medium text-[var(--ink)]">@{acc.username}</span>
+                            <span className="truncate text-sm font-medium text-[var(--ink)]">{acc.username || acc.account_id || acc.accountId}</span>
                           </div>
                           <button
                             type="button"
@@ -326,7 +336,7 @@ export default function ConnectedPlatformsPanel({
                         className="inline-flex h-10 items-center gap-2 rounded-full border border-red-200 bg-white px-4 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
                       >
                         <Unlink className="h-4 w-4" />
-                        {busy === platform.id ? "Disconnecting..." : (isInstagram && connectedAccounts?.instagramAccounts?.length > 1 ? "Disconnect All" : "Disconnect")}
+                        {busy === platform.id ? "Disconnecting..." : (platformAccounts.length > 1 ? "Disconnect All" : "Disconnect")}
                       </button>
                     {canSyncAutoDM ? (
                       <button

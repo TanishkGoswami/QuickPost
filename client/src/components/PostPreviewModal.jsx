@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { usePlatformMetrics } from '../utils/metrics';
 import {
-  X, ExternalLink, CheckCircle2, XCircle,
+  X,
   Clock, Heart, MessageCircle, Share2, Bookmark,
   MoreHorizontal, MoreVertical, Send,
   Repeat, MessageSquare, Plus, Music2,
@@ -82,8 +82,7 @@ const PLATFORM_CONFIG = {
     name: 'Threads', color: '#000', bg: '#fff',
     icon: '/icons/threads-icon.svg',
     formats: [
-      { id: 'th_feed',  label: 'Feed Post',   ratio: '1:1',  w: 1080, h: 1080, css: 'aspect-square'  },
-      { id: 'th_port',  label: 'Portrait',    ratio: '4:5',  w: 1080, h: 1350, css: 'aspect-[4/5]'   },
+      { id: 'th_feed',  label: 'Feed Post',   ratio: 'auto',  w: 0, h: 0, css: ''  },
     ],
     headerBg: '#fff',
     textColor: '#000',
@@ -121,7 +120,110 @@ const PLATFORM_CONFIG = {
 
 /* ── UI Components for each Platform ────────────────────────────────── */
 
-const InstagramOverlay = ({ format, caption, children, isFull, platformUsername, metrics, user }) => {
+const getUserPicture = (user) => user?.profile_picture || user?.profilePicture || user?.picture || user?.avatar_url;
+const getAccountPicture = (account) =>
+  account?.profilePicture ||
+  account?.profile_picture ||
+  account?.profilePictureUrl ||
+  account?.profile_picture_url ||
+  account?.threads_profile_picture_url ||
+  account?.picture ||
+  account?.picture_url ||
+  account?.avatar_url ||
+  account?.avatar ||
+  account?.image ||
+  account?.profile_pic_url;
+const getAccountUsername = (account) =>
+  account?.username ||
+  account?.instagram_username ||
+  account?.handle ||
+  account?.name ||
+  account?.displayName ||
+  account?.account_id ||
+  account?.accountId;
+
+const accountMatchesId = (account, id) => {
+  if (!account || !id) return false;
+  const needle = String(id);
+  return [
+    account.id,
+    account.accountId,
+    account.account_id,
+    account.instagram_business_id,
+    account.instagram_business_account_id,
+    account.instagram_user_id,
+    account.page_id,
+    account.pageId,
+  ].some((value) => value && String(value) === needle);
+};
+
+const resolvePlatformAccount = ({ post, platformId, channel, connectedAccounts }) => {
+  if (!platformId) return null;
+  const accountList = connectedAccounts?.[`${platformId}Accounts`] || [];
+  const platformData = post?.platform_data || {};
+  const platformResult = platformData?.results?.[channel] || platformData?.results?.[platformId] || platformData?.[channel] || platformData?.[platformId];
+  const channelAccountId = String(channel || '').includes(':') ? String(channel).split(':')[1] : null;
+  const accountId = [
+    channelAccountId,
+    platformResult?.accountId,
+    platformResult?.account_id,
+    platformResult?.instagramAccountId,
+    platformResult?.instagram_account_id,
+    platformResult?.threadsAccountId,
+    platformResult?.threads_account_id,
+    platformData?.[`${platformId}AccountId`],
+    platformData?.[`${platformId}_account_id`],
+    platformData?.accountId,
+    platformData?.account_id,
+    post?.[`${platformId}_account_id`],
+    post?.[`${platformId}AccountId`],
+  ].find(Boolean);
+
+  if (accountId) {
+    const matched = accountList.find((account) => accountMatchesId(account, accountId));
+    if (matched) return matched;
+  }
+
+  const username = [
+    platformResult?.username,
+    platformResult?.instagram_username,
+    platformResult?.handle,
+    platformData?.[`${platformId}Username`],
+    platformData?.[`${platformId}_username`],
+    post?.[`${platformId}_username`],
+  ].find(Boolean);
+  if (username) {
+    const normalized = String(username).replace(/^@/, '').toLowerCase();
+    const matched = accountList.find((account) =>
+      String(getAccountUsername(account) || '').replace(/^@/, '').toLowerCase() === normalized
+    );
+    if (matched) return matched;
+  }
+
+  if (accountList.length === 1 && (!channel || channel === platformId)) return accountList[0];
+  return connectedAccounts?.[platformId] || null;
+};
+
+const ProfileBubble = ({ user, username, picture, className = "w-8 h-8", ring = false }) => {
+  const displayPicture = picture || getUserPicture(user);
+  const letter = (username || user?.name || "?").trim()[0]?.toUpperCase() || "?";
+
+  return (
+    <div className={`${className} rounded-full ${ring ? "bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 p-[2px]" : "bg-gray-100"} overflow-hidden flex-shrink-0`}>
+      <div className="w-full h-full rounded-full bg-white p-[2px]">
+        {displayPicture ? (
+          <img src={displayPicture} className="w-full h-full rounded-full object-cover" alt="" />
+        ) : (
+          <div className="w-full h-full rounded-full bg-[#ebe7e1] flex items-center justify-center text-[11px] font-semibold text-[#111]">
+            {letter}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const InstagramOverlay = ({ format, caption, children, isFull, platformUsername, platformPicture, metrics, user }) => {
   if (isFull) {
     const isReel = format.id === 'ig_reel';
     const isStory = format.id === 'ig_story';
@@ -214,37 +316,53 @@ const InstagramOverlay = ({ format, caption, children, isFull, platformUsername,
     );
   }
 
-  // Feed Post (Fluid)
   return (
-    <div className="flex flex-col bg-white pointer-events-none">
-      <div className="p-3 flex items-center justify-between border-b border-gray-100">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-400 to-purple-600 p-[1.5px]">
-            <div className="w-full h-full rounded-full bg-white p-[1.5px]">
-               {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full rounded-full object-cover" /> : <div className="w-full h-full rounded-full bg-gray-200 flex items-center justify-center text-[10px]">{user?.name?.[0] || '?'}</div>}
-            </div>
-          </div>
-          <span className="text-[11px] font-bold text-black">{platformUsername || 'username'}</span>
-        </div>
-        <MoreHorizontal className="w-4 h-4 text-black" />
-      </div>
-
-      <div className={`relative overflow-hidden bg-gray-50 ${format.css} w-full`}>
+    <div className="grid grid-cols-[minmax(0,1fr)_250px] bg-white pointer-events-none border border-gray-200">
+      <div className="min-h-[420px] bg-black flex items-center justify-center">
         {children}
       </div>
-
-      <div className="p-3 flex flex-col border-t border-gray-100">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-3">
-            <Heart className="w-5 h-5 text-black" />
-            <MessageCircle className="w-5 h-5 text-black" />
-            <Send className="w-5 h-5 text-black" />
+      <div className="flex min-h-[420px] flex-col border-l border-gray-200 bg-white">
+        <div className="h-[68px] px-4 flex items-center justify-between border-b border-gray-200">
+          <div className="flex items-center gap-3 min-w-0">
+            <ProfileBubble user={user} username={platformUsername} picture={platformPicture} className="w-10 h-10" ring />
+            <span className="text-[14px] font-semibold text-black truncate">{platformUsername || 'username'}</span>
           </div>
-          <Bookmark className="w-5 h-5 text-black" />
+          <div className="flex items-center gap-4">
+            <span className="text-[14px] font-semibold text-black">Following</span>
+            <MoreHorizontal className="w-5 h-5 text-black" />
+          </div>
         </div>
-        <div className="text-[11px] font-bold text-black mb-1">{metrics.likes.toLocaleString()} likes</div>
-        <p className="text-[11px] text-black"><span className="font-bold mr-1">{platformUsername || 'username'}</span>{caption}</p>
-        <p className="text-[9px] text-gray-400 mt-1 uppercase">{metrics.timestamp}</p>
+
+        <div className="flex-1 px-4 py-4">
+          <div className="flex items-start gap-3">
+            <ProfileBubble user={user} username={platformUsername} picture={platformPicture} className="w-8 h-8" ring />
+            <p className="min-w-0 text-[14px] leading-snug text-black">
+              <span className="font-semibold mr-1">{platformUsername || 'username'}</span>
+              {caption}
+            </p>
+          </div>
+          <div className="mt-20 text-center">
+            <p className="text-[24px] font-bold text-[#1c1e21]">No comments yet.</p>
+            <p className="mt-2 text-[14px] text-[#1c1e21]">Start the conversation.</p>
+          </div>
+        </div>
+
+        <div className="border-t border-gray-200 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 text-black">
+              <Heart className="w-6 h-6" />
+              <MessageCircle className="w-6 h-6" />
+              <Repeat className="w-6 h-6" />
+              <Send className="w-6 h-6" />
+            </div>
+            <Bookmark className="w-6 h-6 text-black" />
+          </div>
+          <p className="mt-3 text-[12px] text-gray-500">{metrics.timestamp} ago</p>
+          <div className="mt-5 flex items-center gap-3 border-t border-gray-100 pt-4">
+            <ProfileBubble user={user} username={platformUsername} picture={platformPicture} className="w-7 h-7" ring />
+            <span className="text-[14px] text-gray-500">Add a comment...</span>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -476,46 +594,50 @@ const FacebookOverlay = ({ format, caption, children, isFull, platformUsername, 
   );
 };
 
-const ThreadsOverlay = ({ format, caption, children, isFull, platformUsername, metrics, user }) => {
+const ThreadsOverlay = ({ format, caption, children, isFull, platformUsername, platformPicture, metrics, user }) => {
   return (
-    <div className="flex flex-col bg-white p-4 pointer-events-none">
-      <div className="flex gap-3">
-        <div className="flex flex-col items-center gap-2">
-           <div className="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0 overflow-hidden">
-              {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gray-100 flex items-center justify-center text-[10px]">{user?.name?.[0] || '?'}</div>}
-           </div>
-           <div className="w-0.5 flex-1 bg-gray-100 rounded-full" />
-           <div className="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center">
-              <div className="w-2 h-2 rounded-full bg-gray-300" />
-           </div>
-        </div>
-        <div className="flex-1 flex flex-col">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[13px] font-bold text-black">{platformUsername || user?.name?.toLowerCase().replace(/\s+/g, '') || 'yourhandle'}</span>
-            <div className="flex items-center gap-2 text-gray-400">
-              <span className="text-[12px]">{metrics.timestamp}</span>
-              <MoreHorizontal className="w-4 h-4" />
+    <div className="bg-white pointer-events-none">
+      <div className="flex h-12 items-center gap-5 px-4 text-black">
+        <ChevronLeft className="w-5 h-5" />
+        <span className="text-[18px] font-semibold">Thread</span>
+        <MoreHorizontal className="w-5 h-5 ml-auto" />
+      </div>
+      <div className="rounded-[24px] border border-gray-200 bg-white p-4">
+        <div className="flex items-start gap-3">
+          <ProfileBubble user={user} username={platformUsername} picture={platformPicture} className="w-9 h-9" />
+          <div className="min-w-0 flex-1">
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-[14px] font-semibold text-black">{platformUsername || 'username'}</span>
+              <span className="text-[14px] text-gray-500">{metrics.timestamp}</span>
+              <MoreHorizontal className="ml-auto w-5 h-5 text-gray-400" />
+            </div>
+            <p className="mb-3 text-[14px] leading-snug text-black whitespace-pre-wrap">{caption}</p>
+            <div className={`relative mb-3 w-full overflow-hidden rounded-md border border-gray-100 bg-white ${format.css}`}>
+              {children}
+            </div>
+            <div className="flex items-center gap-5 text-black">
+              <Heart className="w-5 h-5" />
+              <MessageCircle className="w-5 h-5" />
+              <Repeat className="w-5 h-5" />
+              <Send className="w-5 h-5" />
             </div>
           </div>
-          <p className="text-[13px] text-gray-900 leading-normal mb-3">{caption}</p>
-
-          <div className={`relative overflow-hidden rounded-xl border border-gray-100 ${format.css} w-full mb-4`}>
-            {children}
-          </div>
-
-          <div className="flex items-center gap-4 text-gray-900">
-            <Heart className="w-5 h-5" />
-            <MessageCircle className="w-5 h-5" />
-            <Repeat className="w-5 h-5" />
-            <Send className="w-5 h-5" />
-          </div>
-          <div className="mt-3 text-[12px] text-gray-400">
-             {metrics.likes.toLocaleString()} likes • {metrics.comments.toLocaleString()} replies
+        </div>
+      </div>
+      <div className="border-x border-gray-200 px-5 py-4">
+        <p className="text-[15px] font-semibold text-gray-400">No replies yet</p>
+        <div className="mt-4 flex items-center gap-3 rounded-full border border-gray-200 bg-gray-50 px-2 py-2">
+          <ProfileBubble user={user} username={platformUsername} picture={platformPicture} className="w-8 h-8" />
+          <span className="text-[14px] text-gray-400">Reply to {platformUsername || 'username'}...</span>
+          <div className="ml-auto flex items-center gap-2 text-gray-400">
+            <MessageCircle className="w-4 h-4" />
+            <span className="rounded border border-gray-300 px-1 text-[10px] font-semibold">GIF</span>
           </div>
         </div>
       </div>
     </div>
   );
+
 };
 
 const BlueskyOverlay = ({ format, caption, children, isFull, platformUsername, metrics, user }) => {
@@ -674,22 +796,27 @@ const PinterestOverlay = ({ format, caption, children, isFull, platformUsername,
 function PreviewContainer({ children, config, format, caption, platformUsername, metrics, user }) {
   const isVertical = format.ratio.includes('9:16') || format.ratio === '2:3' || format.ratio === '1:2.1' || format.ratio === '4:5';
   const isFull = format.full === true;
+  const platformName = config.name.toLowerCase();
+  const widthClass = !isFull && platformName === 'instagram'
+    ? 'w-[640px]'
+    : !isFull && platformName === 'threads'
+      ? 'w-[420px]'
+      : isVertical ? 'w-[280px]' : 'w-[360px]';
 
   const getOverlay = () => {
-    const name = config.name.toLowerCase();
     const props = { format, caption, children, isFull, platformUsername, metrics, user };
-    if (name === 'instagram') return <InstagramOverlay {...props} />;
-    if (name === 'youtube') return <YouTubeOverlay {...props} />;
-    if (name === 'linkedin') return <LinkedInOverlay {...props} />;
-    if (name === 'x (twitter)') return <XOverlay {...props} />;
+    if (platformName === 'instagram') return <InstagramOverlay {...props} />;
+    if (platformName === 'youtube') return <YouTubeOverlay {...props} />;
+    if (platformName === 'linkedin') return <LinkedInOverlay {...props} />;
+    if (platformName === 'x (twitter)') return <XOverlay {...props} />;
 
-    if (name === 'facebook') return <FacebookOverlay {...props} />;
-    if (name === 'threads') return <ThreadsOverlay {...props} />;
-    if (name === 'pinterest') return <PinterestOverlay {...props} />;
-    if (name === 'bluesky') return <BlueskyOverlay {...props} />;
-    if (name === 'mastodon') return <MastodonOverlay {...props} />;
-    if (name === 'reddit') return <RedditOverlay {...props} />;
-    if (name === 'google business') return <GoogleBusinessOverlay {...props} />;
+    if (platformName === 'facebook') return <FacebookOverlay {...props} />;
+    if (platformName === 'threads') return <ThreadsOverlay {...props} />;
+    if (platformName === 'pinterest') return <PinterestOverlay {...props} />;
+    if (platformName === 'bluesky') return <BlueskyOverlay {...props} />;
+    if (platformName === 'mastodon') return <MastodonOverlay {...props} />;
+    if (platformName === 'reddit') return <RedditOverlay {...props} />;
+    if (platformName === 'google business') return <GoogleBusinessOverlay {...props} />;
     return children;
   };
 
@@ -698,7 +825,7 @@ function PreviewContainer({ children, config, format, caption, platformUsername,
       {/* Container */}
       <div
         className={`relative rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-gray-100 bg-white transition-all duration-500 ${
-          isVertical ? 'w-[280px]' : 'w-[360px]'
+          widthClass
         } ${isFull ? format.css : 'h-auto'}`}
       >
         {/* If it's a full screen post (Story/Reel), we use absolute positioning */}
@@ -714,14 +841,6 @@ function PreviewContainer({ children, config, format, caption, platformUsername,
         )}
       </div>
 
-      {/* Dimension label */}
-      <div className="mt-6 text-center bg-gray-50 px-5 py-2.5 rounded-2xl border border-gray-100">
-        <div className="text-[13px] font-bold text-gray-800">{format.label}</div>
-        <div className="flex items-center justify-center gap-3 mt-1">
-          <span className="text-[11px] text-gray-500 font-mono bg-white px-2 py-0.5 rounded-md border border-gray-100 shadow-sm">{format.w} × {format.h}px</span>
-          <span className="text-[11px] text-gray-400 font-bold uppercase tracking-tight">Ratio {format.ratio}</span>
-        </div>
-      </div>
     </div>
   );
 }
@@ -741,10 +860,11 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
 
   if (!post) return null;
 
-  const selectedBasePlatforms = new Set([
+  const selectedChannels = [
     ...(post.selected_channels || []),
     ...(post.platform_data?.selectedChannels || []),
-  ].map((channel) => String(channel).split(':')[0]));
+  ];
+  const selectedBasePlatforms = new Set(selectedChannels.map((channel) => String(channel).split(':')[0]));
   const postType = post.platform_data?.postType || post.platform_data?.instagram?.type;
 
   const postedPlatforms = Object.entries(PLATFORM_CONFIG)
@@ -794,6 +914,24 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
 
   const activePlatform = postedPlatforms[activePlatformIdx];
   const activeFormat   = activePlatform?.formats?.[activeFormatIdx] || activePlatform?.formats?.[0];
+  const activeChannel = activePlatform
+    ? selectedChannels.find((channel) => String(channel).split(':')[0] === activePlatform.id)
+    : null;
+  const activeAccount = resolvePlatformAccount({
+    post,
+    platformId: activePlatform?.id,
+    channel: activeChannel,
+    connectedAccounts,
+  });
+  const activeUsername =
+    getAccountUsername(activeAccount) ||
+    connectedAccounts?.[activePlatform?.id]?.username ||
+    user?.name?.toLowerCase().replace(/\s+/g, '_') ||
+    'username';
+  const activePicture =
+    getAccountPicture(activeAccount) ||
+    getAccountPicture(connectedAccounts?.[activePlatform?.id]) ||
+    getUserPicture(user);
 
   const handlePlatformChange = (idx) => { setActivePlatformIdx(idx); setActiveFormatIdx(0); };
   const handleBackdrop = (e) => { if (e.target === e.currentTarget) onClose(); };
@@ -824,9 +962,6 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
         {/* ── Modal Header ── */}
         <div className="post-preview-header flex items-center justify-between px-8 py-5 border-b border-gray-100 bg-white/80 backdrop-blur-md sticky top-0 z-10">
           <div className="flex items-center gap-4">
-             <div className="post-preview-header-icon w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                <Play className="w-5 h-5 text-blue-600 fill-blue-600" />
-             </div>
              <div>
               <h2 className="post-preview-title text-lg font-bold text-gray-900 leading-tight">{post.caption?.split('\n')[0] || 'Post Preview'}</h2>
               <div className="flex items-center gap-2 mt-0.5">
@@ -904,31 +1039,6 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
               </div>
             ) : (
               <div className="post-preview-main-inner p-8">
-                {/* Format selection */}
-                {activePlatform.formats.length > 1 && (
-                  <div className="post-preview-format-section mb-10">
-                    <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.1em] mb-4">Preview Format</p>
-                    <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                      {activePlatform.formats.map((fmt, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setActiveFormatIdx(i)}
-                          className={`post-preview-format-tab flex-shrink-0 px-5 py-3 rounded-2xl text-[13px] font-bold border-2 transition-all duration-200 ${
-                            i === activeFormatIdx
-                              ? 'bg-gray-900 text-white border-gray-900 shadow-xl shadow-gray-200 scale-105'
-                              : 'bg-white text-gray-600 border-gray-100 hover:border-gray-200 hover:bg-gray-50'
-                          }`}
-                        >
-                          <div className="flex flex-col items-start gap-0.5">
-                            <span>{fmt.label}</span>
-                            <span className={`text-[10px] opacity-50 ${i === activeFormatIdx ? 'text-white' : ''}`}>{fmt.ratio}</span>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {/* Phone preview area */}
                 <div className="post-preview-stage flex flex-col lg:flex-row gap-10 items-start justify-center">
 
@@ -937,13 +1047,15 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
                       config={activePlatform}
                       format={activeFormat}
                       caption={post.caption}
-                      platformUsername={connectedAccounts[activePlatform.id]?.username}
+                      platformUsername={activeUsername}
+                      platformPicture={activePicture}
                       metrics={metrics}
                       user={user}
                     >
                       {(() => {
                         const isImage = post.media_type === 'image' || /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || '');
                         const displayUrl = post.thumbnail_url || post.media_url;
+                        const isThreadsPreview = activePlatform?.id === 'threads';
 
                         if (displayUrl) {
                           if (!isImage) {
@@ -951,7 +1063,7 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
                               <video
                                 src={post.media_url || displayUrl}
                                 poster={post.thumbnail_url || undefined}
-                                className="w-full h-full object-cover"
+                                className={isThreadsPreview ? "w-full h-auto object-contain bg-white" : "w-full h-full object-contain bg-black"}
                                 autoPlay
                                 loop
                                 muted
@@ -968,7 +1080,7 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
                             <img
                               src={displayUrl}
                               alt="Post Preview"
-                              className="w-full h-full object-cover"
+                              className={isThreadsPreview ? "w-full h-auto object-contain bg-white" : "w-full h-full object-contain bg-black"}
                               onError={e => {
                                 e.target.src = 'https://placehold.co/600x600?text=Preview+Unavailable';
                               }}
@@ -990,74 +1102,6 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
                         );
                       })()}
                     </PreviewContainer>
-                  </div>
-
-                  {/* Status and Actions Card */}
-                  <div className="post-preview-side-stack flex-1 w-full max-w-md space-y-6">
-                    <div className={`post-preview-status-card p-8 rounded-[2rem] border-2 transition-all shadow-sm ${
-                      activePlatform.success
-                      ? 'bg-green-50/20 border-green-100/50 shadow-green-900/5'
-                      : 'bg-red-50/20 border-red-100/50 shadow-red-900/5'
-                    }`}>
-                      <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner ${
-                            activePlatform.success ? 'bg-green-100' : 'bg-red-100'
-                          }`}>
-                            {activePlatform.success ? (
-                              <CheckCircle2 className="w-6 h-6 text-green-600" />
-                            ) : (
-                              <XCircle className="w-6 h-6 text-red-600" />
-                            )}
-                          </div>
-                          <div>
-                            <h3 className={`text-base font-bold tracking-tight ${activePlatform.success ? 'text-green-900' : 'text-red-900'}`}>
-                              {activePlatform.success ? 'Successfully Published' : 'Publication Failed'}
-                            </h3>
-                            <p className={`text-[12px] font-bold uppercase tracking-wider ${activePlatform.success ? 'text-green-600' : 'text-red-600'}`}>
-                              {activePlatform.name}
-                            </p>
-                          </div>
-                        </div>
-                        {activePlatform.url && (
-                          <a
-                            href={activePlatform.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="post-preview-live-link bg-white border border-gray-100 px-5 py-2.5 rounded-xl text-xs font-black text-gray-800 hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm uppercase tracking-tighter"
-                          >
-                            View Live <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        )}
-                      </div>
-
-                      {!activePlatform.success && activePlatform.error && (
-                        <div className="mt-4 p-5 rounded-2xl bg-white border border-red-100/50 shadow-sm">
-                          <p className="text-[10px] font-black text-red-400 uppercase tracking-[0.2em] mb-2">Error Log</p>
-                          <p className="text-sm text-red-600 font-medium leading-relaxed">{activePlatform.error}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {post.caption && (
-                      <div className="post-preview-content-card bg-gray-50 rounded-[1.5rem] p-6 border border-gray-100 shadow-sm">
-                        <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.1em] mb-3">Post Content</p>
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                          {post.caption}
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="post-preview-spec-card bg-white rounded-2xl p-4 border border-gray-100 flex flex-col gap-1">
-                          <span className="text-[10px] font-black text-gray-400 uppercase">Aspect Ratio</span>
-                          <span className="text-sm font-bold text-gray-800">{activeFormat?.ratio}</span>
-                       </div>
-                       <div className="post-preview-spec-card bg-white rounded-2xl p-4 border border-gray-100 flex flex-col gap-1">
-                          <span className="text-[10px] font-black text-gray-400 uppercase">Resolution</span>
-                          <span className="text-sm font-bold text-gray-800">{activeFormat?.w}×{activeFormat?.h}px</span>
-                       </div>
-                    </div>
                   </div>
 
                 </div>

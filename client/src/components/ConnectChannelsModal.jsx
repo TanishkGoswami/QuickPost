@@ -15,12 +15,12 @@ const SESSION_KEY = "qp_channels_skipped";
 
 const platforms = [
   { id: "instagram",  name: "Instagram",       icon: "/icons/ig-instagram-icon.svg",              type: "oauth-instagram" },
-  { id: "facebook",   name: "Facebook",         icon: "/icons/facebook-round-color-icon.svg",      type: "oauth-facebook" },
+  { id: "facebook",   name: "Facebook",         icon: "/icons/facebook-round-color-icon.svg",      type: "oauth-facebook", allowMultiple: true },
   { id: "linkedin",   name: "LinkedIn",         icon: "/icons/linkedin-icon.svg",                  type: "modal-linkedin" },
 
 
   { id: "youtube",    name: "YouTube",          icon: "/icons/youtube-color-icon.svg",             type: "oauth" },
-  { id: "threads",    name: "Threads",          icon: "/icons/threads-icon.svg",                   type: "oauth" },
+  { id: "threads",    name: "Threads",          icon: "/icons/threads-icon.svg",                   type: "oauth", allowMultiple: true },
   { id: "mastodon",   name: "Mastodon",         icon: "/icons/mastodon-round-icon.svg",            type: "modal-mastodon" },
   { id: "bluesky",    name: "Bluesky",          icon: "/icons/bluesky-circle-color-icon.svg",      type: "modal-bluesky" },
 ];
@@ -82,7 +82,7 @@ export default function ConnectChannelsModal() {
   };
 
   const unconnectedPlatforms = platforms.filter(
-    (p) => !connectedAccounts[p.id]?.connected
+    (p) => !connectedAccounts[p.id]?.connected || p.allowMultiple
   );
 
   if (!visible) return null;

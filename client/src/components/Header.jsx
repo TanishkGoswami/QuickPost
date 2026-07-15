@@ -49,6 +49,18 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
     }
   };
 
+  const multiAccountProviders = [
+    "facebook",
+    "youtube",
+    "linkedin",
+    "threads",
+    "mastodon",
+    "bluesky",
+    "reddit",
+    "x",
+    "pinterest",
+    "googleBusiness",
+  ];
   const connectedRows = [
     ...(connectedAccounts.instagramAccounts || []).map((account) => ({
       id: `instagram:${account.id}`,
@@ -58,8 +70,24 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
       username: account.username,
       profilePicture: account.profilePicture,
     })),
+    ...multiAccountProviders.flatMap((provider) =>
+      (connectedAccounts?.[`${provider}Accounts`] || []).map((account) => ({
+        id: `${provider}:${account.id}`,
+        provider,
+        accountId: account.id,
+        label: provider,
+        username: account.username,
+        profilePicture: account.profilePicture,
+      })),
+    ),
     ...Object.entries(connectedAccounts || {})
-      .filter(([id, data]) => id !== "instagram" && id !== "instagramAccounts" && data?.connected)
+      .filter(([id, data]) =>
+        id !== "instagram" &&
+        id !== "instagramAccounts" &&
+        !id.endsWith("Accounts") &&
+        !multiAccountProviders.includes(id) &&
+        data?.connected
+      )
       .map(([id, data]) => ({
         id,
         provider: id,

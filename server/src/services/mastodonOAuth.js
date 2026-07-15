@@ -131,12 +131,13 @@ class MastodonOAuth {
           provider: 'mastodon',
           access_token: tokenData.accessToken,
           refresh_token: null,
+          account_id: `${instanceUrl}:${tokenData.userInfo?.id || tokenData.userInfo?.username}`,
           mastodon_instance: instanceUrl,
           profile_data: tokenData.userInfo,
           username: tokenData.userInfo?.username,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'user_id,provider'
+          onConflict: 'user_id,provider,account_id'
         })
         .select()
         .single();

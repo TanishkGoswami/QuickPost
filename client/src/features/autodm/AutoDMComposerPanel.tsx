@@ -1,4 +1,4 @@
-import { Instagram, Loader2, MessageCircle, RefreshCw, Zap, MessageSquare, Send } from "lucide-react";
+import { Instagram, Loader2, RefreshCw, Zap, MessageSquare, Send } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -51,14 +51,14 @@ export const defaultComposerAutoDMConfig = {
   },
 };
 
-export function AutoDMComposerPanel({ config, onChange, postType }) {
+export function AutoDMComposerPanel({ config, onChange, postType }: any) {
   const [checking, setChecking] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [status, setStatus] = useState(null);
+  const [status, setStatus] = useState<any>(null);
   const instagramReady = Boolean(status?.autodmAccounts?.length);
   const canImport = Boolean(status?.hasSocialInstagramConnection);
 
-  const update = (updates) => onChange({ ...config, ...updates });
+  const update = (updates: any) => onChange({ ...config, ...updates });
 
   useEffect(() => {
     let cancelled = false;
@@ -69,7 +69,7 @@ export function AutoDMComposerPanel({ config, onChange, postType }) {
       .then((nextStatus) => {
         if (!cancelled) setStatus(nextStatus);
       })
-      .catch((error) => {
+      .catch((error: any) => {
         if (!cancelled) toast.error(error.message || "Failed to check Auto DM account");
       })
       .finally(() => {
@@ -148,7 +148,7 @@ export function AutoDMComposerPanel({ config, onChange, postType }) {
                           const nextStatus = await getAutoDMStatus();
                           setStatus(nextStatus);
                           toast.success("Instagram imported successfully!");
-                        } catch (error) {
+                        } catch (error: any) {
                           toast.error(error.message || "Failed to import Instagram");
                         } finally {
                           setSyncing(false);
@@ -277,8 +277,9 @@ export function AutoDMComposerPanel({ config, onChange, postType }) {
                     <div className="p-4 bg-[var(--canvas-lifted)]">
                       <ResponseFlowBuilder
                         responseFlow={config.responseFlow}
-                        onChange={(responseFlow) => update({ responseFlow })}
+                        onChange={(responseFlow: any) => update({ responseFlow })}
                         compact={true}
+                        step={0}
                       />
                     </div>
                   </div>
