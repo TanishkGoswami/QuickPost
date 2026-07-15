@@ -12,7 +12,7 @@ function hasPaidPlan(plan) {
   return p !== 'free' && p !== '';
 }
 
-const PLANS = [
+const PLANS_TEMPLATE = [
   {
     name: 'Free',
     id: 'free',
@@ -31,8 +31,8 @@ const PLANS = [
   },
   {
     name: 'Pro',
-    id: '999',
-    price: { 1: 999, 3: 899, 6: 799, 12: 799 },
+    id: 'pro',
+    price: { 1: null, 3: null, 6: null, 12: null },
     description: 'For creators who broadcast seriously across every platform.',
     icon: <Sparkles size={20} />,
     features: [
@@ -51,7 +51,7 @@ const PLANS = [
   {
     name: 'Enterprise',
     id: 'enterprise',
-    price: { 1: 2999, 3: 2699, 6: 2499, 12: 2499 },
+    price: { 1: null, 3: null, 6: null, 12: null },
     description: 'For teams, agencies, and heavy automation users.',
     icon: <Building2 size={20} />,
     features: [
@@ -68,13 +68,15 @@ const PLANS = [
   }
 ];
 
-
 export default function BillingPage({ embedded = false }) {
   const { user } = useAuth();
   const [billing, setBilling] = useState(1);
   const [upgrading, setUpgrading] = useState(null);
   const [invoices, setInvoices] = useState([]);
   const [invoiceError, setInvoiceError] = useState('');
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const currentPlanName = user?.entitlements?.plan?.name || 'Free';
   const isPaid = hasPaidPlan(currentPlanName);
@@ -98,6 +100,46 @@ export default function BillingPage({ embedded = false }) {
     return () => { alive = false; };
   }, []);
 
+  React.useEffect(() => {
+    let alive = true;
+    apiClient.get('/api/billing/plans')
+      .then(({ data }) => {
+        if (!alive) return;
+        if (data.success && data.plans) {
+          const merged = data.plans.map(dp => {
+            const staticPlan = PLANS_TEMPLATE.find(sp => sp.id === dp.id);
+            if (!staticPlan) return null;
+            const priceMap = {
+              1: dp.prices && dp.prices.hasOwnProperty('month') ? dp.prices.month : staticPlan.price?.[1],
+              3: dp.prices && dp.prices.hasOwnProperty('quarterly') ? dp.prices.quarterly : staticPlan.price?.[3],
+              6: dp.prices && dp.prices.hasOwnProperty('six_months') ? dp.prices.six_months : staticPlan.price?.[6],
+              12: dp.prices && dp.prices.hasOwnProperty('year') ? dp.prices.year : staticPlan.price?.[12]
+            };
+            return {
+              ...staticPlan,
+              ...dp,
+              features: staticPlan.features,
+              price: priceMap
+            };
+          }).filter(Boolean);
+          setPlans(merged);
+        }
+      })
+      .catch((err) => {
+        if (!alive) return;
+        console.error('Failed to load pricing:', err);
+        setError('Pricing temporarily unavailable');
+        setPlans(PLANS_TEMPLATE.map(sp => ({
+          ...sp,
+          price: { 1: sp.id === 'free' ? 0 : null, 3: sp.id === 'free' ? 0 : null, 6: sp.id === 'free' ? 0 : null, 12: sp.id === 'free' ? 0 : null }
+        })));
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => { alive = false; };
+  }, []);
+
   const formatAmount = (amount) => {
     const value = Number(amount || 0);
     return `₹${Math.round(value / 100).toLocaleString('en-IN')}`;
@@ -113,9 +155,15 @@ export default function BillingPage({ embedded = false }) {
       return;
     }
 
+    const currentPrice = plan.price?.[billing];
+    if (currentPrice === null || currentPrice === undefined) {
+      alert('This plan or billing interval is currently unavailable.');
+      return;
+    }
+
     try {
       setUpgrading(plan.id);
-      console.log(`💳 [PAYMENT INITIATED] Plan: ${plan.name} | Interval: ${billing} month(s) | Amount to be charged: ₹${plan.price[billing] * billing}`);
+      console.log(`💳 [PAYMENT INITIATED] Plan: ${plan.name} | Interval: ${billing} month(s) | Amount to be charged: ₹${currentPrice * billing}`);
       
       const { data, error } = await supabase.functions.invoke('create-payment-link', {
         body: {
@@ -287,9 +335,20 @@ export default function BillingPage({ embedded = false }) {
       </div>
 
       {/* Pricing cards */}
+      {error && (
+        <div style={{
+          textAlign: 'center', color: '#ff4444', background: 'rgba(255,68,68,0.1)',
+          padding: '12px 24px', borderRadius: 8, marginBottom: 24,
+          fontSize: 14, fontWeight: 600, maxWidth: 1100, margin: '0 auto 24px'
+        }}>
+          ⚠️ {error}. Paid checkouts are disabled.
+        </div>
+      )}
       <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, alignItems: 'start' }}>
-        {PLANS.map((plan, i) => {
+        {plans.map((plan, i) => {
           const isCurrentPlan = currentPlanName === plan.name;
+          const currentPrice = plan.price?.[billing];
+          const isCheckoutDisabled = plan.id !== 'free' && (currentPrice === null || currentPrice === undefined);
           
           return (
             <motion.div
@@ -353,16 +412,24 @@ export default function BillingPage({ embedded = false }) {
               {/* Price */}
               <div style={{ marginBottom: 24 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
-                  <span style={{ fontSize: 'clamp(40px, 5vw, 52px)', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                    ₹{plan.price[billing]}
-                  </span>
-                  <span style={{ fontSize: 14, fontWeight: 450, color: 'var(--slate)', marginBottom: 6 }}>
-                    {plan.price[billing] === 0 ? 'forever' : `/ mo`}
-                  </span>
+                  {currentPrice !== null && currentPrice !== undefined ? (
+                    <>
+                      <span style={{ fontSize: 'clamp(40px, 5vw, 52px)', fontWeight: 600, color: 'var(--ink)', letterSpacing: '-0.04em', lineHeight: 1 }}>
+                        ₹{currentPrice}
+                      </span>
+                      <span style={{ fontSize: 14, fontWeight: 450, color: 'var(--slate)', marginBottom: 6 }}>
+                        {currentPrice === 0 ? 'forever' : `/ mo`}
+                      </span>
+                    </>
+                  ) : (
+                    <span style={{ fontSize: 24, fontWeight: 600, color: '#ff4444', letterSpacing: '-0.02em', marginBottom: 6 }}>
+                      Unavailable
+                    </span>
+                  )}
                 </div>
-                {billing > 1 && plan.price[1] > 0 && (
+                {billing > 1 && currentPrice !== null && currentPrice !== undefined && currentPrice > 0 && plan.price?.[1] > 0 && (
                   <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--arc)', marginTop: 4 }}>
-                    Billed ₹{plan.price[billing] * billing} {billing === 12 ? 'yearly' : `every ${billing} months`} · Save ₹{(plan.price[1] - plan.price[billing]) * billing}
+                    Billed ₹{currentPrice * billing} every {billing} months · Save ₹{(plan.price[1] - currentPrice) * billing}
                   </div>
                 )}
               </div>
@@ -370,19 +437,20 @@ export default function BillingPage({ embedded = false }) {
               {/* CTA */}
               <button
                 onClick={() => handleUpgrade(plan)}
-                disabled={upgrading === plan.id || isCurrentPlan}
+                disabled={upgrading === plan.id || isCurrentPlan || isCheckoutDisabled}
                 style={{
                   width: '100%', padding: '13px 20px',
                   borderRadius: 'var(--r-btn)', border: plan.highlighted ? 'none' : '1px solid rgba(20,20,19,0.12)',
-                  background: isCurrentPlan ? 'transparent' : 'var(--ink)',
-                  color: isCurrentPlan ? 'var(--slate)' : 'var(--canvas)',
+                  background: (isCurrentPlan || isCheckoutDisabled) ? 'transparent' : 'var(--ink)',
+                  color: isCurrentPlan ? 'var(--green)' : (isCheckoutDisabled ? 'var(--slate)' : 'var(--canvas)'),
                   fontFamily: 'var(--font)', fontSize: 14, fontWeight: 600,
-                  letterSpacing: '-0.01em', cursor: isCurrentPlan ? 'default' : 'pointer',
+                  letterSpacing: '-0.01em', cursor: (isCurrentPlan || isCheckoutDisabled) ? 'default' : 'pointer',
                   transition: 'all 0.2s', marginBottom: 28,
-                  opacity: upgrading === plan.id || isCurrentPlan ? 0.7 : 1,
+                  opacity: upgrading === plan.id || isCurrentPlan || isCheckoutDisabled ? 0.7 : 1,
+                  border: isCheckoutDisabled ? '1px solid rgba(20,20,19,0.12)' : undefined,
                 }}
               >
-                {upgrading === plan.id ? 'Processing...' : (isCurrentPlan ? 'Current Plan' : plan.cta)}
+                {isCheckoutDisabled ? 'Unavailable' : (upgrading === plan.id ? 'Processing...' : (isCurrentPlan ? 'Current Plan' : plan.cta))}
               </button>
 
               {/* Divider */}

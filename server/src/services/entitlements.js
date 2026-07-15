@@ -7,6 +7,26 @@ import {
   todayPeriod,
 } from '../config/entitlementPolicy.js';
 
+const HUB_PLAN_MAPPING = {
+  'free_trial': 'free',
+  'social_pilot_starter': 'pro',
+  'social_pilot_quarterly': 'pro',
+  'social_pilot_half_yearly': 'pro',
+  'all_in_one_bundle_monthly': 'pro',
+  'all_in_one_bundle_quarterly': 'pro',
+  'all_in_one_bundle_half_yearly': 'pro'
+};
+
+const HUB_PLAN_DURATION = {
+  'free_trial': 'monthly',
+  'social_pilot_starter': 'monthly',
+  'social_pilot_quarterly': 'quarterly',
+  'social_pilot_half_yearly': 'six_months',
+  'all_in_one_bundle_monthly': 'monthly',
+  'all_in_one_bundle_quarterly': 'quarterly',
+  'all_in_one_bundle_half_yearly': 'six_months'
+};
+
 export async function getEntitlements(userId, email = null, token = null) {
   const { data: subscriptionsData, error } = await supabase
     .from('app_subscriptions')
@@ -46,20 +66,15 @@ export async function getEntitlements(userId, email = null, token = null) {
         const isNotExpired = !expiresAt || new Date(expiresAt) > new Date();
         if (isNotExpired) {
           // Map hub plan to QuickPost plans: free, pro, enterprise
-          const p = String(hubSubscription.plan_id || hubSubscription.plan || '').toLowerCase();
-          let mappedPlanId = 'free';
-          if (p.includes('ultimate') || p.includes('ecosystem') || p.includes('max') || p.includes('half_yearly') || p.includes('enterprise')) {
-            mappedPlanId = 'enterprise';
-          } else if (p.includes('pro') || p.includes('core') || p.includes('quarterly') || p.includes('monthly')) {
-            mappedPlanId = 'pro';
-          }
+          const p = String(hubSubscription.plan_id || hubSubscription.plan || '').toLowerCase().trim();
+          const mappedPlanId = HUB_PLAN_MAPPING[p] || 'free';
 
           if (mappedPlanId !== 'free') {
             subscriptions.push({
               plan_id: mappedPlanId,
               source: 'hub',
               status: 'active',
-              billing_interval: p.includes('half_yearly') ? 'six_months' : (p.includes('quarterly') ? 'quarterly' : 'monthly'),
+              billing_interval: HUB_PLAN_DURATION[p] || 'monthly',
               current_period_end: expiresAt || null,
               cancel_at_period_end: false,
               grace_period_ends_at: null,
