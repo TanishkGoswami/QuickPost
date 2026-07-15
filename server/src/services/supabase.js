@@ -27,6 +27,71 @@ if ((!process.env.SUPABASE_SERVICE_KEY && !process.env.SUPABASE_SERVICE_ROLE_KEY
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+const MULTI_ACCOUNT_PROVIDERS = [
+  'youtube',
+  'facebook',
+  'pinterest',
+  'bluesky',
+  'linkedin',
+  'mastodon',
+  'threads',
+  'x',
+  'reddit',
+  'googleBusiness',
+];
+
+const accountArrayKey = (provider) => `${provider}Accounts`;
+
+function getProfilePicture(row) {
+  const pd = row.profile_data || {};
+  return (
+    pd.picture?.data?.url ||
+    pd.profile_picture_url ||
+    pd.threads_profile_picture_url ||
+    pd.picture ||
+    pd.profilePicture ||
+    pd.profileImage ||
+    pd.avatar_url ||
+    pd.profile_image_url ||
+    pd.profileImageUrl ||
+    null
+  );
+}
+
+function normalizeProviderKey(provider) {
+  return provider === 'google-business' ? 'googleBusiness' : provider;
+}
+
+function socialTokenToAccount(row) {
+  return {
+    id: row.id,
+    provider: normalizeProviderKey(row.provider),
+    connected: true,
+    accessToken: row.access_token,
+    refreshToken: row.refresh_token,
+    tokenExpiry: row.token_expiry || row.expires_at || null,
+    token_expiry: row.token_expiry || row.expires_at || null,
+    expires_at: row.expires_at || null,
+    pageId: row.page_id || row.facebook_page_id || row.account_id || null,
+    page_id: row.page_id || row.facebook_page_id || row.account_id || null,
+    businessId: row.instagram_business_id || null,
+    instagram_business_id: row.instagram_business_id || null,
+    accountId: row.account_id || row.page_id || row.instagram_business_id || row.bluesky_did || row.username || row.id,
+    account_id: row.account_id || row.page_id || row.instagram_business_id || row.bluesky_did || row.username || row.id,
+    did: row.bluesky_did || null,
+    bluesky_did: row.bluesky_did || null,
+    handle: row.bluesky_handle || row.username || null,
+    bluesky_handle: row.bluesky_handle || null,
+    instanceUrl: row.mastodon_instance || null,
+    mastodon_instance: row.mastodon_instance || null,
+    profileData: row.profile_data || null,
+    profile_data: row.profile_data || null,
+    username: row.username || row.account_name || row.profile_data?.username || row.profile_data?.name || null,
+    profilePicture: getProfilePicture(row),
+    boardId: row.pinterest_board_id || row.profile_data?.boardId || null,
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Hub Sync Helper
 // Syncs this user to getaipilot.in (hub) database — fire-and-forget.
@@ -96,112 +161,30 @@ export async function getTokensForUser(userId) {
       linkedin: null,
       mastodon: null,
       x: null,
-      googleBusiness: null
+      googleBusiness: null,
+      threads: null,
     };
+    for (const provider of MULTI_ACCOUNT_PROVIDERS) {
+      tokens[accountArrayKey(provider)] = [];
+    }
 
     for (const row of data) {
+      const providerKey = normalizeProviderKey(row.provider);
+      if (MULTI_ACCOUNT_PROVIDERS.includes(providerKey)) {
+        const account = socialTokenToAccount(row);
+        tokens[accountArrayKey(providerKey)].push(account);
+        if (!tokens[providerKey]) tokens[providerKey] = account;
+        continue;
+      }
+
       if (row.provider === 'instagram') {
         tokens.instagram = {
+          id: row.id,
           accessToken: row.access_token,
           businessId: row.instagram_business_id,
           pageId: row.page_id,
-          tokenExpiry: row.token_expiry,
-          username: row.username
-        };
-      }
-
-      if (row.provider === 'facebook') {
-        tokens.facebook = {
-          accessToken: row.access_token, // store PAGE access token here
-          pageId: row.page_id,
-          tokenExpiry: row.token_expiry,
-          username: row.username
-        };
-      }
-
-      if (row.provider === 'youtube') {
-        tokens.youtube = {
-          accessToken: row.access_token,
-          refreshToken: row.refresh_token,
-          tokenExpiry: row.token_expiry,
-          username: row.username
-        };
-      }
-
-      if (row.provider === 'pinterest') {
-        tokens.pinterest = {
-          accessToken: row.access_token,
-          refreshToken: row.refresh_token,
-          tokenExpiry: row.token_expiry,
-          username: row.username
-        };
-      }
-
-      if (row.provider === 'bluesky') {
-        tokens.bluesky = {
-          accessToken: row.access_token,
-          refreshToken: row.refresh_token,
-          did: row.bluesky_did,
-          handle: row.bluesky_handle,
-          tokenExpiry: row.token_expiry,
-          username: row.username
-        };
-      }
-
-      if (row.provider === 'linkedin') {
-        tokens.linkedin = {
-          accessToken: row.access_token,
-          profileData: row.profile_data,
-          tokenExpiry: row.expires_at,
-          username: row.username
-        };
-      }
-
-      if (row.provider === 'mastodon') {
-        tokens.mastodon = {
-          accessToken: row.access_token,
-          instanceUrl: row.mastodon_instance,
-          profileData: row.profile_data,
-          username: row.username
-        };
-      }
-
-
-
-      if (row.provider === 'threads') {
-        tokens.threads = {
-          accessToken: row.access_token,
-          account_id: row.account_id,
-          username: row.username
-        };
-      }
-      
-      if (row.provider === 'x') {
-        tokens.x = {
-          accessToken: row.access_token,
-          refreshToken: row.refresh_token,
-          tokenExpiry: row.token_expiry,
           accountId: row.account_id,
-          username: row.username
-        };
-      }
-
-      if (row.provider === 'reddit') {
-        tokens.reddit = {
-          accessToken: row.access_token,
-          refreshToken: row.refresh_token,
           tokenExpiry: row.token_expiry,
-          accountId: row.account_id,
-          username: row.username
-        };
-      }
-
-      if (row.provider === 'googleBusiness') {
-        tokens.googleBusiness = {
-          accessToken: row.access_token,
-          refreshToken: row.refresh_token,
-          tokenExpiry: row.token_expiry,
-          profile_data: row.profile_data,
           username: row.username
         };
       }
@@ -372,7 +355,7 @@ export async function getConnectedAccounts(userOrId) {
 
     const { data, error } = await supabase
       .from('social_tokens')
-      .select('provider, updated_at, token_expiry, page_id, instagram_business_id, account_id, bluesky_did, bluesky_handle, profile_data, mastodon_instance, username')
+      .select('id, provider, updated_at, token_expiry, expires_at, page_id, instagram_business_id, account_id, bluesky_did, bluesky_handle, profile_data, mastodon_instance, username, pinterest_board_id')
       .in('user_id', userIds);
 
     console.log(`\n📊 [SUPABASE] Raw social_tokens for user ${userIds.join(',')}:`, data?.map(d => d.provider));
@@ -386,37 +369,28 @@ export async function getConnectedAccounts(userOrId) {
     const providers = ['youtube', 'instagram', 'facebook', 'pinterest', 'bluesky', 'linkedin', 'mastodon', 'threads', 'x', 'reddit', 'googleBusiness'];
     const result = {};
     for (const p of providers) result[p] = { connected: false };
+    for (const p of MULTI_ACCOUNT_PROVIDERS) result[accountArrayKey(p)] = [];
 
     for (const row of data || []) {
-      const providerKey = row.provider === 'google-business' ? 'googleBusiness' : row.provider;
-      
-      // Extract profile picture from profile_data
-      let profilePicture = null;
-      if (row.profile_data) {
-        const pd = row.profile_data;
-        profilePicture = 
-          pd.picture?.data?.url || // Facebook format
-          pd.profile_picture_url || // Instagram format
-          pd.threads_profile_picture_url || // Threads format
-          pd.picture || // LinkedIn/Google format
-          pd.profilePicture || 
-          pd.profileImage || 
-          pd.avatar_url ||
-          pd.profile_image_url;
-      }
+      const providerKey = normalizeProviderKey(row.provider);
+      const account = socialTokenToAccount(row);
 
       result[providerKey] = {
         connected: true,
         updated_at: row.updated_at,
-        token_expiry: row.token_expiry,
+        token_expiry: row.token_expiry || row.expires_at || null,
         page_id: row.page_id || null,
         instagram_business_id: row.instagram_business_id || null,
         account_id: row.account_id || null,
         bluesky_did: row.bluesky_did || null,
         bluesky_handle: row.bluesky_handle || null,
         username: row.username || null,
-        profilePicture: profilePicture
+        profilePicture: account.profilePicture
       };
+
+      if (MULTI_ACCOUNT_PROVIDERS.includes(providerKey)) {
+        result[accountArrayKey(providerKey)].push(account);
+      }
     }
 
     // Fetch multiple instagram accounts

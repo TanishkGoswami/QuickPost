@@ -35,6 +35,18 @@ function isFree(plan) {
   return plan.toLowerCase() === 'free';
 }
 
+const countConnectedTargets = (accounts = {}) => {
+  const arrayCount = Object.keys(accounts)
+    .filter((key) => key.endsWith("Accounts"))
+    .reduce((sum, key) => sum + (Array.isArray(accounts[key]) ? accounts[key].length : 0), 0);
+
+  const singleCount = Object.entries(accounts).filter(
+    ([key, value]) => !key.endsWith("Accounts") && value?.connected && !(accounts[`${key}Accounts`]?.length > 0),
+  ).length;
+
+  return arrayCount + singleCount;
+};
+
 /* ── tiny SVG orbital arc decoration ── */
 const OrbitalArc = () => (
   <svg
@@ -213,6 +225,7 @@ function Sidebar() {
         />
       ),
       onConnect: handleConnectFacebook,
+      allowMultiple: true,
     },
     ...(connectedAccounts.instagramAccounts?.length > 0 
       ? connectedAccounts.instagramAccounts.map(acc => ({
@@ -332,6 +345,7 @@ function Sidebar() {
         />
       ),
       onConnect: handleConnectThreads,
+      allowMultiple: true,
     },
     {
       id: "mastodon",
@@ -394,6 +408,26 @@ function Sidebar() {
       disabled: true,
     },
   ];
+
+  const connectedTargets = platforms.flatMap((platform) => {
+    if (platform.id === "instagram_connect" || !platform.connected) return [];
+    const accounts = connectedAccounts[`${platform.id}Accounts`] || [];
+    if (!accounts.length) return [platform];
+
+    return accounts.map((account) => ({
+      ...platform,
+      id: `${platform.id}:${account.id}`,
+      providerId: platform.id,
+      name: account.username || account.account_id || platform.name,
+      icon: account.profilePicture ? (
+        <img
+          src={account.profilePicture}
+          style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover" }}
+          alt=""
+        />
+      ) : platform.icon,
+    }));
+  });
 
   const isActive = (path) => {
     if (path === "/dashboard/auto-dm") {
@@ -684,7 +718,7 @@ function Sidebar() {
         {/* ── Connected platforms ── */}
         <div style={{ marginTop: 8 }}>
           {(() => {
-            const connectedPlatforms = platforms.filter((p) => p.connected);
+            const connectedPlatforms = connectedTargets;
             const visibleIcons = connectedPlatforms.slice(0, 3);
             const extraCount = Math.max(0, connectedPlatforms.length - 3);
 
@@ -837,17 +871,17 @@ function Sidebar() {
                   overflow: "hidden",
                 }}
               >
-                {platforms
-                  .filter((p) => p.connected)
+                {connectedTargets
                   .map((platform) => {
+                    const dashboardPlatform = platform.providerId || platform.id;
                     const isSelected =
-                      selectedDashboardPlatform === platform.id &&
+                      selectedDashboardPlatform === dashboardPlatform &&
                       location.pathname === "/dashboard";
                     return (
                       <div
                         key={platform.id}
                         onClick={() =>
-                          navigate(`/dashboard?platform=${platform.id}`)
+                          navigate(`/dashboard?platform=${dashboardPlatform}`)
                         }
                         className="qp-sidebar-connected-item group"
                         style={{
@@ -942,14 +976,14 @@ function Sidebar() {
             }}
           >
             {platforms
-              .filter((p) => !p.connected)
+              .filter((p) => !p.connected || p.allowMultiple)
               .map((platform) => (
                 <button
                   className="qp-sidebar-channel-button"
                   key={platform.id}
                   onClick={(e) => {
                     const limit = user?.entitlements?.limits?.social_accounts || 1;
-                    const connectedCount = platforms.filter(p => p.connected).length;
+                    const connectedCount = countConnectedTargets(connectedAccounts);
                     if (connectedCount >= limit) {
                       e.preventDefault();
                       alert("Upgrade Required", `You have reached your limit of ${limit} social account${limit === 1 ? '' : 's'} on the ${user?.entitlements?.plan?.name || 'Free'} plan. Please upgrade to connect more channels.`, { intent: "warning" });

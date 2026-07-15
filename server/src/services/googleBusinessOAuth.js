@@ -132,6 +132,7 @@ class GoogleBusinessOAuthService {
         .select("refresh_token, username, profile_data, token_expiry")
         .eq("user_id", userId)
         .eq("provider", "googleBusiness")
+        .eq("account_id", tokenData.userInfo?.locationId || tokenData.userInfo?.accountId || tokenData.userInfo?.googleId)
         .maybeSingle();
 
       if (existingError) {
@@ -164,12 +165,13 @@ class GoogleBusinessOAuthService {
             access_token: tokenData.accessToken,
             refresh_token: resolvedRefreshToken,
             token_expiry: resolvedExpiry,
+            account_id: tokenData.userInfo?.locationId || tokenData.userInfo?.accountId || tokenData.userInfo?.googleId,
             username: resolvedUsername,
             profile_data: resolvedProfileData,
             updated_at: new Date().toISOString(),
           },
           {
-            onConflict: "user_id,provider",
+            onConflict: "user_id,provider,account_id",
           },
         )
         .select();
@@ -219,17 +221,18 @@ class GoogleBusinessOAuthService {
    * @param {string} userId - User's UUID
    * @returns {Promise<string>} Valid access token
    */
-  async getValidAccessToken(userId) {
+  async getValidAccessToken(userId, accountId = null) {
     try {
       console.log(
         `🔍 [GOOGLE_BUSINESS_OAUTH] Fetching tokens for user ${userId} from DB...`,
       );
-      const { data, error } = await supabase
+      let query = supabase
         .from("social_tokens")
         .select("*")
         .eq("user_id", userId)
-        .eq("provider", "googleBusiness")
-        .single();
+        .eq("provider", "googleBusiness");
+      if (accountId) query = query.eq("id", accountId);
+      const { data, error } = await query.limit(1).single();
       console.log("✅ [GOOGLE_BUSINESS_OAUTH] DB fetch complete. Token found:", !!data);
 
       if (error || !data) {
@@ -264,12 +267,17 @@ class GoogleBusinessOAuthService {
         console.log("Token expired or expiring soon, refreshing...");
         const refreshed = await this.refreshAccessToken(data.refresh_token);
 
-        // Update token in database
-        await this.storeTokens(userId, {
-          accessToken: refreshed.accessToken,
-          refreshToken: data.refresh_token,
-          expiryDate: refreshed.expiryDate,
-        });
+        await supabase
+          .from("social_tokens")
+          .update({
+            access_token: refreshed.accessToken,
+            token_expiry: refreshed.expiryDate
+              ? new Date(refreshed.expiryDate).toISOString()
+              : data.token_expiry,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", data.id)
+          .eq("user_id", userId);
 
         return refreshed.accessToken;
       }

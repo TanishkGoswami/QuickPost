@@ -49,6 +49,7 @@ const AutoDMInstagramProfilePage = lazy(() => import('./pages/auto-dm/AutoDMInst
 const AutoDMSettingsPage       = lazy(() => import('./pages/auto-dm/AutoDMSettingsPage'));
 const ConnectInstagramPage     = lazy(() => import('./pages/connect/ConnectInstagramPage'));
 const ConnectSuccessPage       = lazy(() => import('./pages/connect/ConnectSuccessPage'));
+const SelectAccountsPage       = lazy(() => import('./pages/connect/SelectAccountsPage'));
 
 // ── Page loader ──
 const PageLoader = () => (
@@ -101,6 +102,7 @@ function AppContent() {
       />
       <Route path="/connect" element={isAuthenticated ? <ConnectInstagramPage /> : <Navigate to="/login" replace />} />
       <Route path="/connect/success" element={isAuthenticated ? <ConnectSuccessPage /> : <Navigate to="/login" replace />} />
+      <Route path="/connect/select" element={isAuthenticated ? <SelectAccountsPage /> : <Navigate to="/login" replace />} />
 
       // Protected dashboard
         <Route path="/dashboard" element={<DashboardLayout />}>

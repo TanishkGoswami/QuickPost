@@ -1243,10 +1243,15 @@ function ComposerModal({
   const [selectedChannels, setSelectedChannels] = useState([]);
   const hasInstagram = selectedChannels.some(c => c === "instagram" || c.startsWith("instagram:"));
   const getBasePlatform = (c) => c?.split(':')[0] || c;
-  const normalizeSelectedChannels = (channels) =>
-    channels.some((channel) => String(channel).startsWith("instagram:"))
-      ? channels.filter((channel) => channel !== "instagram")
-      : channels;
+  const normalizeSelectedChannels = (channels) => {
+    const specificProviders = new Set(
+      channels
+        .map((channel) => String(channel))
+        .filter((channel) => channel.includes(":"))
+        .map((channel) => channel.split(":")[0]),
+    );
+    return [...new Set(channels)].filter((channel) => !specificProviders.has(String(channel)));
+  };
   const [caption, setCaption] = useState("");
   const [mediaFiles, setMediaFiles] = useState([]);
   const [isScheduled, setIsScheduled] = useState(false);
@@ -1460,8 +1465,8 @@ function ComposerModal({
       setActivePreviewPlatform("instagram");
       return;
     }
-    if (!selectedChannels.some(c => getBasePlatform(c) === activePreviewPlatform))
-      setActivePreviewPlatform(getBasePlatform(selectedChannels[0]));
+    if (!selectedChannels.includes(activePreviewPlatform))
+      setActivePreviewPlatform(selectedChannels[0]);
   }, [JSON.stringify(selectedChannels), activePreviewPlatform]);
 
   useEffect(() => {
@@ -1475,10 +1480,17 @@ function ComposerModal({
     if (isOpen && selectedChannels.length === 0) {
       const instagramChannels = (connectedAccounts.instagramAccounts || [])
         .map((account) => `instagram:${account.id}`);
+      const accountChannels = Object.keys(connectedAccounts)
+        .filter((key) => key.endsWith("Accounts") && key !== "instagramAccounts")
+        .flatMap((key) => {
+          const provider = key.replace(/Accounts$/, "");
+          return (connectedAccounts[key] || []).map((account) => `${provider}:${account.id}`);
+        });
       const connected = [
         ...instagramChannels,
+        ...accountChannels,
         ...Object.keys(connectedAccounts).filter(
-          (key) => key !== "instagram" && connectedAccounts[key]?.connected && PLATFORM_META[key],
+          (key) => key !== "instagram" && connectedAccounts[key]?.connected && PLATFORM_META[key] && !(connectedAccounts[`${key}Accounts`]?.length > 0),
         ),
       ];
       setSelectedChannels(normalizeSelectedChannels(connected));

@@ -327,7 +327,7 @@ class InstagramOAuthService {
 
       const { data, error } = await supabase
         .from('social_tokens')
-        .upsert(payload, { onConflict: 'user_id,provider' })
+        .upsert(payload, { onConflict: 'user_id,provider,account_id' })
         .select();
 
       if (error) throw error;

@@ -75,12 +75,14 @@ class GoogleOAuthService {
         auth: client,
       });
       let channelTitle = userInfo.name; // Fallback to Google name
+      let channelId = userInfo.id;
       try {
         const channelRes = await youtube.channels.list({
           part: "snippet",
           mine: true,
         });
         if (channelRes.data.items && channelRes.data.items.length > 0) {
+          channelId = channelRes.data.items[0].id || channelId;
           channelTitle = channelRes.data.items[0].snippet.title;
         }
       } catch (err) {
@@ -99,6 +101,7 @@ class GoogleOAuthService {
           name: userInfo.name,
           picture: userInfo.picture,
           googleId: userInfo.id,
+          channelId,
           username: channelTitle,
         },
       };
@@ -120,6 +123,7 @@ class GoogleOAuthService {
         .select("refresh_token, username, profile_data, token_expiry")
         .eq("user_id", userId)
         .eq("provider", "youtube")
+        .eq("account_id", tokenData.userInfo?.channelId || tokenData.userInfo?.googleId)
         .maybeSingle();
 
       if (existingError) {
@@ -152,12 +156,13 @@ class GoogleOAuthService {
             access_token: tokenData.accessToken,
             refresh_token: resolvedRefreshToken,
             token_expiry: resolvedExpiry,
+            account_id: tokenData.userInfo?.channelId || tokenData.userInfo?.googleId,
             username: resolvedUsername,
             profile_data: resolvedProfileData,
             updated_at: new Date().toISOString(),
           },
           {
-            onConflict: "user_id,provider",
+            onConflict: "user_id,provider,account_id",
           },
         )
         .select();
@@ -207,17 +212,18 @@ class GoogleOAuthService {
    * @param {string} userId - User's UUID
    * @returns {Promise<string>} Valid access token
    */
-  async getValidAccessToken(userId) {
+  async getValidAccessToken(userId, accountId = null) {
     try {
       console.log(
         `🔍 [GOOGLE_OAUTH] Fetching tokens for user ${userId} from DB...`,
       );
-      const { data, error } = await supabase
+      let query = supabase
         .from("social_tokens")
         .select("*")
         .eq("user_id", userId)
-        .eq("provider", "youtube")
-        .single();
+        .eq("provider", "youtube");
+      if (accountId) query = query.eq("id", accountId);
+      const { data, error } = await query.limit(1).single();
       console.log("✅ [GOOGLE_OAUTH] DB fetch complete. Token found:", !!data);
 
       if (error || !data) {
@@ -252,12 +258,17 @@ class GoogleOAuthService {
         console.log("Token expired or expiring soon, refreshing...");
         const refreshed = await this.refreshAccessToken(data.refresh_token);
 
-        // Update token in database
-        await this.storeTokens(userId, {
-          accessToken: refreshed.accessToken,
-          refreshToken: data.refresh_token,
-          expiryDate: refreshed.expiryDate,
-        });
+        await supabase
+          .from("social_tokens")
+          .update({
+            access_token: refreshed.accessToken,
+            token_expiry: refreshed.expiryDate
+              ? new Date(refreshed.expiryDate).toISOString()
+              : data.token_expiry,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", data.id)
+          .eq("user_id", userId);
 
         return refreshed.accessToken;
       }

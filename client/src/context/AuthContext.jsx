@@ -51,9 +51,20 @@ export function AuthProvider({ children }) {
     mastodon: { connected: false },
     threads: { connected: false },
     x: { connected: false },
-    reddit: { connected: false },
-    googleBusiness: { connected: false },
-  });
+	    reddit: { connected: false },
+	    googleBusiness: { connected: false },
+	    instagramAccounts: [],
+	    youtubeAccounts: [],
+	    pinterestAccounts: [],
+	    facebookAccounts: [],
+	    blueskyAccounts: [],
+	    linkedinAccounts: [],
+	    mastodonAccounts: [],
+	    threadsAccounts: [],
+	    xAccounts: [],
+	    redditAccounts: [],
+	    googleBusinessAccounts: [],
+	  });
   const [loading, setLoading] = useState(true);
 
   const fetchConnectedAccounts = useCallback(async () => {

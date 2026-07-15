@@ -73,6 +73,9 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect, righ
   const connectedRef = useRef(null);
   const moreRef = useRef(null);
 
+  const accountArrayKey = (platformId) => `${platformId}Accounts`;
+  const getPlatformAccounts = (platformId) => connectedAccounts?.[accountArrayKey(platformId)] || [];
+
   // Split platforms
   const connectedPlatforms = [];
   PLATFORMS.forEach(p => {
@@ -93,14 +96,28 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect, righ
       } else if (connectedAccounts?.instagram?.connected) {
          connectedPlatforms.push(p);
       }
-    } else if (connectedAccounts?.[p.id]?.connected) {
-      connectedPlatforms.push(p);
+    } else {
+      const accounts = getPlatformAccounts(p.id);
+      if (accounts.length > 0) {
+        accounts.forEach(acc => {
+          connectedPlatforms.push({
+            id: `${p.id}:${acc.id}`,
+            name: acc.username ? `${p.name} (${acc.username})` : p.name,
+            borderColor: p.borderColor,
+            icon: acc.profilePicture ? (
+              <img src={acc.profilePicture} className="w-8 h-8 object-cover rounded-full" alt={acc.username || p.name} />
+            ) : p.icon,
+          });
+        });
+      } else if (connectedAccounts?.[p.id]?.connected) {
+        connectedPlatforms.push(p);
+      }
     }
   });
 
   const unconnectedPlatforms = PLATFORMS.filter(p => {
     if (p.id === 'instagram') return !connectedAccounts?.instagram?.connected && !(connectedAccounts?.instagramAccounts?.length > 0);
-    return !connectedAccounts?.[p.id]?.connected;
+    return !connectedAccounts?.[p.id]?.connected && getPlatformAccounts(p.id).length === 0;
   });
   const visibleUnconnected = unconnectedPlatforms.slice(0, 3);
   const hiddenUnconnected = unconnectedPlatforms.slice(3);
@@ -141,7 +158,7 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect, righ
       </div>
 
       <div className="flex items-center gap-3.5 flex-wrap">
-        {connectedPlatforms.map((p) => {
+        {connectedPlatforms.map((p, index) => {
           const isSelected = selectedChannels.includes(p.id);
           return (
             <button
@@ -171,7 +188,11 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect, righ
                 </motion.div>
               )}
 
-              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-ink text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest z-30 whitespace-nowrap">
+              <div
+                className={`absolute -top-10 px-2 py-1 bg-ink text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest z-30 whitespace-nowrap ${
+                  index === 0 ? "left-0" : "left-1/2 -translate-x-1/2"
+                }`}
+              >
                 {p.name}
               </div>
             </button>
