@@ -53,19 +53,19 @@ export default function AutomationEditorPage() {
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
   const [name, setName] = useState("Untitled");
   const [triggerType, setTriggerType] = useState("comment_on_post");
-  const [selectedMedia, setSelectedMedia] = useState(null);
+  const [selectedMedia, setSelectedMedia] = useState<any>(null);
   const [applyToAllMedia, setApplyToAllMedia] = useState(true);
-  const [keywords, setKeywords] = useState([]);
+  const [keywords, setKeywords] = useState<string[]>([]);
   const [isCaseSensitive, setIsCaseSensitive] = useState(false);
   const [commentReplyEnabled, setCommentReplyEnabled] = useState(false);
   const [commentReplyText, setCommentReplyText] = useState("");
   const [requireFollow, setRequireFollow] = useState(false);
   const [fallbackCommentReply, setFallbackCommentReply] = useState("");
-  const [responseFlow, setResponseFlow] = useState({ nodes: [], opening_message_enabled: false, opening_message: "" });
+  const [responseFlow, setResponseFlow] = useState<any>({ nodes: [], opening_message_enabled: false, opening_message: "" });
   const [isActive, setIsActive] = useState(false);
 
   // All existing automations for conflict detection
-  const [allAutomations, setAllAutomations] = useState([]);
+  const [allAutomations, setAllAutomations] = useState<any[]>([]);
 
   useEffect(() => {
     if (!socialUser?.userId || !activeAccount?.id) return;
@@ -84,7 +84,7 @@ export default function AutomationEditorPage() {
 
     (async () => {
       try {
-        const automation = await getAutomationById(id, socialUser.userId);
+        const automation = await getAutomationById(id, socialUser?.userId);
         if (!automation) {
           toast.error("Automation not found");
           navigate("/dashboard/auto-dm/automations");
@@ -110,7 +110,7 @@ export default function AutomationEditorPage() {
         setFallbackCommentReply(automation.fallback_comment_reply || "");
         setResponseFlow(automation.response_flow || { nodes: [], opening_message_enabled: false, opening_message: "" });
         setIsActive(Boolean(automation.is_active));
-      } catch (error) {
+      } catch (error: any) {
         toast.error(error.message || "Failed to load automation");
       } finally {
         setLoading(false);
@@ -173,7 +173,7 @@ export default function AutomationEditorPage() {
       return;
     }
     if (hasConflicts) {
-      const conflictNames = [...new Set(conflictingKeywords.map((c) => `"${c.automationName}"`))]
+      const conflictNames = [...new Set((conflictingKeywords || []).map((c: any) => `"${c.automationName}"`))]
         .join(", ");
       toast.error(
         `Keyword conflict with ${conflictNames}. Please use different keywords.`,
@@ -185,8 +185,8 @@ export default function AutomationEditorPage() {
     setSaving(true);
     try {
       const payload = {
-        user_id: socialUser.userId,
-        instagram_account_id: activeAccount.id,
+        user_id: socialUser?.userId,
+        instagram_account_id: activeAccount?.id,
         name,
         trigger_type: triggerType,
         media_id: applyToAllMedia ? null : selectedMedia?.id || null,
@@ -209,7 +209,7 @@ export default function AutomationEditorPage() {
         toast.success("Automation updated");
       }
       navigate("/dashboard/auto-dm/automations");
-    } catch (error) {
+    } catch (error: any) {
       toast.error(error.message || "Failed to save automation");
     } finally {
       setSaving(false);
@@ -245,7 +245,7 @@ export default function AutomationEditorPage() {
               <div className="h-5 w-px bg-black/10" />
               <Input
                 value={name}
-                onChange={(event) => setName(event.target.value)}
+                onChange={(event: any) => setName(event.target.value)}
                 className="h-auto min-w-0 max-w-xs border-0 bg-transparent px-0 text-base font-semibold text-slate-900 focus-visible:ring-0"
               />
             </div>
@@ -379,7 +379,7 @@ export default function AutomationEditorPage() {
                       </div>
                       <Switch
                         checked={applyToAllMedia}
-                        onCheckedChange={(checked) => {
+                        onCheckedChange={(checked: any) => {
                           setApplyToAllMedia(checked);
                           if (checked) setSelectedMedia(null);
                         }}
@@ -475,7 +475,7 @@ export default function AutomationEditorPage() {
                     {commentReplyEnabled && (
                       <Textarea
                         value={commentReplyText}
-                        onChange={(event) =>
+                        onChange={(event: any) =>
                           setCommentReplyText(event.target.value)
                         }
                         rows={3}
@@ -520,7 +520,7 @@ export default function AutomationEditorPage() {
                         </p>
                         <Textarea
                           value={fallbackCommentReply}
-                          onChange={(event) =>
+                          onChange={(event: any) =>
                             setFallbackCommentReply(event.target.value)
                           }
                           rows={2}
@@ -538,13 +538,14 @@ export default function AutomationEditorPage() {
             <ResponseFlowBuilder
               responseFlow={responseFlow}
               onChange={setResponseFlow}
+              step={0}
             />
           </div>
 
           <MediaSelector
             open={mediaDialogOpen}
             onOpenChange={setMediaDialogOpen}
-            onSelect={(media) => {
+            onSelect={(media: any) => {
               setSelectedMedia(media);
               setMediaDialogOpen(false);
             }}
