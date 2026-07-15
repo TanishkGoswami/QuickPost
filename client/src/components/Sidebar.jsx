@@ -17,6 +17,7 @@ import {
   Lock,
   MessagesSquare,
   Bot,
+  Youtube,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
 import logo from "/logo.png";
@@ -315,6 +316,7 @@ function Sidebar() {
         />
       ),
       onConnect: handleConnectYouTube,
+      allowMultiple: true,
     },
     {
       id: "pinterest",
@@ -535,6 +537,11 @@ function Sidebar() {
               to: "/dashboard/instapilot",
               label: "GAP InstaPilot",
               icon: <Bot size={16} />,
+            },
+            {
+              to: "/dashboard/youtube",
+              label: "YouTube Studio",
+              icon: <Youtube size={16} />,
             },
             {
               to: "/dashboard/auto-dm",

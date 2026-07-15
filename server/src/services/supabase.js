@@ -63,6 +63,7 @@ function normalizeProviderKey(provider) {
 }
 
 function socialTokenToAccount(row) {
+  const longUploadsStatus = row.profile_data?.youtubeStatus?.longUploadsStatus || null;
   return {
     id: row.id,
     provider: normalizeProviderKey(row.provider),
@@ -89,6 +90,8 @@ function socialTokenToAccount(row) {
     username: row.username || row.account_name || row.profile_data?.username || row.profile_data?.name || null,
     profilePicture: getProfilePicture(row),
     boardId: row.pinterest_board_id || row.profile_data?.boardId || null,
+    verified: row.provider === 'youtube' ? longUploadsStatus === 'allowed' : undefined,
+    longUploadsStatus,
   };
 }
 
@@ -385,7 +388,9 @@ export async function getConnectedAccounts(userOrId) {
         bluesky_did: row.bluesky_did || null,
         bluesky_handle: row.bluesky_handle || null,
         username: row.username || null,
-        profilePicture: account.profilePicture
+        profilePicture: account.profilePicture,
+        verified: account.verified,
+        longUploadsStatus: account.longUploadsStatus,
       };
 
       if (MULTI_ACCOUNT_PROVIDERS.includes(providerKey)) {

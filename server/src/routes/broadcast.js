@@ -380,9 +380,6 @@ async function processBroadcastJob({
       });
 
       console.log(`✓ [JOB:${jobId}] All files uploaded. URLs:`, mediaUrls);
-      
-      // Clean up the local temporary files immediately since they are now safely in Cloudinary
-      cleanupFiles(filePaths, thumbnailFile);
     } else {
       // Fallback to local URLs if No Cloudinary
       const serverPublicUrl =
@@ -476,6 +473,9 @@ async function processBroadcastJob({
       }
 
       await enqueueBroadcastJob(savedBroadcast.id);
+      if (isCloudinaryConfigured()) {
+        cleanupFiles(filePaths, thumbnailFile);
+      }
       updateJob(jobId, {
         status: "completed",
         progress: 100,
@@ -724,6 +724,7 @@ async function processBroadcastJob({
         return 0;
       }
     });
+
     const totalSize = stats.reduce((a, b) => a + b, 0);
     if (canPostToBluesky && totalSize <= 30 * 1024 * 1024) {
       const blobs = filePaths
@@ -781,18 +782,17 @@ async function processBroadcastJob({
           const ytTokens = { ...account, accessToken: validAccessToken };
           const resolvedCaption = resolveMentions(caption, 'youtube', ytTokens);
           updateJob(jobId, { step: "Uploading video to YouTube…" });
+          const visibility = platData?.youtube?.visibility || "public";
           const result = await postToYouTube(primaryVideoPath, resolvedCaption, ytTokens, (pct) => {
-            // Phase 3 spans from 30% to 85%
-            // If multiple platforms, each gets a slice of that 55%
             const base = 30 + Math.floor((completedChannels / selectedChannelCount) * 55);
             const slice = Math.floor((1 / selectedChannelCount) * 55);
             const currentPct = base + Math.floor((pct / 100) * slice);
-            
             updateJob(jobId, {
               progress: Math.min(currentPct, 85),
               step: `Uploading video to YouTube (${pct}%)…`,
             });
-          });
+          }, visibility);
+
           if (result.success && result.videoId && youtubeThumbnailPath) {
             const thumbResult = await setVideoThumbnail(
               result.videoId,

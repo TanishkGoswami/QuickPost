@@ -447,12 +447,18 @@ const YouTubePreview = memo(
     }
 
     return (
-      <div
-        style={{ background: "#0f0f0f", borderRadius: 12, overflow: "hidden" }}
+      <div 
+        style={{ 
+          background: "white", 
+          borderRadius: 12, 
+          overflow: "hidden",
+          border: "1px solid #e5e7eb",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
+        }}
       >
         <div
           className={`relative w-full ${cssClass}`}
-          style={{ overflow: "hidden" }}
+          style={{ overflow: "hidden", background: "#f8f9fa" }}
         >
           {thumbUrl ? (
             <img
@@ -468,34 +474,34 @@ const YouTubePreview = memo(
               position: "absolute",
               bottom: 6,
               right: 6,
-              background: "rgba(0,0,0,0.85)",
+              background: "rgba(0,0,0,0.8)",
               color: "white",
               fontSize: 9,
               fontWeight: 800,
               padding: "2px 5px",
-              borderRadius: 3,
+              borderRadius: 4,
             }}
           >
             0:00
           </span>
         </div>
 
-        <div style={{ display: "flex", gap: 10, padding: "10px 12px" }}>
-          <UserAvatar user={user} picture={platformPicture} size={32} background="#e00" />
+        <div style={{ display: "flex", gap: 10, padding: "12px" }}>
+          <UserAvatar user={user} picture={platformPicture} size={36} background="#e00" />
           <div style={{ flex: 1, minWidth: 0 }}>
             <p
               style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: "white",
+                fontSize: 13,
+                fontWeight: 600,
+                color: "#0f0f0f",
                 margin: 0,
                 lineHeight: 1.4,
               }}
             >
               {caption || "Video Title"}
             </p>
-            <p style={{ fontSize: 11, color: "#aaa", margin: "4px 0 0" }}>
-              {username} · {metrics.views.toLocaleString()} views ·{" "}
+            <p style={{ fontSize: 11, color: "#606060", margin: "4px 0 0" }}>
+              {username} • {metrics.views.toLocaleString()} views •{" "}
               {metrics.timestamp}
             </p>
           </div>
@@ -962,32 +968,40 @@ const PreviewPanel = memo(function PreviewPanel({
       }}
     >
       {/* Platform tabs — only shown when multiple platforms selected */}
-      {selectedChannels.length > 1 && (
-        <div
-          style={{
-            display: "flex",
-            gap: 5,
-            padding: "8px 12px",
-            overflowX: "auto",
-            scrollbarWidth: "none",
-            borderBottom: "1px solid rgba(20,20,19,0.08)",
-            flexShrink: 0,
-          }}
-        >
-          {selectedChannels.map((pid) => {
-            const basePid = String(pid || "").split(":")[0];
-            const targetId = String(pid || "").includes(":") ? String(pid).split(":")[1] : null;
-            const meta = PLATFORM_META[basePid];
-            if (!meta) return null;
-            const account = targetId
-              ? connectedAccounts?.[`${basePid}Accounts`]?.find((item) => String(item.id) === targetId)
-              : null;
-            const isActive = activeId === pid;
-            return (
+      {(() => {
+        const uniqueBasePlatforms = [];
+        const seen = new Set();
+        selectedChannels.forEach(pid => {
+          const basePid = String(pid || "").split(":")[0];
+          if (!seen.has(basePid)) {
+            seen.add(basePid);
+            uniqueBasePlatforms.push({ basePid, firstPid: pid });
+          }
+        });
+
+        if (uniqueBasePlatforms.length <= 1) return null;
+
+        return (
+          <div
+            style={{
+              display: "flex",
+              gap: 5,
+              padding: "8px 12px",
+              overflowX: "auto",
+              scrollbarWidth: "none",
+              borderBottom: "1px solid rgba(20,20,19,0.08)",
+              flexShrink: 0,
+            }}
+          >
+            {uniqueBasePlatforms.map(({ basePid, firstPid }) => {
+              const meta = PLATFORM_META[basePid];
+              if (!meta) return null;
+              const isActive = baseActiveId === basePid;
+              return (
                 <motion.button
-                  key={pid}
-                  onClick={() => onActivePlatformChange(pid)}
-                  title={account?.username || meta.label}
+                  key={basePid}
+                  onClick={() => onActivePlatformChange(firstPid)}
+                  title={meta.label}
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.94 }}
                   style={{
@@ -1008,31 +1022,23 @@ const PreviewPanel = memo(function PreviewPanel({
                     boxShadow: isActive ? "0 4px 12px rgba(0,0,0,0.12)" : "none",
                   }}
                 >
-                  {account?.profilePicture ? (
-                    <img
-                      src={account.profilePicture}
-                      style={{ width: 22, height: 22, objectFit: "cover", borderRadius: "50%" }}
-                      alt={account.username || meta.label}
-                      onError={(e) => (e.target.style.display = "none")}
-                    />
-                  ) : (
-                    <img
-                      src={meta.icon}
-                      style={{
-                        width: 18,
-                        height: 18,
-                        objectFit: "contain",
-                        transition: "all 0.2s"
-                      }}
-                      alt={account?.username || meta.label}
-                      onError={(e) => (e.target.style.display = "none")}
-                    />
-                  )}
+                  <img
+                    src={meta.icon}
+                    style={{
+                      width: 20,
+                      height: 20,
+                      objectFit: "contain",
+                      transition: "all 0.2s"
+                    }}
+                    alt={meta.label}
+                    onError={(e) => (e.target.style.display = "none")}
+                  />
                 </motion.button>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Preview content */}
       <div

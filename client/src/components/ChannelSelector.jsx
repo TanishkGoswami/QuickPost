@@ -88,8 +88,9 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect, righ
             name: acc.username ? `Instagram (@${acc.username})` : 'Instagram',
             borderColor: p.borderColor,
             icon: acc.profilePicture ? (
-              <img src={acc.profilePicture} className="w-8 h-8 object-cover rounded-full" alt={acc.username || 'Instagram'} />
+              <img src={acc.profilePicture} className="w-full h-full object-cover" alt={acc.username || 'Instagram'} />
             ) : p.icon,
+            platformIcon: p.icon,
             isInstagram: true
           });
         });
@@ -105,8 +106,9 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect, righ
             name: acc.username ? `${p.name} (${acc.username})` : p.name,
             borderColor: p.borderColor,
             icon: acc.profilePicture ? (
-              <img src={acc.profilePicture} className="w-8 h-8 object-cover rounded-full" alt={acc.username || p.name} />
+              <img src={acc.profilePicture} className="w-full h-full object-cover" alt={acc.username || p.name} />
             ) : p.icon,
+            platformIcon: p.icon
           });
         });
       } else if (connectedAccounts?.[p.id]?.connected) {
@@ -146,7 +148,7 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect, righ
           <button
             type="button"
             onClick={() => onBulkSelect(isAllSelected ? [] : connectedIds)}
-            className={`text-[9px] font-black uppercase tracking-[0.15em] py-1 px-3 rounded-full transition-all duration-300 ${
+            className={`text-[11px] font-medium py-1 px-3 rounded-full transition-all duration-300 ${
               isAllSelected
                 ? "bg-ink text-white shadow-md scale-105"
                 : "bg-white text-ink border border-gray-200 hover:border-ink"
@@ -164,32 +166,32 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect, righ
             <button
               key={p.id}
               type="button"
-              onClick={() => {
-                onChannelToggle(p.id);
-              }}
+              onClick={() => onChannelToggle(p.id)}
               title={p.name}
-              className={`group relative w-[52px] h-[52px] rounded-2xl flex items-center justify-center transition-all duration-500 ${
+              className={`group relative rounded-full flex items-center justify-center transition-all duration-300 ${
                 isSelected
-                  ? "bg-white shadow-[0_12px_32px_rgba(20,20,19,0.12)] border-[2.5px] border-ink scale-110 z-10"
-                  : "bg-white border border-gray-100 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 hover:scale-105 hover:shadow-lg"
+                  ? "ring-[2px] ring-offset-[3px] ring-ink scale-105 shadow-md z-10"
+                  : "ring-1 ring-offset-[2px] ring-gray-100 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:scale-105 hover:shadow-sm"
               }`}
             >
-              <div className={`w-8 h-8 flex items-center justify-center transition-transform duration-500 ${isSelected ? 'scale-110' : 'group-hover:scale-110'}`}>
+              <div className="w-[42px] h-[42px] rounded-full overflow-hidden bg-white flex items-center justify-center [&>img]:w-full [&>img]:h-full [&>img]:object-cover">
                 {p.icon}
               </div>
+              
+              {p.platformIcon && (
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-100 [&>img]:w-2.5 [&>img]:h-2.5 [&>img]:object-contain pointer-events-none">
+                  {p.platformIcon}
+                </div>
+              )}
 
               {isSelected && (
-                <motion.div
-                  initial={{ scale: 0, rotate: -45 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-ink rounded-full flex items-center justify-center border-2 border-white shadow-xl"
-                >
-                  <Check size={12} color="white" strokeWidth={4} />
-                </motion.div>
+                <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-ink rounded-full flex items-center justify-center border-[1.5px] border-white shadow-sm pointer-events-none transition-transform duration-300 scale-in-center">
+                  <Check size={10} color="white" strokeWidth={4} />
+                </div>
               )}
 
               <div
-                className={`absolute -top-10 px-2 py-1 bg-ink text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest z-30 whitespace-nowrap ${
+                className={`absolute -top-10 px-2.5 py-1.5 bg-ink text-white text-[11px] font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30 whitespace-nowrap shadow-sm ${
                   index === 0 ? "left-0" : "left-1/2 -translate-x-1/2"
                 }`}
               >

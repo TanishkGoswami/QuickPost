@@ -17,9 +17,10 @@ dotenv.config();
  * @param {string} caption - Video title/description
  * @param {Object} tokens - YouTube tokens object
  * @param {Function} onProgress - Optional callback for upload progress (0-100)
+ * @param {string} visibility - Privacy status ('public', 'unlisted', 'private')
  * @returns {Object} Result with video ID and URL
  */
-export async function postToYouTube(videoPath, caption, tokens, onProgress) {
+export async function postToYouTube(videoPath, caption, tokens, onProgress, visibility = 'public') {
   try {
     if (!tokens || !tokens.accessToken) {
       throw new Error('Missing YouTube credentials');
@@ -65,7 +66,7 @@ export async function postToYouTube(videoPath, caption, tokens, onProgress) {
           tags: ['Shorts', 'QuickPost']
         },
         status: {
-          privacyStatus: 'public', // Can be 'private', 'unlisted', or 'public'
+          privacyStatus: visibility, // Can be 'private', 'unlisted', or 'public'
           selfDeclaredMadeForKids: false
         }
       },

@@ -2283,62 +2283,7 @@ function ComposerModal({
                       />
                     </Section>
 
-                    {hasInstagram && (
-                      <Section label="Instagram" mb={16}>
-                        <div
-                          style={{
-                            background: "white",
-                            border: "1px solid rgba(20,20,19,0.08)",
-                            borderRadius: 14,
-                            padding: 14,
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                            <img src="/icons/ig-instagram-icon.svg" alt="" style={{ width: 18, height: 18 }} />
-                            <span style={{ fontSize: 14, fontWeight: 800, color: "var(--ink,#141413)" }}>
-                              Instagram
-                            </span>
-                          </div>
 
-                          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 16, marginBottom: 16 }}>
-                            {[
-                              ["post", "Feed Post"],
-                              ["story", "Story"],
-                              ["reel", "Reel"],
-                            ].map(([value, label]) => (
-                              <label key={value} className="flex items-center gap-2 cursor-pointer group">
-                                <input
-                                  type="radio"
-                                  name="ig-type"
-                                  checked={(platformData.instagram?.type || "post") === value}
-                                  onChange={() => updateInstagramData("type", value)}
-                                  className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-                                />
-                                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
-                                  {label}
-                                </span>
-                              </label>
-                            ))}
-                          </div>
-
-                          {effectivePostType !== "story" && (
-                            <>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                First Comment (for hashtags)
-                              </label>
-                              <textarea
-                                value={platformData.instagram?.firstComment || ""}
-                                onChange={(e) => updateInstagramData("firstComment", e.target.value)}
-                                placeholder="Add hashtags as a first comment to keep your caption clean..."
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm resize-none placeholder:text-gray-400 transition-all"
-                                rows={3}
-                                maxLength={2200}
-                              />
-                            </>
-                          )}
-                        </div>
-                      </Section>
-                    )}
 
                     {!isInstagramStoryOnly && (
                       <>
@@ -2947,6 +2892,7 @@ function ComposerModal({
                   }
                   youtubeThumbnail={youtubeThumbnail}
                   onYoutubeThumbnailChange={setYoutubeThumbnail}
+                  postType={effectivePostType}
                 />
 
                 {/* ✨ Smart Warnings ✨ */}

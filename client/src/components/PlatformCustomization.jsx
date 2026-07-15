@@ -10,8 +10,11 @@ function PlatformCustomization({
   onToggleExpanded,
   youtubeThumbnail,
   onYoutubeThumbnailChange,
+  postType,
 }) {
   if (selectedChannels.length === 0) return null;
+
+  const hasPlatform = (platform) => selectedChannels.some(ch => String(ch || "").split(":")[0] === platform);
 
   const handleChange = (platform, field, value) => {
     onPlatformDataChange({
@@ -48,13 +51,13 @@ function PlatformCustomization({
             <ChevronDown className="w-3.5 h-3.5" />
           )}
         </div>
-        Customize for each network
+        Customize for each platform
       </button>
 
       {expanded && (
         <div className="space-y-3">
           {/* Pinterest Customization */}
-          {selectedChannels.includes("pinterest") && (
+          {hasPlatform("pinterest") && (
             <div className="platform-card">
               <div className="flex items-center gap-2 mb-3">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#E60023">
@@ -122,7 +125,7 @@ function PlatformCustomization({
           )}
 
           {/* YouTube Customization */}
-          {selectedChannels.includes("youtube") && (
+          {hasPlatform("youtube") && (
             <div className="platform-card">
               <div className="flex items-center gap-2 mb-3">
                 <svg className="w-5 h-5" viewBox="0 0 24 24" fill="#FF0000">
@@ -138,6 +141,27 @@ function PlatformCustomization({
                     <span>
                       Posting as YouTube Short • Caption as description
                     </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Visibility
+                  </label>
+                  <div className="flex items-center gap-4">
+                    {["public", "unlisted", "private"].map((status) => (
+                      <label key={status} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="youtubeVisibility"
+                          value={status}
+                          checked={(platformData.youtube?.visibility || "public") === status}
+                          onChange={(e) => handleChange("youtube", "visibility", e.target.value)}
+                          className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                        />
+                        <span className="text-sm text-gray-700 capitalize">{status}</span>
+                      </label>
+                    ))}
                   </div>
                 </div>
 
@@ -213,7 +237,7 @@ function PlatformCustomization({
           )}
 
           {/* Reddit Customization */}
-          {selectedChannels.includes("reddit") && (
+          {hasPlatform("reddit") && (
             <div className="platform-card">
               <div className="flex items-center gap-2 mb-3">
                 <img src="/icons/reddit-icon.svg" className="w-5 h-5" alt="Reddit" />
@@ -281,7 +305,7 @@ function PlatformCustomization({
           )}
 
           {/* Facebook Customization */}
-          {selectedChannels.includes("facebook") && (
+          {hasPlatform("facebook") && (
             <div className="platform-card">
               <div className="flex items-center gap-2 mb-3">
                 <img src="/icons/facebook-round-color-icon.svg" className="w-5 h-5" alt="Facebook" />
@@ -310,6 +334,53 @@ function PlatformCustomization({
                   <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">Reel</span>
                 </label>
             </div>
+          </div>
+        )}
+
+        {/* Instagram Customization */}
+        {hasPlatform("instagram") && (
+          <div className="platform-card">
+            <div className="flex items-center gap-2 mb-3">
+              <img src="/icons/ig-instagram-icon.svg" className="w-5 h-5" alt="Instagram" />
+              <h4 className="font-semibold text-gray-900">Instagram</h4>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-4 mb-4">
+              {[
+                ["post", "Feed Post"],
+                ["story", "Story"],
+                ["reel", "Reel"],
+              ].map(([value, label]) => (
+                <label key={value} className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="radio"
+                    name="ig-type"
+                    checked={(platformData.instagram?.type || "post") === value}
+                    onChange={() => handleChange("instagram", "type", value)}
+                    className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
+                    {label}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            {(platformData.instagram?.type || postType || "post") !== "story" && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  First Comment (for hashtags)
+                </label>
+                <textarea
+                  value={platformData.instagram?.firstComment || ""}
+                  onChange={(e) => handleChange("instagram", "firstComment", e.target.value)}
+                  placeholder="Add hashtags as a first comment to keep your caption clean..."
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm resize-none placeholder:text-gray-400 transition-all"
+                  rows={3}
+                  maxLength={2200}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>

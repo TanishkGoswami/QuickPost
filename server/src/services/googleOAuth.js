@@ -5,6 +5,7 @@ import supabase from "./supabase.js";
 const YOUTUBE_SCOPES = [
   "https://www.googleapis.com/auth/youtube.upload",
   "https://www.googleapis.com/auth/youtube.readonly",
+  "https://www.googleapis.com/auth/youtube.force-ssl",
   "https://www.googleapis.com/auth/userinfo.email",
   "https://www.googleapis.com/auth/userinfo.profile",
 ];
@@ -76,14 +77,19 @@ class GoogleOAuthService {
       });
       let channelTitle = userInfo.name; // Fallback to Google name
       let channelId = userInfo.id;
+      let channelStatus = null;
+      let channelStats = null;
       try {
         const channelRes = await youtube.channels.list({
-          part: "snippet",
+          part: "snippet,status,statistics",
           mine: true,
         });
         if (channelRes.data.items && channelRes.data.items.length > 0) {
-          channelId = channelRes.data.items[0].id || channelId;
-          channelTitle = channelRes.data.items[0].snippet.title;
+          const channel = channelRes.data.items[0];
+          channelId = channel.id || channelId;
+          channelTitle = channel.snippet.title;
+          channelStatus = channel.status || null;
+          channelStats = channel.statistics || null;
         }
       } catch (err) {
         console.warn(
@@ -103,6 +109,8 @@ class GoogleOAuthService {
           googleId: userInfo.id,
           channelId,
           username: channelTitle,
+          youtubeStatus: channelStatus,
+          youtubeStats: channelStats,
         },
       };
     } catch (error) {
@@ -278,6 +286,102 @@ class GoogleOAuthService {
       console.error("Error getting valid access token:", error);
       throw error;
     }
+  }
+
+  async getChannelHealth(accessToken) {
+    const client = this.createClient();
+    client.setCredentials({ access_token: accessToken });
+    const youtube = google.youtube({ version: "v3", auth: client });
+    const { data } = await youtube.channels.list({
+      part: "snippet,status,statistics,contentDetails",
+      mine: true,
+    });
+    const channel = data.items?.[0];
+    if (!channel) throw new Error("No YouTube channel found for this account");
+    const longUploadsStatus = channel.status?.longUploadsStatus || "unknown";
+    return {
+      id: channel.id,
+      title: channel.snippet?.title,
+      description: channel.snippet?.description,
+      thumbnail: channel.snippet?.thumbnails?.default?.url || channel.snippet?.thumbnails?.medium?.url,
+      customUrl: channel.snippet?.customUrl,
+      publishedAt: channel.snippet?.publishedAt,
+      status: channel.status || {},
+      statistics: channel.statistics || {},
+      uploadsPlaylistId: channel.contentDetails?.relatedPlaylists?.uploads || null,
+      capabilities: {
+        longUploadsStatus,
+        longUploadsAllowed: longUploadsStatus === "allowed",
+        needsPhoneVerification: longUploadsStatus === "eligible",
+        blockedFromLongUploads: longUploadsStatus === "disallowed",
+        madeForKids: Boolean(channel.status?.madeForKids || channel.status?.selfDeclaredMadeForKids),
+      },
+      requiredActions: longUploadsStatus === "allowed" ? [] : [{
+        id: "youtube-feature-eligibility",
+        label: longUploadsStatus === "eligible" ? "Enable intermediate features" : "Review YouTube feature eligibility",
+        description: longUploadsStatus === "eligible"
+          ? "Phone verification is required before this channel can use every upload feature."
+          : "This channel is not currently eligible for long uploads. Check YouTube Studio for policy or verification steps.",
+        url: "https://studio.youtube.com/channel/UC/features",
+      }],
+    };
+  }
+
+  async listChannelUploads(accessToken, uploadsPlaylistId, maxResults = 25) {
+    if (!uploadsPlaylistId) return [];
+    const client = this.createClient();
+    client.setCredentials({ access_token: accessToken });
+    const youtube = google.youtube({ version: "v3", auth: client });
+    const { data: playlistData } = await youtube.playlistItems.list({
+      part: "snippet,contentDetails",
+      playlistId: uploadsPlaylistId,
+      maxResults,
+    });
+    const items = playlistData.items || [];
+    const ids = items.map((item) => item.contentDetails?.videoId).filter(Boolean);
+    if (ids.length === 0) return [];
+
+    const { data: videoData } = await youtube.videos.list({
+      part: "snippet,status,statistics,contentDetails",
+      id: ids.join(","),
+      maxResults,
+    });
+    const byId = new Map((videoData.items || []).map((video) => [video.id, video]));
+    return ids.map((id) => {
+      const video = byId.get(id);
+      if (!video) return null;
+      return {
+        id,
+        title: video.snippet?.title || "Untitled video",
+        description: video.snippet?.description || "",
+        thumbnail:
+          video.snippet?.thumbnails?.medium?.url ||
+          video.snippet?.thumbnails?.default?.url ||
+          null,
+        publishedAt: video.snippet?.publishedAt,
+        privacyStatus: video.status?.privacyStatus || "unknown",
+        uploadStatus: video.status?.uploadStatus || "uploaded",
+        duration: video.contentDetails?.duration || "",
+        views: video.statistics?.viewCount || "0",
+        comments: video.statistics?.commentCount || "0",
+        likes: video.statistics?.likeCount || "0",
+        url: `https://www.youtube.com/watch?v=${id}`,
+      };
+    }).filter(Boolean);
+  }
+
+  async updateVideoVisibility(accessToken, videoId, privacyStatus) {
+    const client = this.createClient();
+    client.setCredentials({ access_token: accessToken });
+    const youtube = google.youtube({ version: "v3", auth: client });
+    const { data } = await youtube.videos.update({
+      part: "status",
+      requestBody: {
+        id: videoId,
+        status: { privacyStatus },
+      },
+    });
+    return data.status?.privacyStatus || privacyStatus;
   }
 }
 
