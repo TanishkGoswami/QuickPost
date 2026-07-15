@@ -80,6 +80,12 @@ export default function BillingPage({ embedded = false }) {
 
   const currentPlanName = user?.entitlements?.plan?.name || 'Free';
   const isPaid = hasPaidPlan(currentPlanName);
+  
+  React.useEffect(() => {
+    console.log('🔍 [BILLING] Current user info:', user);
+    console.log('🔍 [BILLING] Current entitlements:', user?.entitlements);
+    console.log('🔍 [BILLING] Subscription details:', user?.entitlements?.subscription);
+  }, [user]);
 
   React.useEffect(() => { window.scrollTo(0, 0); }, []);
 
@@ -247,9 +253,50 @@ export default function BillingPage({ embedded = false }) {
         {invoiceError ? (
           <p style={{ margin: 0, color: 'var(--danger)', fontSize: 13 }}>{invoiceError}</p>
         ) : invoices.length === 0 ? (
-          <div style={{ border: '1px dashed var(--dust)', borderRadius: 8, padding: 24, color: 'var(--slate)', fontSize: 14 }}>
-            No invoices found yet. Paid invoices will appear here after Razorpay confirms payment.
-          </div>
+          isPaid ? (
+            <div style={{ 
+              border: '1px dashed var(--dust)', 
+              borderRadius: 8, 
+              padding: 24, 
+              color: 'var(--slate)', 
+              fontSize: 14, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: 12, 
+              alignItems: 'flex-start' 
+            }}>
+              <div>
+                Your subscription is active and managed via <strong>getaipilot.in</strong>. 
+                All transaction receipts, billing history, and invoices are located in your GetAiPilot Account Center.
+              </div>
+              <a 
+                href="https://getaipilot.in" 
+                target="_blank" 
+                rel="noreferrer" 
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: 'var(--ink)',
+                  color: 'var(--canvas)',
+                  padding: '8px 16px',
+                  borderRadius: 'var(--r-btn)',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  transition: 'opacity 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = 0.9}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = 1}
+              >
+                Go to GetAiPilot
+              </a>
+            </div>
+          ) : (
+            <div style={{ border: '1px dashed var(--dust)', borderRadius: 8, padding: 24, color: 'var(--slate)', fontSize: 14 }}>
+              No invoices found yet. Paid invoices will appear here after Razorpay confirms payment.
+            </div>
+          )
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
             {invoices.map((invoice) => (
@@ -344,28 +391,37 @@ export default function BillingPage({ embedded = false }) {
           ⚠️ {error}. Paid checkouts are disabled.
         </div>
       )}
-      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, alignItems: 'start' }}>
-        {plans.map((plan, i) => {
-          const isCurrentPlan = currentPlanName === plan.name;
-          const currentPrice = plan.price?.[billing];
-          const isCheckoutDisabled = plan.id !== 'free' && (currentPrice === null || currentPrice === undefined);
-          
-          return (
-            <motion.div
-              key={plan.name}
-              initial={{ opacity: 0, y: 28 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              style={{
-                borderRadius: 'var(--r-hero)',
-                border: `1px solid ${plan.highlighted ? 'rgba(255,86,0,0.35)' : 'rgba(20,20,19,0.08)'}`,
-                background: plan.highlighted ? '#fff7f2' : 'var(--canvas-lifted)',
-                padding: 'clamp(28px, 4vw, 36px)',
-                position: 'relative',
-                boxShadow: plan.highlighted ? '0 24px 48px rgba(255,86,0,0.12)' : 'none',
-                transform: plan.highlighted ? 'scale(1.02)' : 'scale(1)',
-              }}
-            >
+      <div style={{ maxWidth: plans.filter(p => !(isPaid && p.id === 'free')).length === 2 ? 740 : 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, alignItems: 'start' }}>
+        {plans
+          .filter(plan => {
+            if (isPaid && plan.id === 'free') return false;
+            return true;
+          })
+          .map((plan, i) => {
+            const isCurrentPlan = currentPlanName.toLowerCase() === plan.id.toLowerCase();
+            const currentPrice = plan.price?.[billing];
+            const isCheckoutDisabled = plan.id !== 'free' && (currentPrice === null || currentPrice === undefined);
+            
+            return (
+              <motion.div
+                key={plan.name}
+                initial={{ opacity: 0, y: 28 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                style={{
+                  borderRadius: 'var(--r-hero)',
+                  border: isCurrentPlan 
+                    ? '2px solid var(--success)' 
+                    : `1px solid ${plan.highlighted ? 'rgba(255,86,0,0.35)' : 'rgba(20,20,19,0.08)'}`,
+                  background: plan.highlighted ? '#fff7f2' : 'var(--canvas-lifted)',
+                  padding: 'clamp(28px, 4vw, 36px)',
+                  position: 'relative',
+                  boxShadow: isCurrentPlan
+                    ? '0 24px 48px rgba(5,150,105,0.08)'
+                    : (plan.highlighted ? '0 24px 48px rgba(255,86,0,0.12)' : 'none'),
+                  transform: plan.highlighted ? 'scale(1.02)' : 'scale(1)',
+                }}
+              >
               {/* Popular badge */}
               {plan.badge && !isCurrentPlan && (
                 <div style={{
@@ -380,9 +436,10 @@ export default function BillingPage({ embedded = false }) {
               {isCurrentPlan && (
                  <div style={{
                   position: 'absolute', top: -1, left: '50%', transform: 'translateX(-50%)',
-                  background: 'var(--green)', color: 'var(--white)',
+                  background: 'var(--success)', color: 'var(--white)',
                   fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase',
                   padding: '5px 14px', borderRadius: '0 0 var(--r-chip) var(--r-chip)',
+                  zIndex: 10,
                 }}>
                   Current Plan
                 </div>
@@ -442,12 +499,12 @@ export default function BillingPage({ embedded = false }) {
                   width: '100%', padding: '13px 20px',
                   borderRadius: 'var(--r-btn)', border: plan.highlighted ? 'none' : '1px solid rgba(20,20,19,0.12)',
                   background: (isCurrentPlan || isCheckoutDisabled) ? 'transparent' : 'var(--ink)',
-                  color: isCurrentPlan ? 'var(--green)' : (isCheckoutDisabled ? 'var(--slate)' : 'var(--canvas)'),
+                  color: isCurrentPlan ? 'var(--success)' : (isCheckoutDisabled ? 'var(--slate)' : 'var(--canvas)'),
                   fontFamily: 'var(--font)', fontSize: 14, fontWeight: 600,
                   letterSpacing: '-0.01em', cursor: (isCurrentPlan || isCheckoutDisabled) ? 'default' : 'pointer',
                   transition: 'all 0.2s', marginBottom: 28,
                   opacity: upgrading === plan.id || isCurrentPlan || isCheckoutDisabled ? 0.7 : 1,
-                  border: isCheckoutDisabled ? '1px solid rgba(20,20,19,0.12)' : undefined,
+                  border: isCurrentPlan ? '1px solid var(--success-border)' : (isCheckoutDisabled ? '1px solid rgba(20,20,19,0.12)' : undefined),
                 }}
               >
                 {isCheckoutDisabled ? 'Unavailable' : (upgrading === plan.id ? 'Processing...' : (isCurrentPlan ? 'Current Plan' : plan.cta))}

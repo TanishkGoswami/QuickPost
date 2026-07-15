@@ -18,6 +18,8 @@ import {
   MessagesSquare,
   Bot,
   Youtube,
+  User,
+  LogOut,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
 import logo from "/logo.png";
@@ -549,14 +551,14 @@ function Sidebar() {
               icon: <MessagesSquare size={16} />,
             },
             {
-              to: "/dashboard/auto-dm/settings",
-              label: "Settings",
-              icon: <Settings size={16} />,
-            },
-            {
               to: "/dashboard/trends",
               label: "All Trends",
               icon: <Flame size={16} />,
+            },
+            {
+              to: "/dashboard/auto-dm/settings",
+              label: "Profile",
+              icon: <User size={16} />,
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);

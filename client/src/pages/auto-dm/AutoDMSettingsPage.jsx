@@ -37,31 +37,69 @@ function ProfileSettingsPanel({ user }) {
             </div>
 
             <div className="mt-6 border-t border-black/5 pt-6">
-               <div className="flex justify-between items-center mb-3.5">
-                 <h3 className="text-sm font-semibold text-[#1a1a1a]">Current role</h3>
-                 <Briefcase className="w-4 h-4 text-[#888888]" />
-               </div>
-               <div className="flex flex-wrap gap-2.5">
-                  <span className="text-xs font-bold bg-[#f7f5f2] text-[#444444] px-3.5 py-1.5 rounded-full border border-black/5">Personal</span>
-                  <span className="text-xs font-bold bg-[#f7f5f2] text-[#444444] px-3.5 py-1.5 rounded-full border border-black/5">GAP Max</span>
-                  <span className="text-xs font-bold bg-[#f7f5f2] text-[#444444] px-3.5 py-1.5 rounded-full border border-black/5">India</span>
-                  <span className="text-xs font-bold bg-[#f7f5f2] text-[#444444] px-3.5 py-1.5 rounded-full border border-black/5">Premium</span>
-               </div>
-            </div>
+               {(() => {
+                 const subscription = user?.entitlements?.subscription;
+                 const planId = user?.entitlements?.plan?.id || 'free';
+                 const planStatus = subscription?.status || 'inactive';
 
-            <div className="mt-6 bg-[#f7f5f2] rounded-xl p-5 border border-black/5">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-[11px] font-bold text-[#1a1a1a] flex items-center gap-2 uppercase tracking-wider">
-                   <span className="w-5 h-5 rounded flex items-center justify-center bg-white text-emerald-700 text-xs shadow-sm">👑</span> 
-                   SUBSCRIPTION TIMELINE
-                </h3>
-                <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded uppercase tracking-wider">Active</span>
-              </div>
-              <p className="font-bold text-[#1a1a1a] text-lg">GAP Max</p>
-              <p className="text-[12px] text-[#666666] font-medium mt-1">155 days remaining</p>
-              <div className="w-full bg-black/10 rounded-full h-1.5 mt-4 overflow-hidden">
-                <div className="bg-[#0f3d32] h-1.5 rounded-full w-[70%]"></div>
-              </div>
+                 const planLabel = user?.entitlements?.plan?.name || 'Free';
+
+                 let daysRemaining = 0;
+                 let percentRemaining = 0;
+                 const isForever = planId === 'free';
+
+                 if (subscription?.current_period_end) {
+                   const diffTime = new Date(subscription.current_period_end) - new Date();
+                   daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+                   
+                   const interval = subscription?.billing_interval || 'monthly';
+                   let totalDays = 30;
+                   if (interval === 'quarterly') totalDays = 90;
+                   else if (interval === 'six_months') totalDays = 180;
+                   else if (interval === 'year' || interval === 'yearly') totalDays = 365;
+
+                   percentRemaining = Math.min(100, Math.max(0, Math.round((daysRemaining / totalDays) * 100)));
+                 } else if (planId === 'free') {
+                   percentRemaining = 100;
+                 }
+
+                 return (
+                   <>
+                     <div className="flex justify-between items-center mb-3.5">
+                       <h3 className="text-sm font-semibold text-[#1a1a1a]">Current role</h3>
+                       <Briefcase className="w-4 h-4 text-[#888888]" />
+                     </div>
+                     <div className="flex flex-wrap gap-2.5">
+                        <span className="text-xs font-bold bg-[#f7f5f2] text-[#444444] px-3.5 py-1.5 rounded-full border border-black/5">Personal</span>
+                        <span className="text-xs font-bold bg-[#f7f5f2] text-[#444444] px-3.5 py-1.5 rounded-full border border-black/5">{planLabel}</span>
+                        <span className="text-xs font-bold bg-[#f7f5f2] text-[#444444] px-3.5 py-1.5 rounded-full border border-black/5">India</span>
+                        <span className="text-xs font-bold bg-[#f7f5f2] text-[#444444] px-3.5 py-1.5 rounded-full border border-black/5">Premium</span>
+                     </div>
+
+                     <div className="mt-6 bg-[#f7f5f2] rounded-xl p-5 border border-black/5">
+                       <div className="flex justify-between items-center mb-4">
+                         <h3 className="text-[11px] font-bold text-[#1a1a1a] flex items-center gap-2 uppercase tracking-wider">
+                            <span className="w-5 h-5 rounded flex items-center justify-center bg-white text-emerald-700 text-xs shadow-sm">👑</span> 
+                            SUBSCRIPTION TIMELINE
+                         </h3>
+                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${planStatus === 'active' ? 'text-emerald-700 bg-emerald-100' : 'text-amber-700 bg-amber-100'}`}>
+                           {planStatus}
+                         </span>
+                       </div>
+                       <p className="font-bold text-[#1a1a1a] text-lg">{planLabel}</p>
+                       <p className="text-[12px] text-[#666666] font-medium mt-1">
+                         {isForever ? 'Forever' : `${daysRemaining} days remaining`}
+                       </p>
+                       <div className="w-full bg-black/10 rounded-full h-1.5 mt-4 overflow-hidden">
+                         <div 
+                           className="bg-[#0f3d32] h-1.5 rounded-full transition-all duration-500" 
+                           style={{ width: `${percentRemaining}%` }}
+                         ></div>
+                       </div>
+                     </div>
+                   </>
+                 );
+               })()}
             </div>
 
             <div className="grid grid-cols-3 gap-2 mt-4">
