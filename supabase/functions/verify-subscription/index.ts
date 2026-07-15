@@ -29,32 +29,7 @@ function getStandalonePlanId(planId: string): "pro" | "enterprise" | null {
   return null;
 }
 
-const STANDALONE_AMOUNTS: Record<"pro" | "enterprise", Record<number, number>> = {
-  pro: {
-    99900: 1,
-    269700: 3,
-    479400: 6,
-    958800: 12,
-  },
-  enterprise: {
-    299900: 1,
-    899700: 3,
-    1799400: 6,
-    2998800: 12,
-  },
-};
-
-function getPaidIntervalMonths(
-  planId: "pro" | "enterprise",
-  amountPaid: unknown,
-): number {
-  const amount = Number(amountPaid);
-  const interval = STANDALONE_AMOUNTS[planId][amount];
-  if (!interval) {
-    throw new Error("Paid amount does not match a supported QuickPost billing interval.");
-  }
-  return interval;
-}
+// Standalone amounts validation has been replaced by dynamic fetching from GetAiPilot.
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -92,7 +67,7 @@ Deno.serve(async (req) => {
 
     // 3. Update payment status in DB
     const { error: dbError } = await supabase
-      .from("payments")
+      .from("social_payments")
       .update({ status })
       .eq("razorpay_payment_link_id", razorpayPaymentLinkId);
 
@@ -106,9 +81,83 @@ Deno.serve(async (req) => {
       const planName = standalonePlanId
         ? (standalonePlanId === "enterprise" ? "Enterprise" : "Pro")
         : getPlanName(planId);
-      const intervalMonths = standalonePlanId
-        ? getPaidIntervalMonths(standalonePlanId, amountPaid)
-        : Math.max(1, Number.parseInt(razorpayData.notes?.interval || "1", 10) || 1);
+
+      let intervalMonths = 1;
+      if (standalonePlanId) {
+        if (standalonePlanId === "enterprise") {
+          throw new Error("Enterprise checkout activation is currently disabled because no matching Hub pricing plan exists");
+        }
+
+        const interval = Number(razorpayData.notes?.interval || "1");
+        if (interval !== 1) {
+          throw new Error("Non-monthly intervals are disabled because no matching Hub pricing plan exists");
+        }
+
+        const HUB_SUPABASE_URL = Deno.env.get("HUB_SUPABASE_URL");
+        const HUB_SUPABASE_ANON_KEY = Deno.env.get("HUB_SUPABASE_ANON_KEY");
+
+        if (!HUB_SUPABASE_URL || !HUB_SUPABASE_ANON_KEY) {
+          throw new Error("GetAiPilot pricing credentials are not configured in environment variables");
+        }
+
+        // Fetch dynamic pricing from GetAiPilot
+        const hubPricingUrl = `${HUB_SUPABASE_URL}/functions/v1/get-pricing?category=social&currency=INR`;
+        const pricingResponse = await fetch(hubPricingUrl, {
+          method: "GET",
+          headers: {
+            "apikey": HUB_SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${HUB_SUPABASE_ANON_KEY}`,
+          },
+        });
+
+        if (!pricingResponse.ok) {
+          throw new Error(`Failed to fetch pricing from GetAiPilot: ${pricingResponse.statusText}`);
+        }
+
+        const pricingData = await pricingResponse.json();
+        if (!pricingData || typeof pricingData !== "object" || !Array.isArray(pricingData.plans)) {
+          throw new Error("Invalid pricing response format from GetAiPilot");
+        }
+
+        if (pricingData.currency !== "INR") {
+          throw new Error(`Authoritative pricing response contains unsupported currency: ${pricingData.currency}`);
+        }
+
+        const socialPricing = pricingData.plans;
+
+        // Validate duplicates
+        const planNames = socialPricing.map((p: any) => p.plan_name);
+        const hasDuplicates = planNames.some((name: string, index: number) => planNames.indexOf(name) !== index);
+        if (hasDuplicates) {
+          throw new Error("Duplicate plan_name records found in Hub pricing response");
+        }
+
+        // Validate active plans structure
+        for (const plan of socialPricing) {
+          if (plan.is_active !== true) continue;
+          if (typeof plan.amount !== "number" || plan.amount <= 0) {
+            throw new Error(`Invalid amount found in Hub plan: ${plan.plan_name}`);
+          }
+          if (plan.currency !== "INR") {
+            throw new Error(`Unsupported currency found in Hub plan: ${plan.plan_name}`);
+          }
+        }
+
+        // Lookup active social_pilot_starter
+        const starterPlan = socialPricing.find((p: any) => p.plan_name === "social_pilot_starter" && p.is_active === true);
+        if (!starterPlan) {
+          throw new Error("Active social_pilot_starter pricing plan not found in GetAiPilot catalog");
+        }
+
+        const expectedAmount = Math.round(starterPlan.amount * interval);
+        if (amountPaid !== expectedAmount) {
+          throw new Error("Razorpay payment amount is incomplete or inconsistent with authoritative Hub pricing.");
+        }
+
+        intervalMonths = interval;
+      } else {
+        intervalMonths = Math.max(1, Number.parseInt(razorpayData.notes?.interval || "1", 10) || 1);
+      }
 
       if (standalonePlanId && amountPaid !== amount) {
         throw new Error("Razorpay payment amount is incomplete or inconsistent.");
