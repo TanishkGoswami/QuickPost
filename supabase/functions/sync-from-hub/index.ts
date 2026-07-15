@@ -13,21 +13,16 @@ function jsonRes(status: number, body: Record<string, unknown>): Response {
   });
 }
 
-// Plans that include Social Pilot access
-function isSocialPlan(planValue: string): boolean {
-  if (!planValue) return false;
-  const p = planValue.toLowerCase().trim();
-  return (
-    p.startsWith("social_pilot") ||
-    p.startsWith("all_in_one") ||
-    p === "social pilot" ||
-    p === "gap ultimate ecosystem" ||
-    p.includes("core") ||
-    p.includes("pro") ||
-    p.includes("max") ||
-    p.startsWith("gap_")
-  );
-}
+// Plans that include Social Pilot access mapping dictionary
+const HUB_PLAN_MAPPING: Record<string, "free" | "pro" | "enterprise"> = {
+  "free_trial": "free",
+  "social_pilot_starter": "pro",
+  "social_pilot_quarterly": "pro",
+  "social_pilot_half_yearly": "pro",
+  "all_in_one_bundle_monthly": "pro",
+  "all_in_one_bundle_quarterly": "pro",
+  "all_in_one_bundle_half_yearly": "pro"
+};
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS")
@@ -59,7 +54,8 @@ Deno.serve(async (req: Request) => {
       hub_user_id,
       profile_picture,
       plan_id,
-      plan,
+      plan_label,
+      subscription_status,
       expires_at,
     } = body;
 
@@ -71,47 +67,38 @@ Deno.serve(async (req: Request) => {
       auth: { persistSession: false },
     });
 
-    const rawPlanId = plan_id || plan || "";
-    // Store exact plan_label from hub if this is a social-relevant plan
-    // plan_label comes in as e.g. "Social Pilot" or "GAP Ultimate Ecosystem"
-    const planLabel = body.plan_label || null;
-    const subscriptionStatus = body.subscription_status || "active";
-    const hasSocial = isSocialPlan(rawPlanId) || isSocialPlan(planLabel || "");
+    // Normalize plan_id to match exact mapping keys
+    const rawPlanId = plan_id ? String(plan_id).toLowerCase().trim() : "";
+    const mappedPlan = HUB_PLAN_MAPPING[rawPlanId] || "free";
+    
+    // Normalize status. Require exact case-insensitive match for "active".
+    const rawStatus = subscription_status ? String(subscription_status).trim().toLowerCase() : "";
+    const isActive = rawStatus === "active";
 
-    // If payload is incomplete (no plan_id/plan_label), do not downgrade existing paid users.
+    // 1. Fetch existing subscription for expires_at fallback
     const { data: existingSub } = await supabase
       .from("hub_subscriptions")
-      .select("plan, plan_id, subscription_status")
+      .select("expires_at, plan, plan_id, subscription_status")
       .eq("email", email)
       .maybeSingle();
 
-    const existingPaid = isSocialPlan(existingSub?.plan_id || "") || isSocialPlan(existingSub?.plan || "");
-
+    // Map storedPlan name: Free, Pro, or Enterprise (requires explicit active status check)
     let storedPlan = "Free";
-    if (hasSocial) {
-      if (planLabel) {
-        storedPlan = planLabel;
-      } else {
-        const id = rawPlanId.toLowerCase();
-        if (id.includes("monthly") || id.includes("core") || id === "all_in_one_bundle_monthly") storedPlan = "GAP Core";
-        else if (id.includes("quarterly") || id.includes("pro") || id === "all_in_one_bundle_quarterly") storedPlan = "GAP Pro";
-        else if (id.includes("half_yearly") || id.includes("max") || id === "all_in_one_bundle_half_yearly") storedPlan = "GAP Max";
-        else if (id.startsWith("all_in_one") || id.includes("ultimate")) storedPlan = "GAP Ultimate Ecosystem";
-        else storedPlan = "Social Pilot";
-      }
-    } else if (!rawPlanId && existingPaid) {
-      storedPlan = existingSub?.plan || "Social Pilot";
+    if (mappedPlan === "pro" && isActive) {
+      storedPlan = plan_label ? String(plan_label).trim() : "Pro";
+    } else if (mappedPlan === "enterprise" && isActive) {
+      storedPlan = plan_label ? String(plan_label).trim() : "Enterprise";
     }
 
+    // null expires_at in payload must not accidentally erase existing valid non-null expires_at in DB
+    const finalExpiresAt = expires_at || existingSub?.expires_at || null;
+
     // ── Upsert into hub_subscriptions (email as primary key) ──────────────
-    // No auth user creation. No UUID conflicts. Simple and fast.
     const record: Record<string, unknown> = {
       email,
       plan: storedPlan,
-      plan_id: rawPlanId || existingSub?.plan_id || null,
-      subscription_status: hasSocial
-        ? subscriptionStatus
-        : (!rawPlanId && existingPaid ? (existingSub?.subscription_status || "active") : "active"),
+      plan_id: plan_id || null, // Write raw plan_id to DB
+      subscription_status: subscription_status ? String(subscription_status).trim() : null,
       updated_at: new Date().toISOString(),
       synced_at: new Date().toISOString(),
     };
@@ -119,7 +106,7 @@ Deno.serve(async (req: Request) => {
     if (name) record.name = name;
     if (hub_user_id) record.hub_user_id = hub_user_id;
     if (profile_picture) record.profile_picture = profile_picture;
-    if (expires_at) record.expires_at = expires_at;
+    if (finalExpiresAt) record.expires_at = finalExpiresAt;
 
     const { error: upsertError } = await supabase
       .from("hub_subscriptions")
@@ -131,7 +118,7 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log(
-      `[sync-from-hub] ✅ ${email} → plan=${storedPlan} (${rawPlanId})`,
+      `[sync-from-hub] ✅ ${email} → plan=${storedPlan} (${plan_id})`,
     );
 
     return jsonRes(200, {

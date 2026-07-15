@@ -6,11 +6,47 @@ import supabase from '../services/supabase.js';
 
 const router = express.Router();
 
-router.get('/plans', (_req, res) => {
-  res.json({
-    success: true,
-    plans: Object.values(PLANS),
-  });
+import { getSocialPricing } from '../services/pricing.js';
+
+router.get('/plans', async (_req, res) => {
+  try {
+    const socialPricing = await getSocialPricing();
+    const starterPlan = socialPricing.find(p => p.plan_name === 'social_pilot_starter');
+
+    const freePlan = JSON.parse(JSON.stringify(PLANS.free));
+    const proPlan = JSON.parse(JSON.stringify(PLANS.pro));
+    const enterprisePlan = JSON.parse(JSON.stringify(PLANS.enterprise));
+
+    if (starterPlan) {
+      proPlan.prices = {
+        month: starterPlan.amount / 100,
+        year: null // No matching annual plan in Hub pricing, checkout disabled
+      };
+    } else {
+      proPlan.prices = { month: null, year: null };
+    }
+
+    // No matching Enterprise plan in Hub, checkout disabled
+    enterprisePlan.prices = { month: null, year: null };
+
+    res.json({
+      success: true,
+      plans: [freePlan, proPlan, enterprisePlan],
+    });
+  } catch (error) {
+    console.error('Failed to load dynamic pricing, failing closed:', error.message);
+    const freePlan = JSON.parse(JSON.stringify(PLANS.free));
+    const proPlan = JSON.parse(JSON.stringify(PLANS.pro));
+    const enterprisePlan = JSON.parse(JSON.stringify(PLANS.enterprise));
+
+    proPlan.prices = { month: null, year: null };
+    enterprisePlan.prices = { month: null, year: null };
+
+    res.json({
+      success: true,
+      plans: [freePlan, proPlan, enterprisePlan],
+    });
+  }
 });
 
 router.get('/entitlements', authenticateUser, async (req, res, next) => {

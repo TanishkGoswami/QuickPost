@@ -5,7 +5,9 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { supabase } from "../../../lib/supabase";
 
-const PLANS = [
+const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_DEV_API_URL || 'http://localhost:5000';
+
+const PLANS_TEMPLATE = [
   {
     name: 'Free',
     id: 'free',
@@ -19,14 +21,14 @@ const PLANS = [
       '50 automated replies / month',
       'QuickPost Branding Watermark',
     ],
-    cta: "Get started free",
+    cta: 'Get started free',
     highlighted: false,
   },
   {
     name: 'Pro',
-    id: '999',
-    price: { 1: 999, 3: 899, 6: 799, 12: 699 },
-    description: 'For creators who broadcast seriously.',
+    id: 'pro',
+    price: { 1: null, 3: null, 6: null, 12: null },
+    description: 'For creators who broadcast seriously across every platform.',
     icon: <Sparkles size={20} />,
     features: [
       '10 connected social accounts',
@@ -37,14 +39,14 @@ const PLANS = [
       'Unlimited contacts',
       'Priority email support',
     ],
-    cta: "Upgrade to Pro",
+    cta: 'Upgrade to Pro',
     highlighted: true,
-    badge: "Most popular",
+    badge: 'Most popular',
   },
   {
     name: 'Enterprise',
     id: 'enterprise',
-    price: { 1: 2999, 3: 2699, 6: 2499, 12: 2499 },
+    price: { 1: null, 3: null, 6: null, 12: null },
     description: 'For teams, agencies, and heavy automation users.',
     icon: <Building2 size={20} />,
     features: [
@@ -56,7 +58,7 @@ const PLANS = [
       '10 team members',
       'Developer API access',
     ],
-    cta: "Upgrade to Enterprise",
+    cta: 'Upgrade to Enterprise',
     highlighted: false,
   }
 ];
@@ -66,6 +68,49 @@ export default function Pricing() {
   const { user, isAuthenticated } = useAuth();
   const [billing, setBilling] = useState(1);
   const [upgrading, setUpgrading] = useState(null);
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  React.useEffect(() => {
+    async function fetchPlans() {
+      try {
+        const response = await fetch(`${API_URL}/api/billing/plans`);
+        const data = await response.json();
+        if (data.success && data.plans) {
+          const merged = data.plans.map(dp => {
+            const staticPlan = PLANS_TEMPLATE.find(sp => sp.id === dp.id);
+            if (!staticPlan) return null;
+            const priceMap = {
+              1: dp.prices && dp.prices.hasOwnProperty('month') ? dp.prices.month : staticPlan.price?.[1],
+              3: dp.prices && dp.prices.hasOwnProperty('quarterly') ? dp.prices.quarterly : staticPlan.price?.[3],
+              6: dp.prices && dp.prices.hasOwnProperty('six_months') ? dp.prices.six_months : staticPlan.price?.[6],
+              12: dp.prices && dp.prices.hasOwnProperty('year') ? dp.prices.year : staticPlan.price?.[12]
+            };
+            return {
+              ...staticPlan,
+              ...dp,
+              features: staticPlan.features,
+              price: priceMap
+            };
+          }).filter(Boolean);
+          setPlans(merged);
+        } else {
+          throw new Error('Failed to load plans');
+        }
+      } catch (err) {
+        console.error('Failed to load pricing:', err);
+        setError('Pricing temporarily unavailable');
+        setPlans(PLANS_TEMPLATE.map(sp => ({
+          ...sp,
+          price: { 1: sp.id === 'free' ? 0 : null, 3: sp.id === 'free' ? 0 : null, 6: sp.id === 'free' ? 0 : null, 12: sp.id === 'free' ? 0 : null }
+        })));
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchPlans();
+  }, []);
 
   const handleUpgrade = async (plan) => {
     if (!isAuthenticated) {
@@ -75,6 +120,12 @@ export default function Pricing() {
 
     if (plan.id === "free") {
       navigate("/dashboard");
+      return;
+    }
+
+    const currentPrice = plan.price?.[billing];
+    if (currentPrice === null || currentPrice === undefined) {
+      alert('This plan or billing interval is currently unavailable.');
       return;
     }
 
@@ -200,6 +251,15 @@ export default function Pricing() {
           </div>
         </motion.div>
 
+        {error && (
+          <div style={{
+            textAlign: 'center', color: '#ff4444', background: 'rgba(255,68,68,0.1)',
+            padding: '12px 24px', borderRadius: 8, marginBottom: 24,
+            fontSize: 14, fontWeight: 600, maxWidth: 1100, margin: '0 auto 24px'
+          }}>
+            ⚠️ {error}. Paid checkouts are disabled.
+          </div>
+        )}
         {/* Cards */}
         <div style={{
           display: 'grid',
@@ -209,238 +269,251 @@ export default function Pricing() {
           maxWidth: 1100,
           margin: '0 auto',
         }}>
-          {PLANS.map((plan, i) => (
-            <motion.div
-              key={plan.name}
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-40px" }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              style={{
-                borderRadius: "var(--r-hero)",
-                border: plan.highlighted
-                  ? "none"
-                  : "1px solid rgba(20,20,19,0.08)",
-                background: plan.highlighted
-                  ? "var(--ink)"
-                  : "var(--canvas-lifted)",
-                padding: "clamp(24px, 3.5vw, 32px)",
-                position: "relative",
-                boxShadow: plan.highlighted
-                  ? "0 32px 64px -16px rgba(20,20,19,0.2)"
-                  : "none",
-                transform: plan.highlighted ? "scale(1.03)" : "scale(1)",
-              }}
-            >
-              {/* Popular badge */}
-              {plan.badge && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: -1,
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    background: "var(--arc)",
-                    color: "var(--white)",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    letterSpacing: "0.05em",
-                    textTransform: "uppercase",
-                    padding: "5px 14px",
-                    borderRadius: "0 0 var(--r-chip) var(--r-chip)",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {plan.badge}
-                </div>
-              )}
+          {plans.map((plan, i) => {
+            const currentPrice = plan.price?.[billing];
+            const isCheckoutDisabled = plan.id !== 'free' && (currentPrice === null || currentPrice === undefined);
 
-              {/* Icon */}
-              <div
+            return (
+              <motion.div
+                key={plan.name}
+                initial={{ opacity: 0, y: 28 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-40px" }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
                 style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: "50%",
+                  borderRadius: "var(--r-hero)",
+                  border: plan.highlighted
+                    ? "none"
+                    : "1px solid rgba(20,20,19,0.08)",
                   background: plan.highlighted
-                    ? "rgba(255,86,0,0.18)"
-                    : "var(--ink)",
-                  color: plan.highlighted ? "var(--arc)" : "var(--canvas)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: 18,
+                    ? "var(--ink)"
+                    : "var(--canvas-lifted)",
+                  padding: "clamp(24px, 3.5vw, 32px)",
+                  position: "relative",
+                  boxShadow: plan.highlighted
+                    ? "0 32px 64px -16px rgba(20,20,19,0.2)"
+                    : "none",
+                  transform: plan.highlighted ? "scale(1.03)" : "scale(1)",
                 }}
               >
-                {plan.icon}
-              </div>
-
-              {/* Name + desc */}
-              <div style={{ marginBottom: 16 }}>
-                <div
-                  style={{
-                    fontSize: 17,
-                    fontWeight: 600,
-                    color: plan.highlighted ? "var(--canvas)" : "var(--ink)",
-                    letterSpacing: "-0.02em",
-                    marginBottom: 5,
-                  }}
-                >
-                  {plan.name}
-                </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 450,
-                    color: plan.highlighted
-                      ? "rgba(243,240,238,0.55)"
-                      : "var(--slate)",
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {plan.description}
-                </div>
-              </div>
-
-              {/* Price */}
-              <div style={{ marginBottom: 20 }}>
-                <div
-                  style={{ display: "flex", alignItems: "flex-end", gap: 4 }}
-                >
-                  <span
+                {/* Popular badge */}
+                {plan.badge && (
+                  <div
                     style={{
-                      fontSize: "clamp(36px, 4vw, 48px)",
-                      fontWeight: 600,
-                      lineHeight: 1,
-                      color: plan.highlighted ? "var(--canvas)" : "var(--ink)",
-                      letterSpacing: "-0.04em",
+                      position: "absolute",
+                      top: -1,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      background: "var(--arc)",
+                      color: "var(--white)",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: "0.05em",
+                      textTransform: "uppercase",
+                      padding: "5px 14px",
+                      borderRadius: "0 0 var(--r-chip) var(--r-chip)",
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    ₹{plan.price[billing]}
-                  </span>
-                  <span
+                    {plan.badge}
+                  </div>
+                )}
+
+                {/* Icon */}
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: "50%",
+                    background: plan.highlighted
+                      ? "rgba(255,86,0,0.18)"
+                      : "var(--ink)",
+                    color: plan.highlighted ? "var(--arc)" : "var(--canvas)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: 18,
+                  }}
+                >
+                  {plan.icon}
+                </div>
+
+                {/* Name + desc */}
+                <div style={{ marginBottom: 16 }}>
+                  <div
+                    style={{
+                      fontSize: 17,
+                      fontWeight: 600,
+                      color: plan.highlighted ? "var(--canvas)" : "var(--ink)",
+                      letterSpacing: "-0.02em",
+                      marginBottom: 5,
+                    }}
+                  >
+                    {plan.name}
+                  </div>
+                  <div
                     style={{
                       fontSize: 13,
                       fontWeight: 450,
                       color: plan.highlighted
-                        ? "rgba(243,240,238,0.45)"
+                        ? "rgba(243,240,238,0.55)"
                         : "var(--slate)",
-                      marginBottom: 5,
+                      lineHeight: 1.5,
                     }}
                   >
-                    {plan.price[billing] === 0 ? "forever" : "/ mo"}
-                  </span>
-                </div>
-                {billing > 1 && plan.price[1] > 0 && (
-                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--arc)', marginTop: 4 }}>
-                    Billed ₹{plan.price[billing] * billing} {billing === 12 ? 'yearly' : `every ${billing} months`} · Save ₹{(plan.price[1] - plan.price[billing]) * billing}
+                    {plan.description}
                   </div>
-                )}
-              </div>
+                </div>
 
-              {/* CTA */}
-              <button
-                onClick={() => handleUpgrade(plan)}
-                disabled={upgrading === plan.id}
-                style={{
-                  width: "100%",
-                  padding: "12px 20px",
-                  borderRadius: "var(--r-btn)",
-                  border: plan.highlighted
-                    ? "none"
-                    : "1px solid rgba(20,20,19,0.12)",
-                  background: plan.highlighted
-                    ? "var(--canvas)"
-                    : "transparent",
-                  color: "var(--ink)",
-                  fontFamily: "var(--font)",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  letterSpacing: "-0.01em",
-                  cursor: "pointer",
-                  transition: "all 0.2s",
-                  marginBottom: 24,
-                  opacity: upgrading === plan.id ? 0.7 : 1,
-                }}
-                onMouseEnter={(e) => {
-                  if (plan.highlighted)
-                    e.currentTarget.style.transform = "scale(1.02)";
-                  else e.currentTarget.style.background = "rgba(20,20,19,0.05)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "scale(1)";
-                  if (!plan.highlighted)
-                    e.currentTarget.style.background = "transparent";
-                }}
-              >
-                {upgrading === plan.id ? "Processing..." : plan.cta}
-              </button>
-
-              {/* Divider */}
-              <div
-                style={{
-                  borderTop: `1px solid ${plan.highlighted ? "rgba(243,240,238,0.1)" : "rgba(20,20,19,0.07)"}`,
-                  marginBottom: 20,
-                }}
-              />
-
-              {/* Features list */}
-              <ul
-                style={{
-                  listStyle: "none",
-                  padding: 0,
-                  margin: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 11,
-                }}
-              >
-                {plan.features.map((f) => (
-                  <li
-                    key={f}
-                    style={{
-                      display: "flex",
-                      alignItems: "flex-start",
-                      gap: 10,
-                    }}
+                {/* Price */}
+                <div style={{ marginBottom: 20 }}>
+                  <div
+                    style={{ display: "flex", alignItems: "flex-end", gap: 4 }}
                   >
-                    <span
+                    {currentPrice !== null && currentPrice !== undefined ? (
+                      <>
+                        <span
+                          style={{
+                            fontSize: "clamp(36px, 4vw, 48px)",
+                            fontWeight: 600,
+                            lineHeight: 1,
+                            color: plan.highlighted ? "var(--canvas)" : "var(--ink)",
+                            letterSpacing: "-0.04em",
+                          }}
+                        >
+                          ₹{currentPrice}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 450,
+                            color: plan.highlighted
+                              ? "rgba(243,240,238,0.45)"
+                              : "var(--slate)",
+                            marginBottom: 5,
+                          }}
+                        >
+                          {currentPrice === 0 ? "forever" : "/ mo"}
+                        </span>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: 22, fontWeight: 600, color: '#ff4444', letterSpacing: '-0.02em', marginBottom: 5 }}>
+                        Unavailable
+                      </span>
+                    )}
+                  </div>
+                  {billing > 1 && currentPrice !== null && currentPrice !== undefined && currentPrice > 0 && plan.price?.[1] > 0 && (
+                    <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--arc)', marginTop: 4 }}>
+                      Billed ₹{currentPrice * billing} every {billing} months · Save ₹{(plan.price[1] - currentPrice) * billing}
+                    </div>
+                  )}
+                </div>
+
+                {/* CTA */}
+                <button
+                  onClick={() => handleUpgrade(plan)}
+                  disabled={upgrading === plan.id || isCheckoutDisabled}
+                  style={{
+                    width: "100%",
+                    padding: "12px 20px",
+                    borderRadius: "var(--r-btn)",
+                    border: plan.highlighted
+                      ? "none"
+                      : "1px solid rgba(20,20,19,0.12)",
+                    background: isCheckoutDisabled ? "rgba(20,20,19,0.08)" : (plan.highlighted ? "var(--canvas)" : "transparent"),
+                    color: isCheckoutDisabled ? "var(--slate)" : "var(--ink)",
+                    fontFamily: "var(--font)",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    letterSpacing: "-0.01em",
+                    cursor: isCheckoutDisabled ? "not-allowed" : "pointer",
+                    transition: "all 0.2s",
+                    marginBottom: 24,
+                    opacity: upgrading === plan.id || isCheckoutDisabled ? 0.7 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (isCheckoutDisabled) return;
+                    if (plan.highlighted)
+                      e.currentTarget.style.transform = "scale(1.02)";
+                    else e.currentTarget.style.background = "rgba(20,20,19,0.05)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (isCheckoutDisabled) return;
+                    e.currentTarget.style.transform = "scale(1)";
+                    if (!plan.highlighted)
+                      e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  {isCheckoutDisabled ? 'Unavailable' : (upgrading === plan.id ? "Processing..." : plan.cta)}
+                </button>
+
+                {/* Divider */}
+                <div
+                  style={{
+                    borderTop: `1px solid ${plan.highlighted ? "rgba(243,240,238,0.1)" : "rgba(20,20,19,0.07)"}`,
+                    marginBottom: 20,
+                  }}
+                />
+
+                {/* Features list */}
+                <ul
+                  style={{
+                    listStyle: "none",
+                    padding: 0,
+                    margin: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 11,
+                  }}
+                >
+                  {plan.features.map((f) => (
+                    <li
+                      key={f}
                       style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: "50%",
-                        flexShrink: 0,
-                        background: plan.highlighted
-                          ? "rgba(255,86,0,0.18)"
-                          : "rgba(20,20,19,0.06)",
                         display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        marginTop: 1,
+                        alignItems: "flex-start",
+                        gap: 10,
                       }}
                     >
-                      <Check
-                        size={11}
-                        color={plan.highlighted ? "var(--arc)" : "var(--ink)"}
-                        strokeWidth={2.5}
-                      />
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 450,
-                        color: plan.highlighted
-                          ? "rgba(243,240,238,0.7)"
-                          : "var(--slate)",
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {f}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-          ))}
+                      <span
+                        style={{
+                          width: 20,
+                          height: 20,
+                          borderRadius: "50%",
+                          flexShrink: 0,
+                          background: plan.highlighted
+                            ? "rgba(255,86,0,0.18)"
+                            : "rgba(20,20,19,0.06)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          marginTop: 1,
+                        }}
+                      >
+                        <Check
+                          size={11}
+                          color={plan.highlighted ? "var(--arc)" : "var(--ink)"}
+                          strokeWidth={2.5}
+                        />
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 450,
+                          color: plan.highlighted
+                            ? "rgba(243,240,238,0.7)"
+                            : "var(--slate)",
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {f}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            );
+          })}
         </div>
 
         {/* Bottom note */}
