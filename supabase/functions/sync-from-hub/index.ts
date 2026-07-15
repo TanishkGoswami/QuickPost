@@ -70,7 +70,10 @@ Deno.serve(async (req: Request) => {
     // Normalize plan_id to match exact mapping keys
     const rawPlanId = plan_id ? String(plan_id).toLowerCase().trim() : "";
     const mappedPlan = HUB_PLAN_MAPPING[rawPlanId] || "free";
-    const subscriptionStatus = subscription_status ? String(subscription_status).trim() : "active";
+    
+    // Normalize status. Require exact case-insensitive match for "active".
+    const rawStatus = subscription_status ? String(subscription_status).trim().toLowerCase() : "";
+    const isActive = rawStatus === "active";
 
     // 1. Fetch existing subscription for expires_at fallback
     const { data: existingSub } = await supabase
@@ -79,11 +82,11 @@ Deno.serve(async (req: Request) => {
       .eq("email", email)
       .maybeSingle();
 
-    // Map storedPlan name: Free, Pro, or Enterprise
+    // Map storedPlan name: Free, Pro, or Enterprise (requires explicit active status check)
     let storedPlan = "Free";
-    if (mappedPlan === "pro" && subscriptionStatus === "active") {
+    if (mappedPlan === "pro" && isActive) {
       storedPlan = plan_label ? String(plan_label).trim() : "Pro";
-    } else if (mappedPlan === "enterprise" && subscriptionStatus === "active") {
+    } else if (mappedPlan === "enterprise" && isActive) {
       storedPlan = plan_label ? String(plan_label).trim() : "Enterprise";
     }
 
@@ -95,7 +98,7 @@ Deno.serve(async (req: Request) => {
       email,
       plan: storedPlan,
       plan_id: plan_id || null, // Write raw plan_id to DB
-      subscription_status: subscriptionStatus,
+      subscription_status: subscription_status ? String(subscription_status).trim() : null,
       updated_at: new Date().toISOString(),
       synced_at: new Date().toISOString(),
     };
