@@ -20,7 +20,7 @@ dotenv.config();
  * @param {string} visibility - Privacy status ('public', 'unlisted', 'private')
  * @returns {Object} Result with video ID and URL
  */
-export async function postToYouTube(videoPath, caption, tokens, onProgress, visibility = 'public') {
+export async function postToYouTube(videoPath, caption, tokens, onProgress, visibility = 'public', isShort = false) {
   try {
     if (!tokens || !tokens.accessToken) {
       throw new Error('Missing YouTube credentials');
@@ -47,10 +47,11 @@ export async function postToYouTube(videoPath, caption, tokens, onProgress, visi
     });
 
     // Prepare video metadata
-    const videoTitle = caption.substring(0, 100) || 'QuickPost Short';
-    const videoDescription = `${caption}\n\n#Shorts`;
+    const videoTitle = caption.substring(0, 100) || (isShort ? 'QuickPost Short' : 'QuickPost Video');
+    const videoDescription = isShort ? `${caption}\n\n#Shorts` : caption;
+    const tags = isShort ? ['Shorts', 'QuickPost'] : ['QuickPost'];
 
-    console.log('Uploading video to YouTube...');
+    console.log(`Uploading ${isShort ? 'Short' : 'Video'} to YouTube...`);
 
     // Get file size for progress tracking
     const fileSize = fs.statSync(videoPath).size;
@@ -63,7 +64,7 @@ export async function postToYouTube(videoPath, caption, tokens, onProgress, visi
           title: videoTitle,
           description: videoDescription,
           categoryId: '22', // People & Blogs
-          tags: ['Shorts', 'QuickPost']
+          tags: tags
         },
         status: {
           privacyStatus: visibility, // Can be 'private', 'unlisted', or 'public'

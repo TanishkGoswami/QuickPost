@@ -425,7 +425,7 @@ const YouTubePreview = memo(
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <UserAvatar user={user} picture={platformPicture} size={36} background="#f00" />
+              <UserAvatar user={user} picture="/icons/youtube-color-icon.svg" size={36} background="#fff" />
               <span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>@{username.replace(/\s+/g, "").toLowerCase()}</span>
               <button style={{ background: "white", color: "black", fontSize: 12, fontWeight: 700, padding: "6px 14px", borderRadius: 20 }}>Subscribe</button>
             </div>
@@ -439,7 +439,7 @@ const YouTubePreview = memo(
             <div style={{ textAlign: "center" }}><MessageSquare size={26} color="white" fill="white" /><span style={{ color: "white", fontSize: 11, marginTop: 4, fontWeight: 600 }}>{metrics.comments}</span></div>
             <div style={{ textAlign: "center" }}><Share2 size={26} color="white" fill="white" /><span style={{ color: "white", fontSize: 11, marginTop: 4, fontWeight: 600 }}>Share</span></div>
             <div style={{ width: 32, height: 32, borderRadius: 6, border: "2px solid white", overflow: "hidden" }}>
-               <UserAvatar user={user} picture={platformPicture} size={32} />
+               <UserAvatar user={user} picture="/icons/youtube-color-icon.svg" size={32} />
             </div>
           </div>
         </div>

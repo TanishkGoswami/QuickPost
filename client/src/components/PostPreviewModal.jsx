@@ -204,6 +204,11 @@ const resolvePlatformAccount = ({ post, platformId, channel, connectedAccounts }
   return connectedAccounts?.[platformId] || null;
 };
 
+const getPlatformResult = (post, platformId, channel) => {
+  const data = post?.platform_data || {};
+  return data?.results?.[channel] || data?.results?.[platformId] || data?.[channel] || data?.[platformId] || null;
+};
+
 const ProfileBubble = ({ user, username, picture, className = "w-8 h-8", ring = false }) => {
   const displayPicture = picture || getUserPicture(user);
   const letter = (username || user?.name || "?").trim()[0]?.toUpperCase() || "?";
@@ -368,7 +373,7 @@ const InstagramOverlay = ({ format, caption, children, isFull, platformUsername,
   );
 };
 
-const YouTubeOverlay = ({ format, caption, children, isFull, platformUsername, metrics, user }) => {
+const YouTubeOverlay = ({ format, caption, children, isFull, platformUsername, platformPicture, metrics, user }) => {
   if (isFull) {
     return (
       <div className="absolute inset-0 flex flex-col pointer-events-none text-white">
@@ -401,16 +406,14 @@ const YouTubeOverlay = ({ format, caption, children, isFull, platformUsername, m
             <span className="text-[11px] font-bold">Share</span>
           </div>
           <div className="w-10 h-10 rounded border-2 border-white/20 mt-1 overflow-hidden">
-            {user?.profile_picture && <img src={user.profile_picture} className="w-full h-full object-cover" />}
+            {platformPicture && <img src={platformPicture} className="w-full h-full object-cover" alt="" />}
           </div>
         </div>
 
         {/* Shorts Bottom Info */}
         <div className="mt-auto p-4 pb-8 bg-gradient-to-t from-black/60 to-transparent z-10">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-full bg-red-600 border-2 border-white/10 overflow-hidden">
-              {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-[10px] font-bold">{user?.name?.[0] || '?'}</div>}
-            </div>
+            <ProfileBubble user={user} username={platformUsername} picture={platformPicture} className="w-9 h-9" />
             <span className="text-[13px] font-bold">@{platformUsername || user?.name || 'channel'}</span>
             <button className="bg-red-600 text-white px-3.5 py-1.5 rounded-full text-[11px] font-bold">Subscribe</button>
           </div>
@@ -431,9 +434,7 @@ const YouTubeOverlay = ({ format, caption, children, isFull, platformUsername, m
        </div>
        <div className="p-3 text-white">
           <div className="flex gap-3">
-            <div className="w-10 h-10 rounded-full bg-gray-600 flex-shrink-0 overflow-hidden">
-               {user?.profile_picture ? <img src={user.profile_picture} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-red-600 flex items-center justify-center text-xs">{user?.name?.[0] || '?'}</div>}
-            </div>
+            <ProfileBubble user={user} username={platformUsername} picture={platformPicture} className="w-10 h-10" />
             <div className="flex-1">
               <p className="text-[13px] font-bold leading-tight mb-1">{caption || 'Video Title'}</p>
               <p className="text-[11px] text-gray-400">{platformUsername || user?.name || 'Channel Name'} • {metrics.views.toLocaleString()} views • {metrics.timestamp}</p>
@@ -868,7 +869,9 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
   const postType = post.platform_data?.postType || post.platform_data?.instagram?.type;
 
   const postedPlatforms = Object.entries(PLATFORM_CONFIG)
-    .map(([id, cfg]) => {
+    .flatMap(([id, cfg]) => {
+      const platformChannels = selectedChannels.filter((channel) => String(channel).split(':')[0] === id);
+      const entries = platformChannels.length ? platformChannels : [id];
       let finalFormats = cfg.formats;
       const presetId = post?.platform_data?.parsedPresets?.[id]
         || (id === 'instagram' && postType === 'story' ? 'ig-story' : '');
@@ -900,23 +903,27 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
            finalFormats = [cfg.formats[matchedIndex]];
         }
       }
-      return {
+      return entries.map((channel) => {
+        const result = getPlatformResult(post, id, channel);
+        const success = result?.success ?? post[`${id}_success`] ?? (selectedBasePlatforms.has(id) && post.status === 'sent');
+        return {
+        key: channel,
+        channel,
         id,
         ...cfg,
         formats: finalFormats,
-        success: post[`${id}_success`] || (selectedBasePlatforms.has(id) && post.status === 'sent'),
-        error:   post[`${id}_error`],
-        url:     post[`${id}_url`] || post[`${id}_shorts_url`],
+        success,
+        error: result?.error || post[`${id}_error`],
+        url: result?.videoUrl || result?.shortsUrl || result?.url || post[`${id}_url`] || post[`${id}_shorts_url`],
         selected: selectedBasePlatforms.has(id),
       };
+      });
     })
     .filter(p => p.selected || p.success || (p.error && p.error !== 'Not selected'));
 
   const activePlatform = postedPlatforms[activePlatformIdx];
   const activeFormat   = activePlatform?.formats?.[activeFormatIdx] || activePlatform?.formats?.[0];
-  const activeChannel = activePlatform
-    ? selectedChannels.find((channel) => String(channel).split(':')[0] === activePlatform.id)
-    : null;
+  const activeChannel = activePlatform?.channel || null;
   const activeAccount = resolvePlatformAccount({
     post,
     platformId: activePlatform?.id,
@@ -924,11 +931,13 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
     connectedAccounts,
   });
   const activeUsername =
+    getPlatformResult(post, activePlatform?.id, activeChannel)?.username ||
     getAccountUsername(activeAccount) ||
     connectedAccounts?.[activePlatform?.id]?.username ||
     user?.name?.toLowerCase().replace(/\s+/g, '_') ||
     'username';
   const activePicture =
+    getPlatformResult(post, activePlatform?.id, activeChannel)?.profilePicture ||
     getAccountPicture(activeAccount) ||
     getAccountPicture(connectedAccounts?.[activePlatform?.id]) ||
     getUserPicture(user);
@@ -1001,28 +1010,39 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
                 {postedPlatforms.length === 0 ? (
                   <p className="text-xs text-gray-400 italic">No platforms data available</p>
                 ) : (
-                  postedPlatforms.map((p, i) => (
+                  postedPlatforms.map((p, i) => {
+                    const rowAccount = resolvePlatformAccount({ post, platformId: p.id, channel: p.channel, connectedAccounts });
+                    const rowResult = getPlatformResult(post, p.id, p.channel);
+                    const rowName = rowResult?.username || getAccountUsername(rowAccount);
+                    const rowPicture = rowResult?.profilePicture || getAccountPicture(rowAccount);
+                    return (
                     <button
-                      key={p.id}
+                      key={p.key || p.id}
                       onClick={() => handlePlatformChange(i)}
-                    className={`post-preview-platform-option w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all duration-200 ${
+                      className={`post-preview-platform-option w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all duration-200 ${
                         i === activePlatformIdx
                         ? 'bg-white shadow-lg shadow-gray-200/50 border border-gray-100 scale-[1.02]'
                         : 'hover:bg-gray-100/50'
                       }`}
                     >
                       <div className="relative flex-shrink-0">
-                        <img src={p.icon} alt={p.name} className="w-8 h-8 object-contain" />
+                        {rowPicture ? (
+                          <img src={rowPicture} alt="" className="w-8 h-8 rounded-full object-cover" />
+                        ) : (
+                          <img src={p.icon} alt={p.name} className="w-8 h-8 object-contain" />
+                        )}
                         <div className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-[2.5px] border-white shadow-sm ${p.success ? 'bg-green-500' : 'bg-red-500'}`} />
                       </div>
                       <div className="flex-1 min-w-0 text-left">
                         <p className={`text-[13px] font-bold ${i === activePlatformIdx ? 'text-gray-900' : 'text-gray-600'}`}>{p.name}</p>
+                        {rowName && <p className="truncate text-[11px] font-semibold text-gray-500">{rowName}</p>}
                         <p className={`text-[10px] font-bold uppercase tracking-wider ${p.success ? 'text-green-600' : 'text-red-500'}`}>
                           {p.success ? 'Success' : 'Failed'}
                         </p>
                       </div>
                     </button>
-                  ))
+                  );
+                  })
                 )}
               </div>
             </div>

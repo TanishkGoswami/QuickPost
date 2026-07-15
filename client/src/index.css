@@ -142,9 +142,9 @@ body {
 
 .sidebar-subnav {
   display: grid;
-  gap: 2px;
-  margin: 4px 0 10px 22px;
-  padding: 3px 0 3px 8px;
+  gap: 1px;
+  margin: 2px 0 6px 18px;
+  padding: 2px 0 2px 8px;
   border-left: 1px solid rgba(20, 20, 19, 0.09);
 }
 
@@ -174,8 +174,8 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 34px;
-  padding: 8px 10px;
+  min-height: 28px;
+  padding: 6px 9px;
   border: 1px solid transparent;
   border-radius: var(--r-sm);
   color: var(--slate);
@@ -273,8 +273,8 @@ body {
 }
 
 .qp-sidebar-nav-item > span:first-child {
-  width: 30px !important;
-  height: 30px !important;
+  width: 26px !important;
+  height: 26px !important;
   color: var(--side-ink);
 }
 

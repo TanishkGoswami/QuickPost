@@ -119,6 +119,22 @@ function TableSkeletonRows() {
   ));
 }
 
+function YouTubePostsUnavailable() {
+  return (
+    <div style={{ minHeight: 380, display: "grid", placeItems: "center", color: "var(--slate)", background: "var(--white)", borderTop: "1px solid rgba(20,20,19,0.08)" }}>
+      <div style={{ textAlign: "center", maxWidth: 420 }}>
+        <div style={{ width: 150, height: 118, margin: "0 auto 16px", display: "grid", placeItems: "center", overflow: "hidden" }}>
+          <img src={stickers.Posts} alt="" style={{ width: 150, height: 118, objectFit: "contain", mixBlendMode: "multiply", transform: "translateX(12px)" }} />
+        </div>
+        <h3 style={{ margin: 0, color: "var(--ink)", fontSize: 20, fontWeight: 850 }}>Posts sync is not supported by YouTube</h3>
+        <p style={{ margin: "10px 0 0", fontSize: 15, lineHeight: 1.5 }}>
+          YouTube only exposes videos, shorts, playlists and channel stats through the official API. Your posted videos will appear in Videos or Shorts.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function YouTubeManagerPage() {
   const [accounts, setAccounts] = useState([]);
   const [activeId, setActiveId] = useState(() => localStorage.getItem(ACTIVE_ACCOUNT_KEY));
@@ -130,10 +146,12 @@ export default function YouTubeManagerPage() {
   const [showWelcome, setShowWelcome] = useState(() => localStorage.getItem(WELCOME_KEY) !== "1");
   const [updatingVideoId, setUpdatingVideoId] = useState("");
   const [error, setError] = useState("");
+  const [errorAction, setErrorAction] = useState("");
 
   const loadAccounts = async () => {
     setLoading(true);
     setError("");
+    setErrorAction("");
     try {
       const { data } = await apiClient.get("/api/youtube/accounts");
       const nextAccounts = data.accounts || [];
@@ -188,6 +206,7 @@ export default function YouTubeManagerPage() {
     if (!active?.id) return;
     setUpdatingVideoId(videoId);
     setError("");
+    setErrorAction("");
     try {
       const { data } = await apiClient.patch(`/api/youtube/videos/${videoId}/visibility`, {
         accountId: active.id,
@@ -200,9 +219,19 @@ export default function YouTubeManagerPage() {
       }));
     } catch (err) {
       setError(err.response?.data?.error || "Failed to update video visibility");
+      setErrorAction(err.response?.data?.action || "");
     } finally {
       setUpdatingVideoId("");
     }
+  };
+
+  const reconnectYouTube = () => {
+    const token = localStorage.getItem("quickpost_token");
+    if (!token) {
+      setError("Please log in again before reconnecting YouTube.");
+      return;
+    }
+    window.location.href = `/api/auth/youtube?token=${encodeURIComponent(token)}`;
   };
 
   const pageBackground = "var(--canvas)";
@@ -337,7 +366,14 @@ export default function YouTubeManagerPage() {
         })}
       </nav>
 
-      {error && <div style={{ marginTop: 16, border: "1px solid rgba(239,68,68,0.28)", background: "#fff1f2", color: "#991b1b", borderRadius: 8, padding: 14 }}>{error}</div>}
+      {error && (
+        <div style={{ marginTop: 16, border: "1px solid rgba(239,68,68,0.28)", background: "#fff1f2", color: "#991b1b", borderRadius: 8, padding: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <span>{error}</span>
+          {errorAction === "reconnect_youtube" && (
+            <button onClick={reconnectYouTube} style={{ border: 0, borderRadius: 999, background: "linear-gradient(135deg, var(--arc) 0%, var(--color-arc-400) 100%)", color: "#fff", height: 34, padding: "0 14px", fontWeight: 850, cursor: "pointer" }}>Reconnect YouTube</button>
+          )}
+        </div>
+      )}
 
       {activeTab === "Dashboard" && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 395px))", justifyContent: "start", gap: 24, marginTop: 26, alignItems: "start" }}>
@@ -353,19 +389,13 @@ export default function YouTubeManagerPage() {
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><BarChart3 size={17} /> {formatNumber(latestVideo.views)}</span>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><MessageSquare size={17} /> {formatNumber(latestVideo.comments)}</span>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 7 }}><ThumbsUp size={17} /> {formatNumber(latestVideo.likes)}</span>
-                  <ChevronDown size={16} style={{ marginLeft: "auto" }} />
                 </div>
                 <div style={{ borderTop: "1px solid rgba(20,20,19,0.12)", marginTop: 18, paddingTop: 18, display: "grid", gap: 12, fontSize: 14 }}>
-                  <p style={{ margin: "0 0 4px", color: "var(--slate)" }}>First 2 hours 31 minutes</p>
                   <div style={{ display: "flex", justifyContent: "space-between" }}><span>Views</span><strong>{formatNumber(latestVideo.views)}</strong></div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}><span>Impressions click-through rate</span><span>-</span></div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}><span>Average view duration</span><span>-</span></div>
-                  <p style={{ margin: "4px 0 8px", color: "var(--slate)", lineHeight: 1.35 }}>Additional metrics become available 3 hours after publish.</p>
-                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                    <a href={latestVideo.url} target="_blank" rel="noreferrer" style={{ borderRadius: 999, background: "var(--canvas-lifted)", color: "var(--ink)", height: 38, padding: "0 14px", display: "inline-flex", alignItems: "center", gap: 8, textDecoration: "none", fontWeight: 800, fontSize: 13 }}>Catch me up on this video</a>
-                    <button style={{ width: 38, height: 38, border: 0, borderRadius: "50%", background: "var(--canvas-lifted)", display: "grid", placeItems: "center" }}><BarChart3 size={17} /></button>
-                    <button style={{ width: 38, height: 38, border: 0, borderRadius: "50%", background: "var(--canvas-lifted)", display: "grid", placeItems: "center" }}><MessageSquare size={17} /></button>
-                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span>Comments</span><strong>{formatNumber(latestVideo.comments)}</strong></div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span>Likes</span><strong>{formatNumber(latestVideo.likes)}</strong></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", textTransform: "capitalize" }}><span>Visibility</span><strong>{latestVideo.privacyStatus}</strong></div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}><span>Published</span><strong>{formatDate(latestVideo.publishedAt)}</strong></div>
                 </div>
               </>
             ) : <EmptyState type="Videos" />}
@@ -377,13 +407,11 @@ export default function YouTubeManagerPage() {
             <strong style={{ display: "block", fontSize: 40, marginTop: 6 }}>{formatNumber(health?.statistics?.subscriberCount)}</strong>
             <div style={{ borderTop: "1px solid rgba(20,20,19,0.12)", marginTop: 28, paddingTop: 18, display: "grid", gap: 14 }}>
               <strong>Summary</strong>
-              <span style={{ color: "var(--slate)", fontSize: 12, marginTop: -10 }}>Last 28 days</span>
               <div style={{ display: "flex", justifyContent: "space-between" }}><span>Views</span><span>{formatNumber(health?.statistics?.viewCount)}</span></div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Watch time (hours)</span><span>0.0</span></div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}><span>Videos</span><span>{formatNumber(health?.statistics?.videoCount)}</span></div>
             </div>
             <div style={{ borderTop: "1px solid rgba(20,20,19,0.12)", marginTop: 22, paddingTop: 18 }}>
               <strong>Top content</strong>
-              <span style={{ display: "block", color: "var(--slate)", fontSize: 12, marginTop: 3 }}>Last 48 hours · Views</span>
               {allVideos.slice(0, 2).map((video) => (
                 <div key={video.id} style={{ display: "flex", justifyContent: "space-between", gap: 16, marginTop: 14 }}>
                   <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{video.title}</span>
@@ -393,24 +421,6 @@ export default function YouTubeManagerPage() {
               <button onClick={() => setActiveTab("Analytics")} style={{ marginTop: 22, border: 0, borderRadius: 999, background: "var(--canvas-lifted)", color: "var(--ink)", height: 38, padding: "0 18px", fontWeight: 800 }}>Go to channel analytics</button>
             </div>
           </section>
-
-          <div style={{ display: "grid", gap: 24 }}>
-            <section style={{ ...panel, padding: 24 }}>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 850 }}>YouTube known issues</h2>
-              <p style={{ margin: "28px 0 0", lineHeight: 1.45, fontSize: 14 }}>🎉 [Fixed] Creators having issues moving their YouTube channel to a Brand Account</p>
-            </section>
-            <section style={{ ...panel, padding: 24 }}>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 850 }}>Comments</h2>
-              <div style={{ display: "grid", gridTemplateColumns: latestVideo?.thumbnail ? "1fr 64px" : "1fr", gap: 12, marginTop: 18, alignItems: "center" }}>
-                <div>
-                  <p style={{ margin: 0, fontWeight: 800 }}>No recent comments yet</p>
-                  <p style={{ margin: "5px 0 0", color: "var(--slate)", fontSize: 13 }}>New channel comments will appear here.</p>
-                </div>
-                {latestVideo?.thumbnail && <img src={latestVideo.thumbnail} alt="" style={{ width: 64, height: 38, borderRadius: 4, objectFit: "cover" }} />}
-              </div>
-              <button style={{ marginTop: 18, border: 0, borderRadius: 999, background: "var(--canvas-lifted)", color: "var(--ink)", height: 36, padding: "0 16px", fontWeight: 800 }}>View more</button>
-            </section>
-          </div>
         </div>
       )}
 
@@ -481,6 +491,9 @@ export default function YouTubeManagerPage() {
             )}
           </section>
 
+          {activeTab === "Posts" ? (
+            <YouTubePostsUnavailable />
+          ) : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", minWidth: 1040, borderCollapse: "collapse", background: "var(--white)" }}>
               <thead>
@@ -494,7 +507,7 @@ export default function YouTubeManagerPage() {
               <tbody>
                 {loading ? (
                   <TableSkeletonRows />
-                ) : activeTab === "Posts" || activeTab === "Playlists" || videos.length === 0 ? (
+                ) : activeTab === "Playlists" || videos.length === 0 ? (
                   <tr><td colSpan={7}><EmptyState type={activeTab} /></td></tr>
                 ) : videos.map((video) => (
                   <tr key={video.id} style={{ borderBottom: "1px solid rgba(20,20,19,0.12)", color: "var(--ink)" }}>
@@ -538,6 +551,7 @@ export default function YouTubeManagerPage() {
               </tbody>
             </table>
           </div>
+          )}
         </>
       )}
     </div>
