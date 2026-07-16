@@ -199,7 +199,7 @@ function Sidebar() {
       ? new URLSearchParams(location.search).get("platform")
       : null;
 
-  const { user, connectedAccounts, refreshAccounts, logout } = useAuth();
+  const { user, connectedAccounts, refreshAccounts, logout, loading, profileLoading } = useAuth();
   const { confirm, alert } = useDialog();
   const [expandedPlatforms, setExpandedPlatforms] = useState({});
   const [showChannelsPopover, setShowChannelsPopover] = useState(false);
@@ -1192,7 +1192,16 @@ function Sidebar() {
           borderTop: "1px solid rgba(20,20,19,0.08)",
         }}
       >
-        {user && (
+        {loading || profileLoading ? (
+          <div className="qp-sidebar-account-details-skeleton">
+            <div className="qp-sidebar-skeleton-avatar qp-shimmer-loading" />
+            <div className="qp-sidebar-skeleton-text-group">
+              <div className="qp-sidebar-skeleton-line name qp-shimmer-loading" />
+              <div className="qp-sidebar-skeleton-line sub qp-shimmer-loading" />
+            </div>
+            <div className="qp-sidebar-skeleton-pill qp-shimmer-loading" />
+          </div>
+        ) : user ? (
           <div className={`qp-sidebar-account-details ${accountMenuOpen ? "is-open" : ""}`}>
             <button
               type="button"
@@ -1278,7 +1287,7 @@ function Sidebar() {
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
       </div>
 

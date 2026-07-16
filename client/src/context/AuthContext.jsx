@@ -66,6 +66,7 @@ export function AuthProvider({ children }) {
 	    googleBusinessAccounts: [],
 	  });
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   const fetchConnectedAccounts = useCallback(async () => {
     try {
@@ -80,6 +81,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const fetchUserProfile = useCallback(async (sessionUser) => {
+    setProfileLoading(true);
     try {
       // Load standalone entitlements and legacy records in parallel. Standalone
       // entitlements are authoritative once a paid app subscription exists.
@@ -92,7 +94,12 @@ export function AuthProvider({ children }) {
         subscription_status: entitlements.subscription.status,
         entitlements,
       } : null);
-      return;
+    } catch (err) {
+      console.error("Error fetching user profile:", err);
+    } finally {
+      setProfileLoading(false);
+    }
+  }, []);
 
       /*
        * Disabled legacy migration code retained temporarily for reference.
@@ -192,10 +199,10 @@ export function AuthProvider({ children }) {
         };
         setUser(userData);
         localStorage.setItem("quickpost_token", session.access_token);
-        fetchConnectedAccounts();
         fetchUserProfile(session.user);
       } else {
         localStorage.removeItem("quickpost_token");
+        setProfileLoading(false);
       }
       setLoading(false);
     });
@@ -229,6 +236,7 @@ export function AuthProvider({ children }) {
       } else {
         setUser(null);
         localStorage.removeItem("quickpost_token");
+        setProfileLoading(false);
         setConnectedAccounts({
           instagram: { connected: false },
           youtube: { connected: false },
@@ -310,6 +318,7 @@ export function AuthProvider({ children }) {
       session,
       connectedAccounts,
       loading,
+      profileLoading,
       login,
       signUp,
       googleSignIn,
@@ -318,7 +327,7 @@ export function AuthProvider({ children }) {
       refreshProfile,
       isAuthenticated: !!user,
     }),
-    [user, session, connectedAccounts, loading, refreshAccounts, refreshProfile],
+    [user, session, connectedAccounts, loading, profileLoading, refreshAccounts, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
