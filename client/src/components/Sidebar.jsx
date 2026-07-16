@@ -19,8 +19,9 @@ import {
   MessagesSquare,
   Bot,
   Youtube,
-  User,
   LogOut,
+  HelpCircle,
+  CreditCard,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
 import logo from "/logo.png";
@@ -216,6 +217,18 @@ function Sidebar() {
     location.pathname.startsWith("/dashboard/auto-dm"),
   );
   const [imgError, setImgError] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+
+  const handleLogout = async () => {
+    const confirmed = await confirm("Logout", "Are you sure you want to log out?", {
+      intent: "logout",
+      confirmText: "Logout",
+      cancelText: "Stay logged in",
+    });
+    if (!confirmed) return;
+    logout();
+    navigate("/login");
+  };
 
   const handleConnectInstagram = () => setShowBusinessSetupModal(true);
   const handleOpenPopover = () => {
@@ -367,13 +380,7 @@ function Sidebar() {
           id: `instagram:${acc.id}`,
           name: acc.username || "Instagram",
           connected: true,
-          icon: acc.profilePicture ? (
-            <img
-              src={acc.profilePicture}
-              style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover" }}
-              alt=""
-            />
-          ) : (
+          icon: (
             <img
               src="/icons/ig-instagram-icon.svg"
               style={{ width: 20, height: 20 }}
@@ -706,11 +713,6 @@ function Sidebar() {
               to: "/dashboard/trends",
               label: "All Trends",
               icon: <Flame size={16} />,
-            },
-            {
-              to: "/dashboard/auto-dm/settings",
-              label: "Profile",
-              icon: <User size={16} />,
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);
@@ -1177,140 +1179,98 @@ function Sidebar() {
 
       {/* ── Footer ── */}
       <div
+        className="qp-sidebar-footer"
         style={{
-          padding: "12px 12px 16px",
+          padding: "10px",
           borderTop: "1px solid rgba(20,20,19,0.08)",
-          background: "var(--canvas)",
         }}
       >
         {user && (
-          <div
-            className="qp-sidebar-user-card"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "10px 12px",
-              borderRadius: "var(--r-btn)",
-              background: "var(--canvas-lifted)",
-              border: "1px solid rgba(20,20,19,0.08)",
-              marginBottom: 10,
-            }}
-          >
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                background:
-                  user.picture && !imgError ? "transparent" : "var(--ink)",
-                color: "var(--canvas)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 12,
-                fontWeight: 700,
-                flexShrink: 0,
-                overflow: "hidden",
-                border:
-                  user.picture && !imgError
-                    ? "1px solid rgba(20,20,19,0.08)"
-                    : "none",
-              }}
+          <div className={`qp-sidebar-account-details ${accountMenuOpen ? "is-open" : ""}`}>
+            <button
+              type="button"
+              className="qp-sidebar-account-summary"
+              aria-expanded={accountMenuOpen}
+              onClick={() => setAccountMenuOpen((open) => !open)}
             >
-              {user.picture && !imgError ? (
-                <img
-                  src={user.picture}
-                  alt=""
-                  onError={() => setImgError(true)}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              ) : (
-                (user.name || user.email || "U")[0].toUpperCase()
-              )}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
               <div
+                className="qp-sidebar-account-avatar"
                 style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "var(--ink)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
+                  background:
+                    user.picture && !imgError ? "transparent" : "var(--ink)",
+                  color: "var(--canvas)",
                 }}
               >
-                <span
-                  style={{
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    flex: 1,
-                    minWidth: 0,
-                  }}
-                >
-                  {user.name || "My Account"}
-                </span>
-                {user.plan && (
-                  <span
-                    style={{
-                      fontSize: 8,
-                      fontWeight: 800,
-                      padding: "2px 5px",
-                      borderRadius: 4,
-                      background:
-                        isFree(user.plan) ? "var(--dust)" : "var(--arc)",
-                      color: isFree(user.plan) ? "var(--slate)" : "white",
-                      textTransform: "uppercase",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {user.plan || 'Free'}
-                  </span>
+                {user.picture && !imgError ? (
+                  <img
+                    src={user.picture}
+                    alt=""
+                    onError={() => setImgError(true)}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  (user.name || user.email || "U")[0].toUpperCase()
                 )}
               </div>
-              <div
-                style={{
-                  fontSize: 10,
-                  color: "var(--slate)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="qp-sidebar-account-name">
+                  {user.organization_name || user.name || "My Organization"}
+                </div>
+                <div className="qp-sidebar-account-subtitle">
+                  {user.plan || "Free"} plan - {countConnectedTargets(connectedAccounts)} channels
+                </div>
+              </div>
+              {user.plan && (
+                <span className={`qp-sidebar-plan-pill ${isFree(user.plan) ? "is-free" : "is-pro"}`}>
+                  {user.plan || "Free"}
+                </span>
+              )}
+              <ChevronDown size={14} className="qp-sidebar-account-chevron" />
+            </button>
+            <div className="qp-sidebar-account-panel">
+              <div className="qp-sidebar-account-menu">
+            {[
+              { to: "/dashboard/auto-dm/settings", label: "Settings", icon: <Settings size={15} /> },
+              { to: "/dashboard", label: "Channels", icon: <LayoutDashboard size={15} /> },
+              { to: "/dashboard/billing", label: "Plans and Billing", icon: <CreditCard size={15} /> },
+            ].map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="qp-sidebar-account-link"
               >
-                {user.email}
+                {item.icon}
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
+              </Link>
+            ))}
+            <a
+              href="mailto:support@gapsocialpilot.com"
+              className="qp-sidebar-account-link"
+            >
+              <HelpCircle size={15} />
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Help & Support</span>
+            </a>
+            {isFree(user?.plan) && (
+              <button
+                type="button"
+                onClick={() => navigate("/dashboard/billing")}
+                className="qp-sidebar-account-upgrade"
+              >
+                <Sparkles size={15} />
+                Upgrade plan
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="qp-sidebar-account-link qp-sidebar-account-logout"
+            >
+              <LogOut size={15} />
+              Log out
+            </button>
               </div>
             </div>
           </div>
-        )}
-
-        {/* ── Upgrade Button ── */}
-        {isFree(user?.plan) && (
-          <button
-            className="qp-sidebar-upgrade"
-            onClick={() => navigate("/dashboard/billing")}
-            style={{
-              width: "100%",
-              padding: "8px 12px",
-              borderRadius: "var(--r-btn)",
-              border: "none",
-              background:
-                "linear-gradient(135deg, var(--arc) 0%, #ff8c42 100%)",
-              color: "var(--white)",
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer",
-              marginBottom: 8,
-              boxShadow: "0 4px 12px rgba(255,86,0,0.2)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-            }}
-          >
-            <Sparkles size={14} />
-            Upgrade to QuickPost
-          </button>
         )}
 
       </div>
