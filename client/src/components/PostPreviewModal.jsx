@@ -861,16 +861,19 @@ export default function PostPreviewModal({ post, onClose, onDelete }) {
 
   if (!post) return null;
 
-  const selectedChannels = [
+  const selectedChannels = Array.from(new Set([
     ...(post.selected_channels || []),
     ...(post.platform_data?.selectedChannels || []),
-  ];
+  ].map((channel) => String(channel))));
   const selectedBasePlatforms = new Set(selectedChannels.map((channel) => String(channel).split(':')[0]));
   const postType = post.platform_data?.postType || post.platform_data?.instagram?.type;
 
   const postedPlatforms = Object.entries(PLATFORM_CONFIG)
     .flatMap(([id, cfg]) => {
-      const platformChannels = selectedChannels.filter((channel) => String(channel).split(':')[0] === id);
+      let platformChannels = selectedChannels.filter((channel) => String(channel).split(':')[0] === id);
+      if (platformChannels.some((channel) => String(channel).includes(':'))) {
+        platformChannels = platformChannels.filter((channel) => String(channel).includes(':'));
+      }
       const entries = platformChannels.length ? platformChannels : [id];
       let finalFormats = cfg.formats;
       const presetId = post?.platform_data?.parsedPresets?.[id]

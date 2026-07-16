@@ -157,8 +157,11 @@ function getPostPreviewRatio(post) {
 
 function buildPlatforms(post) {
   let instagramChannels = post.selected_channels && Array.isArray(post.selected_channels)
-    ? post.selected_channels.filter(c => c === 'instagram' || c.startsWith('instagram:'))
+    ? Array.from(new Set(post.selected_channels.filter(c => c === 'instagram' || c.startsWith('instagram:'))))
     : [];
+  if (instagramChannels.some(c => c.startsWith('instagram:'))) {
+    instagramChannels = instagramChannels.filter(c => c !== 'instagram');
+  }
   
   if (instagramChannels.length === 0 && (post.instagram_success || post.instagram_error)) {
     instagramChannels = ['instagram'];
@@ -968,53 +971,117 @@ function PinterestCard({ post, onOpen, formatDate }) {
 }
 
 /* ── List row ── */
-function ListRow({ post, expanded, onToggle, formatDate }) {
+function getPostDateValue(post) {
+  return post.status === "scheduled" ? post.scheduled_for : post.posted_at;
+}
+
+function formatTimelineDay(dateString) {
+  const date = new Date(dateString);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (date.toDateString() === today.toDateString()) return "Today";
+  if (date.toDateString() === yesterday.toDateString()) {
+    return `Yesterday, ${date.toLocaleDateString("en-US", { month: "long", day: "numeric" })}`;
+  }
+  return date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+}
+
+function formatTimelineTime(dateString) {
+  return new Date(dateString).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function getMetric(post, keys) {
+  const sources = [post, post.analytics, post.metrics, post.platform_data?.analytics, post.platform_data?.metrics];
+  for (const source of sources) {
+    if (!source) continue;
+    for (const key of keys) {
+      if (source[key] !== undefined && source[key] !== null) return source[key];
+    }
+  }
+  return null;
+}
+
+function resolvePlatformLabel(platform, connectedAccounts) {
+  const [baseId, accountId] = platform.id.split(":");
+  const account = accountId
+    ? (connectedAccounts?.[`${baseId}Accounts`] || []).find((item) => String(item.id) === accountId)
+    : connectedAccounts?.[baseId];
+  const handle = account?.username || account?.name || account?.channelTitle || account?.title;
+  return handle ? `${platform.name} @${handle}` : platform.name;
+}
+
+function ListRow({ post, expanded, onToggle, connectedAccounts }) {
   const platforms = buildPlatforms(post);
   const isScheduled = post.status === "scheduled";
+  const primaryPlatform = platforms.find((p) => p.success) || platforms[0];
+  const liveUrl = platforms.find((p) => p.url)?.url;
+  const metrics = [
+    { label: "Reactions", value: getMetric(post, ["likes", "reactions", "like_count", "instagram_likes"]) },
+    { label: "Comments", value: getMetric(post, ["comments", "comment_count", "instagram_comments"]) },
+    { label: "Eng. Rate", value: getMetric(post, ["engagement_rate", "engagementRate"]) },
+    { label: "Views", value: getMetric(post, ["views", "view_count", "instagram_views", "youtube_views"]) },
+    { label: "Shares", value: getMetric(post, ["shares", "share_count"]) },
+    { label: "Saves", value: getMetric(post, ["saves", "save_count"]) },
+  ].filter((metric) => metric.value !== null && metric.value !== undefined);
 
   return (
     <div
+      className="timeline-card"
       style={{
         background: css.lifted,
-        borderRadius: css.r_hero,
+        borderRadius: 8,
         border: `1px solid ${expanded ? css.ink : css.hairline}`,
         overflow: "hidden",
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        transition: "border-color 0.2s ease, box-shadow 0.2s ease",
         boxShadow: "none",
         position: "relative"
       }}
     >
       <div
+        className="timeline-card-main"
         style={{
-          padding: "20px 24px",
-          display: "flex",
-          alignItems: "center",
-          gap: 20,
+          padding: "16px 18px",
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) 240px",
+          gap: 22,
           cursor: "pointer",
         }}
         onClick={onToggle}
       >
-        <MediaThumb
-          post={post}
-          style={{
-            width: 84,
-            height: 84,
-            borderRadius: "var(--r-btn)",
-            flexShrink: 0,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-          }}
-        />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 8,
+              gap: 8,
+              marginBottom: 18,
             }}
           >
-            <div className="eyebrow" style={{ fontSize: 9 }}>
-              {formatDate(isScheduled ? post.scheduled_for : post.posted_at)}
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 8,
+                background: "#f3eee8",
+                border: `1px solid ${css.hairline}`,
+                display: "grid",
+                placeItems: "center",
+                flexShrink: 0,
+              }}
+            >
+              {primaryPlatform ? getPlatformIcon(primaryPlatform.id) : <Share2 size={14} />}
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 750, color: css.ink }}>
+                {primaryPlatform ? resolvePlatformLabel(primaryPlatform, connectedAccounts) : "Social post"}
+              </div>
+              <div style={{ fontSize: 11, color: css.slate }}>
+                {isScheduled ? "Scheduled" : "Published"} via {primaryPlatform?.name || "channel"}
+              </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               {isScheduled && (
@@ -1032,36 +1099,17 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
                   Scheduled
                 </div>
               )}
-              <div
-                style={{
-                  fontSize: 9,
-                  fontWeight: 800,
-                  color: css.arc,
-                  background: "rgba(255, 86, 0, 0.08)",
-                  padding: "2px 8px",
-                  borderRadius: css.r_pill,
-                  textTransform: "uppercase",
-                }}
-              >
-                {post.platform_data?.postType || post.postType || post.post_type || post.media_type || "media"}
-              </div>
-              {expanded ? (
-                <ChevronUp size={16} style={{ color: css.arc }} />
-              ) : (
-                <ChevronDown size={16} style={{ color: css.slate }} />
-              )}
             </div>
           </div>
-          <h3
+          <p
             style={{
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: 500,
               color: css.ink,
-              margin: "0 0 10px",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              letterSpacing: "-0.01em",
+              margin: 0,
+              lineHeight: 1.5,
+              whiteSpace: "pre-wrap",
+              maxWidth: 680,
             }}
           >
             {post.caption || (
@@ -1069,8 +1117,8 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
                 No caption
               </span>
             )}
-          </h3>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 14 }}>
             {platforms.slice(0, 5).map((p) => (
               <PlatformBadge key={p.id} platform={p} />
             ))}
@@ -1090,23 +1138,113 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
             )}
           </div>
         </div>
+        <MediaThumb
+          post={post}
+          className="timeline-thumb"
+          style={{
+            width: "100%",
+            height: 132,
+            borderRadius: 7,
+            flexShrink: 0,
+            border: `1px solid ${css.hairline}`,
+          }}
+        />
+      </div>
+
+      {metrics.length > 0 && (
+        <div
+          className="timeline-metrics"
+          style={{
+            borderTop: `1px solid ${css.hairline}`,
+            display: "grid",
+            gridTemplateColumns: `repeat(${Math.min(metrics.length, 6)}, minmax(0, 1fr))`,
+            padding: "12px 18px",
+            gap: 8,
+          }}
+        >
+          {metrics.map((metric) => (
+            <div key={metric.label} style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 650, color: css.slate }}>
+                {metric.label}
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 750, color: css.ink, marginTop: 3 }}>
+                {metric.value}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div
+        style={{
+          borderTop: `1px solid ${css.hairline}`,
+          padding: "12px 18px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+        }}
+      >
+        <span style={{ fontSize: 13, color: css.ink }}>
+          {isScheduled ? "Scheduled for" : "Published via"} {primaryPlatform?.name || "channel"}
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {liveUrl && (
+            <a
+              href={liveUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 7,
+                padding: "8px 14px",
+                borderRadius: 7,
+                border: `1px solid ${css.hairline}`,
+                color: css.ink,
+                fontSize: 13,
+                fontWeight: 700,
+                textDecoration: "none",
+                background: css.white,
+              }}
+            >
+              <ExternalLink size={14} /> View Post
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={onToggle}
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 7,
+              border: `1px solid ${css.hairline}`,
+              background: css.white,
+              color: expanded ? css.arc : css.slate,
+              display: "grid",
+              placeItems: "center",
+              cursor: "pointer",
+            }}
+          >
+            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+        </div>
       </div>
 
       {expanded && (
         <div
           style={{
-            borderTop: "1.5px solid rgba(255, 86, 0, 0.1)",
-            background:
-              "linear-gradient(to bottom, rgba(255, 86, 0, 0.02), transparent)",
-            padding: "24px",
+            borderTop: `1px solid ${css.hairline}`,
+            background: "rgba(245,241,236,0.45)",
+            padding: "14px 18px",
           }}
         >
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-              gap: 12,
-              marginBottom: 20,
+              display: "flex",
+              flexDirection: "column",
+              gap: 0,
             }}
           >
             {platforms.map((p) => (
@@ -1114,57 +1252,44 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
                 key={p.id}
                 style={{
                   background: css.white,
-                  padding: "16px",
-                  borderRadius: css.r_btn,
-                  border: "1.2px solid rgba(20,20,19,0.06)",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+                  padding: "11px 12px",
+                  borderBottom: `1px solid ${css.hairline}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
                 }}
               >
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: 12,
+                    gap: 10,
+                    minWidth: 0,
                   }}
                 >
                   <div
-                    style={{ display: "flex", alignItems: "center", gap: 8 }}
-                  >
-                    <div
-                      style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: "50%",
-                        background: PLATFORM_COLORS[p.id.split(':')[0]] || css.slate,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      {getPlatformIcon(p.id)}
-                    </div>
-                    <span
-                      style={{ fontSize: 13, fontWeight: 600, color: css.ink }}
-                    >
-                      {p.name}
-                    </span>
-                  </div>
-                  <span
                     style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      padding: "3px 10px",
-                      borderRadius: css.r_pill,
-                      background: p.success
-                        ? "rgba(34,197,94,0.08)"
-                        : "rgba(239,68,68,0.08)",
-                      color: p.success ? "#15803d" : "#b91c1c",
-                      border: `1px solid ${p.success ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`,
+                      width: 28,
+                      height: 28,
+                      borderRadius: 7,
+                      background: "#f3eee8",
+                      border: `1px solid ${css.hairline}`,
+                      display: "grid",
+                      placeItems: "center",
+                      flexShrink: 0,
                     }}
                   >
-                    {p.success ? "Success" : "Failed"}
-                  </span>
+                    {getPlatformIcon(p.id)}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: css.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {resolvePlatformLabel(p, connectedAccounts)}
+                    </div>
+                    <div style={{ fontSize: 11, fontWeight: 650, color: p.success ? "#15803d" : "#b91c1c" }}>
+                      {p.success ? "Success" : p.error || "Failed"}
+                    </div>
+                  </div>
                 </div>
                 {p.success ? (
                   p.url ? (
@@ -1199,50 +1324,20 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
                     </div>
                   )
                 ) : (
-                  <p
+                  <span
                     style={{
                       fontSize: 11,
                       color: "#ef4444",
-                      fontStyle: "italic",
-                      margin: 0,
-                      lineHeight: 1.4,
+                      fontWeight: 650,
+                      textAlign: "right",
                     }}
                   >
-                    {p.error || "Connection error"}
-                  </p>
+                    Action needed
+                  </span>
                 )}
               </div>
             ))}
           </div>
-          {post.caption && (
-            <div
-              style={{
-                background: css.white,
-                padding: "20px",
-                borderRadius: css.r_btn,
-                border: "1.2px solid rgba(255, 86, 0, 0.1)",
-                boxShadow: "0 8px 24px rgba(255, 86, 0, 0.05)",
-              }}
-            >
-              <div
-                className="eyebrow"
-                style={{ marginBottom: 10, fontSize: 10 }}
-              >
-                Full Caption
-              </div>
-              <p
-                style={{
-                  fontSize: 14,
-                  color: css.ink,
-                  whiteSpace: "pre-wrap",
-                  lineHeight: 1.6,
-                  margin: 0,
-                }}
-              >
-                {post.caption}
-              </p>
-            </div>
-          )}
         </div>
       )}
 
@@ -1500,8 +1595,7 @@ function Dashboard() {
     if (selectedPlatform === "all") return matchesSearch;
     const matchesPlatform = buildPlatforms(b).some((p) => {
       if (p.id === selectedPlatform) return true;
-      // Allow legacy generic "instagram" posts to show up for any specific instagram filter
-      if (selectedPlatform.startsWith("instagram:") && p.id === "instagram") return true;
+      if (selectedPlatform === "instagram" && p.id.startsWith("instagram")) return true;
       return false;
     });
     return matchesSearch && matchesPlatform;
@@ -1577,6 +1671,81 @@ function Dashboard() {
           .dashboard-masonry_col { padding-left: 12px; }
           .dashboard-masonry_col > .masonry-card { margin-bottom: 12px; }
         }
+        .timeline-list {
+          max-width: 1120px;
+          margin: 0 auto;
+        }
+        .timeline-group {
+          display: grid;
+          grid-template-columns: 120px minmax(0, 1fr);
+          column-gap: 24px;
+          align-items: start;
+        }
+        .timeline-date {
+          grid-column: 1 / -1;
+          margin: 0 0 18px 120px;
+          color: ${css.ink};
+          font-size: 17px;
+          font-weight: 750;
+          letter-spacing: -0.01em;
+        }
+        .timeline-time {
+          color: ${css.ink};
+          font-size: 13px;
+          font-weight: 700;
+          line-height: 1.35;
+          padding-top: 6px;
+          position: sticky;
+          top: 12px;
+        }
+        .timeline-status {
+          color: ${css.slate};
+          font-size: 11px;
+          font-weight: 500;
+          margin-top: 5px;
+        }
+        .timeline-card-main {
+          grid-template-columns: minmax(0, 1fr) 240px;
+        }
+        @media (max-width: 860px) {
+          .timeline-list { max-width: 680px; }
+          .timeline-group {
+            grid-template-columns: 76px minmax(0, 1fr);
+            column-gap: 14px;
+          }
+          .timeline-date { margin-left: 76px; }
+          .timeline-card-main {
+            grid-template-columns: minmax(0, 1fr) 156px !important;
+            gap: 14px !important;
+          }
+          .timeline-thumb { height: 112px !important; }
+          .timeline-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+        }
+        @media (max-width: 620px) {
+          .timeline-group {
+            display: block;
+            margin-bottom: 18px;
+          }
+          .timeline-date { margin: 0 0 14px; }
+          .timeline-time {
+            position: static;
+            display: flex;
+            gap: 8px;
+            align-items: baseline;
+            margin: 0 0 8px;
+            padding-top: 0;
+          }
+          .timeline-status { margin-top: 0; }
+          .timeline-card-main {
+            grid-template-columns: 1fr !important;
+          }
+          .timeline-thumb {
+            width: 100% !important;
+            height: auto !important;
+            aspect-ratio: 16 / 9;
+          }
+          .timeline-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+        }
       `}</style>
       <div
         style={{
@@ -1637,6 +1806,7 @@ function Dashboard() {
                     if (acc && acc.username) return `Instagram (@${acc.username})`;
                     return "Instagram Account";
                   }
+                  if (selectedPlatform === "instagram") return "Instagram";
                   return (
                     selectedPlatform.charAt(0).toUpperCase() +
                     selectedPlatform.slice(1)
@@ -1939,31 +2109,60 @@ function Dashboard() {
               </Masonry>
             ) : (
               <div
+                className="timeline-list"
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: 12,
-                  maxWidth: 860,
-                  margin: "0 auto",
+                  gap: 0,
                 }}
               >
-                {displayedItems.map((post) => (
-                  <div
-                    key={post.id}
-                    onClick={() => setSelectedPost(post)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <ListRow
-                      post={post}
-                      expanded={expandedId === post.id}
-                      onToggle={(e) => {
-                        e?.stopPropagation();
-                        toggleExpand(post.id);
-                      }}
-                      formatDate={formatDate}
-                    />
-                  </div>
-                ))}
+                {displayedItems.map((post, index) => {
+                  const dateValue = getPostDateValue(post);
+                  const currentDay = formatTimelineDay(dateValue);
+                  const previous = displayedItems[index - 1];
+                  const previousDay = previous ? formatTimelineDay(getPostDateValue(previous)) : null;
+                  return (
+                    <React.Fragment key={post.id}>
+                      {currentDay !== previousDay && (
+                        <h3
+                          className="timeline-date"
+                          style={{
+                            marginTop: index === 0 ? 0 : 30,
+                          }}
+                        >
+                          {currentDay}
+                        </h3>
+                      )}
+                      <div
+                        className="timeline-group"
+                        style={{ marginBottom: 18 }}
+                      >
+                        <div
+                          className="timeline-time"
+                        >
+                          {formatTimelineTime(dateValue)}
+                          <div className="timeline-status">
+                            {post.status === "scheduled" ? "Scheduled" : "Published"}
+                          </div>
+                        </div>
+                        <div
+                          onClick={() => setSelectedPost(post)}
+                          style={{ cursor: "pointer", minWidth: 0 }}
+                        >
+                          <ListRow
+                            post={post}
+                            expanded={expandedId === post.id}
+                            onToggle={(e) => {
+                              e?.stopPropagation();
+                              toggleExpand(post.id);
+                            }}
+                            connectedAccounts={connectedAccounts}
+                          />
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
               </div>
             )}
 

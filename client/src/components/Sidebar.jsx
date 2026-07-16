@@ -993,7 +993,8 @@ function Sidebar() {
                   const isAnySelected = targets.some((target) => {
                     const dashboardPlatform = target.providerId || target.id;
                     return (
-                      selectedDashboardPlatform === dashboardPlatform &&
+                      (selectedDashboardPlatform === platformId ||
+                        selectedDashboardPlatform === dashboardPlatform) &&
                       location.pathname === "/dashboard"
                     );
                   });
