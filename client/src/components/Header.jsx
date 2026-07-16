@@ -29,7 +29,6 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
   const [showSettings, setShowSettings] = useState(false);
   const [expandedPlatforms, setExpandedPlatforms] = useState({});
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
-  const [imgError, setImgError] = useState(false);
 
   const isEditorPage = location.pathname.includes('/dashboard/auto-dm/automations/') && location.pathname !== '/dashboard/auto-dm/automations';
 
@@ -151,15 +150,6 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
     setShowSettings(true);
   };
 
-  const initials = user.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase()
-    : user.email?.[0]?.toUpperCase() || "U";
-
   return (
     <header
       className="qp-header"
@@ -273,68 +263,6 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
           </button>
         </div>
 
-        {/* User pill */}
-        <div
-          className="qp-header-user-pill"
-          aria-label={`Account: ${user.name || user.email}`}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "4px 10px 4px 4px",
-            borderRadius: "var(--r-pill)",
-            background: "var(--canvas)",
-            border: "1px solid rgba(20,20,19,0.08)",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-          }}
-        >
-          {user.picture && !imgError ? (
-            <img
-              src={user.picture}
-              alt={user.name}
-              onError={() => setImgError(true)}
-              style={{
-                width: 26,
-                height: 26,
-                borderRadius: "50%",
-                objectFit: "cover",
-                border: "1.5px solid var(--white)",
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: 26,
-                height: 26,
-                borderRadius: "50%",
-                background: "var(--ink)",
-                color: "var(--canvas)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 10,
-                fontWeight: 700,
-                flexShrink: 0,
-              }}
-            >
-              {initials}
-            </div>
-          )}
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: "var(--ink)",
-              maxWidth: isDesktop ? 120 : 80,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              letterSpacing: "-0.01em",
-            }}
-          >
-            {user.name || "Account"}
-          </span>
-        </div>
           </>
         )}
       </div>
@@ -345,7 +273,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
           <div className="modal-content" style={{ maxWidth: 460, borderRadius: "12px", padding: 0 }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: "20px 24px", borderBottom: "1px solid rgba(20,20,19,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <h2 style={{ fontSize: 18, fontWeight: 600, color: "var(--ink)" }}>Connected Accounts</h2>
-              <button onClick={() => setShowSettings(false)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: "50%", background: "rgba(20,20,19,0.04)" }}><X size={16} /></button>
+              <button onClick={() => setShowSettings(false)} style={{ border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: "50%", background: "rgba(20,20,19,0.04)" }}><X size={16} /></button>
             </div>
             
             <div 

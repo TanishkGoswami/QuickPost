@@ -361,6 +361,192 @@ body {
   filter: brightness(0.96);
 }
 
+.qp-sidebar > .qp-sidebar-footer {
+  background:
+    linear-gradient(180deg, rgba(245, 241, 236, 0.86), var(--side-canvas)) !important;
+}
+
+.qp-sidebar-account-details {
+  border: 1px solid rgba(20, 20, 19, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  overflow: hidden;
+}
+
+.qp-sidebar-account-summary {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  min-height: 48px;
+  padding: 8px;
+  text-align: left;
+  width: 100%;
+}
+
+.qp-sidebar-account-avatar {
+  border: 1px solid rgba(20, 20, 19, 0.1) !important;
+  border-radius: 9px;
+  box-shadow: 0 1px 4px rgba(20, 20, 19, 0.08);
+  display: flex;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 800;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  width: 30px;
+}
+
+.qp-sidebar-account-name {
+  color: var(--side-ink);
+  font-size: 12px;
+  font-weight: 750;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qp-sidebar-account-subtitle {
+  color: var(--side-muted);
+  font-size: 10px;
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qp-sidebar-account-chevron {
+  color: var(--side-subtle);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.qp-sidebar-account-details.is-open .qp-sidebar-account-chevron {
+  transform: rotate(180deg);
+}
+
+.qp-sidebar-plan-pill {
+  border-radius: 999px !important;
+  flex-shrink: 0;
+  font-size: 8px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0 !important;
+  line-height: 1;
+  padding: 3px 6px !important;
+  text-transform: uppercase;
+}
+
+.qp-sidebar-plan-pill.is-pro {
+  background: var(--side-fin) !important;
+  color: #fff !important;
+}
+
+.qp-sidebar-plan-pill.is-free {
+  background: #efe8df !important;
+  color: #5f554b !important;
+}
+
+.qp-sidebar-account-menu {
+  border-top: 1px solid rgba(20, 20, 19, 0.08);
+  display: grid;
+  gap: 1px;
+  padding: 4px;
+}
+
+.qp-sidebar-account-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    grid-template-rows 0.22s ease,
+    opacity 0.18s ease,
+    transform 0.22s ease;
+}
+
+.qp-sidebar-account-panel > .qp-sidebar-account-menu {
+  overflow: hidden;
+}
+
+.qp-sidebar-account-details.is-open .qp-sidebar-account-panel {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.qp-sidebar-account-link,
+.qp-sidebar-account-upgrade {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--side-muted);
+  display: flex;
+  font-size: 13px;
+  font-weight: 600;
+  gap: 9px;
+  min-height: 30px;
+  padding: 5px 7px;
+  text-align: left;
+  text-decoration: none;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+  width: 100%;
+}
+
+.qp-sidebar-account-link svg {
+  color: var(--side-subtle);
+  flex-shrink: 0;
+}
+
+.qp-sidebar-account-link:hover {
+  background: #f0ebe4;
+  border-color: rgba(20, 20, 19, 0.08);
+  color: var(--side-ink);
+}
+
+.qp-sidebar-account-link:hover svg {
+  color: var(--side-ink);
+}
+
+.qp-sidebar-account-upgrade {
+  background: var(--side-fin);
+  color: #fff;
+  cursor: pointer;
+  justify-content: center;
+  margin-top: 4px;
+  border-color: var(--side-fin);
+}
+
+.qp-sidebar-account-upgrade:hover {
+  filter: brightness(0.98);
+}
+
+.qp-sidebar-account-logout {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid rgba(20, 20, 19, 0.08);
+  border-radius: 0;
+  color: #8f3224;
+  cursor: pointer;
+  margin-top: 3px;
+  padding-top: 7px;
+}
+
+.qp-sidebar-account-logout svg {
+  color: #a13b2b;
+}
+
+.qp-sidebar-account-logout:hover {
+  background: #fff1ee;
+  border-color: rgba(255, 86, 0, 0.15);
+  border-radius: 10px;
+  color: #7d2619;
+}
+
 .qp-sidebar-connected-parent-item {
   border: 1px solid transparent !important;
   border-radius: 8px !important;

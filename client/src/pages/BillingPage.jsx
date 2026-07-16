@@ -497,14 +497,14 @@ export default function BillingPage({ embedded = false }) {
                 disabled={upgrading === plan.id || isCurrentPlan || isCheckoutDisabled}
                 style={{
                   width: '100%', padding: '13px 20px',
-                  borderRadius: 'var(--r-btn)', border: plan.highlighted ? 'none' : '1px solid rgba(20,20,19,0.12)',
+                  borderRadius: 'var(--r-btn)', 
+                  border: isCurrentPlan ? '1px solid var(--success-border)' : (isCheckoutDisabled ? '1px solid rgba(20,20,19,0.12)' : (plan.highlighted ? 'none' : '1px solid rgba(20,20,19,0.12)')),
                   background: (isCurrentPlan || isCheckoutDisabled) ? 'transparent' : 'var(--ink)',
                   color: isCurrentPlan ? 'var(--success)' : (isCheckoutDisabled ? 'var(--slate)' : 'var(--canvas)'),
                   fontFamily: 'var(--font)', fontSize: 14, fontWeight: 600,
                   letterSpacing: '-0.01em', cursor: (isCurrentPlan || isCheckoutDisabled) ? 'default' : 'pointer',
                   transition: 'all 0.2s', marginBottom: 28,
                   opacity: upgrading === plan.id || isCurrentPlan || isCheckoutDisabled ? 0.7 : 1,
-                  border: isCurrentPlan ? '1px solid var(--success-border)' : (isCheckoutDisabled ? '1px solid rgba(20,20,19,0.12)' : undefined),
                 }}
               >
                 {isCheckoutDisabled ? 'Unavailable' : (upgrading === plan.id ? 'Processing...' : (isCurrentPlan ? 'Current Plan' : plan.cta))}
