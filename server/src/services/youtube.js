@@ -18,9 +18,10 @@ dotenv.config();
  * @param {Object} tokens - YouTube tokens object
  * @param {Function} onProgress - Optional callback for upload progress (0-100)
  * @param {string} visibility - Privacy status ('public', 'unlisted', 'private')
+ * @param {string} description - Optional YouTube description override
  * @returns {Object} Result with video ID and URL
  */
-export async function postToYouTube(videoPath, caption, tokens, onProgress, visibility = 'public', isShort = false) {
+export async function postToYouTube(videoPath, caption, tokens, onProgress, visibility = 'public', isShort = false, description = '') {
   try {
     if (!tokens || !tokens.accessToken) {
       throw new Error('Missing YouTube credentials');
@@ -48,7 +49,10 @@ export async function postToYouTube(videoPath, caption, tokens, onProgress, visi
 
     // Prepare video metadata
     const videoTitle = caption.substring(0, 100) || (isShort ? 'QuickPost Short' : 'QuickPost Video');
-    const videoDescription = isShort ? `${caption}\n\n#Shorts` : caption;
+    const baseDescription = description?.trim() || caption;
+    const videoDescription = isShort && !/#shorts/i.test(baseDescription)
+      ? `${baseDescription}\n\n#Shorts`
+      : baseDescription;
     const tags = isShort ? ['Shorts', 'QuickPost'] : ['QuickPost'];
 
     console.log(`Uploading ${isShort ? 'Short' : 'Video'} to YouTube...`);

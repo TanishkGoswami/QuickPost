@@ -530,6 +530,14 @@ router.post("/bluesky/connect", authenticateUser, async (req, res) => {
     // Authenticate with Bluesky
     const sessionData = await blueskyAuth.authenticate(handle, appPassword);
 
+    // Fetch profile
+    try {
+      const profile = await blueskyAuth.getProfile(sessionData.accessJwt, sessionData.did);
+      sessionData.profile = profile;
+    } catch (err) {
+      console.warn("Could not fetch Bluesky profile", err);
+    }
+
     // Store credentials
     await blueskyAuth.storeCredentials(userId, sessionData);
 
