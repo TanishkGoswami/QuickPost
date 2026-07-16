@@ -5529,3 +5529,69 @@ textarea:focus-visible {
   display: none;  /* Chrome, Safari and Opera */
 }
 
+/* Shimmer Skeleton for Sidebar Account Summary */
+.qp-sidebar-account-details-skeleton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid rgba(20,20,19,0.06);
+  border-radius: var(--r-btn, 8px);
+  width: 100%;
+  height: 52px;
+  box-sizing: border-box;
+}
+
+.qp-sidebar-skeleton-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.qp-sidebar-skeleton-text-group {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.qp-sidebar-skeleton-line {
+  border-radius: 4px;
+}
+
+.qp-sidebar-skeleton-line.name {
+  width: 90px;
+  height: 12px;
+}
+
+.qp-sidebar-skeleton-line.sub {
+  width: 110px;
+  height: 10px;
+  margin-top: 6px;
+}
+
+.qp-sidebar-skeleton-pill {
+  width: 36px;
+  height: 18px;
+  border-radius: 9999px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+@keyframes qp-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.qp-shimmer-loading {
+  background: linear-gradient(90deg, rgba(20, 20, 19, 0.05) 25%, rgba(20, 20, 19, 0.12) 50%, rgba(20, 20, 19, 0.05) 75%);
+  background-size: 200% 100%;
+  animation: qp-shimmer 1.5s infinite linear;
+}
+
