@@ -1319,6 +1319,14 @@ function ComposerModal({
   }));
   const [youtubeThumbnail, setYoutubeThumbnail] = useState(null);
 
+  useEffect(() => {
+    const ytType = platformData.youtube?.type || "video";
+    setPlatformPresets((prev) => ({
+      ...prev,
+      youtube: ytType === "short" ? "yt-shorts" : "yt-video",
+    }));
+  }, [platformData.youtube?.type]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isGlobalDragging, setIsGlobalDragging] = useState(false);
