@@ -139,6 +139,24 @@ export default function ConnectedPlatformsPanel({
     return count;
   }, [connectedAccounts]);
 
+  const { connectedPlatforms, unconnectedPlatforms } = useMemo(() => {
+    const connected = [];
+    const unconnected = [];
+    PLATFORM_META.forEach((platform) => {
+      const account = connectedAccounts?.[platform.id] || {};
+      const platformAccounts = platform.id === "instagram"
+        ? connectedAccounts?.instagramAccounts || []
+        : connectedAccounts?.[`${platform.id}Accounts`] || [];
+      const isConnected = Boolean(account.connected || platformAccounts.length);
+      if (isConnected) {
+        connected.push(platform);
+      } else {
+        unconnected.push(platform);
+      }
+    });
+    return { connectedPlatforms: connected, unconnectedPlatforms: unconnected };
+  }, [connectedAccounts]);
+
   const connectPlatform = async (platform) => {
     const limit = user?.entitlements?.limits?.social_accounts || 1;
     if (connectedCount >= limit) {
@@ -263,108 +281,141 @@ export default function ConnectedPlatformsPanel({
       ) : null}
 
       <div className={`grid gap-3 p-5 ${compact ? "md:grid-cols-2" : "lg:grid-cols-2"}`}>
-        {PLATFORM_META.map((platform) => {
-          const account = connectedAccounts?.[platform.id] || {};
-          const platformAccounts = platform.id === "instagram"
-            ? connectedAccounts?.instagramAccounts || []
-            : connectedAccounts?.[`${platform.id}Accounts`] || [];
-          const status = getStatus(platform, platformAccounts.length ? { ...platformAccounts[0], connected: true } : account, autoDMState);
-          const isConnected = Boolean(account.connected || platformAccounts.length);
-          const isInstagram = platform.id === "instagram";
-          const canSyncAutoDM =
-            isInstagram &&
-            isConnected &&
-            autoDMState?.hasSocialInstagramConnection &&
-            autoDMState?.autoDMStorageReady !== false &&
-            typeof autoDMState?.importInstagram === "function";
+        {connectedPlatforms.length === 0 ? (
+          <div className="col-span-full py-12 flex flex-col items-center justify-center text-center">
+            <span className="text-4xl mb-3">👋</span>
+            <h3 className="text-base font-semibold text-gray-900">No channels connected yet</h3>
+            <p className="text-xs text-gray-500 mt-1 max-w-sm">Use the quick connect bar below to link your first social channel.</p>
+          </div>
+        ) : (
+          connectedPlatforms.map((platform) => {
+            const account = connectedAccounts?.[platform.id] || {};
+            const platformAccounts = platform.id === "instagram"
+              ? connectedAccounts?.instagramAccounts || []
+              : connectedAccounts?.[`${platform.id}Accounts`] || [];
+            const status = getStatus(platform, platformAccounts.length ? { ...platformAccounts[0], connected: true } : account, autoDMState);
+            const isConnected = Boolean(account.connected || platformAccounts.length);
+            const isInstagram = platform.id === "instagram";
+            const canSyncAutoDM =
+              isInstagram &&
+              isConnected &&
+              autoDMState?.hasSocialInstagramConnection &&
+              autoDMState?.autoDMStorageReady !== false &&
+              typeof autoDMState?.importInstagram === "function";
 
-          return (
-            <article key={platform.id} className="rounded-2xl border border-black/10 bg-white p-4">
-              <div className="flex gap-3">
-                <PlatformIcon platform={platform} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-base font-semibold tracking-[-0.02em] text-[var(--ink)]">{platform.name}</h3>
-                    <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${statusClass(status.tone)}`}>
-                      {status.label}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs leading-5 text-[var(--slate)]">{status.help}</p>
-                  <p className="mt-3 rounded-2xl border border-black/10 bg-[#f7f5f2] p-3 text-xs leading-5 text-[var(--slate)]">
-                    {platform.prerequisite}
-                  </p>
-                  {isInstagram && autoDMState?.autoDMStorageError ? (
-                    <div className="mt-3 flex gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span>{autoDMState.autoDMStorageError}</span>
+            return (
+              <article key={platform.id} className="rounded-2xl border border-black/10 bg-white p-4">
+                <div className="flex gap-3">
+                  <PlatformIcon platform={platform} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-base font-semibold tracking-[-0.02em] text-[var(--ink)]">{platform.name}</h3>
+                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${statusClass(status.tone)}`}>
+                        {status.label}
+                      </span>
                     </div>
-                  ) : null}
-                  {platformAccounts.length > 0 && (
-                    <div className="mt-4 flex flex-col gap-2 border-t border-black/5 pt-4">
-                      <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Connected Accounts</span>
-                      {platformAccounts.map((acc) => (
-                        <div key={acc.id} className="flex items-center justify-between rounded-lg border border-black/5 bg-white p-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            {acc.profilePicture ? (
-                              <img src={acc.profilePicture} alt="" className="h-6 w-6 shrink-0 rounded-full bg-gray-100 object-cover" />
-                            ) : (
-                              <div className="h-6 w-6 shrink-0 rounded-full bg-gray-100" />
-                            )}
-                            <span className="truncate text-sm font-medium text-[var(--ink)]">{acc.username || acc.account_id || acc.accountId}</span>
+                    <p className="mt-1 text-xs leading-5 text-[var(--slate)]">{status.help}</p>
+                    <p className="mt-3 rounded-2xl border border-black/10 bg-[#f7f5f2] p-3 text-xs leading-5 text-[var(--slate)]">
+                      {platform.prerequisite}
+                    </p>
+                    {isInstagram && autoDMState?.autoDMStorageError ? (
+                      <div className="mt-3 flex gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>{autoDMState.autoDMStorageError}</span>
+                      </div>
+                    ) : null}
+                    {platformAccounts.length > 0 && (
+                      <div className="mt-4 flex flex-col gap-2 border-t border-black/5 pt-4">
+                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Connected Accounts</span>
+                        {platformAccounts.map((acc) => (
+                          <div key={acc.id} className="flex items-center justify-between rounded-lg border border-black/5 bg-white p-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {acc.profilePicture ? (
+                                <img src={acc.profilePicture} alt="" className="h-6 w-6 shrink-0 rounded-full bg-gray-100 object-cover" />
+                              ) : (
+                                <div className="h-6 w-6 shrink-0 rounded-full bg-gray-100" />
+                              )}
+                              <span className="truncate text-sm font-medium text-[var(--ink)]">{acc.username || acc.account_id || acc.accountId}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => disconnectPlatform(platform, acc.id)}
+                              disabled={busy === acc.id}
+                              className="shrink-0 text-xs font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
+                            >
+                              {busy === acc.id ? "Disconnecting..." : "Disconnect"}
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => disconnectPlatform(platform, acc.id)}
-                            disabled={busy === acc.id}
-                            className="shrink-0 text-xs font-semibold text-red-600 hover:text-red-700 disabled:opacity-50"
-                          >
-                            {busy === acc.id ? "Disconnecting..." : "Disconnect"}
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {isConnected ? (
+                    <>
+                        <button
+                          type="button"
+                          onClick={() => disconnectPlatform(platform)}
+                          disabled={busy === platform.id}
+                          className="inline-flex h-10 items-center gap-2 rounded-full border border-red-200 bg-white px-4 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                        >
+                          <Unlink className="h-4 w-4" />
+                          {busy === platform.id ? "Disconnecting..." : (platformAccounts.length > 1 ? "Disconnect All" : "Disconnect")}
+                        </button>
+                      {canSyncAutoDM ? (
+                        <button
+                          type="button"
+                          onClick={syncInstagramToAutoDM}
+                          disabled={busy === "instagram-sync"}
+                          className="inline-flex h-10 items-center gap-2 rounded-full border border-black/10 bg-[#f7f5f2] px-4 text-sm font-semibold text-[var(--ink)] transition hover:bg-white disabled:opacity-50"
+                        >
+                          <RefreshCw className={`h-4 w-4 ${busy === "instagram-sync" ? "animate-spin" : ""}`} />
+                          {busy === "instagram-sync" ? "Syncing..." : "Sync AutoDM"}
+                        </button>
+                      ) : null}
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => connectPlatform(platform)}
+                      className="inline-flex h-10 items-center gap-2 rounded-full border border-black/10 bg-white px-4 text-sm font-semibold text-[var(--ink)] shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      {platform.connectLabel}
+                    </button>
                   )}
                 </div>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {isConnected ? (
-                  <>
-                      <button
-                        type="button"
-                        onClick={() => disconnectPlatform(platform)}
-                        disabled={busy === platform.id}
-                        className="inline-flex h-10 items-center gap-2 rounded-full border border-red-200 bg-white px-4 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
-                      >
-                        <Unlink className="h-4 w-4" />
-                        {busy === platform.id ? "Disconnecting..." : (platformAccounts.length > 1 ? "Disconnect All" : "Disconnect")}
-                      </button>
-                    {canSyncAutoDM ? (
-                      <button
-                        type="button"
-                        onClick={syncInstagramToAutoDM}
-                        disabled={busy === "instagram-sync"}
-                        className="inline-flex h-10 items-center gap-2 rounded-full border border-black/10 bg-[#f7f5f2] px-4 text-sm font-semibold text-[var(--ink)] transition hover:bg-white disabled:opacity-50"
-                      >
-                        <RefreshCw className={`h-4 w-4 ${busy === "instagram-sync" ? "animate-spin" : ""}`} />
-                        {busy === "instagram-sync" ? "Syncing..." : "Sync AutoDM"}
-                      </button>
-                    ) : null}
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => connectPlatform(platform)}
-                    className="inline-flex h-10 items-center gap-2 rounded-full border border-black/10 bg-white px-4 text-sm font-semibold text-[var(--ink)] shadow-sm transition hover:border-blue-200 hover:bg-blue-50"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    {platform.connectLabel}
-                  </button>
-                )}
-              </div>
-            </article>
-          );
-        })}
+              </article>
+            );
+          })
+        )}
       </div>
+
+      {unconnectedPlatforms.length > 0 && (
+        <div className="p-5 border-t border-black/5 bg-[#fcfbf9]/60 rounded-b-[22px] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h4 className="text-[10px] font-bold text-[#888888] uppercase tracking-[0.2em] mb-1">Connect More Platforms</h4>
+            <p className="text-xs text-[#666666]">Click an icon to quickly authorize and link a new channel.</p>
+          </div>
+          <div className="flex flex-wrap gap-3 items-center">
+            {unconnectedPlatforms.map((platform) => (
+              <button
+                key={platform.id}
+                type="button"
+                onClick={() => connectPlatform(platform)}
+                className="w-11 h-11 rounded-full border border-black/10 hover:border-black/25 bg-white hover:bg-gray-50 flex items-center justify-center shadow-sm relative group transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
+                title={platform.connectLabel}
+              >
+                <img src={platform.icon} alt={platform.name} className="w-5.5 h-5.5 object-contain" />
+                <span className="absolute -top-8 scale-0 group-hover:scale-100 transition-all duration-150 bg-[#1a1a1a] text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-lg whitespace-nowrap z-25 pointer-events-none uppercase tracking-wider">
+                  {platform.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {showFacebookModal && (
         <FacebookSetupModal
           isOpen={showFacebookModal}

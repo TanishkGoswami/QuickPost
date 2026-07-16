@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { LogOut, ChevronRight, Mail, Phone, Instagram, Facebook, Globe, MapPin, Briefcase, UserRound, Shield, CreditCard, CheckCircle2 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
-import { useAutoDM } from '../../context/AutoDMContext';
-import ConnectedPlatformsPanel from '../../components/platforms/ConnectedPlatformsPanel';
-import BillingPage from '../BillingPage';
+import { useAuth } from '../context/AuthContext';
+import { useAutoDM } from '../context/AutoDMContext';
+import ConnectedPlatformsPanel from '../components/platforms/ConnectedPlatformsPanel';
+import BillingPage from './BillingPage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -243,7 +243,7 @@ function ProfileSettingsPanel({ user }) {
   );
 }
 
-export default function AutoDMSettingsPage() {
+export default function ProfilePage() {
   const { user } = useAuth();
   const autoDM = useAutoDM();
   const [activeTab, setActiveTab] = useState('account');
@@ -253,12 +253,8 @@ export default function AutoDMSettingsPage() {
       <div className="flex justify-between items-end mb-8">
         <div>
           <h3 className="text-[10px] font-bold text-[#888888] uppercase tracking-[0.2em] mb-1.5">Account Center</h3>
-          <h1 className="text-[28px] font-bold text-[#1a1a1a] tracking-tight leading-tight">Profile and billing</h1>
+          <h1 className="text-[28px] font-bold text-[#1a1a1a] tracking-tight leading-tight">Profile Settings</h1>
         </div>
-        {/* <Button variant="destructive" className="bg-[#b3261e] hover:bg-[#8c1d18] text-white font-bold h-[38px] px-5 gap-2 rounded-md transition-colors shadow-sm hidden sm:flex border border-red-900/20">
-          <LogOut className="w-3.5 h-3.5" />
-          <span className="text-xs uppercase tracking-wider">Logout</span>
-        </Button> */}
       </div>
 
       <div className="w-full border-b border-black/10 mb-6">
@@ -268,14 +264,14 @@ export default function AutoDMSettingsPage() {
               onClick={() => setActiveTab('account')}
            >
               <UserRound className="w-[15px] h-[15px]" />
-              Profile Settings
+              Profile Details
            </button>
            <button 
               className={`pb-3 text-xs font-bold uppercase tracking-wider transition-colors border-b-[3px] flex items-center gap-2 whitespace-nowrap ${activeTab === 'platforms' ? 'border-[#0f3d32] text-[#0f3d32]' : 'border-transparent text-[#888888] hover:text-[#1a1a1a]'}`}
               onClick={() => setActiveTab('platforms')}
            >
               <Shield className="w-[15px] h-[15px]" />
-              Accounts
+              Connected Accounts
            </button>
            <button 
               className={`pb-3 text-xs font-bold uppercase tracking-wider transition-colors border-b-[3px] flex items-center gap-2 whitespace-nowrap ${activeTab === 'billing' ? 'border-[#0f3d32] text-[#0f3d32]' : 'border-transparent text-[#888888] hover:text-[#1a1a1a]'}`}
