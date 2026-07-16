@@ -3,8 +3,8 @@ import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ZoomIn, Crop } from "lucide-react";
 
-export default function ImageCropperModal({ isOpen, onClose, file, onSave }) {
-  const [aspectRatio, setAspectRatio] = useState("1"); // "1" (1:1), "0.8" (4:5), "1.777" (16:9), "free"
+export default function ImageCropperModal({ isOpen, onClose, file, onSave, defaultAspectRatio = "1", lockedAspectRatio }) {
+  const [aspectRatio, setAspectRatio] = useState(lockedAspectRatio || defaultAspectRatio); // "1" (1:1), "0.8" (4:5), "1.777" (16:9), "free"
   const [scale, setScale] = useState(1);
   const [offsetX, setOffsetX] = useState(0);
   const [offsetY, setOffsetY] = useState(0);
@@ -15,24 +15,42 @@ export default function ImageCropperModal({ isOpen, onClose, file, onSave }) {
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
 
+  // Sync aspectRatio with lockedAspectRatio when it changes
+  useEffect(() => {
+    if (lockedAspectRatio) {
+      setAspectRatio(lockedAspectRatio);
+    }
+  }, [lockedAspectRatio]);
+
   // Create a temporary object URL for editing
   const imageUrl = useMemo(() => {
     if (!file) return "";
-    return URL.createObjectURL(file);
+    if (typeof file === "string") return file;
+    try {
+      return URL.createObjectURL(file);
+    } catch (e) {
+      console.error("Failed to create object URL:", e);
+      return "";
+    }
   }, [file]);
 
-  // Clean up object URL on unmount or file change
+  // Clean up object URL on unmount (only if created locally)
   useEffect(() => {
     return () => {
-      if (imageUrl) URL.revokeObjectURL(imageUrl);
+      if (imageUrl && imageUrl.startsWith("blob:") && typeof file !== "string") {
+        URL.revokeObjectURL(imageUrl);
+      }
     };
-  }, [imageUrl]);
+  }, []);
 
   // Load image dimensions
   useEffect(() => {
     if (!imageUrl) return;
     setLoading(true);
     const img = new Image();
+    if (imageUrl && (imageUrl.startsWith("http://") || imageUrl.startsWith("https://"))) {
+      img.crossOrigin = "anonymous";
+    }
     img.onload = () => {
       setImgDimensions({
         width: img.width,
@@ -43,6 +61,10 @@ export default function ImageCropperModal({ isOpen, onClose, file, onSave }) {
       setScale(1);
       setOffsetX(0);
       setOffsetY(0);
+      setLoading(false);
+    };
+    img.onerror = (err) => {
+      console.error("Cropper image loading failed:", err);
       setLoading(false);
     };
     img.src = imageUrl;
@@ -180,8 +202,10 @@ export default function ImageCropperModal({ isOpen, onClose, file, onSave }) {
     const sourceWidth = viewport.width * scaleFactor;
     const sourceHeight = viewport.height * scaleFactor;
 
-    // Render original image segment onto target output canvas size
     const imgElement = new Image();
+    if (imageUrl && (imageUrl.startsWith("http://") || imageUrl.startsWith("https://"))) {
+      imgElement.crossOrigin = "anonymous";
+    }
     imgElement.onload = () => {
       ctx.drawImage(
         imgElement,
@@ -317,6 +341,7 @@ export default function ImageCropperModal({ isOpen, onClose, file, onSave }) {
                 <img
                   ref={imageRef}
                   src={imageUrl}
+                  crossOrigin={imageUrl && (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) ? "anonymous" : undefined}
                   alt="Cropping region"
                   onMouseDown={onMouseDown}
                   onMouseMove={onMouseMove}
@@ -345,41 +370,58 @@ export default function ImageCropperModal({ isOpen, onClose, file, onSave }) {
           </div>
 
           {/* Aspect ratio controls */}
-          <div
-            style={{
-              display: "flex",
-              gap: 8,
-              marginTop: 16,
-              width: "100%",
-              justifyContent: "center",
-            }}
-          >
-            {[
-              { id: "1", label: "1:1 Square" },
-              { id: "0.8", label: "4:5 Portrait" },
-              { id: "1.777", label: "16:9 Landscape" },
-              { id: "free", label: "Original" },
-            ].map((ratio) => (
-              <button
-                key={ratio.id}
-                onClick={() => setAspectRatio(ratio.id)}
-                style={{
-                  padding: "6px 12px",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  borderRadius: 6,
-                  border: "1px solid",
-                  borderColor: aspectRatio === ratio.id ? "var(--ink, #111111)" : "rgba(20,20,19,0.1)",
-                  background: aspectRatio === ratio.id ? "var(--ink, #111111)" : "#ffffff",
-                  color: aspectRatio === ratio.id ? "#ffffff" : "#626260",
-                  cursor: "pointer",
-                  transition: "all 0.15s",
-                }}
-              >
-                {ratio.label}
-              </button>
-            ))}
-          </div>
+          {lockedAspectRatio ? (
+            <div
+              style={{
+                marginTop: 16,
+                fontSize: 12,
+                fontWeight: 600,
+                color: "#626260",
+                background: "rgba(20, 20, 19, 0.04)",
+                padding: "6px 16px",
+                borderRadius: 8,
+                textAlign: "center",
+              }}
+            >
+              Locked Ratio: {lockedAspectRatio === "1.777" ? "16:9 Landscape (Video)" : "9:16 Vertical (Short/Reel)"}
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                marginTop: 16,
+                width: "100%",
+                justifyContent: "center",
+              }}
+            >
+              {[
+                { id: "1", label: "1:1 Square" },
+                { id: "0.8", label: "4:5 Portrait" },
+                { id: "1.777", label: "16:9 Landscape" },
+                { id: "free", label: "Original" },
+              ].map((ratio) => (
+                <button
+                  key={ratio.id}
+                  onClick={() => setAspectRatio(ratio.id)}
+                  style={{
+                    padding: "6px 12px",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    borderRadius: 6,
+                    border: "1px solid",
+                    borderColor: aspectRatio === ratio.id ? "var(--ink, #111111)" : "rgba(20,20,19,0.1)",
+                    background: aspectRatio === ratio.id ? "var(--ink, #111111)" : "#ffffff",
+                    color: aspectRatio === ratio.id ? "#ffffff" : "#626260",
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {ratio.label}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Zoom controls */}
           <div

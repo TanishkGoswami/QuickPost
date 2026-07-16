@@ -411,7 +411,15 @@ const YouTubePreview = memo(
             aspectRatio: "9/16",
           }}
         >
-          <MediaCarousel mediaFiles={mediaFiles} cssClass={cssClass} />
+          {thumbUrl ? (
+            <img
+              src={thumbUrl}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              alt="Custom Shorts Thumbnail"
+            />
+          ) : (
+            <MediaCarousel mediaFiles={mediaFiles} cssClass={cssClass} />
+          )}
           {/* Shorts Overlay */}
           <div
             style={{
