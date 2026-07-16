@@ -9,6 +9,7 @@ import {
   Settings,
   ShoppingCart,
   Users,
+  UserRound,
   Workflow,
   X,
 } from "lucide-react";
@@ -32,7 +33,7 @@ const navItems = [
   { label: "Contacts", to: "/dashboard/auto-dm/contacts", icon: Users },
   { label: "Products", to: "/dashboard/auto-dm/products", icon: Package },
   { label: "Orders", to: "/dashboard/auto-dm/orders", icon: ShoppingCart },
-  { label: "Settings", to: "/dashboard/auto-dm/settings", icon: Settings },
+  { label: "Profile", to: "/dashboard/profile", icon: UserRound },
 ];
 
 function AutoDMSidebar({ onNavigate = () => {} }) {
@@ -200,9 +201,9 @@ export default function AutoDMModuleLayout() {
                     {syncingAccount ? "Syncing..." : "Sync From Social Pilot"}
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <NavLink to="/dashboard/auto-dm/settings">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Module Settings
+                    <NavLink to="/dashboard/profile">
+                      <UserRound className="mr-2 h-4 w-4" />
+                      Profile and Settings
                     </NavLink>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
