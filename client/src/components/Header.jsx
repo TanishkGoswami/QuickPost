@@ -21,7 +21,7 @@ const PLATFORM_ICONS = {
   googleBusiness: "/icons/google-icon.svg",
 };
 
-function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
+function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage, topOffset = 0 }) {
   const { user, logout, connectedAccounts, refreshAccounts } = useAuth();
   const { confirm, alert } = useDialog();
   const navigate = useNavigate();
@@ -151,7 +151,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
       className="qp-header"
       style={{
         position: "fixed",
-        top: 0,
+        top: topOffset,
         right: 0,
         left: isDesktop && !isTrendsPage ? 240 : 0,
         zIndex: 39,
@@ -165,7 +165,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
         justifyContent: "space-between",
         padding: isDesktop ? "0 24px" : "0 16px",
         fontFamily: "var(--font-body)",
-        transition: "left 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        transition: "left 0.3s cubic-bezier(0.16, 1, 0.3, 1), top 0.2s ease",
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

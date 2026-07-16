@@ -18,6 +18,7 @@ import {
   Sparkles,
   ScanEye,
   EyeOff,
+  MailCheck,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 
@@ -28,23 +29,33 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
+    setNotice(null);
     try {
       if (mode === "login") {
         await login(email, password);
       } else {
         await signUp(email, password, name);
-        setError("Check your email for the confirmation link!");
+        setNotice({
+          title: "Confirmation email sent",
+          message: "Open the link we sent to your inbox to activate this account.",
+        });
       }
     } catch (err) {
-      setError(err.message || "An error occurred");
+      const message = err.message || "An error occurred";
+      const needsConfirmation = /email not confirmed|confirmation/i.test(message);
+      setNotice({
+        title: needsConfirmation ? "Email confirmation needed" : "We could not continue",
+        message: needsConfirmation
+          ? "Please confirm your email from the link in your inbox, then sign in again."
+          : message,
+      });
     } finally {
       setLoading(false);
     }
@@ -52,10 +63,14 @@ export default function AuthPage() {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
+    setNotice(null);
     try {
       await googleSignIn();
     } catch (err) {
-      setError(err.message || "Google login failed");
+      setNotice({
+        title: "Google sign-in did not finish",
+        message: err.message || "Please try again in a moment.",
+      });
       setLoading(false);
     }
   };
@@ -160,16 +175,26 @@ export default function AuthPage() {
             </p>
           </div>
 
-          {/* Error Message */}
+          {/* Auth status */}
           <AnimatePresence mode="wait">
-            {error && (
+            {notice && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="bg-red-50 border border-red-100 text-red-600 p-4 rounded-xl text-sm font-medium"
+                className="flex items-start gap-3 rounded-lg border border-[var(--dust)] bg-white p-4 text-sm text-[var(--ink)]"
               >
-                {error}
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#fff1e8] text-[var(--arc)]">
+                  <MailCheck className="size-4" />
+                </span>
+                <span className="min-w-0">
+                  <strong className="block text-sm font-semibold leading-5 text-[var(--ink)]">
+                    {notice.title}
+                  </strong>
+                  <span className="mt-0.5 block leading-5 text-[var(--slate)]">
+                    {notice.message}
+                  </span>
+                </span>
               </motion.div>
             )}
           </AnimatePresence>

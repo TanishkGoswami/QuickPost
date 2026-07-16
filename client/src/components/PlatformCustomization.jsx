@@ -230,8 +230,8 @@ function PlatformCustomization({
                     </label>
                   </div>
 
-                   {youtubeThumbnail ? (
-                    <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-200 group">
+                  {youtubeThumbnail ? (
+                    <div className="relative w-full max-w-[680px] aspect-video rounded-xl overflow-hidden border border-black/10 group bg-white">
                       <img
                         src={thumbnailPreviewUrl}
                         alt="Thumbnail Preview"
@@ -279,7 +279,7 @@ function PlatformCustomization({
                       )}
                     </div>
                   ) : (
-                    <label className="flex flex-col items-center justify-center w-full aspect-video rounded-lg border-2 border-dashed border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-all cursor-pointer group">
+                    <label className="flex aspect-video w-full max-w-[680px] flex-col items-center justify-center rounded-xl border border-dashed border-black/20 bg-white hover:border-black/40 hover:bg-gray-50 transition-all cursor-pointer group">
                       <div className="flex flex-col items-center justify-center pt-5 pb-6">
                         <svg
                           className="w-8 h-8 text-gray-400 group-hover:text-gray-500 mb-2"

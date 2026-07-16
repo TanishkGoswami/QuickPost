@@ -32,6 +32,45 @@ const FREE_ENTITLEMENTS = Object.freeze({
 // Disabling browser-side sync to prevent CORS errors and protect sensitive env vars
 // (VITE_SOCIAL_SYNC_SECRET) from being exposed in production.
 // The Express backend server already handles this securely on the server-to-server layer.
+const EMPTY_CONNECTED_ACCOUNTS = Object.freeze({
+  instagram: { connected: false },
+  youtube: { connected: false },
+  pinterest: { connected: false },
+  facebook: { connected: false },
+  bluesky: { connected: false },
+  linkedin: { connected: false },
+  mastodon: { connected: false },
+  threads: { connected: false },
+  x: { connected: false },
+  reddit: { connected: false },
+  googleBusiness: { connected: false },
+  instagramAccounts: [],
+  youtubeAccounts: [],
+  pinterestAccounts: [],
+  facebookAccounts: [],
+  blueskyAccounts: [],
+  linkedinAccounts: [],
+  mastodonAccounts: [],
+  threadsAccounts: [],
+  xAccounts: [],
+  redditAccounts: [],
+  googleBusinessAccounts: [],
+});
+
+function buildAuthenticatedUser(sessionUser, entitlements) {
+  return {
+    userId: sessionUser.id,
+    email: sessionUser.email,
+    name:
+      sessionUser.user_metadata?.full_name ||
+      sessionUser.email?.split("@")[0],
+    plan: entitlements?.plan?.name || null,
+    subscription_status: entitlements?.subscription?.status || null,
+    entitlements,
+    picture: sessionUser.user_metadata?.avatar_url || sessionUser.user_metadata?.picture,
+  };
+}
+
 async function syncUserToHub(sessionUser) {
   console.info("[HUB-SYNC] Skipping browser-side hub sync (handled securely by backend)");
   return;
@@ -41,30 +80,7 @@ async function syncUserToHub(sessionUser) {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
-  const [connectedAccounts, setConnectedAccounts] = useState({
-    instagram: { connected: false },
-    youtube: { connected: false },
-    pinterest: { connected: false },
-    facebook: { connected: false },
-    bluesky: { connected: false },
-    linkedin: { connected: false },
-    mastodon: { connected: false },
-    threads: { connected: false },
-    x: { connected: false },
-	    reddit: { connected: false },
-	    googleBusiness: { connected: false },
-	    instagramAccounts: [],
-	    youtubeAccounts: [],
-	    pinterestAccounts: [],
-	    facebookAccounts: [],
-	    blueskyAccounts: [],
-	    linkedinAccounts: [],
-	    mastodonAccounts: [],
-	    threadsAccounts: [],
-	    xAccounts: [],
-	    redditAccounts: [],
-	    googleBusinessAccounts: [],
-	  });
+  const [connectedAccounts, setConnectedAccounts] = useState(EMPTY_CONNECTED_ACCOUNTS);
   const [loading, setLoading] = useState(true);
 
   const fetchConnectedAccounts = useCallback(async () => {
@@ -86,13 +102,8 @@ export function AuthProvider({ children }) {
       const { data } = await apiClient.get('/api/billing/entitlements');
       const entitlements = data?.entitlements || FREE_ENTITLEMENTS;
 
-      setUser(prev => prev ? {
-        ...prev,
-        plan: entitlements.plan.name,
-        subscription_status: entitlements.subscription.status,
-        entitlements,
-      } : null);
-      return;
+      setUser(buildAuthenticatedUser(sessionUser, entitlements));
+      return entitlements;
 
       /*
        * Disabled legacy migration code retained temporarily for reference.
@@ -144,12 +155,8 @@ export function AuthProvider({ children }) {
 
     } catch (error) {
       console.error("Error fetching user profile:", error);
-      setUser(prev => prev ? {
-        ...prev,
-        plan: 'Free',
-        subscription_status: 'active',
-        entitlements: FREE_ENTITLEMENTS,
-      } : null);
+      setUser(buildAuthenticatedUser(sessionUser, FREE_ENTITLEMENTS));
+      return FREE_ENTITLEMENTS;
     }
   }, []);
 
@@ -175,78 +182,51 @@ export function AuthProvider({ children }) {
       localStorage.setItem("last_supabase_url", currentSupabaseUrl);
     }
 
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        const userData = {
-          userId: session.user.id,
-          email: session.user.email,
-          name:
-            session.user.user_metadata?.full_name ||
-            session.user.email?.split("@")[0],
-          plan: 'Free',
-          subscription_status: 'active',
-          entitlements: FREE_ENTITLEMENTS,
-          picture: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
-        };
-        setUser(userData);
-        localStorage.setItem("quickpost_token", session.access_token);
-        fetchConnectedAccounts();
-        fetchUserProfile(session.user);
+    let isMounted = true;
+
+    const hydrateSession = async (nextSession) => {
+      setSession(nextSession);
+      if (nextSession) {
+        localStorage.setItem("quickpost_token", nextSession.access_token);
+        await Promise.all([
+          fetchConnectedAccounts(),
+          fetchUserProfile(nextSession.user),
+        ]);
       } else {
+        setUser(null);
         localStorage.removeItem("quickpost_token");
+        setConnectedAccounts(EMPTY_CONNECTED_ACCOUNTS);
       }
-      setLoading(false);
+    };
+
+    // Check active sessions and wait for the authoritative plan before rendering.
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      try {
+        await hydrateSession(session);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
     });
 
     // Listen for changes on auth state (logged in, signed out, etc.)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+      hydrateSession(session).finally(() => {
+        if (isMounted) setLoading(false);
+      });
       if (session) {
-        const userData = {
-          userId: session.user.id,
-          email: session.user.email,
-          name:
-            session.user.user_metadata?.full_name ||
-            session.user.email?.split("@")[0],
-          plan: 'Free',
-          subscription_status: 'active',
-          entitlements: FREE_ENTITLEMENTS,
-          picture: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
-        };
-        setUser(userData);
-        localStorage.setItem("quickpost_token", session.access_token);
-        fetchConnectedAccounts();
-        fetchUserProfile(session.user);
-
         // Sync to hub — only on SIGNED_IN event to avoid spamming on every token refresh
         if (_event === "SIGNED_IN" || _event === "USER_UPDATED") {
           syncUserToHub(session.user);
         }
-      } else {
-        setUser(null);
-        localStorage.removeItem("quickpost_token");
-        setConnectedAccounts({
-          instagram: { connected: false },
-          youtube: { connected: false },
-          pinterest: { connected: false },
-          facebook: { connected: false },
-          bluesky: { connected: false },
-          linkedin: { connected: false },
-          mastodon: { connected: false },
-          threads: { connected: false },
-          x: { connected: false },
-          reddit: { connected: false },
-          googleBusiness: { connected: false },
-        });
       }
-      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [fetchConnectedAccounts, fetchUserProfile]);
 
   const login = async (email, password) => {
