@@ -361,6 +361,34 @@ body {
   filter: brightness(0.96);
 }
 
+.qp-sidebar-connected-parent-item {
+  border: 1px solid transparent !important;
+  border-radius: 8px !important;
+  transition: all 0.15s ease;
+}
+
+.qp-sidebar-connected-parent-item:hover {
+  border-color: var(--side-hairline) !important;
+  background: var(--side-surface-2) !important;
+  color: var(--side-ink) !important;
+}
+
+.qp-sidebar-connected-parent-item-active {
+  background: var(--side-surface-2) !important;
+  border-color: var(--side-hairline) !important;
+}
+
+.qp-sidebar-connected-children {
+  margin-left: 22px;
+  padding-left: 8px;
+  border-left: 1.5px solid var(--side-hairline);
+  margin-top: 2px;
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .autodm-brand {
   display: inline-flex;
   align-items: center;
@@ -5305,3 +5333,13 @@ textarea:focus-visible {
 .btn-ghost:hover {
   transform: translateY(-1px);
 }
+
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
