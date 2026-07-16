@@ -1,9 +1,13 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import {
   AlertTriangle,
   BarChart3,
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Check,
   ExternalLink,
   Filter,
@@ -100,7 +104,6 @@ function EmptyState({ type }) {
 function TableSkeletonRows() {
   return [1, 2, 3].map((row) => (
     <tr key={row} style={{ borderBottom: "1px solid rgba(20,20,19,0.08)" }}>
-      <td style={{ padding: "12px 16px" }}><div className="skeleton-shimmer" style={{ width: 14, height: 14, borderRadius: 3 }} /></td>
       <td style={{ padding: "12px 10px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "120px minmax(240px, 1fr)", gap: 16, alignItems: "center" }}>
           <div className="skeleton-shimmer" style={{ width: 120, height: 68, borderRadius: 7 }} />
@@ -135,6 +138,48 @@ function YouTubePostsUnavailable() {
   );
 }
 
+function CustomSelect({ value, options, onChange, renderValue, style, dropdownStyle }) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef();
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div style={{ position: "relative", ...style }} ref={containerRef}>
+      <button
+        onClick={(e) => { e.preventDefault(); setOpen(!open); }}
+        style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: "none", cursor: "pointer", color: "inherit", fontSize: "inherit", padding: 0, fontWeight: "inherit", outline: "none" }}
+      >
+        {renderValue ? renderValue(value) : value}
+        <ChevronDown size={14} style={{ color: "var(--slate)" }} />
+      </button>
+      {open && (
+        <div style={{ position: "absolute", zIndex: 50, background: "var(--white)", border: "1px solid rgba(20,20,19,0.12)", borderRadius: 6, boxShadow: "0 10px 24px rgba(20,20,19,0.12)", padding: "4px 0", minWidth: "100%", ...dropdownStyle }}>
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={(e) => { e.preventDefault(); onChange(opt.value); setOpen(false); }}
+              style={{ display: "block", width: "100%", textAlign: dropdownStyle?.textAlign || "left", padding: "8px 14px", background: value === opt.value ? "var(--canvas-lifted)" : "transparent", border: "none", cursor: "pointer", fontSize: 13, color: "var(--ink)", outline: "none" }}
+              onMouseEnter={(e) => e.target.style.background = "var(--canvas-lifted)"}
+              onMouseLeave={(e) => e.target.style.background = value === opt.value ? "var(--canvas-lifted)" : "transparent"}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function YouTubeManagerPage() {
   const [accounts, setAccounts] = useState([]);
   const [activeId, setActiveId] = useState(() => localStorage.getItem(ACTIVE_ACCOUNT_KEY));
@@ -147,6 +192,8 @@ export default function YouTubeManagerPage() {
   const [updatingVideoId, setUpdatingVideoId] = useState("");
   const [error, setError] = useState("");
   const [errorAction, setErrorAction] = useState("");
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(30);
 
   const loadAccounts = async () => {
     setLoading(true);
@@ -188,6 +235,15 @@ export default function YouTubeManagerPage() {
       `${video.title} ${video.description}`.toLowerCase().includes(normalized)
     );
   }, [allVideos, activeTab, query]);
+  
+  const paginatedVideos = useMemo(() => {
+    return videos.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  }, [videos, page, rowsPerPage]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [activeTab, query]);
+
   const latestVideo = allVideos[0];
   const topVideo = [...allVideos].sort((a, b) => Number(b.views || 0) - Number(a.views || 0))[0];
   const status = statusCopy(health?.capabilities?.longUploadsStatus);
@@ -494,13 +550,13 @@ export default function YouTubeManagerPage() {
           {activeTab === "Posts" ? (
             <YouTubePostsUnavailable />
           ) : (
+          <>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", minWidth: 1040, borderCollapse: "collapse", background: "var(--white)" }}>
               <thead>
-                <tr style={{ borderBottom: "1px solid rgba(20,20,19,0.12)", color: "var(--ink)", fontSize: 12 }}>
-                  <th style={{ width: 46, padding: "16px", textAlign: "left" }}><input type="checkbox" /></th>
+                <tr style={{ borderBottom: "1px solid rgba(20,20,19,0.12)", color: "var(--ink)" }}>
                   {(tableHeaders[activeTab] || tableHeaders.Videos).map((header, idx) => (
-                    <th key={header} style={{ width: idx === 0 ? "auto" : 150, padding: "16px 10px", textAlign: idx > 3 ? "right" : "left", fontWeight: 800 }}>{header}</th>
+                    <th key={header} style={{ width: idx === 0 ? "auto" : 120, padding: "16px 10px", textAlign: "left", fontWeight: 500, fontSize: 13, color: "var(--slate)" }}>{header}</th>
                   ))}
                 </tr>
               </thead>
@@ -508,49 +564,89 @@ export default function YouTubeManagerPage() {
                 {loading ? (
                   <TableSkeletonRows />
                 ) : activeTab === "Playlists" || videos.length === 0 ? (
-                  <tr><td colSpan={7}><EmptyState type={activeTab} /></td></tr>
-                ) : videos.map((video) => (
+                  <tr><td colSpan={6}><EmptyState type={activeTab} /></td></tr>
+                ) : paginatedVideos.map((video) => (
                   <tr key={video.id} style={{ borderBottom: "1px solid rgba(20,20,19,0.12)", color: "var(--ink)" }}>
-                    <td style={{ padding: "10px 16px", verticalAlign: "top" }}><input type="checkbox" /></td>
                     <td style={{ padding: "10px", verticalAlign: "top" }}>
                       <a href={video.url} target="_blank" rel="noreferrer" style={{ display: "grid", gridTemplateColumns: "120px minmax(240px, 1fr)", gap: 16, color: "var(--ink)", textDecoration: "none" }}>
                         <span style={{ position: "relative", width: 120, height: 68, borderRadius: 7, overflow: "hidden", background: "#111", display: "block" }}>
                           {video.thumbnail && <img src={video.thumbnail} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
-                          {video.duration && <span style={{ position: "absolute", right: 5, bottom: 5, background: "rgba(0,0,0,0.85)", color: "#fff", borderRadius: 3, padding: "1px 5px", fontSize: 12, fontWeight: 900 }}>{parseDuration(video.duration)}</span>}
+                          {video.duration && <span style={{ position: "absolute", right: 5, bottom: 5, background: "rgba(0,0,0,0.85)", color: "#fff", borderRadius: 3, padding: "1px 5px", fontSize: 12, fontWeight: 500 }}>{parseDuration(video.duration)}</span>}
                         </span>
                         <span style={{ minWidth: 0, paddingTop: 4 }}>
-                          <strong style={{ display: "block", fontSize: 14, lineHeight: 1.35, maxWidth: 640, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{video.title}</strong>
+                          <span style={{ display: "block", fontSize: 14, fontWeight: 500, lineHeight: 1.35, maxWidth: 640, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{video.title}</span>
                           <span style={{ display: "block", marginTop: 5, color: "var(--slate)", fontSize: 12, lineHeight: 1.45, maxWidth: 640, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{video.description || "No description"}</span>
-                          <span style={{ display: "flex", gap: 14, marginTop: 10, color: "var(--ink)" }}>
-                            <Pencil size={17} /><BarChart3 size={17} /><MessageSquare size={17} />
+                          <span style={{ display: "flex", gap: 14, marginTop: 10, color: "var(--slate)" }}>
+                            <Pencil size={16} /><BarChart3 size={16} /><MessageSquare size={16} />
                           </span>
                         </span>
                       </a>
                     </td>
                     <td style={{ padding: "10px", verticalAlign: "middle", color: "var(--slate)" }}>-</td>
                     <td style={{ padding: "10px", verticalAlign: "middle" }}>
-                      <label style={{ display: "inline-flex", alignItems: "center", gap: 10, fontWeight: 750 }}>
+                      <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontWeight: 400 }}>
                         {visibilityIcon(video.privacyStatus)}
-                        <select
+                        <CustomSelect
                           value={video.privacyStatus}
-                          disabled={updatingVideoId === video.id}
-                          onChange={(event) => updateVisibility(video.id, event.target.value)}
-                          style={{ border: 0, background: "transparent", color: "var(--ink)", fontWeight: 750, textTransform: "capitalize", outline: "none", cursor: "pointer" }}
-                        >
-                          <option value="public">Public</option>
-                          <option value="unlisted">Unlisted</option>
-                          <option value="private">Private</option>
-                        </select>
+                          options={[
+                            { value: "public", label: "Public" },
+                            { value: "unlisted", label: "Unlisted" },
+                            { value: "private", label: "Private" },
+                          ]}
+                          onChange={(val) => {
+                            if (updatingVideoId !== video.id) updateVisibility(video.id, val);
+                          }}
+                          renderValue={(val) => <span style={{ textTransform: "capitalize" }}>{val}</span>}
+                          dropdownStyle={{ top: "100%", left: 0, marginTop: 4, minWidth: 100 }}
+                        />
                       </label>
                     </td>
-                    <td style={{ padding: "10px", verticalAlign: "middle" }}><strong style={{ display: "block", fontSize: 13 }}>{formatDate(video.publishedAt)}</strong><span style={{ display: "block", marginTop: 5, color: "var(--slate)", fontSize: 12, textTransform: "capitalize" }}>{video.uploadStatus}</span></td>
-                    <td style={{ padding: "10px", verticalAlign: "middle", textAlign: "right", fontWeight: 800 }}>{formatNumber(video.views)}</td>
-                    <td style={{ padding: "10px 18px 10px 10px", verticalAlign: "middle", textAlign: "right", fontWeight: 800 }}>{formatNumber(video.comments)}</td>
+                    <td style={{ padding: "10px", verticalAlign: "middle" }}><span style={{ display: "block", fontSize: 13, fontWeight: 500 }}>{formatDate(video.publishedAt)}</span><span style={{ display: "block", marginTop: 5, color: "var(--slate)", fontSize: 12, textTransform: "capitalize" }}>{video.uploadStatus}</span></td>
+                    <td style={{ padding: "10px", verticalAlign: "middle", textAlign: "left", fontSize: 13 }}>{formatNumber(video.views)}</td>
+                    <td style={{ padding: "10px 18px 10px 10px", verticalAlign: "middle", textAlign: "left", fontSize: 13 }}>{formatNumber(video.comments)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          
+          {activeTab !== "Playlists" && videos.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 32, padding: "12px 24px", color: "var(--slate)", fontSize: 13, borderTop: "1px solid rgba(20,20,19,0.12)", background: "var(--white)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span>Rows per page:</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }}>
+                  <CustomSelect
+                    value={rowsPerPage}
+                    options={[
+                      { value: 10, label: "10" },
+                      { value: 30, label: "30" },
+                      { value: 50, label: "50" },
+                    ]}
+                    onChange={(val) => { setRowsPerPage(val); setPage(0); }}
+                    dropdownStyle={{ bottom: "100%", left: "50%", transform: "translateX(-50%)", marginBottom: 8, minWidth: 60, textAlign: "center" }}
+                  />
+                </div>
+              </div>
+              
+              <span>{`${page * rowsPerPage + 1}-${Math.min((page + 1) * rowsPerPage, videos.length)} of ${videos.length}`}</span>
+              
+              <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+                <button disabled={page === 0} onClick={() => setPage(0)} style={{ background: "transparent", border: "none", padding: 0, cursor: page === 0 ? "default" : "pointer", color: page === 0 ? "rgba(20,20,19,0.2)" : "var(--slate)", display: "flex", alignItems: "center" }}>
+                  <ChevronsLeft size={20} />
+                </button>
+                <button disabled={page === 0} onClick={() => setPage(p => p - 1)} style={{ background: "transparent", border: "none", padding: 0, cursor: page === 0 ? "default" : "pointer", color: page === 0 ? "rgba(20,20,19,0.2)" : "var(--slate)", display: "flex", alignItems: "center" }}>
+                  <ChevronLeft size={20} />
+                </button>
+                <button disabled={(page + 1) * rowsPerPage >= videos.length} onClick={() => setPage(p => p + 1)} style={{ background: "transparent", border: "none", padding: 0, cursor: (page + 1) * rowsPerPage >= videos.length ? "default" : "pointer", color: (page + 1) * rowsPerPage >= videos.length ? "rgba(20,20,19,0.2)" : "var(--slate)", display: "flex", alignItems: "center" }}>
+                  <ChevronRight size={20} />
+                </button>
+                <button disabled={(page + 1) * rowsPerPage >= videos.length} onClick={() => setPage(Math.ceil(videos.length / rowsPerPage) - 1)} style={{ background: "transparent", border: "none", padding: 0, cursor: (page + 1) * rowsPerPage >= videos.length ? "default" : "pointer", color: (page + 1) * rowsPerPage >= videos.length ? "rgba(20,20,19,0.2)" : "var(--slate)", display: "flex", alignItems: "center" }}>
+                  <ChevronsRight size={20} />
+                </button>
+              </div>
+            </div>
+          )}
+          </>
           )}
         </>
       )}
