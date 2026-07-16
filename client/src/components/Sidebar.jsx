@@ -381,7 +381,13 @@ function Sidebar() {
           id: `instagram:${acc.id}`,
           name: acc.username || "Instagram",
           connected: true,
-          icon: (
+          icon: acc.profilePicture ? (
+            <img
+              src={acc.profilePicture}
+              style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover" }}
+              alt=""
+            />
+          ) : (
             <img
               src="/icons/ig-instagram-icon.svg"
               style={{ width: 20, height: 20 }}
