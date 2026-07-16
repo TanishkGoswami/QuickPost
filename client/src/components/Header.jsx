@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Menu, ArrowLeft, Unplug, LogOut, X, ChevronDown } from "lucide-react";
+import { Menu, ArrowLeft, Unplug, LogOut, X, ChevronDown, UserRound } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -143,11 +143,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
   };
 
   const handleSettingsClick = () => {
-    if (location.pathname.startsWith("/dashboard/auto-dm")) {
-      navigate("/dashboard/auto-dm/settings");
-      return;
-    }
-    setShowSettings(true);
+    navigate("/dashboard/profile");
   };
 
   return (
@@ -233,7 +229,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
           <button
             className="qp-header-icon-button"
             onClick={handleSettingsClick}
-            title="Connections"
+            title="Profile Settings"
             style={{
               width: 36,
               height: 36,
@@ -250,7 +246,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
             onMouseEnter={e => { e.currentTarget.style.background = "rgba(20,20,19,0.05)"; e.currentTarget.style.color = "var(--ink)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--slate)"; }}
           >
-            <Unplug size={18} />
+            <UserRound size={18} />
           </button>
           <button
             onClick={handleLogout}

@@ -10,6 +10,7 @@ import {
   Users,
   Instagram,
   Settings,
+  UserRound,
   ChevronDown,
   X,
   Plus,
@@ -594,7 +595,7 @@ function Sidebar() {
 
   const isActive = (path) => {
     if (path === "/dashboard/auto-dm") {
-      return location.pathname.startsWith("/dashboard/auto-dm") && !location.pathname.startsWith("/dashboard/auto-dm/settings");
+      return location.pathname.startsWith("/dashboard/auto-dm");
     }
     if (path === "/dashboard") {
       return location.pathname === "/dashboard";
@@ -1230,7 +1231,7 @@ function Sidebar() {
             <div className="qp-sidebar-account-panel">
               <div className="qp-sidebar-account-menu">
             {[
-              { to: "/dashboard/auto-dm/settings", label: "Settings", icon: <Settings size={15} /> },
+              { to: "/dashboard/profile", label: "Profile", icon: <UserRound size={15} /> },
               { to: "/dashboard", label: "Channels", icon: <LayoutDashboard size={15} /> },
               { to: "/dashboard/billing", label: "Plans and Billing", icon: <CreditCard size={15} /> },
             ].map((item) => (
