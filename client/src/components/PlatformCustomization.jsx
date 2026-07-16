@@ -135,13 +135,27 @@ function PlatformCustomization({
               </div>
 
               <div className="space-y-4">
-                <div className="text-[11px] text-indigo-700 bg-indigo-50/50 p-2.5 rounded-xl border border-indigo-100/50 font-medium">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-                    <span>
-                      Posting as YouTube Short • Caption as description
-                    </span>
-                  </div>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <input
+                      type="radio"
+                      name="yt-type"
+                      checked={(platformData.youtube?.type || "video") === "video"}
+                      onChange={() => handleChange("youtube", "type", "video")}
+                      className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">Video</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer group">
+                    <input
+                      type="radio"
+                      name="yt-type"
+                      checked={(platformData.youtube?.type || "video") === "short"}
+                      onChange={() => handleChange("youtube", "type", "short")}
+                      className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">Short</span>
+                  </label>
                 </div>
 
                 <div>
@@ -165,73 +179,75 @@ function PlatformCustomization({
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Custom Thumbnail
-                  </label>
-
-                  {youtubeThumbnail ? (
-                    <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-200 group">
-                      <img
-                        src={URL.createObjectURL(youtubeThumbnail)}
-                        alt="Thumbnail Preview"
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => onYoutubeThumbnailChange(null)}
-                          className="px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-colors shadow-lg"
-                        >
-                          Remove
-                        </button>
-                        <label className="px-3 py-1.5 bg-white text-gray-900 text-xs font-bold rounded-lg hover:bg-gray-50 transition-colors shadow-lg cursor-pointer">
-                          Change
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept="image/*"
-                            onChange={handleThumbnailChange}
-                          />
-                        </label>
-                      </div>
-                    </div>
-                  ) : (
-                    <label className="flex flex-col items-center justify-center w-full aspect-video rounded-lg border-2 border-dashed border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-all cursor-pointer group">
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <svg
-                          className="w-8 h-8 text-gray-400 group-hover:text-gray-500 mb-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="1.5"
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                        <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider group-hover:text-gray-600">
-                          Select Thumbnail
-                        </p>
-                        <p className="text-[9px] text-gray-400 mt-1">
-                          PNG, JPG, WebP (Max 2MB)
-                        </p>
-                      </div>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleThumbnailChange}
-                      />
+                {(platformData.youtube?.type || "video") === "video" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Custom Thumbnail
                     </label>
-                  )}
-                  <p className="text-[10px] text-gray-400 mt-2 leading-relaxed font-medium">
-                    <span className="text-indigo-500">Pro Tip:</span> Custom
-                    thumbnails significantly increase CTR on YouTube.
-                  </p>
-                </div>
+
+                    {youtubeThumbnail ? (
+                      <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-200 group">
+                        <img
+                          src={URL.createObjectURL(youtubeThumbnail)}
+                          alt="Thumbnail Preview"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => onYoutubeThumbnailChange(null)}
+                            className="px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-colors shadow-lg"
+                          >
+                            Remove
+                          </button>
+                          <label className="px-3 py-1.5 bg-white text-gray-900 text-xs font-bold rounded-lg hover:bg-gray-50 transition-colors shadow-lg cursor-pointer">
+                            Change
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="image/*"
+                              onChange={handleThumbnailChange}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center justify-center w-full aspect-video rounded-lg border-2 border-dashed border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-all cursor-pointer group">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <svg
+                            className="w-8 h-8 text-gray-400 group-hover:text-gray-500 mb-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="1.5"
+                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                            />
+                          </svg>
+                          <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider group-hover:text-gray-600">
+                            Select Thumbnail
+                          </p>
+                          <p className="text-[9px] text-gray-400 mt-1">
+                            PNG, JPG, WebP (Max 2MB)
+                          </p>
+                        </div>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleThumbnailChange}
+                        />
+                      </label>
+                    )}
+                    <p className="text-[10px] text-gray-400 mt-2 leading-relaxed font-medium">
+                      <span className="text-indigo-500">Pro Tip:</span> Custom
+                      thumbnails significantly increase CTR on YouTube.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}

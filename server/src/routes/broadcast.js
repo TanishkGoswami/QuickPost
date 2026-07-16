@@ -783,6 +783,7 @@ async function processBroadcastJob({
           const resolvedCaption = resolveMentions(caption, 'youtube', ytTokens);
           updateJob(jobId, { step: "Uploading video to YouTube…" });
           const visibility = platData?.youtube?.visibility || "public";
+          const isShort = (platData?.youtube?.type === "short");
           const result = await postToYouTube(primaryVideoPath, resolvedCaption, ytTokens, (pct) => {
             const base = 30 + Math.floor((completedChannels / selectedChannelCount) * 55);
             const slice = Math.floor((1 / selectedChannelCount) * 55);
@@ -791,7 +792,7 @@ async function processBroadcastJob({
               progress: Math.min(currentPct, 85),
               step: `Uploading video to YouTube (${pct}%)…`,
             });
-          }, visibility);
+          }, visibility, isShort);
 
           if (result.success && result.videoId && youtubeThumbnailPath) {
             const thumbResult = await setVideoThumbnail(
@@ -801,11 +802,21 @@ async function processBroadcastJob({
             );
             result.thumbnailSuccess = thumbResult.success;
           }
-          return onChannelComplete(account.channel, result);
+          return onChannelComplete(account.channel, {
+            ...result,
+            accountId: account.id,
+            channelId: account.accountId || account.account_id,
+            username: account.username,
+            profilePicture: account.profilePicture || account.profile_picture,
+          });
         } catch (error) {
           return onChannelComplete(account.channel, {
             success: false,
             platform: "YouTube",
+            accountId: account.id,
+            channelId: account.accountId || account.account_id,
+            username: account.username,
+            profilePicture: account.profilePicture || account.profile_picture,
             error: error.message || "Failed to upload to YouTube",
           });
         }

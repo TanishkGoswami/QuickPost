@@ -93,7 +93,7 @@ const INSTAGRAM_POST_TYPE_PRESETS = {
   reel: "ig-reel",
 };
 
-const ClockView = memo(function ClockView({ value, onChange, minTime }) {
+const ClockView = memo(function ClockView({ value, onChange, minTime, onClose }) {
   const [mode, setMode] = useState("hours"); // 'hours' or 'minutes'
   const initialH = parseInt(value.split(":")[0]) || 0;
   const initialM = parseInt(value.split(":")[1]) || 0;
@@ -580,10 +580,12 @@ const ClockView = memo(function ClockView({ value, onChange, minTime }) {
         onClick={(e) => {
           if (isCurrentSelectionPast) return;
           e.stopPropagation();
-          onChange(
-            `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`,
-          );
-          window.dispatchEvent(new MouseEvent("mousedown"));
+          onChange(to24h(hour, minute, meridiem));
+          if (typeof onClose === "function") {
+            onClose();
+          } else {
+            window.dispatchEvent(new MouseEvent("mousedown"));
+          }
         }}
         style={{
           width: "100%",
@@ -977,6 +979,7 @@ const CustomSelect = memo(function CustomSelect({
                 onChange={(v) => {
                   onChange(v);
                 }}
+                onClose={() => setOpen(false)}
               />
             ) : (
               <div
@@ -1622,8 +1625,14 @@ function ComposerModal({
   useEffect(() => {
     if (!isScheduled) return;
     const dv = datePart || minDate;
-    const opts = buildTimeOpts(dv);
-    const nt = timePart && opts.includes(timePart) ? timePart : opts[0] || "";
+    let nt = timePart;
+    
+    if (!nt) {
+      nt = buildTimeOpts(dv)[0] || "";
+    } else if (dv === minDate && nt < minTime) {
+      nt = minTime;
+    }
+
     if (!nt) return;
     const nv = `${dv}T${nt}`;
     if (scheduledAt !== nv) setScheduledAt(nv);

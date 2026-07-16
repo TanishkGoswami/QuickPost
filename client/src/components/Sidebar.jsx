@@ -520,10 +520,10 @@ function Sidebar() {
       {/* ── Scrollable body ── */}
       <div
         className="flex-1 overflow-y-auto custom-scrollbar"
-        style={{ padding: "12px 12px 0" }}
+        style={{ padding: "8px 12px 0" }}
       >
         {/* ── Primary nav ── */}
-        <div style={{ marginBottom: 20 }}>
+        <div style={{ marginBottom: 12 }}>
           {[
             {
               to: "/dashboard",
@@ -569,8 +569,8 @@ function Sidebar() {
               <>
                 <span
                   style={{
-                    width: 28,
-                    height: 28,
+                    width: 24,
+                    height: 24,
                     borderRadius: "var(--r-sm)",
                     background: active
                       ? "rgba(255,255,255,0.15)"
@@ -591,10 +591,10 @@ function Sidebar() {
             const style = {
               display: "flex",
               alignItems: "center",
-              gap: 10,
-              padding: "9px 12px",
+              gap: 9,
+              padding: "6px 10px",
               borderRadius: "var(--r-btn)",
-              marginBottom: 2,
+              marginBottom: 1,
               background: active ? "var(--ink)" : "transparent",
               color: active
                 ? "var(--canvas)"
@@ -644,10 +644,10 @@ function Sidebar() {
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: 10,
+                        gap: 9,
                         minWidth: 0,
                         flex: 1,
-                        padding: "9px 0 9px 12px",
+                        padding: "6px 0 6px 10px",
                         color: "inherit",
                         textDecoration: "none",
                       }}

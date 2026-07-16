@@ -55,7 +55,16 @@ router.patch("/videos/:videoId/visibility", authenticateUser, async (req, res) =
     res.json({ success: true, privacyStatus: nextStatus });
   } catch (error) {
     console.error("YouTube visibility update error:", error);
-    const message = error.response?.data?.error?.message || error.message || "Failed to update visibility";
+    const rawError = error.response?.data || error.errors || error.message || "";
+    const rawText = typeof rawError === "string" ? rawError : JSON.stringify(rawError);
+    if (/insufficient|scope|forbidden/i.test(rawText)) {
+      return res.status(403).json({
+        success: false,
+        action: "reconnect_youtube",
+        error: "Reconnect this YouTube account to allow visibility changes.",
+      });
+    }
+    const message = error.response?.data?.error?.message || error.errors?.[0]?.message || error.message || "Failed to update visibility";
     res.status(400).json({ success: false, error: message });
   }
 });

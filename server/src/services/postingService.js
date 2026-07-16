@@ -177,12 +177,23 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
             } catch (tokenErr) {
               console.warn(`⚠️ [postingService] Could not refresh YouTube token: ${tokenErr.message}. Using stored token.`);
             }
-            return postToYouTube(primaryVideoPath, resolveMentions(caption, 'youtube', ytTokens), ytTokens)
+            const isShort = (platformData?.youtube?.type === "short");
+            const visibility = platformData?.youtube?.visibility || "public";
+            return postToYouTube(primaryVideoPath, resolveMentions(caption, 'youtube', ytTokens), ytTokens, null, visibility, isShort)
               .then(async result => {
                 if (result.success && result.mediaId && coverImagePath && fs.existsSync(coverImagePath)) {
                   await setVideoThumbnail(result.mediaId, coverImagePath, ytTokens);
                 }
-                return { platform: account.channel, result };
+                return {
+                  platform: account.channel,
+                  result: {
+                    ...result,
+                    accountId: account.id,
+                    channelId: account.accountId || account.account_id,
+                    username: account.username,
+                    profilePicture: account.profilePicture || account.profile_picture,
+                  },
+                };
               });
           })()
         );

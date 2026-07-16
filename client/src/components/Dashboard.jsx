@@ -138,9 +138,20 @@ function getPlatformIcon(id) {
 }
 
 function getPostPreviewRatio(post) {
-  if (post.media_type === "image") return "4 / 5";
-  if (post.media_type === "video") return "9 / 16";
+  const savedRatio =
+    post.platform_data?.selected_aspect_ratio ||
+    post.platform_data?.selectedAspectRatio;
+  if (typeof savedRatio === "string" && savedRatio.includes(":")) {
+    return savedRatio.replace(":", " / ");
+  }
   if (Array.isArray(post.media_urls) && post.media_urls.length > 1) return "1 / 1";
+  if (post.media_type === "video") {
+    const isShort =
+      post.platform_data?.youtube?.type === "short" ||
+      String(post.platform_data?.selected_post_size_preset || "").includes("short");
+    return isShort ? "9 / 16" : "16 / 9";
+  }
+  if (post.media_type === "image") return "4 / 5";
   return "4 / 5";
 }
 
