@@ -1,6 +1,7 @@
-import React from "react";
-import { ChevronDown, ChevronUp, Hash } from "lucide-react";
+import React, { useState } from "react";
+import { ChevronDown, ChevronUp, Hash, Crop } from "lucide-react";
 import { PLATFORM_META } from "./composer/data/platforms.js";
+import ImageCropperModal from "./composer/components/ImageCropperModal";
 
 function PlatformCustomization({
   selectedChannels,
@@ -12,6 +13,32 @@ function PlatformCustomization({
   onYoutubeThumbnailChange,
   postType,
 }) {
+  const [isCropOpen, setIsCropOpen] = useState(false);
+  const thumbnailPreviewUrl = React.useMemo(() => {
+    if (!youtubeThumbnail) return "";
+    if (typeof youtubeThumbnail === "string") return youtubeThumbnail;
+    try {
+      return URL.createObjectURL(youtubeThumbnail);
+    } catch (e) {
+      console.error("Failed to create object URL for thumbnail:", e);
+      return "";
+    }
+  }, [youtubeThumbnail]);
+
+  // Clean up object URL when component unmounts
+  React.useEffect(() => {
+    return () => {
+      if (thumbnailPreviewUrl && thumbnailPreviewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(thumbnailPreviewUrl);
+      }
+    };
+  }, []);
+
+  const lockedAspectRatio = React.useMemo(() => {
+    const ytType = platformData.youtube?.type || "video";
+    return ytType === "short" ? "0.5625" : "1.777";
+  }, [platformData.youtube?.type]);
+
   if (selectedChannels.length === 0) return null;
 
   const hasPlatform = (platform) => selectedChannels.some(ch => String(ch || "").split(":")[0] === platform);
@@ -201,24 +228,12 @@ function PlatformCustomization({
                     <label className="block text-sm font-medium text-gray-700">
                       Custom Thumbnail
                     </label>
-                    {youtubeThumbnail && (
-                      <select
-                        value={platformData.youtube?.thumbnailCrop || "center"}
-                        onChange={(e) => handleChange("youtube", "thumbnailCrop", e.target.value)}
-                        className="px-2 py-1 border border-gray-200 rounded-lg text-xs font-semibold bg-white text-gray-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                        title="Thumbnail crop position"
-                      >
-                        <option value="center">Crop center</option>
-                        <option value="top">Crop top</option>
-                        <option value="bottom">Crop bottom</option>
-                      </select>
-                    )}
                   </div>
 
-                  {youtubeThumbnail ? (
+                   {youtubeThumbnail ? (
                     <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-200 group">
                       <img
-                        src={URL.createObjectURL(youtubeThumbnail)}
+                        src={thumbnailPreviewUrl}
                         alt="Thumbnail Preview"
                         className="w-full h-full object-cover"
                         style={{ objectPosition: platformData.youtube?.thumbnailCrop || "center" }}
@@ -226,10 +241,11 @@ function PlatformCustomization({
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                         <button
                           type="button"
-                          onClick={() => onYoutubeThumbnailChange(null)}
-                          className="px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-colors shadow-lg"
+                          onClick={() => setIsCropOpen(true)}
+                          className="px-3 py-1.5 bg-white text-gray-900 text-xs font-bold rounded-lg hover:bg-gray-50 transition-colors shadow-lg flex items-center gap-1.5"
                         >
-                          Remove
+                          <Crop size={12} className="text-indigo-500" />
+                          Crop
                         </button>
                         <label className="px-3 py-1.5 bg-white text-gray-900 text-xs font-bold rounded-lg hover:bg-gray-50 transition-colors shadow-lg cursor-pointer">
                           Change
@@ -240,7 +256,27 @@ function PlatformCustomization({
                             onChange={handleThumbnailChange}
                           />
                         </label>
+                        <button
+                          type="button"
+                          onClick={() => onYoutubeThumbnailChange(null)}
+                          className="px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-colors shadow-lg"
+                        >
+                          Remove
+                        </button>
                       </div>
+
+                      {isCropOpen && (
+                        <ImageCropperModal
+                          isOpen={isCropOpen}
+                          onClose={() => setIsCropOpen(false)}
+                          file={thumbnailPreviewUrl}
+                          lockedAspectRatio={lockedAspectRatio}
+                          onSave={(croppedFile) => {
+                            onYoutubeThumbnailChange(croppedFile);
+                            setIsCropOpen(false);
+                          }}
+                        />
+                      )}
                     </div>
                   ) : (
                     <label className="flex flex-col items-center justify-center w-full aspect-video rounded-lg border-2 border-dashed border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition-all cursor-pointer group">
