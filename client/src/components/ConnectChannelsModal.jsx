@@ -22,7 +22,7 @@ const platforms = [
   { id: "youtube",    name: "YouTube",          icon: "/icons/youtube-color-icon.svg",             type: "oauth" },
   { id: "threads",    name: "Threads",          icon: "/icons/threads-icon.svg",                   type: "oauth", allowMultiple: true },
   { id: "mastodon",   name: "Mastodon",         icon: "/icons/mastodon-round-icon.svg",            type: "modal-mastodon" },
-  { id: "bluesky",    name: "Bluesky",          icon: "/icons/bluesky-circle-color-icon.svg",      type: "modal-bluesky" },
+  { id: "bluesky",    name: "Bluesky",          icon: "/icons/bluesky-circle-color-icon.svg",      type: "modal-bluesky", allowMultiple: true },
 ];
 
 export default function ConnectChannelsModal() {

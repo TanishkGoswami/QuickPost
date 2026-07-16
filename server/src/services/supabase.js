@@ -52,6 +52,7 @@ function getProfilePicture(row) {
     pd.profilePicture ||
     pd.profileImage ||
     pd.avatar_url ||
+    pd.avatar ||
     pd.profile_image_url ||
     pd.profileImageUrl ||
     null

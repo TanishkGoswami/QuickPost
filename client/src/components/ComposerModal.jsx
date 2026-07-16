@@ -1361,6 +1361,40 @@ function ComposerModal({
     });
   };
 
+  const cropYouTubeThumbnail = (file, position = "center") => {
+    if (!file?.type?.startsWith("image/")) return Promise.resolve(file);
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const targetRatio = 16 / 9;
+        const sourceRatio = img.width / img.height;
+        let sx = 0;
+        let sy = 0;
+        let sw = img.width;
+        let sh = img.height;
+
+        if (sourceRatio > targetRatio) {
+          sw = img.height * targetRatio;
+          sx = (img.width - sw) / 2;
+        } else if (sourceRatio < targetRatio) {
+          sh = img.width / targetRatio;
+          sy = position === "top" ? 0 : position === "bottom" ? img.height - sh : (img.height - sh) / 2;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = 1280;
+        canvas.height = 720;
+        canvas.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, 1280, 720);
+        canvas.toBlob((blob) => {
+          URL.revokeObjectURL(img.src);
+          resolve(blob ? new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }) : file);
+        }, "image/jpeg", 0.92);
+      };
+      img.onerror = () => resolve(file);
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const handleGlobalDrop = async (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1787,7 +1821,10 @@ function ComposerModal({
       });
 
       if (youtubeThumbnail) {
-        formData.append("youtubeThumbnail", youtubeThumbnail);
+        formData.append(
+          "youtubeThumbnail",
+          await cropYouTubeThumbnail(youtubeThumbnail, publishPlatformData.youtube?.thumbnailCrop),
+        );
       }
 
       formData.append("selectedAspectRatio", selectedRatio || "1:1");

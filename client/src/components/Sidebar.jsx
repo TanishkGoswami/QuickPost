@@ -508,6 +508,7 @@ function Sidebar() {
         />
       ),
       onConnect: () => setShowBlueskyModal(true),
+      allowMultiple: true,
     },
     {
       id: "googleBusiness",

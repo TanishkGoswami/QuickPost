@@ -179,7 +179,8 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
             }
             const isShort = (platformData?.youtube?.type === "short");
             const visibility = platformData?.youtube?.visibility || "public";
-            return postToYouTube(primaryVideoPath, resolveMentions(caption, 'youtube', ytTokens), ytTokens, null, visibility, isShort)
+            const description = platformData?.youtube?.description || "";
+            return postToYouTube(primaryVideoPath, resolveMentions(caption, 'youtube', ytTokens), ytTokens, null, visibility, isShort, description)
               .then(async result => {
                 if (result.success && result.mediaId && coverImagePath && fs.existsSync(coverImagePath)) {
                   await setVideoThumbnail(result.mediaId, coverImagePath, ytTokens);

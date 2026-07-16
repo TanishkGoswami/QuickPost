@@ -784,6 +784,7 @@ async function processBroadcastJob({
           updateJob(jobId, { step: "Uploading video to YouTube…" });
           const visibility = platData?.youtube?.visibility || "public";
           const isShort = (platData?.youtube?.type === "short");
+          const description = platData?.youtube?.description || "";
           const result = await postToYouTube(primaryVideoPath, resolvedCaption, ytTokens, (pct) => {
             const base = 30 + Math.floor((completedChannels / selectedChannelCount) * 55);
             const slice = Math.floor((1 / selectedChannelCount) * 55);
@@ -792,7 +793,7 @@ async function processBroadcastJob({
               progress: Math.min(currentPct, 85),
               step: `Uploading video to YouTube (${pct}%)…`,
             });
-          }, visibility, isShort);
+          }, visibility, isShort, description);
 
           if (result.success && result.videoId && youtubeThumbnailPath) {
             const thumbResult = await setVideoThumbnail(

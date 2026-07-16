@@ -134,6 +134,7 @@ class BlueskyAuth {
             bluesky_did: sessionData.did,
             bluesky_handle: sessionData.handle,
             username: sessionData.handle,
+            profile_data: sessionData.profile || null,
             updated_at: new Date().toISOString()
           },
           { onConflict: 'user_id,provider,account_id' }
