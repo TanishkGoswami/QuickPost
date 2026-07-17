@@ -142,7 +142,23 @@ Deno.serve(async (req) => {
       throw new Error(razorpayData.error?.description || "Failed to create Razorpay payment link");
     }
 
-    // 4. Store payment link in DB
+    // 4. Ensure user exists in public.users to satisfy the foreign key constraint
+    // in social_payments (which references public.users.id)
+    const { error: userSyncError } = await supabase
+      .from("users")
+      .upsert({
+        id: userId,
+        email: customerEmail,
+        name: customerName || "Customer",
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "id" });
+
+    if (userSyncError) {
+      console.error("[create-payment-link] Critical: Failed to pre-sync user to public.users:", userSyncError);
+      throw new Error("Failed to initialize checkout session. Please try again.");
+    }
+
+    // 5. Store payment link in DB
     const { error: dbError } = await supabase.from("social_payments").insert({
       user_id: userId,
       razorpay_payment_link_id: razorpayData.id,

@@ -14,14 +14,16 @@ function jsonRes(status: number, body: Record<string, unknown>): Response {
 }
 
 // Plans that include Social Pilot access mapping dictionary
-const HUB_PLAN_MAPPING: Record<string, "free" | "pro" | "enterprise"> = {
+const HUB_PLAN_MAPPING: Record<string, "free" | "slite" | "sgrowth"> = {
   "free_trial": "free",
-  "social_pilot_starter": "pro",
-  "social_pilot_quarterly": "pro",
-  "social_pilot_half_yearly": "pro",
-  "all_in_one_bundle_monthly": "pro",
-  "all_in_one_bundle_quarterly": "pro",
-  "all_in_one_bundle_half_yearly": "pro"
+  "social_pilot_starter": "slite",
+  "social_pilot_growth": "sgrowth",
+  "social_pilot_pro": "sgrowth",
+  "social_pilot_quarterly": "slite",
+  "social_pilot_half_yearly": "slite",
+  "all_in_one_bundle_monthly": "sgrowth",
+  "all_in_one_bundle_quarterly": "sgrowth",
+  "all_in_one_bundle_half_yearly": "sgrowth"
 };
 
 Deno.serve(async (req: Request) => {
@@ -71,9 +73,9 @@ Deno.serve(async (req: Request) => {
     const rawPlanId = plan_id ? String(plan_id).toLowerCase().trim() : "";
     const mappedPlan = HUB_PLAN_MAPPING[rawPlanId] || "free";
     
-    // Normalize status. Require exact case-insensitive match for "active".
+    // Normalize status.
     const rawStatus = subscription_status ? String(subscription_status).trim().toLowerCase() : "";
-    const isActive = rawStatus === "active";
+    const isActive = ["active", "created", "authenticated", "trialing"].includes(rawStatus);
 
     // 1. Fetch existing subscription for expires_at fallback
     const { data: existingSub } = await supabase
@@ -82,12 +84,10 @@ Deno.serve(async (req: Request) => {
       .eq("email", email)
       .maybeSingle();
 
-    // Map storedPlan name: Free, Pro, or Enterprise (requires explicit active status check)
+    // Map storedPlan name for display (requires explicit active status check)
     let storedPlan = "Free";
-    if (mappedPlan === "pro" && isActive) {
-      storedPlan = plan_label ? String(plan_label).trim() : "Pro";
-    } else if (mappedPlan === "enterprise" && isActive) {
-      storedPlan = plan_label ? String(plan_label).trim() : "Enterprise";
+    if (mappedPlan !== "free" && isActive) {
+      storedPlan = plan_label ? String(plan_label).trim() : mappedPlan;
     }
 
     // null expires_at in payload must not accidentally erase existing valid non-null expires_at in DB

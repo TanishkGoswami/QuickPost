@@ -54,21 +54,21 @@ describe('subscription validity', () => {
     ).toBe(true);
   });
 
-  it('selects Enterprise over Pro and Free', () => {
+  it('selects SPgrowth over SPstarter and Free', () => {
     const selected = selectBestSubscription(
       [
         { plan_id: 'free', status: 'active' },
-        { plan_id: 'pro', status: 'active' },
-        { plan_id: 'enterprise', status: 'active' },
+        { plan_id: 'slite', status: 'active' },
+        { plan_id: 'sgrowth', status: 'active' },
       ],
       NOW,
     );
-    expect(selected.plan_id).toBe('enterprise');
+    expect(selected.plan_id).toBe('sgrowth');
   });
 
   it('returns null when no subscription is usable', () => {
     expect(
-      selectBestSubscription([{ plan_id: 'pro', status: 'expired' }], NOW),
+      selectBestSubscription([{ plan_id: 'slite', status: 'expired' }], NOW),
     ).toBeNull();
   });
 });
