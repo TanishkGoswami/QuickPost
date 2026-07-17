@@ -17,11 +17,15 @@ import {
   RefreshCw,
   Zap,
   CalendarClock,
+  LayoutGrid,
+  List
 } from "lucide-react";
 import apiClient from "../utils/apiClient";
 import ComposerModal from "../components/ComposerModal";
+import CalendarView from "../components/CalendarView";
 import { Skeleton } from "boneyard-js/react";
 import { useDialog } from "../context/DialogContext";
+import { useAuth } from "../context/AuthContext";
 
 // ─── Platform icon helper ────────────────────────────────────────────────────
 function getPlatformIcon(id) {
@@ -459,12 +463,26 @@ function groupByDate(posts) {
 
 // ─── Main ScheduledQueue Page ─────────────────────────────────────────────────
 export default function ScheduledQueue() {
+  const { connectedAccounts } = useAuth();
   const [posts, setPosts] = useState([]);
   const [stats, setStats] = useState({ pending: 0 });
   const [loading, setLoading] = useState(true);
   const [composerOpen, setComposerOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
   const [refreshing, setRefreshing] = useState(false);
+  
+  // Persistent toggle state
+  const [viewMode, setViewMode] = useState(() => {
+    return localStorage.getItem("quickpost_queue_view") || "list";
+  });
+  const [prefillDate, setPrefillDate] = useState("");
+  const [prefillCaption, setPrefillCaption] = useState("");
+  const [prefillMediaUrls, setPrefillMediaUrls] = useState([]);
+
+  const handleViewChange = (mode) => {
+    setViewMode(mode);
+    localStorage.setItem("quickpost_queue_view", mode);
+  };
 
   const fetchQueue = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -502,6 +520,7 @@ export default function ScheduledQueue() {
   const FILTERS = [
     { id: "all", label: "All" },
     { id: "scheduled", label: "Scheduled" },
+    { id: "sent", label: "Published" },
     { id: "failed", label: "Failed" },
     { id: "cancelled", label: "Cancelled" },
   ];
@@ -560,6 +579,32 @@ export default function ScheduledQueue() {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {/* Segmented View Toggle */}
+          <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200">
+            <button
+              onClick={() => handleViewChange("grid")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                viewMode === "grid"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              Grid
+            </button>
+            <button
+              onClick={() => handleViewChange("list")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                viewMode === "list"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <List className="w-3.5 h-3.5" />
+              List
+            </button>
+          </div>
+
           <button
             onClick={() => fetchQueue(true)}
             disabled={refreshing}
@@ -713,7 +758,24 @@ export default function ScheduledQueue() {
             </div>
           }
         >
-          {filtered.length === 0 ? (
+          {viewMode === "grid" ? (
+            <CalendarView
+              posts={filtered}
+              connectedAccounts={connectedAccounts}
+              onRefresh={(silent) => fetchQueue(silent)}
+              onCancel={handleCancel}
+              onAddPost={(date, options = {}) => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, "0");
+                const d = String(date.getDate()).padStart(2, "0");
+                const localDateStr = `${y}-${m}-${d}`;
+                setPrefillDate(`${localDateStr}T09:00`);
+                if (options.caption) setPrefillCaption(options.caption);
+                if (options.mediaUrls) setPrefillMediaUrls(options.mediaUrls);
+                setComposerOpen(true);
+              }}
+            />
+          ) : filtered.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -781,9 +843,20 @@ export default function ScheduledQueue() {
 
       <ComposerModal
         isOpen={composerOpen}
-        onClose={() => setComposerOpen(false)}
+        initialScheduledAt={prefillDate}
+        initialCaption={prefillCaption}
+        initialMediaUrls={prefillMediaUrls}
+        onClose={() => {
+          setComposerOpen(false);
+          setPrefillDate("");
+          setPrefillCaption("");
+          setPrefillMediaUrls([]);
+        }}
         onPostCreated={() => {
           setComposerOpen(false);
+          setPrefillDate("");
+          setPrefillCaption("");
+          setPrefillMediaUrls([]);
           fetchQueue(true);
         }}
       />
