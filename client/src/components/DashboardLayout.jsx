@@ -115,8 +115,8 @@ function DashboardShellSkeleton({ isDesktop }) {
               {isDesktop && <SkeletonBlock style={{ width: 128, height: 42 }} />}
             </div>
             <div style={{ display: "flex", gap: 28, marginTop: 38 }}>
-              {[92, 70, 74, 74].map((width) => (
-                <SkeletonBlock key={width} style={{ width, height: 14 }} />
+              {[92, 70, 74, 74].map((width, index) => (
+                <SkeletonBlock key={index} style={{ width, height: 14 }} />
               ))}
             </div>
           </div>
@@ -290,26 +290,27 @@ const DashboardLayout = () => {
               top: 0,
               right: 0,
               left: isDesktop && showDashboardChrome ? 240 : 0,
-              height: bannerHeight,
+              minHeight: 52,
               zIndex: 40,
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               gap: 16,
-              padding: isDesktop ? "0 24px" : "0 14px",
-              background: "#1f1e1c",
-              color: "#fff",
-              borderBottom: "1px solid rgba(255,255,255,0.10)",
+              padding: isDesktop ? "8px 24px" : "8px 14px",
+              background: "#ffffff",
+              color: "var(--ink, #111)",
+              borderBottom: "1px solid var(--dust, #d3cec6)",
               transition: "left 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+              boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: "1 1 auto" }}>
               <span
                 style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 7,
-                  background: "rgba(255, 86, 0, 0.14)",
+                  width: 28,
+                  height: 28,
+                  borderRadius: 8,
+                  background: "rgba(255, 86, 0, 0.12)",
                   color: "var(--arc, #ff5600)",
                   display: "inline-flex",
                   alignItems: "center",
@@ -317,77 +318,113 @@ const DashboardLayout = () => {
                   flexShrink: 0,
                 }}
               >
-                <CircleDollarSign size={16} />
+                <CircleDollarSign size={16} strokeWidth={2.5} />
               </span>
               <strong
                 style={{
                   fontSize: 14,
                   fontWeight: 650,
-                  lineHeight: 1.2,
-                  whiteSpace: isDesktop ? "nowrap" : "normal",
+                  lineHeight: 1.4,
+                  whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
+                  color: "var(--ink, #111)",
                 }}
               >
-                Free plan limits are active. Upgrade when you need more channels and automations.
+                Free plan limits are active. <span style={{ color: "rgba(17, 17, 17, 0.6)", fontWeight: 500, display: isDesktop ? "inline" : "none" }}>Upgrade when you need more channels and automations.</span>
               </strong>
-              {isDesktop && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => navigate("/pricing")}
-                    style={{
-                      height: 34,
-                      padding: "0 18px",
-                      borderRadius: 7,
-                      border: "1px solid var(--arc, #ff5600)",
-                      background: "var(--arc, #ff5600)",
-                      color: "white",
-                      fontSize: 13,
-                      fontWeight: 750,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Upgrade plan
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => navigate("/pricing")}
-                    style={{
-                      border: "none",
-                      background: "transparent",
-                      color: "rgba(255,255,255,0.76)",
-                      fontSize: 13,
-                      fontWeight: 650,
-                      cursor: "pointer",
-                      padding: 0,
-                    }}
-                  >
-                    View pricing
-                  </button>
-                </>
-              )}
             </div>
-            <button
-              type="button"
-              aria-label="Dismiss upgrade banner"
-              onClick={() => setHideUpgradeBanner(true)}
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
-                border: "none",
-                background: "transparent",
-                color: "rgba(255,255,255,0.72)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              <X size={18} />
-            </button>
+
+            <div style={{ display: "flex", alignItems: "center", gap: isDesktop ? 16 : 10, flexShrink: 0 }}>
+              <button
+                type="button"
+                onClick={() => navigate("/pricing")}
+                style={{
+                  height: 32,
+                  padding: "0 16px",
+                  borderRadius: 6,
+                  border: "none",
+                  background: "var(--arc, #ff5600)",
+                  color: "#ffffff",
+                  fontSize: 13,
+                  fontWeight: 650,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                  boxShadow: "0 1px 3px rgba(255, 86, 0, 0.2)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-1px)";
+                  e.currentTarget.style.boxShadow = "0 3px 6px rgba(255, 86, 0, 0.25)";
+                  e.currentTarget.style.filter = "brightness(1.05)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 1px 3px rgba(255, 86, 0, 0.2)";
+                  e.currentTarget.style.filter = "brightness(1)";
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 1px 2px rgba(255, 86, 0, 0.2)";
+                }}
+              >
+                Upgrade plan
+              </button>
+              
+              {isDesktop && (
+                <button
+                  type="button"
+                  onClick={() => navigate("/pricing")}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    color: "rgba(17, 17, 17, 0.6)",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    padding: "0 4px",
+                    whiteSpace: "nowrap",
+                    transition: "color 0.2s ease",
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = "var(--ink, #111)"}
+                  onMouseLeave={(e) => e.currentTarget.style.color = "rgba(17, 17, 17, 0.6)"}
+                >
+                  View pricing
+                </button>
+              )}
+              
+              <div style={{ width: 1, height: 20, background: "var(--dust, #d3cec6)", marginLeft: 2, marginRight: 2 }} />
+
+              <button
+                type="button"
+                aria-label="Dismiss upgrade banner"
+                onClick={() => setHideUpgradeBanner(true)}
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  border: "none",
+                  background: "transparent",
+                  color: "rgba(17, 17, 17, 0.4)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "var(--ink, #111)";
+                  e.currentTarget.style.background = "rgba(17, 17, 17, 0.06)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "rgba(17, 17, 17, 0.4)";
+                  e.currentTarget.style.background = "transparent";
+                }}
+              >
+                <X size={16} strokeWidth={2.5} />
+              </button>
+            </div>
           </div>
         )}
 

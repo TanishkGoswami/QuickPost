@@ -1,7 +1,7 @@
 export const PLAN_IDS = Object.freeze({
   FREE: 'free',
-  PRO: 'pro',
-  ENTERPRISE: 'enterprise',
+  SLITE: 'slite',
+  SGROWTH: 'sgrowth',
 });
 
 export const PLANS = Object.freeze({
@@ -29,9 +29,9 @@ export const PLANS = Object.freeze({
       contacts: 100,
     }),
   }),
-  pro: Object.freeze({
-    id: 'pro',
-    name: 'Pro',
+  slite: Object.freeze({
+    id: 'slite',
+    name: 'Starter',
     prices: Object.freeze({ month: 999, year: 9588 }),
     features: Object.freeze({
       publishing: true,
@@ -53,9 +53,9 @@ export const PLANS = Object.freeze({
       contacts: 1000000,
     }),
   }),
-  enterprise: Object.freeze({
-    id: 'enterprise',
-    name: 'Enterprise',
+  sgrowth: Object.freeze({
+    id: 'sgrowth',
+    name: 'Growth',
     prices: Object.freeze({ month: 2999, year: 29988 }),
     features: Object.freeze({
       publishing: true,
