@@ -28,6 +28,8 @@ import {
   RectangleVertical,
   Lock,
   Upload,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { Reorder } from "framer-motion";
 
@@ -87,7 +89,13 @@ const SUGGESTED_HASHTAGS = [
   "#branding",
 ];
 
-const ClockView = memo(function ClockView({ value, onChange, minTime }) {
+const INSTAGRAM_POST_TYPE_PRESETS = {
+  post: "ig-post-square",
+  story: "ig-story",
+  reel: "ig-reel",
+};
+
+const ClockView = memo(function ClockView({ value, onChange, minTime, onClose }) {
   const [mode, setMode] = useState("hours"); // 'hours' or 'minutes'
   const initialH = parseInt(value.split(":")[0]) || 0;
   const initialM = parseInt(value.split(":")[1]) || 0;
@@ -574,10 +582,12 @@ const ClockView = memo(function ClockView({ value, onChange, minTime }) {
         onClick={(e) => {
           if (isCurrentSelectionPast) return;
           e.stopPropagation();
-          onChange(
-            `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`,
-          );
-          window.dispatchEvent(new MouseEvent("mousedown"));
+          onChange(to24h(hour, minute, meridiem));
+          if (typeof onClose === "function") {
+            onClose();
+          } else {
+            window.dispatchEvent(new MouseEvent("mousedown"));
+          }
         }}
         style={{
           width: "100%",
@@ -769,7 +779,7 @@ const CalendarView = memo(function CalendarView({ value, onChange }) {
               onMouseLeave={(e) => {
                 if (!isSelected) {
                   e.target.style.background = isToday
-                    ? "rgba(255,86,0,0.08)"
+                    ? "rgba(243,115,56,0.08)"
                     : "transparent";
                 }
               }}
@@ -871,7 +881,7 @@ const CustomSelect = memo(function CustomSelect({
           minWidth: isTime ? 130 : 160,
           transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
           boxShadow: open
-            ? "0 4px 12px rgba(255,86,0,0.08)"
+            ? "0 4px 12px rgba(243,115,56,0.08)"
             : "0 2px 4px rgba(0,0,0,0.02)",
         }}
         onMouseEnter={(e) => {
@@ -971,6 +981,7 @@ const CustomSelect = memo(function CustomSelect({
                 onChange={(v) => {
                   onChange(v);
                 }}
+                onClose={() => setOpen(false)}
               />
             ) : (
               <div
@@ -1002,7 +1013,7 @@ const CustomSelect = memo(function CustomSelect({
                         textAlign: "left",
                         background:
                           value === val
-                            ? "rgba(255,86,0,0.08)"
+                            ? "rgba(243,115,56,0.08)"
                             : "transparent",
                         border: "none",
                         borderRadius: "8px",
@@ -1091,8 +1102,8 @@ const SmartWarnings = memo(function SmartWarnings({
           style={{
             padding: "10px 14px",
             borderRadius: 12,
-            background: "rgba(255,86,0,0.06)",
-            border: "1px solid rgba(255,86,0,0.15)",
+            background: "rgba(243,115,56,0.06)",
+            border: "1px solid rgba(243,115,56,0.15)",
             display: "flex",
             alignItems: "center",
             gap: 10,
@@ -1237,11 +1248,21 @@ function ComposerModal({
   const [selectedChannels, setSelectedChannels] = useState([]);
   const hasInstagram = selectedChannels.some(c => c === "instagram" || c.startsWith("instagram:"));
   const getBasePlatform = (c) => c?.split(':')[0] || c;
+  const normalizeSelectedChannels = (channels) => {
+    const specificProviders = new Set(
+      channels
+        .map((channel) => String(channel))
+        .filter((channel) => channel.includes(":"))
+        .map((channel) => channel.split(":")[0]),
+    );
+    return [...new Set(channels)].filter((channel) => !specificProviders.has(String(channel)));
+  };
   const [caption, setCaption] = useState("");
   const [mediaFiles, setMediaFiles] = useState([]);
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [postType, setPostType] = useState("post");
+  const postTypeRef = useRef("post");
   const [quickSuggestions, setQuickSuggestions] = useState(QUICK_SUGGESTIONS);
   const [suggestedHashtags, setSuggestedHashtags] = useState(SUGGESTED_HASHTAGS);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -1265,6 +1286,32 @@ function ComposerModal({
     reddit: { subreddit: "", title: "", flairId: "" },
     mastodon: { type: "post" },
   });
+  const effectivePostType = hasInstagram
+    ? platformData.instagram?.type || postType
+    : postType;
+  const isInstagramStoryOnly =
+    hasInstagram &&
+    effectivePostType === "story" &&
+    selectedChannels.length > 0 &&
+    selectedChannels.every((channel) => getBasePlatform(channel) === "instagram");
+  const updateInstagramData = useCallback((field, value) => {
+    if (field === "type") {
+      postTypeRef.current = value;
+      setPostType(value);
+      setActivePreviewPlatform("instagram");
+      setPlatformPresets((current) => ({
+        ...current,
+        instagram: INSTAGRAM_POST_TYPE_PRESETS[value] || current.instagram,
+      }));
+    }
+    setPlatformData((current) => ({
+      ...current,
+      instagram: {
+        ...current.instagram,
+        [field]: value,
+      },
+    }));
+  }, []);
   const [autoDMConfig, setAutoDMConfig] = useState(() => ({
     ...defaultComposerAutoDMConfig,
     responseFlow: {
@@ -1273,6 +1320,14 @@ function ComposerModal({
     },
   }));
   const [youtubeThumbnail, setYoutubeThumbnail] = useState(null);
+
+  useEffect(() => {
+    const ytType = platformData.youtube?.type || "video";
+    setPlatformPresets((prev) => ({
+      ...prev,
+      youtube: ytType === "short" ? "yt-shorts" : "yt-video",
+    }));
+  }, [platformData.youtube?.type]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -1313,6 +1368,40 @@ function ComposerModal({
       } else {
         resolve(null);
       }
+    });
+  };
+
+  const cropYouTubeThumbnail = (file, position = "center") => {
+    if (!file?.type?.startsWith("image/")) return Promise.resolve(file);
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const targetRatio = 16 / 9;
+        const sourceRatio = img.width / img.height;
+        let sx = 0;
+        let sy = 0;
+        let sw = img.width;
+        let sh = img.height;
+
+        if (sourceRatio > targetRatio) {
+          sw = img.height * targetRatio;
+          sx = (img.width - sw) / 2;
+        } else if (sourceRatio < targetRatio) {
+          sh = img.width / targetRatio;
+          sy = position === "top" ? 0 : position === "bottom" ? img.height - sh : (img.height - sh) / 2;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = 1280;
+        canvas.height = 720;
+        canvas.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, 1280, 720);
+        canvas.toBlob((blob) => {
+          URL.revokeObjectURL(img.src);
+          resolve(blob ? new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }) : file);
+        }, "image/jpeg", 0.92);
+      };
+      img.onerror = () => resolve(file);
+      img.src = URL.createObjectURL(file);
     });
   };
 
@@ -1360,6 +1449,7 @@ function ComposerModal({
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [mobileActiveTab, setMobileActiveTab] = useState("compose");
   const [autoFixMsg, setAutoFixMsg] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const isMobile = windowWidth < 768;
 
   useEffect(() => {
@@ -1374,7 +1464,7 @@ function ComposerModal({
     mediaFiles,
     platformData,
     youtubeThumbnail,
-    postType,
+    postType: effectivePostType,
     caption,
     scheduledAt,
     isScheduled,
@@ -1382,14 +1472,15 @@ function ComposerModal({
   });
 
   /* ── Smart size engine ── */
+  const activePreviewBasePlatform = getBasePlatform(activePreviewPlatform);
   const { smartSizes, availablePresets, selectedRatio } = useSmartSizes({
     selectedChannels,
-    activePlatform: activePreviewPlatform,
-    selectedSizePreset: platformPresets[activePreviewPlatform],
+    activePlatform: activePreviewBasePlatform,
+    selectedSizePreset: platformPresets[activePreviewBasePlatform],
     setSelectedSizePreset: (val) =>
       setPlatformPresets((prev) => ({
         ...prev,
-        [activePreviewPlatform]: val,
+        [activePreviewBasePlatform]: val,
       })),
     onAutoFixed: (msg) => {
       setAutoFixMsg(msg);
@@ -1400,17 +1491,20 @@ function ComposerModal({
   /* ── Available post types (intersection) ── */
   const availablePostTypes = useMemo(() => {
     if (selectedChannels.length === 0) return ["post", "story", "reel"];
-    let common = PLATFORM_POST_TYPES[selectedChannels[0]] || ["post"];
+    let common = PLATFORM_POST_TYPES[getBasePlatform(selectedChannels[0])] || ["post"];
     for (let i = 1; i < selectedChannels.length; i++) {
-      const types = PLATFORM_POST_TYPES[selectedChannels[i]] || ["post"];
+      const types = PLATFORM_POST_TYPES[getBasePlatform(selectedChannels[i])] || ["post"];
       common = common.filter((t) => types.includes(t));
     }
     return common.length > 0 ? common : ["post"];
   }, [JSON.stringify(selectedChannels)]);
 
   useEffect(() => {
-    if (!availablePostTypes.includes(postType))
-      setPostType(availablePostTypes[0] || "post");
+    if (!availablePostTypes.includes(postType)) {
+      const nextType = availablePostTypes[0] || "post";
+      postTypeRef.current = nextType;
+      setPostType(nextType);
+    }
   }, [availablePostTypes, postType]);
 
   /* ── Platform preview sync ── */
@@ -1419,23 +1513,35 @@ function ComposerModal({
       setActivePreviewPlatform("instagram");
       return;
     }
-    if (!selectedChannels.some(c => getBasePlatform(c) === activePreviewPlatform))
-      setActivePreviewPlatform(getBasePlatform(selectedChannels[0]));
+    if (!selectedChannels.includes(activePreviewPlatform))
+      setActivePreviewPlatform(selectedChannels[0]);
   }, [JSON.stringify(selectedChannels), activePreviewPlatform]);
 
   useEffect(() => {
-    if (!hasInstagram && autoDMConfig.enabled) {
+    if ((!hasInstagram || effectivePostType === "story") && autoDMConfig.enabled) {
       setAutoDMConfig((current) => ({ ...current, enabled: false }));
     }
-  }, [JSON.stringify(selectedChannels), autoDMConfig.enabled]);
+  }, [JSON.stringify(selectedChannels), autoDMConfig.enabled, hasInstagram, effectivePostType]);
 
   /* ── Auto-select connected channels on open ── */
   useEffect(() => {
     if (isOpen && selectedChannels.length === 0) {
-      const connected = Object.keys(connectedAccounts).filter(
-        (k) => connectedAccounts[k]?.connected && PLATFORM_META[k],
-      );
-      setSelectedChannels(connected);
+      const instagramChannels = (connectedAccounts.instagramAccounts || [])
+        .map((account) => `instagram:${account.id}`);
+      const accountChannels = Object.keys(connectedAccounts)
+        .filter((key) => key.endsWith("Accounts") && key !== "instagramAccounts")
+        .flatMap((key) => {
+          const provider = key.replace(/Accounts$/, "");
+          return (connectedAccounts[key] || []).map((account) => `${provider}:${account.id}`);
+        });
+      const connected = [
+        ...instagramChannels,
+        ...accountChannels,
+        ...Object.keys(connectedAccounts).filter(
+          (key) => key !== "instagram" && connectedAccounts[key]?.connected && PLATFORM_META[key] && !(connectedAccounts[`${key}Accounts`]?.length > 0),
+        ),
+      ];
+      setSelectedChannels(normalizeSelectedChannels(connected));
     }
   }, [isOpen]);
 
@@ -1564,8 +1670,14 @@ function ComposerModal({
   useEffect(() => {
     if (!isScheduled) return;
     const dv = datePart || minDate;
-    const opts = buildTimeOpts(dv);
-    const nt = timePart && opts.includes(timePart) ? timePart : opts[0] || "";
+    let nt = timePart;
+    
+    if (!nt) {
+      nt = buildTimeOpts(dv)[0] || "";
+    } else if (dv === minDate && nt < minTime) {
+      nt = minTime;
+    }
+
     if (!nt) return;
     const nv = `${dv}T${nt}`;
     if (scheduledAt !== nv) setScheduledAt(nv);
@@ -1574,13 +1686,13 @@ function ComposerModal({
   /* ── Handlers ── */
   const handleChannelToggle = useCallback((id) => {
     setSelectedChannels((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
+      normalizeSelectedChannels(prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]),
     );
     setError(null);
   }, []);
 
   const handleBulkSelect = useCallback((ids) => {
-    setSelectedChannels(ids);
+    setSelectedChannels(normalizeSelectedChannels(ids));
     setError(null);
   }, []);
 
@@ -1590,7 +1702,7 @@ function ComposerModal({
       setError("Please select at least one platform");
       return false;
     }
-    if (!caption.trim()) {
+    if (!isInstagramStoryOnly && !caption.trim()) {
       setError("Please add a caption");
       return false;
     }
@@ -1602,6 +1714,14 @@ function ComposerModal({
     const hasImg = mediaFiles.some((m) => m.file?.type?.startsWith("image/"));
     const hasVid = mediaFiles.some((m) => m.file?.type?.startsWith("video/"));
 
+    if (effectivePostType === "reel" && !hasVid) {
+      setError("Reels require a video file.");
+      return false;
+    }
+    if (effectivePostType === "story" && mediaFiles.length > 1) {
+      setError("Stories support one image or video at a time.");
+      return false;
+    }
     if (selectedChannels.includes("youtube") && hasImg && !hasVid) {
       setError(
         "YouTube only supports video — please upload a video or deselect YouTube.",
@@ -1639,7 +1759,7 @@ function ComposerModal({
         return false;
       }
     }
-    if (hasInstagram && autoDMConfig.enabled) {
+    if (hasInstagram && effectivePostType !== "story" && autoDMConfig.enabled) {
       if (!autoDMConfig.keywords?.length) {
         setError("Add at least one Auto DM keyword or turn Auto DM off.");
         return false;
@@ -1658,6 +1778,9 @@ function ComposerModal({
     isScheduled,
     scheduledAt,
     autoDMConfig,
+    hasInstagram,
+    effectivePostType,
+    isInstagramStoryOnly,
   ]);
 
   const handleSubmit = async () => {
@@ -1668,14 +1791,33 @@ function ComposerModal({
     try {
       // 1. Prep data
       const formData = new FormData();
-      formData.append("caption", caption);
-      formData.append("selectedChannels", JSON.stringify(selectedChannels));
-      formData.append("postType", postType);
-      formData.append("platformData", JSON.stringify(platformData));
-      formData.append("platformPresets", JSON.stringify(platformPresets));
+      formData.append("caption", isInstagramStoryOnly ? "" : caption);
+      const publishChannels = normalizeSelectedChannels(selectedChannels);
+      const publishPostType = hasInstagram ? postTypeRef.current : effectivePostType;
+      const publishPlatformData = hasInstagram
+        ? {
+            ...platformData,
+            instagram: {
+              ...platformData.instagram,
+              type: publishPostType,
+            },
+          }
+        : platformData;
+      formData.append("selectedChannels", JSON.stringify(publishChannels));
+      formData.append("postType", publishPostType);
+      formData.append("platformData", JSON.stringify(publishPlatformData));
+      
+      formData.append("platformPresets", JSON.stringify(
+        hasInstagram && publishPostType !== 'post'
+          ? {
+              ...platformPresets,
+              instagram: INSTAGRAM_POST_TYPE_PRESETS[publishPostType] || platformPresets.instagram,
+            }
+          : platformPresets
+      ));
       formData.append("userTimezone", userTimezone);
       formData.append("isScheduled", isScheduled ? "true" : "false");
-      if (hasInstagram && autoDMConfig.enabled) {
+      if (hasInstagram && publishPostType !== "story" && autoDMConfig.enabled) {
         formData.append("autoDMConfig", JSON.stringify(autoDMConfig));
       }
 
@@ -1690,13 +1832,16 @@ function ComposerModal({
       });
 
       if (youtubeThumbnail) {
-        formData.append("youtubeThumbnail", youtubeThumbnail);
+        formData.append(
+          "youtubeThumbnail",
+          await cropYouTubeThumbnail(youtubeThumbnail, publishPlatformData.youtube?.thumbnailCrop),
+        );
       }
 
       formData.append("selectedAspectRatio", selectedRatio || "1:1");
       formData.append(
         "selectedPostSizePreset",
-        platformPresets[activePreviewPlatform] || ""
+        platformPresets[activePreviewBasePlatform] || ""
       );
 
       // 2. Start broadcast via API
@@ -1716,13 +1861,14 @@ function ComposerModal({
 
       // 3. Add to background manager
       const firstMedia = mediaFiles[0];
-      const detectedMediaType = firstMedia?.file?.type?.startsWith("video/")
+      const isGif = firstMedia?.file?.type === "image/gif";
+      const detectedMediaType = (firstMedia?.file?.type?.startsWith("video/") || isGif)
         ? "video"
         : "image";
 
       addJob(res.data.jobId, {
         caption,
-        channels: selectedChannels,
+        channels: publishChannels,
         fileCount: mediaFiles.length,
         mediaType: detectedMediaType,
         previewUrl:
@@ -1845,6 +1991,8 @@ function ComposerModal({
   if (!isOpen) return null;
 
   const publishDisabled = loading || hasBlockingError;
+  const shellFullscreen = isFullscreen || isMobile;
+  const previewWidth = isFullscreen ? 360 : 300;
 
   const MOBILE_TABS = [
     { id: "compose", label: "Compose" },
@@ -1859,13 +2007,20 @@ function ComposerModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px]"
+        className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
+        style={{ padding: shellFullscreen ? 0 : 16 }}
       >
         <motion.div
+          layout
           initial={{ opacity: 0, scale: 0.94, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 20 }}
-          transition={{ type: "spring", stiffness: 300, damping: 28 }}
+          transition={{
+            type: "spring",
+            stiffness: 300,
+            damping: 28,
+            layout: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+          }}
           onDragOver={(e) => {
             e.preventDefault();
             setIsGlobalDragging(true);
@@ -1875,15 +2030,15 @@ function ComposerModal({
           style={{
             position: "relative",
             width: "100%",
-            maxWidth: isMobile ? "100%" : 960,
-            height: isMobile ? "100%" : "90vh",
-            background: "var(--canvas,#fff)",
-            borderRadius: isMobile ? 0 : "var(--r-hero,20px)",
+            maxWidth: shellFullscreen ? "100%" : 960,
+            height: shellFullscreen ? "100vh" : "90vh",
+            background: isFullscreen ? "#f7f6f3" : "var(--canvas,#fff)",
+            borderRadius: shellFullscreen ? 0 : "var(--r-hero,20px)",
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
-            boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
-            border: isMobile ? "none" : "1px solid rgba(20,20,19,0.08)",
+            boxShadow: shellFullscreen ? "none" : "0 25px 50px -12px rgba(0,0,0,0.25)",
+            border: shellFullscreen ? "none" : "1px solid rgba(20,20,19,0.08)",
           }}
         >
           {/* Global Drag Overlay */}
@@ -1916,7 +2071,7 @@ function ComposerModal({
                     padding: "20px",
                     borderRadius: "50%",
                     marginBottom: 20,
-                    boxShadow: "0 10px 25px rgba(255,86,0,0.3)",
+                    boxShadow: "0 10px 25px rgba(243,115,56,0.3)",
                   }}
                 >
                   <Upload size={40} strokeWidth={2.5} />
@@ -1947,13 +2102,14 @@ function ComposerModal({
           {/* ── HEADER ── */}
           <div
             style={{
-              padding: "16px 22px",
+              padding: isFullscreen ? "14px 24px" : "16px 22px",
               borderBottom: "1px solid rgba(20,20,19,0.08)",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               background: "white",
               flexShrink: 0,
+              minHeight: isFullscreen ? 60 : "auto",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -1961,7 +2117,7 @@ function ComposerModal({
                 style={{
                   fontSize: 16,
                   fontWeight: 800,
-                  color: "var(--ink,#111111)",
+                  color: "var(--ink,#141413)",
                   margin: 0,
                   letterSpacing: "-0.02em",
                 }}
@@ -1988,6 +2144,30 @@ function ComposerModal({
               </motion.div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {!isMobile && (
+                <motion.button
+                  type="button"
+                  onClick={() => setIsFullscreen((value) => !value)}
+                  aria-label={isFullscreen ? "Exit fullscreen composer" : "Open fullscreen composer"}
+                  title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                  whileHover={{ scale: 1.05, background: "rgba(20,20,19,0.06)" }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: "50%",
+                    border: isFullscreen ? "1px solid var(--ink,#141413)" : "1px solid rgba(20,20,19,0.1)",
+                    background: isFullscreen ? "white" : "transparent",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: isFullscreen ? "var(--ink,#141413)" : "var(--slate,#8a8a82)",
+                  }}
+                >
+                  {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                </motion.button>
+              )}
               <motion.button
                 type="button"
                 onClick={handleClose}
@@ -2036,9 +2216,9 @@ function ComposerModal({
                     background: "transparent",
                     color:
                       mobileActiveTab === tab.id
-                        ? "var(--ink,#111111)"
+                        ? "var(--ink,#141413)"
                         : "var(--slate,#8a8a82)",
-                    borderBottom: `2.5px solid ${mobileActiveTab === tab.id ? "var(--ink,#111111)" : "transparent"}`,
+                    borderBottom: `2.5px solid ${mobileActiveTab === tab.id ? "var(--ink,#141413)" : "transparent"}`,
                     transition: "all 0.2s",
                     cursor: "pointer",
                   }}
@@ -2086,14 +2266,19 @@ function ComposerModal({
               display: "flex",
               flex: 1,
               overflow: "hidden",
-              height: isMobile ? "calc(100vh - 105px)" : "calc(90vh - 115px)",
+              background: isFullscreen ? "#f7f6f3" : "transparent",
+              height: isMobile
+                ? "calc(100vh - 105px)"
+                : isFullscreen
+                  ? "calc(100vh - 115px)"
+                  : "calc(90vh - 115px)",
             }}
           >
             {/* ── PREVIEW PANEL (right column on desktop, tab on mobile) ── */}
             {(!isMobile || mobileActiveTab === "preview") && (
               <div
                 style={{
-                  width: isMobile ? "100%" : 300,
+                  width: isMobile ? "100%" : previewWidth,
                   flexShrink: 0,
                   borderLeft: isMobile
                     ? "none"
@@ -2101,13 +2286,13 @@ function ComposerModal({
                   display: "flex",
                   flexDirection: "column",
                   overflow: "hidden",
-                  background: "var(--canvas-lifted,#fafaf9)",
+                  background: "#fff",
                   order: 1,
                 }}
               >
                 <div
                   style={{
-                    padding: "11px 14px",
+                    padding: isFullscreen ? "14px 18px" : "11px 14px",
                     borderBottom: "1px solid rgba(20,20,19,0.08)",
                     flexShrink: 0,
                   }}
@@ -2130,7 +2315,7 @@ function ComposerModal({
                   caption={caption}
                   mediaFiles={mediaFiles}
                   selectedRatio={selectedRatio}
-                  selectedSizePreset={platformPresets[activePreviewPlatform]}
+                  selectedSizePreset={platformPresets[activePreviewBasePlatform]}
                   youtubeThumbnail={youtubeThumbnail}
                   activePlatform={activePreviewPlatform}
                   onActivePlatformChange={setActivePreviewPlatform}
@@ -2147,10 +2332,14 @@ function ComposerModal({
                 style={{
                   flex: 1,
                   overflowY: "auto",
-                  padding: "24px 28px",
+                  minWidth: 0,
+                  maxWidth: isFullscreen ? 960 : "none",
+                  margin: isFullscreen ? "0 auto" : 0,
+                  padding: isFullscreen ? "24px 28px 36px" : "24px 28px",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 24,
+                  gap: isFullscreen ? 18 : 24,
+                  boxSizing: "border-box",
                   scrollbarWidth: "none",
                 }}
               >
@@ -2194,236 +2383,246 @@ function ComposerModal({
                       />
                     </Section>
 
-                    {/* Caption */}
-                    <div style={{ position: "relative", marginBottom: 16 }}>
-                      <textarea
-                        value={caption}
-                        onChange={(e) => {
-                          setCaption(e.target.value);
-                          setError(null);
-                        }}
-                        placeholder="What's on your mind?"
-                        style={{
-                          width: "100%",
-                          minHeight: 120,
-                          padding: 14,
-                          background: "white",
-                          border: "1px solid rgba(20,20,19,0.1)",
-                          borderRadius: "var(--r-hero,16px)",
-                          fontSize: 14,
-                          fontFamily: "inherit",
-                          resize: "none",
-                          color: "var(--ink,#111111)",
-                          outline: "none",
-                          transition: "border-color 0.2s",
-                        }}
-                        onFocus={(e) =>
-                          (e.target.style.borderColor = "var(--ink)")
-                        }
-                        onBlur={(e) =>
-                          (e.target.style.borderColor = "rgba(20,20,19,0.1)")
-                        }
-                      />
-                      {/* Caption helpers */}
-                      {!isMobile && (
-                        <div
-                          style={{
-                            position: "absolute",
-                            bottom: 12,
-                            right: 12,
-                            display: "flex",
-                            gap: 8,
-                          }}
-                        >
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setCaption((p) =>
-                                p
-                                  ? `${p} {{MENTION_SELF}}`
-                                  : "{{MENTION_SELF}}",
-                              )
-                            }
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: "#4f46e5",
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 3,
-                              letterSpacing: "0.05em",
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            <AtSign size={9} /> Mention
-                          </button>
-                          <button
-                            onClick={() => setCaption("")}
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: "var(--slate,#8a8a82)",
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              letterSpacing: "0.05em",
-                              textTransform: "uppercase",
-                            }}
-                          >
-                            Clear
-                          </button>
-                        </div>
-                      )}
-                    </div>
 
-                    {/* Quick suggestions */}
-                    <div style={{ marginTop: 10 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <RowLabel>Quick Ideas</RowLabel>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button type="button" onClick={() => scrollContainer(ideasScrollRef, 'left')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronLeft size={14} /></button>
-                          <button type="button" onClick={() => scrollContainer(ideasScrollRef, 'right')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronRight size={14} /></button>
-                          <button type="button" onClick={fetchMoreIdeas} disabled={isFetchingMoreIdeas} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {isFetchingMoreIdeas ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                          </button>
-                        </div>
-                      </div>
-                      <div
-                        ref={ideasScrollRef}
-                        style={{
-                          display: "flex",
-                          gap: 6,
-                          overflowX: "auto",
-                          paddingBottom: 4,
-                          scrollbarWidth: "none",
-                        }}
-                      >
-                        {quickSuggestions.map((s, i) => (
-                          <motion.button
-                            key={i}
-                            type="button"
-                            whileHover={{
-                              scale: 1.03,
-                              background: "var(--ink,#111111)",
-                              color: "white",
+
+                    {!isInstagramStoryOnly && (
+                      <>
+                        {/* Caption */}
+                        <div style={{ position: "relative", marginBottom: 16 }}>
+                          <textarea
+                            value={caption}
+                            onChange={(e) => {
+                              setCaption(e.target.value);
+                              setError(null);
                             }}
-                            whileTap={{ scale: 0.97 }}
-                            onClick={() =>
-                              setCaption(s)
-                            }
+                            placeholder="What's on your mind?"
                             style={{
-                              flexShrink: 0,
-                              padding: "6px 14px",
-                              background: "var(--canvas-lifted,#f5f5f4)",
+                              width: "100%",
+                              minHeight: 120,
+                              padding: 14,
+                              background: "white",
                               border: "1px solid rgba(20,20,19,0.1)",
-                              borderRadius: 20,
-                              fontSize: 13,
-                              color: "var(--slate,#8a8a82)",
-                              cursor: "pointer",
-                              whiteSpace: "nowrap",
+                              borderRadius: "var(--r-hero,16px)",
+                              fontSize: 14,
                               fontFamily: "inherit",
-                              fontWeight: 500,
-                              transition: "all 0.15s",
+                              resize: "none",
+                              color: "var(--ink,#141413)",
+                              outline: "none",
+                              transition: "border-color 0.2s",
                             }}
-                          >
-                            {s}
-                          </motion.button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Hashtags */}
-                    <div style={{ marginTop: 10 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <RowLabel>Hashtags</RowLabel>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button type="button" onClick={() => scrollContainer(hashtagsScrollRef, 'left')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronLeft size={14} /></button>
-                          <button type="button" onClick={() => scrollContainer(hashtagsScrollRef, 'right')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronRight size={14} /></button>
-                          <button type="button" onClick={fetchMoreHashtags} disabled={isFetchingMoreHashtags} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            {isFetchingMoreHashtags ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
-                          </button>
+                            onFocus={(e) =>
+                              (e.target.style.borderColor = "var(--ink)")
+                            }
+                            onBlur={(e) =>
+                              (e.target.style.borderColor = "rgba(20,20,19,0.1)")
+                            }
+                          />
+                          {/* Caption helpers */}
+                          {!isMobile && (
+                            <div
+                              style={{
+                                position: "absolute",
+                                bottom: 12,
+                                right: 12,
+                                display: "flex",
+                                gap: 8,
+                              }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCaption((p) =>
+                                    p
+                                      ? `${p} {{MENTION_SELF}}`
+                                      : "{{MENTION_SELF}}",
+                                  )
+                                }
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  color: "#4f46e5",
+                                  background: "none",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 3,
+                                  letterSpacing: "0.05em",
+                                  textTransform: "uppercase",
+                                }}
+                              >
+                                <AtSign size={9} /> Mention
+                              </button>
+                              <button
+                                onClick={() => setCaption("")}
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  color: "var(--slate,#8a8a82)",
+                                  background: "none",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  letterSpacing: "0.05em",
+                                  textTransform: "uppercase",
+                                }}
+                              >
+                                Clear
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      <div
-                        ref={hashtagsScrollRef}
-                        style={{
-                          display: "flex",
-                          gap: 6,
-                          overflowX: "auto",
-                          alignItems: "center",
-                          scrollbarWidth: "none",
-                        }}
-                      >
-                        <input
-                          type="text"
-                          placeholder="+ Add tag (Enter)"
-                          style={{
-                            fontSize: 13,
-                            padding: "6px 14px",
-                            border: "1px dashed rgba(20,20,19,0.2)",
-                            borderRadius: 20,
-                            background: "transparent",
-                            outline: "none",
-                            width: 140,
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              const val = e.target.value.trim();
-                              if (val) {
-                                const tag = val.startsWith("#")
-                                  ? val
-                                  : `#${val}`;
-                                setCaption((p) => (p ? `${p} ${tag}` : tag));
-                                e.target.value = "";
-                              }
-                            }
-                          }}
-                        />
-                        {suggestedHashtags.map((h, i) => (
-                          <button
-                            key={i}
-                            onClick={() =>
-                              setCaption((p) => (p ? `${p} ${h}` : h))
-                            }
+                      </>
+                    )}
+
+                    {effectivePostType !== "story" && (
+                      <>
+                        {/* Quick suggestions */}
+                        <div style={{ marginTop: 10 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                            <RowLabel>Quick Ideas</RowLabel>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button type="button" onClick={() => scrollContainer(ideasScrollRef, 'left')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronLeft size={14} /></button>
+                              <button type="button" onClick={() => scrollContainer(ideasScrollRef, 'right')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronRight size={14} /></button>
+                              <button type="button" onClick={fetchMoreIdeas} disabled={isFetchingMoreIdeas} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {isFetchingMoreIdeas ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                              </button>
+                            </div>
+                          </div>
+                          <div
+                            ref={ideasScrollRef}
                             style={{
-                              flexShrink: 0,
-                              fontSize: 12,
-                              fontWeight: 700,
-                              color: "#4f46e5",
-                              background: "rgba(79,70,229,0.06)",
-                              border: "none",
-                              padding: "6px 14px",
-                              borderRadius: 20,
-                              cursor: "pointer",
+                              display: "flex",
+                              gap: 6,
+                              overflowX: "auto",
+                              paddingBottom: 4,
+                              scrollbarWidth: "none",
                             }}
                           >
-                            {h}
-                          </button>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setCaption((p) =>
-                              p ? `${p} #getaipilot` : "#getaipilot",
-                            )
-                          }
-                          className="btn-signal"
-                          style={{
-                            fontSize: 10,
-                            padding: "4px 10px",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 4,
-                            flexShrink: 0,
-                          }}
-                        >
-                          #getaipilot <Sparkles size={9} />
-                        </button>
-                      </div>
-                    </div>
+                            {quickSuggestions.map((s, i) => (
+                              <motion.button
+                                key={i}
+                                type="button"
+                                whileHover={{
+                                  scale: 1.03,
+                                  background: "var(--ink,#141413)",
+                                  color: "white",
+                                }}
+                                whileTap={{ scale: 0.97 }}
+                                onClick={() =>
+                                  setCaption(s)
+                                }
+                                style={{
+                                  flexShrink: 0,
+                                  padding: "6px 14px",
+                                  background: "var(--canvas-lifted,#f5f5f4)",
+                                  border: "1px solid rgba(20,20,19,0.1)",
+                                  borderRadius: 20,
+                                  fontSize: 13,
+                                  color: "var(--slate,#8a8a82)",
+                                  cursor: "pointer",
+                                  whiteSpace: "nowrap",
+                                  fontFamily: "inherit",
+                                  fontWeight: 500,
+                                  transition: "all 0.15s",
+                                }}
+                              >
+                                {s}
+                              </motion.button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Hashtags */}
+                        <div style={{ marginTop: 10 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                            <RowLabel>Hashtags</RowLabel>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <button type="button" onClick={() => scrollContainer(hashtagsScrollRef, 'left')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronLeft size={14} /></button>
+                              <button type="button" onClick={() => scrollContainer(hashtagsScrollRef, 'right')} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer' }}><ChevronRight size={14} /></button>
+                              <button type="button" onClick={fetchMoreHashtags} disabled={isFetchingMoreHashtags} style={{ padding: 4, borderRadius: 6, background: 'var(--canvas-lifted,#f5f5f4)', border: '1px solid rgba(20,20,19,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {isFetchingMoreHashtags ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                              </button>
+                            </div>
+                          </div>
+                          <div
+                            ref={hashtagsScrollRef}
+                            style={{
+                              display: "flex",
+                              gap: 6,
+                              overflowX: "auto",
+                              alignItems: "center",
+                              scrollbarWidth: "none",
+                            }}
+                          >
+                            <input
+                              type="text"
+                              placeholder="+ Add tag (Enter)"
+                              style={{
+                                fontSize: 13,
+                                padding: "6px 14px",
+                                border: "1px dashed rgba(20,20,19,0.2)",
+                                borderRadius: 20,
+                                background: "transparent",
+                                outline: "none",
+                                width: 140,
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  const val = e.target.value.trim();
+                                  if (val) {
+                                    const tag = val.startsWith("#")
+                                      ? val
+                                      : `#${val}`;
+                                    setCaption((p) => (p ? `${p} ${tag}` : tag));
+                                    e.target.value = "";
+                                  }
+                                }
+                              }}
+                            />
+                            {suggestedHashtags.map((h, i) => (
+                              <button
+                                key={i}
+                                onClick={() =>
+                                  setCaption((p) => (p ? `${p} ${h}` : h))
+                                }
+                                style={{
+                                  flexShrink: 0,
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  color: "#4f46e5",
+                                  background: "rgba(79,70,229,0.06)",
+                                  border: "none",
+                                  padding: "6px 14px",
+                                  borderRadius: 20,
+                                  cursor: "pointer",
+                                }}
+                              >
+                                {h}
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setCaption((p) =>
+                                  p ? `${p} #getaipilot` : "#getaipilot",
+                                )
+                              }
+                              className="btn-signal"
+                              style={{
+                                fontSize: 10,
+                                padding: "4px 10px",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                                flexShrink: 0,
+                              }}
+                            >
+                              #getaipilot <Sparkles size={9} />
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
@@ -2443,7 +2642,7 @@ function ComposerModal({
                 {/* ── Smart Size ── */}
                 <Section
                   label="Content Format"
-                  hint={`Format for ${PLATFORM_META[activePreviewPlatform]?.label || "active platform"}`}
+                  hint={`Format for ${PLATFORM_META[activePreviewBasePlatform]?.label || "active platform"}`}
                   mb={20}
                 >
                   <div
@@ -2460,13 +2659,13 @@ function ComposerModal({
                       msOverflowStyle: "none",
                     }}
                   >
-                    {(PLATFORM_LAYOUT_PRESETS[activePreviewPlatform] || []).map(
+                    {(PLATFORM_LAYOUT_PRESETS[activePreviewBasePlatform] || []).map(
                       (preset) => {
                         const sizeInfo = smartSizes.find(
                           (s) => s.id === preset.ratio,
                         );
                         const isSelected =
-                          platformPresets[activePreviewPlatform] === preset.id;
+                          platformPresets[activePreviewBasePlatform] === preset.id;
                         return (
                           <motion.button
                             key={preset.id}
@@ -2475,7 +2674,7 @@ function ComposerModal({
                             onClick={() =>
                               setPlatformPresets((prev) => ({
                                 ...prev,
-                                [activePreviewPlatform]: preset.id,
+                                [activePreviewBasePlatform]: preset.id,
                               }))
                             }
                             style={{
@@ -2497,7 +2696,7 @@ function ComposerModal({
                               transition:
                                 "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                               boxShadow: isSelected
-                                ? "0 4px 12px rgba(255,86,0,0.12)"
+                                ? "0 4px 12px rgba(243,115,56,0.12)"
                                 : "0 2px 4px rgba(0,0,0,0.02)",
                             }}
                           >
@@ -2591,7 +2790,7 @@ function ComposerModal({
                         size={13}
                         style={{
                           color: isScheduled
-                            ? "var(--arc,#ff5600)"
+                            ? "var(--arc,#f37338)"
                             : "var(--slate,#8a8a82)",
                         }}
                       />
@@ -2601,8 +2800,8 @@ function ComposerModal({
                             fontSize: 12,
                             fontWeight: 700,
                             color: isScheduled
-                              ? "var(--arc,#ff5600)"
-                              : "var(--ink,#111111)",
+                              ? "var(--arc,#f37338)"
+                              : "var(--ink,#141413)",
                             margin: 0,
                           }}
                         >
@@ -2612,7 +2811,7 @@ function ComposerModal({
                           <p
                             style={{
                               fontSize: 10,
-                              color: "var(--arc,#ff5600)",
+                              color: "var(--arc,#f37338)",
                               margin: 0,
                               opacity: 0.8,
                             }}
@@ -2757,19 +2956,19 @@ function ComposerModal({
                               alignItems: "center",
                               gap: 6,
                               padding: "7px 10px",
-                              background: "rgba(255,86,0,0.05)",
+                              background: "rgba(243,115,56,0.05)",
                               borderRadius: 8,
-                              border: "1px solid rgba(255,86,0,0.1)",
+                              border: "1px solid rgba(243,115,56,0.1)",
                             }}
                           >
                             <Clock
                               size={11}
-                              style={{ color: "var(--arc,#ff5600)" }}
+                              style={{ color: "var(--arc,#f37338)" }}
                             />
                             <span
                               style={{
                                 fontSize: 10,
-                                color: "var(--arc,#ff5600)",
+                                color: "var(--arc,#f37338)",
                                 fontWeight: 600,
                               }}
                             >
@@ -2793,15 +2992,16 @@ function ComposerModal({
                   }
                   youtubeThumbnail={youtubeThumbnail}
                   onYoutubeThumbnailChange={setYoutubeThumbnail}
+                  postType={effectivePostType}
                 />
 
                 {/* ✨ Smart Warnings ✨ */}
-                {hasInstagram && (
+                {hasInstagram && effectivePostType !== "story" && (
                   <Section label="Instagram Auto DM" mb={20}>
                     <AutoDMComposerPanel
                       config={autoDMConfig}
                       onChange={setAutoDMConfig}
-                      postType={postType}
+                      postType={effectivePostType}
                     />
                   </Section>
                 )}
@@ -2898,16 +3098,17 @@ function ComposerModal({
           <div
             style={{
               borderTop: "1px solid rgba(20,20,19,0.08)",
-              padding: isMobile ? "12px 16px" : "14px 22px",
-              background: "var(--canvas-lifted,#fafaf9)",
+              padding: isMobile ? "12px 16px" : isFullscreen ? "12px 24px" : "14px 22px",
+              background: "white",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               flexShrink: 0,
-              borderBottomLeftRadius: isMobile ? 0 : "var(--r-hero,20px)",
-              borderBottomRightRadius: isMobile ? 0 : "var(--r-hero,20px)",
+              borderBottomLeftRadius: shellFullscreen ? 0 : "var(--r-hero,20px)",
+              borderBottomRightRadius: shellFullscreen ? 0 : "var(--r-hero,20px)",
               gap: isMobile ? 8 : 16,
               flexWrap: isMobile ? "wrap" : "nowrap",
+              boxShadow: isFullscreen ? "0 -2px 8px rgba(20,20,19,0.04)" : "none",
             }}
           >
             <motion.button
@@ -2938,15 +3139,15 @@ function ComposerModal({
                   animate={{ opacity: 1, y: 0 }}
                   style={{
                     fontSize: 10,
-                    color: "var(--arc,#ff5600)",
+                    color: "var(--arc,#f37338)",
                     fontWeight: 700,
                     display: "flex",
                     alignItems: "center",
                     gap: 5,
-                    background: "rgba(255,86,0,0.06)",
+                    background: "rgba(243,115,56,0.06)",
                     padding: isMobile ? "4px 8px" : "5px 12px",
                     borderRadius: 20,
-                    border: "1px solid rgba(255,86,0,0.15)",
+                    border: "1px solid rgba(243,115,56,0.15)",
                     textAlign: "center",
                   }}
                 >
@@ -2998,7 +3199,7 @@ function ComposerModal({
                         scale: 1.02,
                         y: -2,
                         boxShadow: isScheduled
-                          ? "0 10px 24px rgba(255,86,0,0.3)"
+                          ? "0 10px 24px rgba(243,115,56,0.3)"
                           : "0 10px 24px rgba(20,20,19,0.22)",
                       }
                     : {}
@@ -3013,8 +3214,8 @@ function ComposerModal({
                     publishDisabled
                       ? "rgba(20,20,19,0.18)"
                       : isScheduled
-                        ? "linear-gradient(135deg,var(--arc,#ff5600) 0%,#ff8c5a 100%)"
-                        : "linear-gradient(135deg,var(--ink,#111111) 0%,#3a3a37 100%)",
+                        ? "linear-gradient(135deg,var(--arc,#f37338) 0%,#ff8c5a 100%)"
+                        : "linear-gradient(135deg,var(--ink,#141413) 0%,#3a3a37 100%)",
                   height: isMobile ? 42 : 48,
                   minWidth: isMobile ? 120 : 175,
                   borderRadius: "16px",

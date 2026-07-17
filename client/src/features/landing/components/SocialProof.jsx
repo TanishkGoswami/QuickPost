@@ -253,7 +253,7 @@ export default function SocialProof() {
           <div
             className="hide-scrollbar"
             style={{
-              padding: "20px 0",
+              padding: "60px 0 20px",
               overflowX: "auto",
               overflowY: "visible",
               WebkitOverflowScrolling: "touch",

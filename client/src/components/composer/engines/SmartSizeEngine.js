@@ -8,6 +8,8 @@
 
 import { ASPECT_RATIOS, PLATFORM_SUPPORTED_RATIOS, PLATFORM_LAYOUT_PRESETS } from "../data/platforms.js";
 
+const basePlatform = (platformId) => String(platformId || "").split(":")[0];
+
 /**
  * Badge types:
  *   "best"    → all selected platforms support this ratio
@@ -22,7 +24,9 @@ import { ASPECT_RATIOS, PLATFORM_SUPPORTED_RATIOS, PLATFORM_LAYOUT_PRESETS } fro
  * @returns {EnrichedRatio[]}
  */
 export function SmartSizeEngine(selectedChannels) {
-  if (selectedChannels.length === 0) {
+  const channels = selectedChannels.map(basePlatform);
+
+  if (channels.length === 0) {
     // No platforms selected: return all ratios with no badge
     return ASPECT_RATIOS.map((r) => ({
       ...r,
@@ -34,15 +38,15 @@ export function SmartSizeEngine(selectedChannels) {
   }
 
   const enriched = ASPECT_RATIOS.map((ratio) => {
-    const supportedBy = selectedChannels.filter((p) =>
+    const supportedBy = channels.filter((p) =>
       (PLATFORM_SUPPORTED_RATIOS[p] || []).includes(ratio.id)
     );
-    const unsupportedBy = selectedChannels.filter(
+    const unsupportedBy = channels.filter(
       (p) => !(PLATFORM_SUPPORTED_RATIOS[p] || []).includes(ratio.id)
     );
 
     let badge;
-    if (supportedBy.length === selectedChannels.length) {
+    if (supportedBy.length === channels.length) {
       badge = "best";
     } else if (supportedBy.length > 0) {
       badge = "partial";
@@ -71,7 +75,7 @@ export function SmartSizeEngine(selectedChannels) {
  * @returns {string} presetId
  */
 export function getBestDefaultPreset(platformId, selectedChannels = []) {
-  const presets = PLATFORM_LAYOUT_PRESETS[platformId] || [];
+  const presets = PLATFORM_LAYOUT_PRESETS[basePlatform(platformId)] || [];
   if (presets.length === 0) return "";
 
   const sizes = SmartSizeEngine(selectedChannels);
@@ -91,12 +95,12 @@ export function getBestDefaultPreset(platformId, selectedChannels = []) {
  * @param {string[]} selectedChannels
  */
 export function isPresetCompatible(presetId, platformId, selectedChannels) {
-  const presets = PLATFORM_LAYOUT_PRESETS[platformId] || [];
+  const presets = PLATFORM_LAYOUT_PRESETS[basePlatform(platformId)] || [];
   const preset  = presets.find((p) => p.id === presetId);
   if (!preset) return false;
 
   // Check that at least one selected platform supports this ratio
   return selectedChannels.some((p) =>
-    (PLATFORM_SUPPORTED_RATIOS[p] || []).includes(preset.ratio)
+    (PLATFORM_SUPPORTED_RATIOS[basePlatform(p)] || []).includes(preset.ratio)
   );
 }

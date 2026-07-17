@@ -1,4 +1,4 @@
-import { Instagram, Loader2, MessageCircle, RefreshCw, Zap, MessageSquare, Send } from "lucide-react";
+import { Instagram, Loader2, RefreshCw, Zap, MessageSquare, Send } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -25,6 +25,8 @@ export const defaultComposerAutoDMConfig = {
   isCaseSensitive: false,
   commentReplyEnabled: true,
   commentReplyText: "Sent you the details in DM.",
+  requireFollow: false,
+  fallbackCommentReply: "Please follow our account to receive the link!",
   responseFlow: {
     opening_message_enabled: true,
     opening_message: "Hey there! Thanks for your interest ✨\nClick below to get the details.",
@@ -49,14 +51,14 @@ export const defaultComposerAutoDMConfig = {
   },
 };
 
-export function AutoDMComposerPanel({ config, onChange, postType }) {
+export function AutoDMComposerPanel({ config, onChange, postType }: any) {
   const [checking, setChecking] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [status, setStatus] = useState(null);
+  const [status, setStatus] = useState<any>(null);
   const instagramReady = Boolean(status?.autodmAccounts?.length);
   const canImport = Boolean(status?.hasSocialInstagramConnection);
 
-  const update = (updates) => onChange({ ...config, ...updates });
+  const update = (updates: any) => onChange({ ...config, ...updates });
 
   useEffect(() => {
     let cancelled = false;
@@ -67,7 +69,7 @@ export function AutoDMComposerPanel({ config, onChange, postType }) {
       .then((nextStatus) => {
         if (!cancelled) setStatus(nextStatus);
       })
-      .catch((error) => {
+      .catch((error: any) => {
         if (!cancelled) toast.error(error.message || "Failed to check Auto DM account");
       })
       .finally(() => {
@@ -86,13 +88,13 @@ export function AutoDMComposerPanel({ config, onChange, postType }) {
   }, [postType]);
 
   return (
-    <div className={`overflow-hidden rounded-[20px] border transition-all duration-300 ${config.enabled ? 'border-[var(--arc)] shadow-sm' : 'border-black/10 bg-white shadow-sm'}`}>
+    <div className={`overflow-hidden rounded-2xl border bg-white transition-all duration-300 ${config.enabled ? 'border-black/15' : 'border-black/10'}`}>
       
       {/* Header Area */}
-      <div className={`flex items-center justify-between p-5 transition-colors ${config.enabled ? 'bg-[var(--arc)]/5' : ''}`}>
+      <div className={`flex items-center justify-between p-4 transition-colors ${config.enabled ? 'bg-orange-50/50' : ''}`}>
         <div className="flex items-center gap-3.5">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-full transition-colors ${config.enabled ? 'bg-[var(--arc)] text-white' : 'bg-black/5 text-[var(--slate)]'}`}>
-            <Zap className="h-5 w-5" />
+          <div className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${config.enabled ? 'bg-[var(--arc)] text-white' : 'bg-black/5 text-[var(--slate)]'}`}>
+            <Zap className="h-4 w-4" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-[var(--ink)]">Auto DM Setup</h3>
@@ -111,10 +113,10 @@ export function AutoDMComposerPanel({ config, onChange, postType }) {
             exit={{ height: 0, opacity: 0 }}
             className="border-t border-black/5 overflow-hidden"
           >
-            <div className="p-5 space-y-8 bg-white">
+            <div className="p-4 space-y-6 bg-white">
               
               {/* Account Status Banner */}
-              <div className="rounded-xl border border-black/5 bg-gray-50/80 p-4">
+              <div className="rounded-xl border border-black/10 bg-gray-50/70 p-3">
                 {checking ? (
                   <div className="flex items-center gap-2 text-xs font-medium text-[var(--slate)]">
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -146,7 +148,7 @@ export function AutoDMComposerPanel({ config, onChange, postType }) {
                           const nextStatus = await getAutoDMStatus();
                           setStatus(nextStatus);
                           toast.success("Instagram imported successfully!");
-                        } catch (error) {
+                        } catch (error: any) {
                           toast.error(error.message || "Failed to import Instagram");
                         } finally {
                           setSyncing(false);
@@ -204,7 +206,7 @@ export function AutoDMComposerPanel({ config, onChange, postType }) {
                 </div>
                 
                 <div className="pl-8">
-                  <div className="rounded-xl border border-black/10 bg-white p-4 shadow-sm transition-all focus-within:border-[var(--arc)] focus-within:ring-1 focus-within:ring-[var(--arc)]">
+                  <div className="rounded-xl border border-black/10 bg-white p-4 transition-all focus-within:border-[var(--arc)] focus-within:ring-1 focus-within:ring-[var(--arc)]">
                     <div className="flex items-center justify-between gap-3 mb-3">
                       <div className="flex items-center gap-2">
                         <MessageSquare className="h-4 w-4 text-[var(--slate)]" />
@@ -226,10 +228,43 @@ export function AutoDMComposerPanel({ config, onChange, postType }) {
                 </div>
               </div>
 
-              {/* Step 3: Private DM */}
+              {/* Step 3: Follow Gate */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-black/5 text-[10px] font-bold text-[var(--slate)]">3</div>
+                  <h4 className="text-sm font-semibold text-[var(--ink)]">Instagram Follow Gate</h4>
+                </div>
+                
+                <div className="pl-8">
+                  <div className="rounded-xl border border-black/10 bg-white p-4 transition-all focus-within:border-[var(--arc)] focus-within:ring-1 focus-within:ring-[var(--arc)]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <div className="text-sm font-medium text-[var(--ink)]">Only send DM if they follow</div>
+                        <p className="text-xs text-[var(--slate)] mt-1">Require users to follow your account before sending them a DM.</p>
+                      </div>
+                      <Switch checked={config.requireFollow} onCheckedChange={(requireFollow) => update({ requireFollow })} />
+                    </div>
+                    {config.requireFollow && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}>
+                        <div className="mt-4 pt-4 border-t border-black/5">
+                          <Label className="text-xs text-[var(--slate)] mb-2 block">Fallback Comment Reply</Label>
+                          <Textarea
+                            className="min-h-[60px] resize-none border-none bg-gray-50/50 focus-visible:ring-0 p-3 text-sm rounded-lg"
+                            value={config.fallbackCommentReply}
+                            onChange={(event) => update({ fallbackCommentReply: event.target.value })}
+                            placeholder="Please follow our account to receive the link!"
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 4: Private DM */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-black/5 text-[10px] font-bold text-[var(--slate)]">4</div>
                   <h4 className="text-sm font-semibold text-[var(--ink)]">Privately send them a DM</h4>
                 </div>
                 
@@ -242,8 +277,9 @@ export function AutoDMComposerPanel({ config, onChange, postType }) {
                     <div className="p-4 bg-[var(--canvas-lifted)]">
                       <ResponseFlowBuilder
                         responseFlow={config.responseFlow}
-                        onChange={(responseFlow) => update({ responseFlow })}
+                        onChange={(responseFlow: any) => update({ responseFlow })}
                         compact={true}
+                        step={0}
                       />
                     </div>
                   </div>

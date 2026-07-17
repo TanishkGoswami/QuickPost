@@ -5,10 +5,11 @@ import {
   postToInstagram,
   postImageToInstagram,
   postCarouselToInstagram,
+  postStoryToInstagram,
 } from "../services/instagram.js";
 import { postToYouTube, setVideoThumbnail } from "../services/youtube.js";
 import { postToPinterest } from "../services/pinterest.js";
-import { postToFacebook, postVideoToFacebook } from "../services/facebook.js";
+import { postFacebookReel, postFacebookStory, postToFacebook, postVideoToFacebook } from "../services/facebook.js";
 import { postToBluesky } from "../services/bluesky.js";
 import { postToLinkedIn } from "../services/linkedin.js";
 import mastodon from "../services/mastodon.js";
@@ -23,6 +24,8 @@ import {
   isCloudinaryConfigured,
 } from "../services/cloudinary.js";
 import googleOAuth from "../services/googleOAuth.js";
+import googleBusinessOAuth from "../services/googleBusinessOAuth.js";
+import { postToGoogleBusiness } from "../services/googleBusiness.js";
 import blueskyAuth from "../services/blueskyAuth.js";
 import { createJob, updateJob, failJob, getJob } from "../services/jobQueue.js";
 import fs from "fs";
@@ -32,6 +35,10 @@ import { getValidInstagramTokensForPosting } from "../services/instagramToken.js
 import { decryptToken } from "../services/instapilot.js";
 import { enqueueBroadcastJob, isBroadcastQueueEnabled } from "../services/broadcastQueue.js";
 import { requireFeature, reserveUsage } from "../middleware/entitlements.js";
+import { supermailbox } from "../services/supermailbox.js";
+import { resolveInstagramPublishChannels } from "../utils/instagramChannels.js";
+import { resolvePublishPostType } from "../utils/postType.js";
+import { resolveSocialPublishChannels, setAggregateResult } from "../utils/socialChannels.js";
 
 const router = express.Router();
 
@@ -69,6 +76,7 @@ router.post(
       caption, 
       selectedChannels, 
       platformData, 
+      platformPresets,
       scheduledAt, 
       isScheduled: isScheduledField, 
       userTimezone,
@@ -84,15 +92,41 @@ router.post(
         typeof selectedChannels === "string"
           ? JSON.parse(selectedChannels)
           : selectedChannels;
+      if (!Array.isArray(channels) || channels.length === 0) {
+        return res.status(400).json({ success: false, error: "Please select at least one platform." });
+      }
       const platData =
         typeof platformData === "string"
           ? JSON.parse(platformData)
           : platformData;
+      const parsedPresets =
+        typeof platformPresets === "string"
+          ? JSON.parse(platformPresets)
+          : platformPresets || {};
+            
+      // Save the chosen format presets to platformData so it persists in the database
+      platData.parsedPresets = parsedPresets;
+      platData.selectedPostSizePreset = selectedPostSizePreset;
+      const hasInstagramChannel = (channels || []).some((channel) =>
+        channel === "instagram" || String(channel).startsWith("instagram:")
+      );
+      const selectedPostType = resolvePublishPostType({
+        hasInstagramChannel,
+        postType,
+        platformData: platData,
+      });
+      console.log("🚨 [DEBUG] Evaluated Post Type:", selectedPostType, "| Raw body postType:", postType, "| platData:", JSON.stringify(platData));
+      if (hasInstagramChannel) {
+        platData.instagram = { ...(platData.instagram || {}), type: selectedPostType };
+      }
+      platData.postType = selectedPostType;
+        
       const isScheduled = isScheduledField === "true" || !!scheduledAt;
       const autoDMConfig =
         typeof autoDMConfigField === "string"
           ? JSON.parse(autoDMConfigField)
           : autoDMConfigField;
+      const canUseAutoDM = selectedPostType !== "story";
 
     // ── Validate scheduled time ───────────────────────────────────────────
     if (isScheduled && scheduledAt) {
@@ -139,12 +173,21 @@ router.post(
       const primaryVideoPath = videos.length > 0 ? videos[0].path : null;
       const primaryInputPath = uploadedFiles.length > 0 ? uploadedFiles[0].path : null;
 
+      if (selectedPostType === "reel" && !isVideo) {
+        cleanupFiles(filePaths, thumbnailFile);
+        return res.status(400).json({ success: false, error: "Reels require a video file." });
+      }
+      if (selectedPostType === "story" && uploadedFiles.length > 1) {
+        cleanupFiles(filePaths, thumbnailFile);
+        return res.status(400).json({ success: false, error: "Stories support one image or video at a time." });
+      }
+
     // ── Detect Job ID early for variants ─────────────────────────────────
     const jobId = createJob(userId, {
       caption,
       channels,
       mediaType,
-      postType,
+      postType: selectedPostType,
       filenames,
       fileCount: uploadedFiles.length,
       hasThumbnail: !!thumbnailFile,
@@ -177,12 +220,13 @@ router.post(
       thumbnailFile,
       isVideo,
       mediaType,
-      postType,
+      postType: selectedPostType,
       primaryVideoPath,
       platformVariants,
       generatedVariantPaths,
       selectedAspectRatio,
       selectedPostSizePreset,
+      parsedPresets,
       isScheduled,
       scheduledAt,
       userTimezone,
@@ -215,12 +259,13 @@ async function processBroadcastJob({
   uploadedFiles, filePaths, filenames,
   thumbnailFile, isVideo, mediaType, postType, primaryVideoPath,
   platformVariants, generatedVariantPaths,
-  selectedAspectRatio, selectedPostSizePreset,
+  selectedAspectRatio, selectedPostSizePreset, parsedPresets,
   isScheduled, scheduledAt, userTimezone, autoDMConfig
 }) {
   console.log(
     `\n🚀 [JOB:${jobId}] Starting background broadcast for user: ${userId}`,
   );
+  const canUseAutoDM = postType !== "story";
 
   // ── Phase 1: Uploading to cloud (0 → 30%) ──────────────────────────────
   updateJob(jobId, {
@@ -240,7 +285,6 @@ async function processBroadcastJob({
       );
 
       const uploadPromises = filePaths.map((p, i) => {
-        // ✅ Detect resource type per-file from its actual MIME type
         const mime = uploadedFiles[i]?.mimetype || '';
         const fileResourceType = mime.startsWith('video/') ? 'video' : 'image';
         
@@ -260,18 +304,44 @@ async function processBroadcastJob({
               ? `Compressing file ${i + 1} of ${filePaths.length} (${prog.percent}%)…`
               : `Uploading file ${i + 1} of ${filePaths.length}…`,
           });
-        }).then((r) => {
-          // Update progress incrementally as each file finishes
-          updateJob(jobId, {
-            progress: 5 + (i + 1) * Math.floor(25 / filePaths.length),
-            step: `Uploading file ${i + 1} of ${filePaths.length}…`,
+          }).then((r) => {
+            // Convert Cloudinary URL to request MP4 conversion for animated GIFs
+            if (mime === 'image/gif') {
+              r.url = r.url.replace(/\.gif$/i, '.mp4');
+            }
+            // Update progress incrementally as each file finishes
+            updateJob(jobId, {
+              progress: 5 + (i + 1) * Math.floor(25 / filePaths.length),
+              step: `Uploading file ${i + 1} of ${filePaths.length}…`,
+            });
+            return r;
           });
-          return r;
-        });
       });
 
       const uploadResults = await Promise.all(uploadPromises);
       mediaUrls = uploadResults.map((r) => r.url);
+      
+      // Calculate optimal Instagram Aspect Ratio
+      let targetAr = null;
+      if (parsedPresets['instagram']) {
+        const presetId = parsedPresets['instagram'];
+        if (presetId.includes('square')) targetAr = 1.0;
+        else if (presetId.includes('portrait')) targetAr = 0.8;
+        else if (presetId.includes('reel') || presetId.includes('story')) targetAr = 0.5625;
+        else if (presetId.includes('landscape')) targetAr = 1.7778;
+      }
+      
+      // If no preset selected, fallback to dynamic calculation from first item (only for carousels)
+      if (!targetAr && mediaUrls.length > 1 && uploadResults[0] && uploadResults[0].width && uploadResults[0].height) {
+         targetAr = uploadResults[0].width / uploadResults[0].height;
+         // Clamp to Instagram's allowed range for carousels (4:5 to 1.91:1) -> 0.8 to 1.91
+         if (targetAr < 0.8) targetAr = 0.8;
+         if (targetAr > 1.91) targetAr = 1.91;
+      }
+      
+      if (targetAr) {
+         platData.instagramAspectRatio = targetAr.toFixed(4);
+      }
 
       // Auto cover: first image in set
       const firstImageIdx = uploadedFiles.findIndex((f) =>
@@ -310,9 +380,6 @@ async function processBroadcastJob({
       });
 
       console.log(`✓ [JOB:${jobId}] All files uploaded. URLs:`, mediaUrls);
-      
-      // Clean up the local temporary files immediately since they are now safely in Cloudinary
-      cleanupFiles(filePaths, thumbnailFile);
     } else {
       // Fallback to local URLs if No Cloudinary
       const serverPublicUrl =
@@ -347,7 +414,7 @@ async function processBroadcastJob({
           sourceJobId: jobId,
           source_job_id: jobId,
           postType,
-          autoDMConfig: autoDMConfig?.enabled ? autoDMConfig : null,
+          autoDMConfig: canUseAutoDM && autoDMConfig?.enabled ? autoDMConfig : null,
           selectedChannels: channels, 
           filePaths, 
           userTimezone: userTimezone || 'UTC',
@@ -390,7 +457,7 @@ async function processBroadcastJob({
           sourceJobId: jobId,
           source_job_id: jobId,
           postType,
-          autoDMConfig: autoDMConfig?.enabled ? autoDMConfig : null,
+          autoDMConfig: canUseAutoDM && autoDMConfig?.enabled ? autoDMConfig : null,
           selectedChannels: channels,
           filePaths,
           userTimezone: userTimezone || 'UTC',
@@ -406,6 +473,9 @@ async function processBroadcastJob({
       }
 
       await enqueueBroadcastJob(savedBroadcast.id);
+      if (isCloudinaryConfigured()) {
+        cleanupFiles(filePaths, thumbnailFile);
+      }
       updateJob(jobId, {
         status: "completed",
         progress: 100,
@@ -464,28 +534,27 @@ async function processBroadcastJob({
     return { platform, result };
   };
 
-  // Pinterest
-  if (channels.includes("pinterest") && tokens.pinterest) {
-    const resolvedCaption = resolveMentions(platData?.pinterest?.title || caption, 'pinterest', tokens.pinterest);
+  for (const account of resolveSocialPublishChannels("pinterest", channels, tokens.pinterestAccounts || [])) {
+    const resolvedCaption = resolveMentions(platData?.pinterest?.title || caption, 'pinterest', account);
     platformPromises.push(
       postToPinterest(
         primaryMediaUrl,
         resolvedCaption,
-        tokens.pinterest,
+        account,
         platData?.pinterest?.link,
-        platData?.pinterest?.boardId,
-      ).then((r) => onChannelComplete("Pinterest", r)),
+        platData?.pinterest?.boardId || account.boardId,
+      ).then((r) => onChannelComplete(account.channel, r)),
     );
   }
 
   // Instagram
-  const instagramChannels = channels.filter(c => c === "instagram" || c.startsWith("instagram:"));
+  const instagramChannels = resolveInstagramPublishChannels(channels, tokens.instagramAccounts || []);
   if (instagramChannels.length > 0 && (tokens.instagram || tokens.instagramAccounts?.length > 0)) {
     const postedBusinessIds = new Set();
     
     for (const igChannel of instagramChannels) {
       let currentTokens;
-      let platformKey = "Instagram";
+      let platformKey = igChannel;
       
       if (igChannel === "instagram") {
         currentTokens = tokens.instagram;
@@ -502,9 +571,6 @@ async function processBroadcastJob({
               tokenExpiry: igAccount.token_expires_at,
               username: igAccount.instagram_username
             };
-            if (igAccount.instagram_username) {
-              platformKey = `Instagram (@${igAccount.instagram_username})`;
-            }
           } catch (err) {
             console.error(`Failed to decrypt token for IG account ${accountId}:`, err);
           }
@@ -523,8 +589,21 @@ async function processBroadcastJob({
               // We don't overwrite tokens.instagram here because there might be multiple
               const resolvedCaption = resolveMentions(caption, 'instagram', instagramTokens);
               let result;
-              if (mediaUrls.length > 1 && !isVideo) {
-                result = await postCarouselToInstagram(mediaUrls, resolvedCaption, instagramTokens);
+              if (postType === "story") {
+                const storyUrl = isVideo
+                  ? mediaUrls[uploadedFiles.findIndex((f) => f.mimetype?.startsWith("video/"))] || primaryMediaUrl
+                  : primaryMediaUrl;
+                result = await postStoryToInstagram(storyUrl, resolvedCaption, instagramTokens, mediaType, isVideo ? (pct) => {
+                  const base = 30 + Math.floor((completedChannels / selectedChannelCount) * 55);
+                  const slice = Math.floor((1 / selectedChannelCount) * 55);
+                  const currentPct = base + Math.floor((pct / 100) * slice);
+                  updateJob(jobId, {
+                    progress: Math.min(currentPct, 85),
+                    step: `Processing story on Instagram (${pct}%).`,
+                  });
+                } : null, platData.instagramAspectRatio);
+              } else if (mediaUrls.length > 1) {
+                result = await postCarouselToInstagram(mediaUrls, resolvedCaption, instagramTokens, platData.instagramAspectRatio);
               } else if (isVideo) {
                 const igTokens = { ...instagramTokens, coverUrl: autoCoverImageUrl };
                 result = await postToInstagram(primaryMediaUrl, resolvedCaption, igTokens, (pct) => {
@@ -535,9 +614,9 @@ async function processBroadcastJob({
                     progress: Math.min(currentPct, 85),
                     step: `Processing video on Instagram (${pct}%).`,
                   });
-                });
+                }, platData.instagramAspectRatio);
               } else {
-                result = await postImageToInstagram(primaryMediaUrl, resolvedCaption, instagramTokens);
+                result = await postImageToInstagram(primaryMediaUrl, resolvedCaption, instagramTokens, platData.instagramAspectRatio);
               }
               return onChannelComplete(platformKey, result);
             } catch (error) {
@@ -555,41 +634,54 @@ async function processBroadcastJob({
     }
   }
 
-  // Facebook
-  if (channels.includes("facebook") && tokens.facebook?.pageId) {
-    const resolvedCaption = resolveMentions(caption, 'facebook', tokens.facebook);
-    const fbAction = isVideo
-      ? postVideoToFacebook(
-          tokens.facebook.accessToken,
-          tokens.facebook.pageId,
+  for (const account of resolveSocialPublishChannels("facebook", channels, tokens.facebookAccounts || [])) {
+    const resolvedCaption = resolveMentions(caption, 'facebook', account);
+    const facebookVideoUrl = mediaUrls[uploadedFiles.findIndex((f) => f.mimetype?.startsWith("video/"))] || primaryMediaUrl;
+    const fbAction = postType === "story"
+      ? postFacebookStory(
+          account.accessToken,
+          account.pageId,
           resolvedCaption,
-          primaryMediaUrl,
-          autoCoverImageUrl,
+          isVideo ? facebookVideoUrl : primaryMediaUrl,
+          mediaType,
         )
-      : postToFacebook(
-          tokens.facebook.accessToken,
-          tokens.facebook.pageId,
-          resolvedCaption,
-          mediaUrls,
-        );
+      : postType === "reel"
+        ? postFacebookReel(
+            account.accessToken,
+            account.pageId,
+            resolvedCaption,
+            facebookVideoUrl,
+          )
+        : isVideo
+          ? postVideoToFacebook(
+              account.accessToken,
+              account.pageId,
+              resolvedCaption,
+              primaryMediaUrl,
+              autoCoverImageUrl,
+            )
+          : postToFacebook(
+              account.accessToken,
+              account.pageId,
+              resolvedCaption,
+              mediaUrls,
+            );
     platformPromises.push(
-      fbAction.then((r) => onChannelComplete("Facebook", r)),
+      fbAction.then((r) => onChannelComplete(account.channel, r)),
     );
   }
 
-  // LinkedIn
-  if (channels.includes("linkedin") && tokens.linkedin) {
-    const resolvedCaption = resolveMentions(caption, 'linkedin', tokens.linkedin);
+  for (const account of resolveSocialPublishChannels("linkedin", channels, tokens.linkedinAccounts || [])) {
+    const resolvedCaption = resolveMentions(caption, 'linkedin', account);
     platformPromises.push(
-      postToLinkedIn(mediaUrls, resolvedCaption, tokens.linkedin).then((r) =>
-        onChannelComplete("LinkedIn", r),
+      postToLinkedIn(mediaUrls, resolvedCaption, account).then((r) =>
+        onChannelComplete(account.channel, r),
       ),
     );
   }
 
-  // Bluesky
-  if (channels.includes("bluesky") && tokens.bluesky?.did) {
-    const bskyTokens = { ...tokens.bluesky };
+  for (const account of resolveSocialPublishChannels("bluesky", channels, tokens.blueskyAccounts || [])) {
+    const bskyTokens = { ...account };
     let canPostToBluesky = true;
     // Refresh the Bluesky session — access tokens expire every ~2 hours
     try {
@@ -613,7 +705,7 @@ async function processBroadcastJob({
         canPostToBluesky = false;
         platformPromises.push(
           Promise.resolve(
-            onChannelComplete("Bluesky", {
+            onChannelComplete(account.channel, {
               success: false,
               platform: "Bluesky",
               error:
@@ -632,6 +724,7 @@ async function processBroadcastJob({
         return 0;
       }
     });
+
     const totalSize = stats.reduce((a, b) => a + b, 0);
     if (canPostToBluesky && totalSize <= 30 * 1024 * 1024) {
       const blobs = filePaths
@@ -652,9 +745,9 @@ async function processBroadcastJob({
           blobs,
           isVideo,
         )
-          .then((r) => onChannelComplete("Bluesky", r))
+          .then((r) => onChannelComplete(account.channel, r))
           .catch((error) =>
-            onChannelComplete("Bluesky", {
+            onChannelComplete(account.channel, {
               success: false,
               platform: "Bluesky",
               error: error.message || "Failed to post to Bluesky",
@@ -670,42 +763,38 @@ async function processBroadcastJob({
     }
   }
 
-  // X (Twitter)
-  if (channels.includes("x") && tokens.x) {
-    const resolvedCaption = resolveMentions(caption, 'x', tokens.x);
+  for (const account of resolveSocialPublishChannels("x", channels, tokens.xAccounts || [])) {
+    const resolvedCaption = resolveMentions(caption, 'x', account);
     platformPromises.push(
-      broadcastToX(resolvedCaption, mediaUrls, tokens.x, userId)
+      broadcastToX(resolvedCaption, mediaUrls, account, userId)
         .then((r) => (typeof r === "object" ? r : { success: true, result: r })) // ensure object response
-        .then((r) => onChannelComplete("X", r)),
+        .then((r) => onChannelComplete(account.channel, r)),
     );
   }
 
   // YouTube
-  if (
-    channels.includes("youtube") &&
-    isVideo &&
-    tokens.youtube &&
-    primaryVideoPath
-  ) {
+  for (const account of resolveSocialPublishChannels("youtube", channels, tokens.youtubeAccounts || [])) {
+    if (!isVideo || !primaryVideoPath) continue;
     platformPromises.push(
       (async () => {
         try {
-          const validAccessToken = await googleOAuth.getValidAccessToken(userId);
-          const ytTokens = { ...tokens.youtube, accessToken: validAccessToken };
+          const validAccessToken = await googleOAuth.getValidAccessToken(userId, account.id);
+          const ytTokens = { ...account, accessToken: validAccessToken };
           const resolvedCaption = resolveMentions(caption, 'youtube', ytTokens);
           updateJob(jobId, { step: "Uploading video to YouTube…" });
+          const visibility = platData?.youtube?.visibility || "public";
+          const isShort = (platData?.youtube?.type === "short");
+          const description = platData?.youtube?.description || "";
           const result = await postToYouTube(primaryVideoPath, resolvedCaption, ytTokens, (pct) => {
-            // Phase 3 spans from 30% to 85%
-            // If multiple platforms, each gets a slice of that 55%
             const base = 30 + Math.floor((completedChannels / selectedChannelCount) * 55);
             const slice = Math.floor((1 / selectedChannelCount) * 55);
             const currentPct = base + Math.floor((pct / 100) * slice);
-            
             updateJob(jobId, {
               progress: Math.min(currentPct, 85),
               step: `Uploading video to YouTube (${pct}%)…`,
             });
-          });
+          }, visibility, isShort, description);
+
           if (result.success && result.videoId && youtubeThumbnailPath) {
             const thumbResult = await setVideoThumbnail(
               result.videoId,
@@ -714,11 +803,21 @@ async function processBroadcastJob({
             );
             result.thumbnailSuccess = thumbResult.success;
           }
-          return onChannelComplete("YouTube", result);
+          return onChannelComplete(account.channel, {
+            ...result,
+            accountId: account.id,
+            channelId: account.accountId || account.account_id,
+            username: account.username,
+            profilePicture: account.profilePicture || account.profile_picture,
+          });
         } catch (error) {
-          return onChannelComplete("YouTube", {
+          return onChannelComplete(account.channel, {
             success: false,
             platform: "YouTube",
+            accountId: account.id,
+            channelId: account.accountId || account.account_id,
+            username: account.username,
+            profilePicture: account.profilePicture || account.profile_picture,
             error: error.message || "Failed to upload to YouTube",
           });
         }
@@ -728,33 +827,48 @@ async function processBroadcastJob({
 
   // TikTok, Mastodon, Reddit, Threads...
 
-  if (channels.includes("mastodon") && tokens.mastodon) {
-    const resolvedCaption = resolveMentions(caption, 'mastodon', tokens.mastodon);
+  for (const account of resolveSocialPublishChannels("mastodon", channels, tokens.mastodonAccounts || [])) {
+    const resolvedCaption = resolveMentions(caption, 'mastodon', account);
     platformPromises.push(
       mastodon
         .postStatus(
-          tokens.mastodon.accessToken,
-          tokens.mastodon.instanceUrl,
+          account.accessToken,
+          account.instanceUrl,
           resolvedCaption,
           filePaths,
         )
-        .then((r) => onChannelComplete("Mastodon", r)),
+        .then((r) => onChannelComplete(account.channel, r)),
     );
   }
-  if (channels.includes("reddit") && tokens.reddit) {
-    const resolvedCaption = resolveMentions(caption, 'reddit', tokens.reddit);
+  for (const account of resolveSocialPublishChannels("reddit", channels, tokens.redditAccounts || [])) {
+    const resolvedCaption = resolveMentions(caption, 'reddit', account);
     platformPromises.push(
       postToReddit(
         userId,
         resolvedCaption,
         primaryMediaUrl,
-        tokens.reddit,
+        account,
         platData?.reddit,
-      ).then((r) => onChannelComplete("Reddit", r)),
+      ).then((r) => onChannelComplete(account.channel, r)),
     );
   }
-  if (channels.includes("threads") && tokens.threads) {
-    const resolvedCaption = resolveMentions(caption, 'threads', tokens.threads);
+  for (const account of resolveSocialPublishChannels("googleBusiness", channels, tokens.googleBusinessAccounts || [])) {
+    const resolvedCaption = resolveMentions(caption, 'googleBusiness', account);
+    platformPromises.push(
+      (async () => {
+        let gbpTokens = account;
+        try {
+          const freshAccessToken = await googleBusinessOAuth.getValidAccessToken(userId, account.id);
+          gbpTokens = { ...account, accessToken: freshAccessToken };
+        } catch (tokenErr) {
+          console.warn(`Warning: could not refresh Google Business token: ${tokenErr.message}. Using stored token.`);
+        }
+        return postToGoogleBusiness(resolvedCaption, mediaUrls, gbpTokens, platData?.googleBusiness);
+      })().then((r) => onChannelComplete(account.channel, r)),
+    );
+  }
+  for (const account of resolveSocialPublishChannels("threads", channels, tokens.threadsAccounts || [])) {
+    const resolvedCaption = resolveMentions(caption, 'threads', account);
     // Build mediaItems with per-file type for carousel support
     const threadsMediaItems = mediaUrls.map((url, idx) => ({
       url,
@@ -762,13 +876,13 @@ async function processBroadcastJob({
     }));
     platformPromises.push(
       postToThreads(
-        tokens.threads.accessToken,
-        tokens.threads.account_id,
+        account.accessToken,
+        account.account_id,
         resolvedCaption,
         mediaUrls[0],
         mediaType,
         threadsMediaItems,
-      ).then((r) => onChannelComplete("Threads", r)),
+      ).then((r) => onChannelComplete(account.channel, r)),
     );
   }
 
@@ -776,13 +890,29 @@ async function processBroadcastJob({
     progress: 31,
     step: `Publishing to ${selectedChannelCount} platform(s)…`,
   });
+  if (platformPromises.length === 0) {
+    const message = "No publishable platforms were resolved. Reconnect/select the target account and try again.";
+    failJob(jobId, message);
+    await saveBroadcast(userId, caption, filenames, results, mediaType, {
+      ...platData,
+      sourceJobId: jobId,
+      source_job_id: jobId,
+      postType,
+      selectedChannels: channels,
+      selected_aspect_ratio: selectedAspectRatio,
+      selected_post_size_preset: selectedPostSizePreset,
+    }, 'failed');
+    return;
+  }
+
   const platformResults = await Promise.allSettled(platformPromises);
 
   const failedPlatforms = [];
   for (const promiseResult of platformResults) {
     if (promiseResult.status === "fulfilled") {
       const { platform, result } = promiseResult.value;
-      results[platform.toLowerCase()] = result;
+      const resultKey = String(platform).includes(":") ? platform : String(platform).toLowerCase();
+      results[resultKey] = result;
       if (result && result.success === false) {
         failedPlatforms.push({
           platform,
@@ -804,6 +934,17 @@ async function processBroadcastJob({
     }
   }
 
+  const instagramResults = Object.entries(results)
+    .filter(([platform]) => platform === "instagram" || platform.startsWith("instagram:"))
+    .map(([, result]) => result);
+  if (instagramResults.length > 0) {
+    results.instagram = instagramResults.find((result) => result?.success) || instagramResults[0];
+    results.instagramAccounts = instagramResults;
+  }
+  for (const provider of ['facebook', 'youtube', 'pinterest', 'bluesky', 'linkedin', 'mastodon', 'threads', 'x', 'reddit', 'googleBusiness']) {
+    setAggregateResult(results, provider);
+  }
+
   const hasPlatformFailures = failedPlatforms.length > 0;
 
   // ── Phase 4: Save to DB (85 → 95%) ────────────────────────────────────
@@ -814,11 +955,12 @@ async function processBroadcastJob({
       sourceJobId: jobId,
       source_job_id: jobId,
       postType,
-      autoDMConfig: autoDMConfig?.enabled ? autoDMConfig : null,
+      selectedChannels: channels,
+      autoDMConfig: canUseAutoDM && autoDMConfig?.enabled ? autoDMConfig : null,
       selected_aspect_ratio: selectedAspectRatio,
       selected_post_size_preset: selectedPostSizePreset
     }, hasPlatformFailures ? 'failed' : 'sent');
-    if (autoDMConfig?.enabled && results.instagram?.success) {
+    if (canUseAutoDM && autoDMConfig?.enabled && results.instagram?.success) {
       try {
         await createOrUpdateComposerAutomation({
           user,
@@ -854,7 +996,11 @@ async function processBroadcastJob({
 
   const successCount = platformPromises.length - failedPlatforms.length;
   const anyFailed = hasPlatformFailures;
-  const failedStr = failedPlatforms.map(f => `${f.platform}: ${f.error}`).join(" | ");
+  const failedStr = failedPlatforms.map(f => {
+    let pName = f.platform.split(':')[0];
+    pName = pName.charAt(0).toUpperCase() + pName.slice(1);
+    return `${pName}: ${f.error}`;
+  }).join(" | ");
 
   const finalStatus = anyFailed ? "failed" : "completed";
   const finalStep = anyFailed ? "Some platforms failed." : "Broadcast complete!";
@@ -878,6 +1024,22 @@ async function processBroadcastJob({
     result: results,
   });
   console.log(`🎉 [JOB:${jobId}] Broadcast job finished. Success: ${successCount}/${platformPromises.length}${anyFailed ? ` | Errors: ${failedStr}` : ''}`);
+
+  // Dispatch broadcast summary email via SupermailBox
+  if (user?.email) {
+    supermailbox.sendEmail({
+      to: user.email,
+      templateKey: 'broadcast_notification',
+      idempotencyKey: `broadcast_${jobId}`,
+      variables: {
+        campaign_name: 'Broadcast Published successfully',
+        full_name: user.name || user.email,
+        email: user.email,
+        caption: caption?.substring(0, 100) || 'New post published',
+        platforms: channels?.join(', ') || 'Connected channels'
+      }
+    }).catch(err => console.warn('[SupermailBox SDK] Broadcast notification email failed:', err?.message));
+  }
 }
 
 function getJob_internal(jobId) {

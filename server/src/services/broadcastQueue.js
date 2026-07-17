@@ -4,6 +4,7 @@ import IORedis from 'ioredis';
 import { default as supabase } from './supabase.js';
 import { executeBroadcast } from './postingService.js';
 import { downloadMedia } from '../utils/download.js';
+import { supermailbox } from './supermailbox.js';
 
 const QUEUE_NAME = process.env.BROADCAST_QUEUE_NAME || 'broadcast-publish';
 const getRedisUrl = () => process.env.REDIS_URL || process.env.BULLMQ_REDIS_URL;
@@ -197,6 +198,27 @@ export async function processBroadcastJob(broadcastId) {
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
     log('log', id, `Success in ${elapsed}s`);
     cleanupFiles(processingFilePaths);
+
+    // Notify user via SupermailBox
+    try {
+      const { data: user } = await supabase
+        .from('users')
+        .select('email, name')
+        .eq('id', user_id)
+        .maybeSingle();
+
+      if (user?.email) {
+        supermailbox.notifyBroadcastSuccess({
+          userEmail: user.email,
+          userName: user.name,
+          jobId: id,
+          caption,
+          platforms: channels
+        }).catch(err => log('warn', id, `SupermailBox notification failed: ${err?.message}`));
+      }
+    } catch (mailErr) {
+      log('warn', id, `Failed sending SupermailBox notification: ${mailErr?.message}`);
+    }
   } catch (error) {
     const errorMsg = error?.message || String(error);
     log('error', id, `Failed attempt ${currentAttempt}/${MAX_ATTEMPTS}`, { error: errorMsg });

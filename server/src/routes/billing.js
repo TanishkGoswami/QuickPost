@@ -6,11 +6,60 @@ import supabase from '../services/supabase.js';
 
 const router = express.Router();
 
-router.get('/plans', (_req, res) => {
-  res.json({
-    success: true,
-    plans: Object.values(PLANS),
-  });
+import { getSocialPricing } from '../services/pricing.js';
+
+router.get('/plans', async (_req, res) => {
+  try {
+    const socialPricing = await getSocialPricing();
+    const starterPlan = socialPricing.find(p => p.plan_name === 'social_pilot_starter');
+    const growthPlan = socialPricing.find(p => p.plan_name === 'social_pilot_growth');
+
+    const freePlan = JSON.parse(JSON.stringify(PLANS.free));
+    const slitePlan = JSON.parse(JSON.stringify(PLANS.slite));
+    const sgrowthPlan = JSON.parse(JSON.stringify(PLANS.sgrowth));
+
+    if (starterPlan) {
+      const base = starterPlan.amount;
+      slitePlan.prices = {
+        month: base / 100,
+        quarterly: Math.round(base * 3 * 0.90) / 100 / 3,
+        six_months: Math.round(base * 6 * 0.80) / 100 / 6,
+        year: Math.round(base * 12 * 0.70) / 100 / 12
+      };
+    } else {
+      slitePlan.prices = { month: null, quarterly: null, six_months: null, year: null };
+    }
+
+    if (growthPlan) {
+      const base = growthPlan.amount;
+      sgrowthPlan.prices = {
+        month: base / 100,
+        quarterly: Math.round(base * 3 * 0.90) / 100 / 3,
+        six_months: Math.round(base * 6 * 0.80) / 100 / 6,
+        year: Math.round(base * 12 * 0.70) / 100 / 12
+      };
+    } else {
+      sgrowthPlan.prices = { month: null, quarterly: null, six_months: null, year: null };
+    }
+
+    res.json({
+      success: true,
+      plans: [freePlan, slitePlan, sgrowthPlan],
+    });
+  } catch (error) {
+    console.error('Failed to load dynamic pricing, failing closed:', error.message);
+    const freePlan = JSON.parse(JSON.stringify(PLANS.free));
+    const slitePlan = JSON.parse(JSON.stringify(PLANS.slite));
+    const sgrowthPlan = JSON.parse(JSON.stringify(PLANS.sgrowth));
+
+    slitePlan.prices = { month: null, quarterly: null, six_months: null, year: null };
+    sgrowthPlan.prices = { month: null, quarterly: null, six_months: null, year: null };
+
+    res.json({
+      success: true,
+      plans: [freePlan, slitePlan, sgrowthPlan],
+    });
+  }
 });
 
 router.get('/entitlements', authenticateUser, async (req, res, next) => {
@@ -26,7 +75,7 @@ router.get('/invoices', authenticateUser, async (req, res, next) => {
   try {
     const ids = [req.user.authUserId, req.user.userId].filter(Boolean);
     let query = supabase
-      .from('payments')
+      .from('social_payments')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(24);

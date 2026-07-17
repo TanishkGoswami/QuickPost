@@ -206,6 +206,10 @@ function History() {
         ) : (
           <div className="space-y-6">
             {filteredBroadcasts.map((post) => {
+              const selectedBasePlatforms = new Set([
+                ...(post.selected_channels || []),
+                ...(post.platform_data?.selectedChannels || []),
+              ].map((channel) => String(channel).split(":")[0]));
               const platforms = [
                 {
                   id: "linkedin",
@@ -223,7 +227,7 @@ function History() {
                 },
                 {
                   id: "instagram",
-                  success: post.instagram_success,
+                  success: post.instagram_success || (selectedBasePlatforms.has("instagram") && post.status === "sent"),
                   name: "Instagram",
                   error: post.instagram_error,
                   url: post.instagram_url,
@@ -278,9 +282,12 @@ function History() {
                   error: post.reddit_error,
                   url: post.reddit_url,
                 },
-              ].filter(
-                (p) => p.success || (p.error && p.error !== "Not selected"),
-              ); // FILTER OUT NOT SELECTED
+              ].map((platform) => ({
+                ...platform,
+                selected: selectedBasePlatforms.has(platform.id),
+              })).filter(
+                (p) => p.selected || p.success || (p.error && p.error !== "Not selected"),
+              );
 
               return (
                 <div

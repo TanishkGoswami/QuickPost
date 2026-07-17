@@ -63,6 +63,8 @@ export default function LandingPage() {
         <AboutSection />
         <Pricing />
         <SocialProof />
+
+        
         <CTASection />
 
         {/* Footer */}

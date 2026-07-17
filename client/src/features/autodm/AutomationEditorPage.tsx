@@ -53,17 +53,19 @@ export default function AutomationEditorPage() {
   const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
   const [name, setName] = useState("Untitled");
   const [triggerType, setTriggerType] = useState("comment_on_post");
-  const [selectedMedia, setSelectedMedia] = useState(null);
+  const [selectedMedia, setSelectedMedia] = useState<any>(null);
   const [applyToAllMedia, setApplyToAllMedia] = useState(true);
-  const [keywords, setKeywords] = useState([]);
+  const [keywords, setKeywords] = useState<string[]>([]);
   const [isCaseSensitive, setIsCaseSensitive] = useState(false);
   const [commentReplyEnabled, setCommentReplyEnabled] = useState(false);
   const [commentReplyText, setCommentReplyText] = useState("");
-  const [responseFlow, setResponseFlow] = useState({ nodes: [], opening_message_enabled: false, opening_message: "" });
+  const [requireFollow, setRequireFollow] = useState(false);
+  const [fallbackCommentReply, setFallbackCommentReply] = useState("");
+  const [responseFlow, setResponseFlow] = useState<any>({ nodes: [], opening_message_enabled: false, opening_message: "" });
   const [isActive, setIsActive] = useState(false);
 
   // All existing automations for conflict detection
-  const [allAutomations, setAllAutomations] = useState([]);
+  const [allAutomations, setAllAutomations] = useState<any[]>([]);
 
   useEffect(() => {
     if (!socialUser?.userId || !activeAccount?.id) return;
@@ -82,7 +84,7 @@ export default function AutomationEditorPage() {
 
     (async () => {
       try {
-        const automation = await getAutomationById(id, socialUser.userId);
+        const automation = await getAutomationById(id, socialUser?.userId);
         if (!automation) {
           toast.error("Automation not found");
           navigate("/dashboard/auto-dm/automations");
@@ -104,9 +106,11 @@ export default function AutomationEditorPage() {
         setIsCaseSensitive(Boolean(automation.is_case_sensitive));
         setCommentReplyEnabled(Boolean(automation.comment_reply_enabled));
         setCommentReplyText(automation.comment_reply_text || "");
+        setRequireFollow(Boolean(automation.require_follow));
+        setFallbackCommentReply(automation.fallback_comment_reply || "");
         setResponseFlow(automation.response_flow || { nodes: [], opening_message_enabled: false, opening_message: "" });
         setIsActive(Boolean(automation.is_active));
-      } catch (error) {
+      } catch (error: any) {
         toast.error(error.message || "Failed to load automation");
       } finally {
         setLoading(false);
@@ -169,7 +173,7 @@ export default function AutomationEditorPage() {
       return;
     }
     if (hasConflicts) {
-      const conflictNames = [...new Set(conflictingKeywords.map((c) => `"${c.automationName}"`))]
+      const conflictNames = [...new Set((conflictingKeywords || []).map((c: any) => `"${c.automationName}"`))]
         .join(", ");
       toast.error(
         `Keyword conflict with ${conflictNames}. Please use different keywords.`,
@@ -181,8 +185,8 @@ export default function AutomationEditorPage() {
     setSaving(true);
     try {
       const payload = {
-        user_id: socialUser.userId,
-        instagram_account_id: activeAccount.id,
+        user_id: socialUser?.userId,
+        instagram_account_id: activeAccount?.id,
         name,
         trigger_type: triggerType,
         media_id: applyToAllMedia ? null : selectedMedia?.id || null,
@@ -192,6 +196,8 @@ export default function AutomationEditorPage() {
         is_case_sensitive: isCaseSensitive,
         comment_reply_enabled: commentReplyEnabled,
         comment_reply_text: commentReplyEnabled ? commentReplyText : null,
+        require_follow: requireFollow,
+        fallback_comment_reply: fallbackCommentReply,
         response_flow: responseFlow,
         is_active: isActive,
       };
@@ -203,7 +209,7 @@ export default function AutomationEditorPage() {
         toast.success("Automation updated");
       }
       navigate("/dashboard/auto-dm/automations");
-    } catch (error) {
+    } catch (error: any) {
       toast.error(error.message || "Failed to save automation");
     } finally {
       setSaving(false);
@@ -239,7 +245,7 @@ export default function AutomationEditorPage() {
               <div className="h-5 w-px bg-black/10" />
               <Input
                 value={name}
-                onChange={(event) => setName(event.target.value)}
+                onChange={(event: any) => setName(event.target.value)}
                 className="h-auto min-w-0 max-w-xs border-0 bg-transparent px-0 text-base font-semibold text-slate-900 focus-visible:ring-0"
               />
             </div>
@@ -373,7 +379,7 @@ export default function AutomationEditorPage() {
                       </div>
                       <Switch
                         checked={applyToAllMedia}
-                        onCheckedChange={(checked) => {
+                        onCheckedChange={(checked: any) => {
                           setApplyToAllMedia(checked);
                           if (checked) setSelectedMedia(null);
                         }}
@@ -469,7 +475,7 @@ export default function AutomationEditorPage() {
                     {commentReplyEnabled && (
                       <Textarea
                         value={commentReplyText}
-                        onChange={(event) =>
+                        onChange={(event: any) =>
                           setCommentReplyText(event.target.value)
                         }
                         rows={3}
@@ -480,19 +486,66 @@ export default function AutomationEditorPage() {
                   </CardContent>
                 </Card>
               )}
+
+              {/* Follow Gate */}
+              {["comment_on_post", "comment_on_reel"].includes(
+                triggerType,
+              ) && (
+                <Card className="overflow-hidden rounded-2xl border-black/8 shadow-sm">
+                  <CardHeader className="border-b border-black/5 bg-slate-50/60 pb-3 pt-4">
+                    <CardTitle className="text-sm font-semibold text-slate-900">
+                      Instagram Follow Gate
+                    </CardTitle>
+                    <p className="text-xs text-slate-400">
+                      Require users to follow your account before sending them a DM.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm text-slate-700">
+                        Only send DM if they follow
+                      </Label>
+                      <Switch
+                        checked={requireFollow}
+                        onCheckedChange={setRequireFollow}
+                      />
+                    </div>
+                    {requireFollow && (
+                      <div className="space-y-2 mt-2 pt-2 border-t border-black/5">
+                        <Label className="text-sm text-slate-700">
+                          Fallback Comment Reply
+                        </Label>
+                        <p className="text-xs text-slate-400 mb-2">
+                          If they don't follow you, we'll reply to their comment with this text instead of sending a DM.
+                        </p>
+                        <Textarea
+                          value={fallbackCommentReply}
+                          onChange={(event: any) =>
+                            setFallbackCommentReply(event.target.value)
+                          }
+                          rows={2}
+                          placeholder="Please follow our account to receive the link!"
+                          className="resize-none rounded-xl border-black/10 text-sm"
+                        />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Right column: Response Flow */}
             <ResponseFlowBuilder
               responseFlow={responseFlow}
               onChange={setResponseFlow}
+              step={0}
             />
           </div>
 
           <MediaSelector
             open={mediaDialogOpen}
             onOpenChange={setMediaDialogOpen}
-            onSelect={(media) => {
+            onSelect={(media: any) => {
               setSelectedMedia(media);
               setMediaDialogOpen(false);
             }}

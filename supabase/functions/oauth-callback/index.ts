@@ -305,7 +305,7 @@ Deno.serve(async (request: Request) => {
         },
         updated_at: new Date().toISOString(),
       },
-      { onConflict: 'user_id,provider' }
+      { onConflict: 'user_id,provider,account_id' }
     );
 
     if (socialTokenError) {

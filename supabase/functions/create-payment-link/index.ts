@@ -23,27 +23,81 @@ Deno.serve(async (req) => {
     if (!userId || !planId) {
       throw new Error("userId and planId are required");
     }
-    if (![1, 3, 6, 12].includes(intervalMonths)) {
-      throw new Error("Invalid billing interval");
+
+    // Only "pro" (or "999" backward compat) is supported. Enterprise checkout is fail-closed.
+    const planKey = String(planId).toLowerCase();
+    if (planKey !== "pro" && planKey !== "999") {
+      throw new Error("Enterprise and invalid plan checkouts are disabled because no matching Hub pricing plan exists");
     }
 
-    // 1. Determine amount based on plan
-    let amount = 0;
-    let description = "";
-    if (planId === "999" || planId === "pro") {
-      let monthlyPrice = 999;
-      if (intervalMonths === 3) monthlyPrice = 899;
-      else if (intervalMonths === 6) monthlyPrice = 799;
-      else if (intervalMonths === 12) monthlyPrice = 799;
-      
-      amount = Math.round(monthlyPrice * intervalMonths * 100); // in paise
-      description = `QuickPost Pro Plan Subscription (${intervalMonths} Month${intervalMonths > 1 ? 's' : ''})`;
-    } else if (planId === "2999" || planId === "enterprise") {
-      amount = (intervalMonths === 12 ? 29988 : 2999 * intervalMonths) * 100; // in paise
-      description = `QuickPost Enterprise Plan Subscription (${intervalMonths} Month${intervalMonths > 1 ? 's' : ''})`;
-    } else {
-      throw new Error("Invalid planId");
+    // Validate supported billing intervals.
+    if (![1, 3, 6, 12].includes(intervalMonths)) {
+      throw new Error("Invalid billing interval requested");
     }
+
+    const HUB_SUPABASE_URL = Deno.env.get("HUB_SUPABASE_URL");
+    const HUB_SUPABASE_ANON_KEY = Deno.env.get("HUB_SUPABASE_ANON_KEY");
+
+    if (!HUB_SUPABASE_URL || !HUB_SUPABASE_ANON_KEY) {
+      throw new Error("GetAiPilot pricing credentials are not configured in environment variables");
+    }
+
+    // Fetch dynamic pricing from GetAiPilot
+    const hubPricingUrl = `${HUB_SUPABASE_URL}/functions/v1/get-pricing?category=social&currency=INR`;
+    const pricingResponse = await fetch(hubPricingUrl, {
+      method: "GET",
+      headers: {
+        "apikey": HUB_SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${HUB_SUPABASE_ANON_KEY}`,
+      },
+    });
+
+    if (!pricingResponse.ok) {
+      throw new Error(`Failed to fetch pricing from GetAiPilot: ${pricingResponse.statusText}`);
+    }
+
+    const pricingData = await pricingResponse.json();
+    if (!pricingData || typeof pricingData !== "object" || !Array.isArray(pricingData.plans)) {
+      throw new Error("Invalid pricing response format from GetAiPilot");
+    }
+
+    if (pricingData.currency !== "INR") {
+      throw new Error(`Authoritative pricing response contains unsupported currency: ${pricingData.currency}`);
+    }
+
+    const socialPricing = pricingData.plans;
+
+    // Validate duplicates
+    const planNames = socialPricing.map((p: any) => p.plan_name);
+    const hasDuplicates = planNames.some((name: string, index: number) => planNames.indexOf(name) !== index);
+    if (hasDuplicates) {
+      throw new Error("Duplicate plan_name records found in Hub pricing response");
+    }
+
+    // Validate active plans structure
+    for (const plan of socialPricing) {
+      if (plan.is_active !== true) continue;
+      if (typeof plan.amount !== "number" || plan.amount <= 0) {
+        throw new Error(`Invalid amount found in Hub plan: ${plan.plan_name}`);
+      }
+      if (plan.currency !== "INR") {
+        throw new Error("Unsupported currency found in Hub plan");
+      }
+    }
+
+    // Lookup active social_pilot_starter
+    const starterPlan = socialPricing.find((p: any) => p.plan_name === "social_pilot_starter" && p.is_active === true);
+    if (!starterPlan) {
+      throw new Error("Active social_pilot_starter pricing plan not found in GetAiPilot catalog");
+    }
+
+    let discountMultiplier = 1.0;
+    if (intervalMonths === 3) discountMultiplier = 0.90;
+    else if (intervalMonths === 6) discountMultiplier = 0.80;
+    else if (intervalMonths === 12) discountMultiplier = 0.70;
+
+    const amount = Math.round(starterPlan.amount * intervalMonths * discountMultiplier);
+    const description = `QuickPost Pro Plan Subscription (${intervalMonths} Month${intervalMonths > 1 ? 's' : ''})`;
 
     // 2. Initialize Supabase client
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
@@ -88,8 +142,24 @@ Deno.serve(async (req) => {
       throw new Error(razorpayData.error?.description || "Failed to create Razorpay payment link");
     }
 
-    // 4. Store payment link in DB
-    const { error: dbError } = await supabase.from("payments").insert({
+    // 4. Ensure user exists in public.users to satisfy the foreign key constraint
+    // in social_payments (which references public.users.id)
+    const { error: userSyncError } = await supabase
+      .from("users")
+      .upsert({
+        id: userId,
+        email: customerEmail,
+        name: customerName || "Customer",
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "id" });
+
+    if (userSyncError) {
+      console.error("[create-payment-link] Critical: Failed to pre-sync user to public.users:", userSyncError);
+      throw new Error("Failed to initialize checkout session. Please try again.");
+    }
+
+    // 5. Store payment link in DB
+    const { error: dbError } = await supabase.from("social_payments").insert({
       user_id: userId,
       razorpay_payment_link_id: razorpayData.id,
       plan: planId === "999" || planId === "pro" ? "Pro" : "Enterprise",

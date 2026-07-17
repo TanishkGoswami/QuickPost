@@ -2,6 +2,10 @@ import axios from 'axios';
 
 const GRAPH_API_URL = 'https://graph.facebook.com/v18.0';
 
+function getFacebookErrorMessage(error, fallback) {
+  return error.response?.data?.error?.message || fallback;
+}
+
 /**
  * Post to Facebook Page (Supports single image or multiple images)
  * @param {string} accessToken - Page access token
@@ -117,4 +121,68 @@ async function postVideoToFacebook(accessToken, pageId, caption, videoUrl, thumb
   }
 }
 
-export { postToFacebook, postVideoToFacebook };
+async function transferFacebookVideoUpload(uploadUrl, accessToken, fileUrl, http = axios) {
+  await http.post(
+    uploadUrl,
+    { file_url: fileUrl },
+    { headers: { Authorization: `OAuth ${accessToken}` } }
+  );
+}
+
+async function postFacebookReel(accessToken, pageId, caption, videoUrl, http = axios) {
+  try {
+    const startRes = await http.post(`${GRAPH_API_URL}/${pageId}/video_reels`, {
+      upload_phase: 'start',
+      access_token: accessToken,
+    });
+    const { video_id: videoId, upload_url: uploadUrl } = startRes.data;
+    await transferFacebookVideoUpload(uploadUrl, accessToken, videoUrl, http);
+    const finishRes = await http.post(`${GRAPH_API_URL}/${pageId}/video_reels`, {
+      upload_phase: 'finish',
+      video_id: videoId,
+      description: caption,
+      access_token: accessToken,
+    });
+    return { success: true, postId: finishRes.data.id || videoId, platform: 'Facebook' };
+  } catch (error) {
+    console.error('Facebook reel error:', error.response?.data || error.message);
+    throw new Error(getFacebookErrorMessage(error, 'Failed to post Facebook Reel'));
+  }
+}
+
+async function postFacebookStory(accessToken, pageId, caption, mediaUrl, mediaType = 'image', http = axios) {
+  try {
+    if (mediaType === 'video') {
+      const startRes = await http.post(`${GRAPH_API_URL}/${pageId}/video_stories`, {
+        upload_phase: 'start',
+        access_token: accessToken,
+      });
+      const { video_id: videoId, upload_url: uploadUrl } = startRes.data;
+      await transferFacebookVideoUpload(uploadUrl, accessToken, mediaUrl, http);
+      const finishRes = await http.post(`${GRAPH_API_URL}/${pageId}/video_stories`, {
+        upload_phase: 'finish',
+        video_id: videoId,
+        description: caption,
+        access_token: accessToken,
+      });
+      return { success: true, postId: finishRes.data.id || videoId, platform: 'Facebook' };
+    }
+
+    const photoRes = await http.post(`${GRAPH_API_URL}/${pageId}/photos`, {
+      url: mediaUrl,
+      caption,
+      published: false,
+      access_token: accessToken,
+    });
+    const storyRes = await http.post(`${GRAPH_API_URL}/${pageId}/photo_stories`, {
+      photo_id: photoRes.data.id,
+      access_token: accessToken,
+    });
+    return { success: true, postId: storyRes.data.id || photoRes.data.id, platform: 'Facebook' };
+  } catch (error) {
+    console.error('Facebook story error:', error.response?.data || error.message);
+    throw new Error(getFacebookErrorMessage(error, 'Failed to post Facebook Story'));
+  }
+}
+
+export { postToFacebook, postVideoToFacebook, postFacebookReel, postFacebookStory };

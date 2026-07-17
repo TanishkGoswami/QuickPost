@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "graph-it-live": {
+      "type": "stdio",
+      "command": "graph-it",
+      "args": ["serve"],
+      "env": {
+        "WORKSPACE_ROOT": "C:\\Users\\pc\\Documents\\GitHub\\GAP\\QuickPost",
+        "EXCLUDE_NODE_MODULES": "true",
+        "MAX_DEPTH": "50"
+      }
+    }
+  }
+}
