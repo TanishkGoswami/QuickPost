@@ -11,6 +11,7 @@ import {
   CTASection,
   LandingNav,
 } from "../features/landing";
+import FAQ from "../features/landing/components/FAQ";
 import { FloatingPaths } from "../components/ui/BackgroundPaths";
 import SmoothScroll from "../components/ui/SmoothScroll";
 import "../styles/landing.css";
@@ -63,8 +64,7 @@ export default function LandingPage() {
         <AboutSection />
         <Pricing />
         <SocialProof />
-
-        
+        <FAQ />
         <CTASection />
 
         {/* Footer */}
