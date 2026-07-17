@@ -208,12 +208,17 @@ export async function processBroadcastJob(broadcastId) {
         .maybeSingle();
 
       if (user?.email) {
-        supermailbox.notifyBroadcastSuccess({
-          userEmail: user.email,
-          userName: user.name,
-          jobId: id,
-          caption,
-          platforms: channels
+        supermailbox.sendEmail({
+          to: user.email,
+          templateKey: 'broadcast_notification',
+          idempotencyKey: `broadcast_${id}`,
+          variables: {
+            campaign_name: 'Broadcast Published successfully',
+            full_name: user.name || user.email,
+            email: user.email,
+            caption: caption?.substring(0, 100) || 'New post published',
+            platforms: channels?.join(', ') || 'Connected channels'
+          }
         }).catch(err => log('warn', id, `SupermailBox notification failed: ${err?.message}`));
       }
     } catch (mailErr) {

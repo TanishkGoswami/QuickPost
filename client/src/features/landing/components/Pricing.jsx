@@ -253,28 +253,6 @@ export default function Pricing({ hideHeader = false }) {
               padding: 4,
               border: "1px solid #e5e5e5",
             }}>
-              <div style={{
-                background: "#1a1a1a",
-                color: "#ffffff",
-                borderRadius: 9999,
-                padding: "8px 24px",
-                fontSize: 14,
-                fontWeight: 500,
-                cursor: "default",
-              }}>
-                Individual
-              </div>
-              <div style={{
-                background: "transparent",
-                color: "#1a1a1a",
-                borderRadius: 9999,
-                padding: "8px 24px",
-                fontSize: 14,
-                fontWeight: 500,
-                cursor: "pointer",
-              }}>
-                Teams
-              </div>
             </div>
 
             {/* Right side: Billing toggle */}
@@ -444,7 +422,8 @@ export default function Pricing({ hideHeader = false }) {
                 >
                   {isCheckoutDisabled ? 'Unavailable' : (upgrading === plan.id ? "Processing..." : plan.cta)}
                 </button>
-
+                     
+                     {/* <CTASection /> */}
                 {/* Features list */}
                 <div style={{ paddingBottom: 24, flex: 1 }}>
                   <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 14 }}>
