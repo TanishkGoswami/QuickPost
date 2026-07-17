@@ -478,7 +478,7 @@ export async function getScheduledBroadcasts(userId) {
       .from('broadcasts')
       .select('*')
       .eq('user_id', userId)
-      .in('status', ['scheduled', 'queued', 'processing', 'failed', 'cancelled'])
+      .in('status', ['scheduled', 'queued', 'processing', 'failed', 'cancelled', 'sent'])
       .order('scheduled_for', { ascending: true });
 
     if (error) throw error;
