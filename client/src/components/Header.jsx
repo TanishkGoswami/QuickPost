@@ -1,18 +1,36 @@
 import React, { useState } from "react";
-import { Menu, ArrowLeft, Settings, LogOut, X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Menu, ArrowLeft, Unplug, LogOut, X, ChevronDown, UserRound } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import { useDialog } from "../context/DialogContext";
 import apiClient from "../utils/apiClient";
 
-function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
+const PLATFORM_ICONS = {
+  instagram: "/icons/ig-instagram-icon.svg",
+  facebook: "/icons/facebook-round-color-icon.svg",
+  youtube: "/icons/youtube-color-icon.svg",
+  linkedin: "/icons/linkedin-icon.svg",
+  threads: "/icons/threads-icon.svg",
+  mastodon: "/icons/mastodon-round-icon.svg",
+  bluesky: "/icons/bluesky-circle-color-icon.svg",
+  reddit: "/icons/reddit-icon.svg",
+  x: "/icons/x-social-media-round-icon.svg",
+  pinterest: "/icons/pinterest-round-color-icon.svg",
+  googleBusiness: "/icons/google-icon.svg",
+};
+
+function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage, topOffset = 0 }) {
   const { user, logout, connectedAccounts, refreshAccounts } = useAuth();
   const { confirm, alert } = useDialog();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showSettings, setShowSettings] = useState(false);
+  const [expandedPlatforms, setExpandedPlatforms] = useState({});
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
-  const [imgError, setImgError] = useState(false);
+
+  const isEditorPage = location.pathname.includes('/dashboard/auto-dm/automations/') && location.pathname !== '/dashboard/auto-dm/automations';
 
   if (!user) return null;
 
@@ -32,10 +50,74 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
     }
   };
 
-  const handleDisconnect = async (platform) => {
+  const multiAccountProviders = [
+    "facebook",
+    "youtube",
+    "linkedin",
+    "threads",
+    "mastodon",
+    "bluesky",
+    "reddit",
+    "x",
+    "pinterest",
+    "googleBusiness",
+  ];
+  const connectedRows = [
+    ...(connectedAccounts.instagramAccounts || []).map((account) => ({
+      id: `instagram:${account.id}`,
+      provider: "instagram",
+      accountId: account.id,
+      label: "Instagram",
+      username: account.username,
+      profilePicture: account.profilePicture,
+    })),
+    ...multiAccountProviders.flatMap((provider) =>
+      (connectedAccounts?.[`${provider}Accounts`] || []).map((account) => ({
+        id: `${provider}:${account.id}`,
+        provider,
+        accountId: account.id,
+        label: provider,
+        username: account.username,
+        profilePicture: account.profilePicture,
+      })),
+    ),
+    ...Object.entries(connectedAccounts || {})
+      .filter(([id, data]) =>
+        id !== "instagram" &&
+        id !== "instagramAccounts" &&
+        !id.endsWith("Accounts") &&
+        !multiAccountProviders.includes(id) &&
+        data?.connected
+      )
+      .map(([id, data]) => ({
+        id,
+        provider: id,
+        accountId: null,
+        label: id,
+        username: data.username,
+        profilePicture: data.profilePicture,
+      })),
+  ];
+
+  const groupedAccounts = React.useMemo(() => {
+    const groups = {};
+    connectedRows.forEach((row) => {
+      const provider = row.provider;
+      if (!groups[provider]) {
+        groups[provider] = [];
+      }
+      groups[provider].push(row);
+    });
+    return groups;
+  }, [connectedRows]);
+
+  const handleDisconnect = async (platform, accountId = null) => {
+    const message = platform === "instagram"
+      ? `Are you sure you want to disconnect your ${platform} account? This will pause any active automations. Your automations will be restored when you reconnect.`
+      : `Are you sure you want to disconnect your ${platform} account?`;
     const confirmed = await confirm(
       "Disconnect Account",
-      `Are you sure you want to disconnect your ${platform} account?`,
+      message,
       {
         intent: "danger",
         confirmText: "Disconnect",
@@ -43,9 +125,12 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
       },
     );
     if (!confirmed) return;
-    setDisconnectingPlatform(platform);
+    const busyKey = accountId || platform;
+    setDisconnectingPlatform(busyKey);
     try {
-      const response = await apiClient.delete(`/api/auth/disconnect/${platform}`);
+      const response = await apiClient.delete(
+        `/api/auth/disconnect/${platform}${accountId ? `?accountId=${accountId}` : ""}`,
+      );
       if (response.data.success) {
         await refreshAccounts();
         alert("Success", `Disconnected from ${platform}`, { intent: "primary" });
@@ -57,40 +142,38 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
     }
   };
 
-  const initials = user.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase()
-    : user.email?.[0]?.toUpperCase() || "U";
+  const handleSettingsClick = () => {
+    navigate("/dashboard/profile");
+  };
 
   return (
     <header
+      className="qp-header"
       style={{
         position: "fixed",
-        top: 0,
+        top: topOffset,
         right: 0,
         left: isDesktop && !isTrendsPage ? 240 : 0,
         zIndex: 39,
         height: 56,
-        background: "rgba(255, 255, 255, 0.8)",
+        background: "rgba(245, 241, 236, 0.94)",
         backdropFilter: "blur(12px)",
         WebkitBackdropFilter: "blur(12px)",
-        borderBottom: "1px solid rgba(20,20,19,0.06)",
+        borderBottom: "1px solid #d3cec6",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
         padding: isDesktop ? "0 24px" : "0 16px",
-        fontFamily: "var(--font)",
-        transition: "left 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        fontFamily: "var(--font-body)",
+        transition: "left 0.3s cubic-bezier(0.16, 1, 0.3, 1), top 0.2s ease",
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div id="header-left-portal"></div>
         {/* Back Button on Trends Page */}
         {isTrendsPage && (
           <button
+            className="qp-header-icon-button"
             onClick={() => navigate('/dashboard')}
             aria-label="Go Back"
             style={{
@@ -115,6 +198,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
         {/* Mobile menu toggle */}
         {!isDesktop && !isTrendsPage && (
           <button
+            className="qp-header-icon-button"
             onClick={onMenuClick}
             aria-label="Toggle Menu"
             style={{
@@ -138,10 +222,14 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
 
       {/* Right: Actions + user pill */}
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ display: "flex", gap: 6 }}>
+        <div id="header-actions-portal" style={{ display: "flex", alignItems: "center", gap: 12 }}></div>
+        {!isEditorPage && (
+          <>
+            <div style={{ display: "flex", gap: 6 }}>
           <button
-            onClick={() => setShowSettings(true)}
-            title="Settings"
+            className="qp-header-icon-button"
+            onClick={handleSettingsClick}
+            title="Profile Settings"
             style={{
               width: 36,
               height: 36,
@@ -158,113 +246,260 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage }) {
             onMouseEnter={e => { e.currentTarget.style.background = "rgba(20,20,19,0.05)"; e.currentTarget.style.color = "var(--ink)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--slate)"; }}
           >
-            <Settings size={18} />
+            <UserRound size={18} />
           </button>
           <button
             onClick={handleLogout}
-            className="group flex items-center justify-start w-[36px] hover:w-[100px] h-[36px] border-none rounded-full hover:rounded-[18px] cursor-pointer relative overflow-hidden transition-all duration-300 shadow-[1px_1px_5px_rgba(0,0,0,0.08)] bg-[#141413] active:translate-x-[1px] active:translate-y-[1px]"
+            className="flex items-center gap-2 px-4 h-9 bg-red-50 hover:bg-red-500 text-red-600 hover:text-white font-semibold rounded-lg transition-all duration-200 border border-red-200 hover:border-red-500 shadow-sm"
+            aria-label="Logout"
+            title="Logout"
           >
-            <div className="flex items-center justify-center w-full group-hover:w-[35%] transition-all duration-300 group-hover:pl-4">
-              <svg viewBox="0 0 512 512" className="w-[16px] fill-white">
-                <path d="M377.9 105.9L500.7 228.7c7.2 7.2 11.3 17.1 11.3 27.3s-4.1 20.1-11.3 27.3L377.9 406.1c-6.4 6.4-15 9.9-24 9.9c-18.7 0-33.9-15.2-33.9-33.9l0-62.1-128 0c-17.7 0-32-14.3-32-32l0-64c0-17.7 14.3-32 32-32l128 0 0-62.1c0-18.7 15.2-33.9 33.9-33.9c9 0 17.6 3.6 24 9.9zM160 96L96 96c-17.7 0-32 14.3-32 32l0 256c0 17.7 14.3 32 32 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-64 0c-53 0-96-43-96-96L0 128C0 75 43 32 96 32l64 0c17.7 0 32 14.3 32 32s-14.3 32-32 32z" />
-              </svg>
-            </div>
-            <div className="absolute right-0 w-0 group-hover:w-[65%] opacity-0 group-hover:opacity-100 text-white text-[11px] font-semibold transition-all duration-300 group-hover:pr-3 whitespace-nowrap">
-              Logout
-            </div>
+            <LogOut size={16} strokeWidth={2.5} />
+            <span className="text-[13px] tracking-wide">Logout</span>
           </button>
         </div>
 
-        {/* User pill */}
-        <div
-          aria-label={`Account: ${user.name || user.email}`}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "4px 10px 4px 4px",
-            borderRadius: "var(--r-pill)",
-            background: "var(--canvas)",
-            border: "1px solid rgba(20,20,19,0.08)",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
-          }}
-        >
-          {user.picture && !imgError ? (
-            <img
-              src={user.picture}
-              alt={user.name}
-              onError={() => setImgError(true)}
-              style={{
-                width: 26,
-                height: 26,
-                borderRadius: "50%",
-                objectFit: "cover",
-                border: "1.5px solid var(--white)",
-              }}
-            />
-          ) : (
-            <div
-              style={{
-                width: 26,
-                height: 26,
-                borderRadius: "50%",
-                background: "var(--ink)",
-                color: "var(--canvas)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 10,
-                fontWeight: 700,
-                flexShrink: 0,
-              }}
-            >
-              {initials}
-            </div>
-          )}
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: "var(--ink)",
-              maxWidth: isDesktop ? 120 : 80,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              letterSpacing: "-0.01em",
-            }}
-          >
-            {user.name || "Account"}
-          </span>
-        </div>
+          </>
+        )}
       </div>
 
       {/* Settings Modal */}
       {showSettings && createPortal(
         <div className="modal-overlay" onClick={() => setShowSettings(false)}>
-          <div className="modal-content" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
-            <div style={{ padding: "24px 32px", borderBottom: "1px solid rgba(20,20,19,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <h2 style={{ fontSize: 20, fontWeight: 500 }}>Settings</h2>
-              <button onClick={() => setShowSettings(false)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={20} /></button>
+          <div className="modal-content" style={{ maxWidth: 460, borderRadius: "12px", padding: 0 }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid rgba(20,20,19,0.08)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <h2 style={{ fontSize: 18, fontWeight: 600, color: "var(--ink)" }}>Connected Accounts</h2>
+              <button onClick={() => setShowSettings(false)} style={{ border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", width: 32, height: 32, borderRadius: "50%", background: "rgba(20,20,19,0.04)" }}><X size={16} /></button>
             </div>
-            <div style={{ padding: "24px 32px" }}>
-              <div className="eyebrow" style={{ marginBottom: 12 }}>Connected Accounts</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {Object.entries(connectedAccounts || {}).filter(([_, data]) => data?.connected).map(([id, data]) => (
-                  <div key={id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: "var(--r-btn)", background: "var(--canvas)", border: "1px solid rgba(20,20,19,0.08)" }}>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: "var(--ink)", margin: 0, textTransform: 'capitalize' }}>{id}</p>
-                      <p style={{ fontSize: 12, color: 'var(--slate)', margin: 0 }}>{data.username || 'Connected'}</p>
+            
+            <div 
+              className="no-scrollbar"
+              style={{ 
+                padding: "20px 24px 24px",
+                maxHeight: "440px",
+                overflowY: "auto",
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+              }}
+            >
+              {connectedRows.length === 0 ? (
+                <div style={{ padding: "32px 0", textAlign: "center", color: "var(--slate)", fontSize: 13 }}>
+                  No channels connected yet. Click the plus button in the sidebar to link a social profile.
+                </div>
+              ) : (
+                Object.entries(groupedAccounts).map(([provider, rows]) => {
+                  const isExpanded = expandedPlatforms[provider] !== false; // Default to true
+                  
+                  return (
+                    <div key={provider} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                      {/* Parent platform header row */}
+                      <div
+                        onClick={() => {
+                          setExpandedPlatforms((prev) => ({
+                            ...prev,
+                            [provider]: prev[provider] === false ? true : false,
+                          }));
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 12,
+                          padding: "10px 14px",
+                          borderRadius: "var(--r-btn)",
+                          background: "var(--side-surface-2)",
+                          border: "1px solid var(--side-hairline)",
+                          cursor: "pointer",
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        <div style={{ width: 24, height: 24, borderRadius: "6px", background: "var(--white)", border: "1px solid var(--side-hairline)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          {PLATFORM_ICONS[provider] ? (
+                            <img
+                              src={PLATFORM_ICONS[provider]}
+                              alt=""
+                              style={{ width: 16, height: 16, objectFit: "contain" }}
+                            />
+                          ) : (
+                            <span style={{ fontSize: 10, fontWeight: 800 }}>{provider[0].toUpperCase()}</span>
+                          )}
+                        </div>
+                        
+                        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--side-ink)", textTransform: "capitalize" }}>
+                            {provider}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 9,
+                              fontWeight: 700,
+                              color: "var(--side-muted)",
+                              background: "rgba(20, 20, 19, 0.06)",
+                              padding: "1px 5px",
+                              borderRadius: "8px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            {rows.length}
+                          </span>
+                        </div>
+
+                        <ChevronDown
+                          size={14}
+                          style={{
+                            color: "var(--side-muted)",
+                            transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                            transition: "transform 0.2s",
+                          }}
+                        />
+                      </div>
+
+                      {/* Nested expanded account rows */}
+                      <AnimatePresence initial={false}>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2, ease: "easeInOut" }}
+                            style={{
+                              paddingLeft: 12,
+                              marginLeft: 12,
+                              borderLeft: "1.5px solid var(--side-hairline)",
+                              marginTop: 2,
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 4,
+                              overflow: "hidden",
+                            }}
+                          >
+                            {rows.map((row) => (
+                              <div
+                                key={row.id}
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 12,
+                                  padding: "8px 12px",
+                                  borderRadius: "8px",
+                                  background: "var(--white)",
+                                  border: "1px solid rgba(20,20,19,0.06)",
+                                  boxShadow: "0 1px 3px rgba(0,0,0,0.02)",
+                                }}
+                              >
+                                {/* Photo Container with shadow, double borders, and green dot indicator */}
+                                <div style={{ position: "relative", flexShrink: 0 }}>
+                                  <div
+                                    style={{
+                                      width: 32,
+                                      height: 32,
+                                      borderRadius: "50%",
+                                      background: "var(--white)",
+                                      border: "1px solid var(--side-hairline)",
+                                      boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      overflow: "hidden",
+                                    }}
+                                  >
+                                    {row.profilePicture ? (
+                                      <img
+                                        src={row.profilePicture}
+                                        alt=""
+                                        style={{ width: "100%", height: "100%", objectFit: "cover", border: "1.5px solid var(--white)", borderRadius: "50%" }}
+                                      />
+                                    ) : PLATFORM_ICONS[row.provider] ? (
+                                      <img
+                                        src={PLATFORM_ICONS[row.provider]}
+                                        alt=""
+                                        style={{ width: 16, height: 16, objectFit: "contain" }}
+                                      />
+                                    ) : (
+                                      <span style={{ fontSize: 11, fontWeight: 800, color: "var(--slate)", textTransform: "uppercase" }}>
+                                        {row.label.slice(0, 1)}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <span
+                                    style={{
+                                      position: "absolute",
+                                      bottom: -1,
+                                      right: -1,
+                                      width: 7,
+                                      height: 7,
+                                      background: "#22c55e",
+                                      borderRadius: "50%",
+                                      border: "1.5px solid var(--white)",
+                                      boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                                    }}
+                                  />
+                                </div>
+                                
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div
+                                    style={{
+                                      fontSize: 13,
+                                      fontWeight: 600,
+                                      color: "var(--side-ink)",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    {row.username ? `@${row.username}` : "Connected Profile"}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: 9,
+                                      color: "var(--side-muted)",
+                                      textTransform: "uppercase",
+                                      fontWeight: 700,
+                                      letterSpacing: "0.02em",
+                                    }}
+                                  >
+                                    Active Channel
+                                  </div>
+                                </div>
+
+                                <button
+                                  onClick={() => handleDisconnect(row.provider, row.accountId)}
+                                  disabled={disconnectingPlatform === (row.accountId || row.provider)}
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    padding: "5px 12px",
+                                    borderRadius: "6px",
+                                    border: "1.5px solid #ef4444",
+                                    color: "#ef4444",
+                                    background: "none",
+                                    cursor: "pointer",
+                                    transition: "all 0.15s ease",
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = "#fef2f2";
+                                    e.currentTarget.style.borderColor = "#dc2626";
+                                    e.currentTarget.style.color = "#dc2626";
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = "none";
+                                    e.currentTarget.style.borderColor = "#ef4444";
+                                    e.currentTarget.style.color = "#ef4444";
+                                  }}
+                                >
+                                  {disconnectingPlatform === (row.accountId || row.provider) ? "..." : "Disconnect"}
+                                </button>
+                              </div>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
-                    <button
-                      onClick={() => handleDisconnect(id)}
-                      disabled={disconnectingPlatform === id}
-                      style={{ fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: "var(--r-btn)", border: "1px solid #dc2626", color: "#dc2626", background: "none", cursor: "pointer" }}
-                    >
-                      {disconnectingPlatform === id ? "..." : "Disconnect"}
-                    </button>
-                  </div>
-                ))}
-              </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { AnimatePresence } from "framer-motion";
 import Masonry from "react-masonry-css";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -25,6 +25,7 @@ import {
   Eye,
   X,
   Lock,
+  ShieldCheck,
 } from "lucide-react";
 import apiClient from "../utils/apiClient";
 import ComposerModal from "./ComposerModal";
@@ -34,23 +35,54 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 /* ── token shortcuts ── */
 const css = {
-  canvas: "var(--canvas)",
-  lifted: "var(--canvas-lifted)",
-  ink: "var(--ink)",
-  white: "var(--white)",
-  slate: "var(--slate)",
-  dust: "var(--dust)",
-  arc: "var(--arc)",
-  shadow: "var(--shadow-card)",
-  r_btn: "var(--r-btn)",
-  r_hero: "var(--r-hero)",
+  canvas: "#f5f1ec",
+  lifted: "#ffffff",
+  surface2: "#ebe7e1",
+  hairline: "#d3cec6",
+  ink: "#111111",
+  white: "#ffffff",
+  slate: "#626260",
+  dust: "#7b7b78",
+  arc: "#ff5600",
+  shadow: "none",
+  r_btn: "8px",
+  r_hero: "16px",
   r_pill: "var(--r-pill)",
 };
+
+const PLATFORM_COLORS = {
+  instagram: "#E4405F",
+  facebook: "#1877F2",
+  x: "#000000",
+  linkedin: "#0A66C2",
+  youtube: "#FF0000",
+  threads: "#000000",
+  pinterest: "#BD081C",
+  bluesky: "#0085FF",
+  mastodon: "#6364FF",
+  reddit: "#FF4500",
+  "google-business": "#4285F4",
+};
+
+const DASHBOARD_MASONRY_COLS = {
+  default: 4,
+  1500: 4,
+  1280: 3,
+  900: 2,
+  560: 1,
+};
+
+const SKELETON_HEIGHTS = [
+  280, 190, 340, 230, 310, 255, 370, 210, 295, 330, 180, 245,
+];
+
+const LOAD_MORE_SKELETON_HEIGHTS = [260, 190, 315, 225, 285, 205, 335, 240];
 
 /* ── Platform helpers ── */
 function getPlatformIcon(id) {
   const s = { width: 14, height: 14, objectFit: "contain" };
-  switch (id) {
+  const baseId = id.split(':')[0];
+  switch (baseId) {
     case "facebook":
       return (
         <img
@@ -105,7 +137,36 @@ function getPlatformIcon(id) {
   }
 }
 
+function getPostPreviewRatio(post) {
+  const savedRatio =
+    post.platform_data?.selected_aspect_ratio ||
+    post.platform_data?.selectedAspectRatio;
+  if (typeof savedRatio === "string" && savedRatio.includes(":")) {
+    return savedRatio.replace(":", " / ");
+  }
+  if (Array.isArray(post.media_urls) && post.media_urls.length > 1) return "1 / 1";
+  if (post.media_type === "video") {
+    const isShort =
+      post.platform_data?.youtube?.type === "short" ||
+      String(post.platform_data?.selected_post_size_preset || "").includes("short");
+    return isShort ? "9 / 16" : "16 / 9";
+  }
+  if (post.media_type === "image") return "4 / 5";
+  return "4 / 5";
+}
+
 function buildPlatforms(post) {
+  let instagramChannels = post.selected_channels && Array.isArray(post.selected_channels)
+    ? Array.from(new Set(post.selected_channels.filter(c => c === 'instagram' || c.startsWith('instagram:'))))
+    : [];
+  if (instagramChannels.some(c => c.startsWith('instagram:'))) {
+    instagramChannels = instagramChannels.filter(c => c !== 'instagram');
+  }
+  
+  if (instagramChannels.length === 0 && (post.instagram_success || post.instagram_error)) {
+    instagramChannels = ['instagram'];
+  }
+
   return [
     {
       id: "linkedin",
@@ -121,13 +182,13 @@ function buildPlatforms(post) {
       error: post.youtube_error,
       url: post.youtube_shorts_url || post.youtube_url,
     },
-    {
-      id: "instagram",
+    ...instagramChannels.map(igId => ({
+      id: igId,
       name: "Instagram",
       success: post.instagram_success,
       error: post.instagram_error,
       url: post.instagram_url,
-    },
+    })),
     {
       id: "facebook",
       name: "Facebook",
@@ -386,6 +447,7 @@ function PinterestCard({ post, onOpen, formatDate }) {
     /\.(jpg|jpeg|png|gif|webp)$/i.test(post.video_filename || "");
   const displayUrl = post.thumbnail_url || (isImage ? post.media_url : null);
   const hasMedia = !!displayUrl;
+  const mediaRatio = getPostPreviewRatio(post);
   const allSuccess = platforms.length > 0 && platforms.every((p) => p.success);
 
   const ICON_MAP = {
@@ -418,17 +480,15 @@ function PinterestCard({ post, onOpen, formatDate }) {
       onMouseLeave={() => setHovered(false)}
       style={{
         position: "relative",
-        borderRadius: 20,
+        borderRadius: 16,
         overflow: "hidden",
         cursor: "pointer",
         background: hasMedia ? "transparent" : css.lifted,
-        boxShadow: hovered
-          ? "0 24px 48px rgba(20,20,19,0.15), 0 4px 12px rgba(20,20,19,0.06)"
-          : "0 2px 12px rgba(20,20,19,0.06)",
-        transform: hovered ? "translateY(-5px) scale(1.01)" : "none",
+        boxShadow: "none",
+        transform: hovered ? "translateY(-1px)" : "none",
         transition:
-          "box-shadow 0.35s cubic-bezier(0.2,0.8,0.2,1), transform 0.35s cubic-bezier(0.2,0.8,0.2,1)",
-        border: "1px solid rgba(20,20,19,0.07)",
+          "border-color 0.2s ease, transform 0.2s ease",
+        border: `1px solid ${hovered ? css.ink : css.hairline}`,
         willChange: "transform",
       }}
     >
@@ -438,7 +498,9 @@ function PinterestCard({ post, onOpen, formatDate }) {
           style={{
             position: "relative",
             lineHeight: 0,
-            minHeight: imgLoaded ? 0 : 180,
+            aspectRatio: mediaRatio,
+            minHeight: 180,
+            background: "rgba(20,20,19,0.045)",
           }}
         >
           {/* Shimmer shown until image loads */}
@@ -459,8 +521,9 @@ function PinterestCard({ post, onOpen, formatDate }) {
             loading="lazy"
             style={{
               width: "100%",
-              height: "auto",
+              height: "100%",
               display: "block",
+              objectFit: "cover",
               opacity: imgLoaded ? 1 : 0,
               transition:
                 "opacity 0.5s ease, transform 0.55s cubic-bezier(0.2,0.8,0.2,1)",
@@ -688,9 +751,9 @@ function PinterestCard({ post, onOpen, formatDate }) {
                       overflow: "hidden",
                     }}
                   >
-                    {ICON_MAP[p.id] ? (
+                    {ICON_MAP[p.id.split(':')[0]] ? (
                       <img
-                        src={`/icons/${ICON_MAP[p.id]}`}
+                        src={`/icons/${ICON_MAP[p.id.split(':')[0]]}`}
                         alt={p.name}
                         style={{ width: 13, height: 13, objectFit: "contain" }}
                       />
@@ -720,12 +783,16 @@ function PinterestCard({ post, onOpen, formatDate }) {
                     height: 6,
                     borderRadius: "50%",
                     flexShrink: 0,
-                    background: isScheduled
+                    background: post.status === 'processing'
+                      ? "#eab308"
+                      : isScheduled
                       ? "#f97316"
                       : allSuccess
                         ? "#22c55e"
                         : "#ef4444",
-                    boxShadow: isScheduled
+                    boxShadow: post.status === 'processing'
+                      ? "0 0 6px rgba(234,179,8,0.7)"
+                      : isScheduled
                       ? "0 0 6px rgba(249,115,22,0.7)"
                       : allSuccess
                         ? "0 0 6px rgba(34,197,94,0.7)"
@@ -769,7 +836,7 @@ function PinterestCard({ post, onOpen, formatDate }) {
               pointerEvents: "none",
             }}
           >
-            {post.media_type || "media"}
+            {post.platform_data?.postType || post.postType || post.post_type || post.media_type || "media"}
           </div>
         </div>
       ) : (
@@ -877,57 +944,144 @@ function PinterestCard({ post, onOpen, formatDate }) {
           </div>
         </div>
       )}
+
+      {post.status === 'processing' && (
+        <>
+          {post.step && (
+            <div style={{
+              position: 'absolute', bottom: 12, left: 8, right: 8, zIndex: 10,
+              background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 11, padding: '4px 8px',
+              borderRadius: 6, backdropFilter: 'blur(4px)', textAlign: 'center',
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'
+            }}>
+              {post.step}
+            </div>
+          )}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'rgba(234,179,8,0.2)', zIndex: 10
+          }}>
+            <div style={{
+              height: '100%', width: `${post.progress || 0}%`, background: '#eab308', transition: 'width 0.5s ease-out'
+            }} />
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
 /* ── List row ── */
-function ListRow({ post, expanded, onToggle, formatDate }) {
+function getPostDateValue(post) {
+  return post.status === "scheduled" ? post.scheduled_for : post.posted_at;
+}
+
+function formatTimelineDay(dateString) {
+  const date = new Date(dateString);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (date.toDateString() === today.toDateString()) return "Today";
+  if (date.toDateString() === yesterday.toDateString()) {
+    return `Yesterday, ${date.toLocaleDateString("en-US", { month: "long", day: "numeric" })}`;
+  }
+  return date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+}
+
+function formatTimelineTime(dateString) {
+  return new Date(dateString).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function getMetric(post, keys) {
+  const sources = [post, post.analytics, post.metrics, post.platform_data?.analytics, post.platform_data?.metrics];
+  for (const source of sources) {
+    if (!source) continue;
+    for (const key of keys) {
+      if (source[key] !== undefined && source[key] !== null) return source[key];
+    }
+  }
+  return null;
+}
+
+function resolvePlatformLabel(platform, connectedAccounts) {
+  const [baseId, accountId] = platform.id.split(":");
+  const account = accountId
+    ? (connectedAccounts?.[`${baseId}Accounts`] || []).find((item) => String(item.id) === accountId)
+    : connectedAccounts?.[baseId];
+  const handle = account?.username || account?.name || account?.channelTitle || account?.title;
+  return handle ? `${platform.name} @${handle}` : platform.name;
+}
+
+function ListRow({ post, expanded, onToggle, connectedAccounts }) {
   const platforms = buildPlatforms(post);
   const isScheduled = post.status === "scheduled";
+  const primaryPlatform = platforms.find((p) => p.success) || platforms[0];
+  const liveUrl = platforms.find((p) => p.url)?.url;
+  const metrics = [
+    { label: "Reactions", value: getMetric(post, ["likes", "reactions", "like_count", "instagram_likes"]) },
+    { label: "Comments", value: getMetric(post, ["comments", "comment_count", "instagram_comments"]) },
+    { label: "Eng. Rate", value: getMetric(post, ["engagement_rate", "engagementRate"]) },
+    { label: "Views", value: getMetric(post, ["views", "view_count", "instagram_views", "youtube_views"]) },
+    { label: "Shares", value: getMetric(post, ["shares", "share_count"]) },
+    { label: "Saves", value: getMetric(post, ["saves", "save_count"]) },
+  ].filter((metric) => metric.value !== null && metric.value !== undefined);
 
   return (
     <div
+      className="timeline-card"
       style={{
         background: css.lifted,
-        borderRadius: css.r_hero,
-        border: `1.5px solid ${expanded ? "rgba(243, 115, 56, 0.25)" : "rgba(20,20,19,0.06)"}`,
+        borderRadius: 8,
+        border: `1px solid ${expanded ? css.ink : css.hairline}`,
         overflow: "hidden",
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        boxShadow: expanded ? css.shadow : "0 4px 15px rgba(0,0,0,0.01)",
+        transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+        boxShadow: "none",
+        position: "relative"
       }}
     >
       <div
+        className="timeline-card-main"
         style={{
-          padding: "20px 24px",
-          display: "flex",
-          alignItems: "center",
-          gap: 20,
+          padding: "16px 18px",
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) 240px",
+          gap: 22,
           cursor: "pointer",
         }}
         onClick={onToggle}
       >
-        <MediaThumb
-          post={post}
-          style={{
-            width: 84,
-            height: 84,
-            borderRadius: "var(--r-btn)",
-            flexShrink: 0,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-          }}
-        />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 8,
+              gap: 8,
+              marginBottom: 18,
             }}
           >
-            <div className="eyebrow" style={{ fontSize: 9 }}>
-              {formatDate(isScheduled ? post.scheduled_for : post.posted_at)}
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 8,
+                background: "#f3eee8",
+                border: `1px solid ${css.hairline}`,
+                display: "grid",
+                placeItems: "center",
+                flexShrink: 0,
+              }}
+            >
+              {primaryPlatform ? getPlatformIcon(primaryPlatform.id) : <Share2 size={14} />}
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 750, color: css.ink }}>
+                {primaryPlatform ? resolvePlatformLabel(primaryPlatform, connectedAccounts) : "Social post"}
+              </div>
+              <div style={{ fontSize: 11, color: css.slate }}>
+                {isScheduled ? "Scheduled" : "Published"} via {primaryPlatform?.name || "channel"}
+              </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               {isScheduled && (
@@ -936,7 +1090,7 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
                     fontSize: 9,
                     fontWeight: 800,
                     color: css.arc,
-                    background: "rgba(243, 115, 56, 0.08)",
+                    background: "rgba(255, 86, 0, 0.08)",
                     padding: "2px 8px",
                     borderRadius: css.r_pill,
                     textTransform: "uppercase",
@@ -945,23 +1099,17 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
                   Scheduled
                 </div>
               )}
-              {expanded ? (
-                <ChevronUp size={16} style={{ color: css.arc }} />
-              ) : (
-                <ChevronDown size={16} style={{ color: css.slate }} />
-              )}
             </div>
           </div>
-          <h3
+          <p
             style={{
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: 500,
               color: css.ink,
-              margin: "0 0 10px",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              letterSpacing: "-0.01em",
+              margin: 0,
+              lineHeight: 1.5,
+              whiteSpace: "pre-wrap",
+              maxWidth: 680,
             }}
           >
             {post.caption || (
@@ -969,8 +1117,8 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
                 No caption
               </span>
             )}
-          </h3>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 14 }}>
             {platforms.slice(0, 5).map((p) => (
               <PlatformBadge key={p.id} platform={p} />
             ))}
@@ -990,23 +1138,113 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
             )}
           </div>
         </div>
+        <MediaThumb
+          post={post}
+          className="timeline-thumb"
+          style={{
+            width: "100%",
+            height: 132,
+            borderRadius: 7,
+            flexShrink: 0,
+            border: `1px solid ${css.hairline}`,
+          }}
+        />
+      </div>
+
+      {metrics.length > 0 && (
+        <div
+          className="timeline-metrics"
+          style={{
+            borderTop: `1px solid ${css.hairline}`,
+            display: "grid",
+            gridTemplateColumns: `repeat(${Math.min(metrics.length, 6)}, minmax(0, 1fr))`,
+            padding: "12px 18px",
+            gap: 8,
+          }}
+        >
+          {metrics.map((metric) => (
+            <div key={metric.label} style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 12, fontWeight: 650, color: css.slate }}>
+                {metric.label}
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 750, color: css.ink, marginTop: 3 }}>
+                {metric.value}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div
+        style={{
+          borderTop: `1px solid ${css.hairline}`,
+          padding: "12px 18px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+        }}
+      >
+        <span style={{ fontSize: 13, color: css.ink }}>
+          {isScheduled ? "Scheduled for" : "Published via"} {primaryPlatform?.name || "channel"}
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {liveUrl && (
+            <a
+              href={liveUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 7,
+                padding: "8px 14px",
+                borderRadius: 7,
+                border: `1px solid ${css.hairline}`,
+                color: css.ink,
+                fontSize: 13,
+                fontWeight: 700,
+                textDecoration: "none",
+                background: css.white,
+              }}
+            >
+              <ExternalLink size={14} /> View Post
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={onToggle}
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 7,
+              border: `1px solid ${css.hairline}`,
+              background: css.white,
+              color: expanded ? css.arc : css.slate,
+              display: "grid",
+              placeItems: "center",
+              cursor: "pointer",
+            }}
+          >
+            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+        </div>
       </div>
 
       {expanded && (
         <div
           style={{
-            borderTop: "1.5px solid rgba(243, 115, 56, 0.1)",
-            background:
-              "linear-gradient(to bottom, rgba(243, 115, 56, 0.02), transparent)",
-            padding: "24px",
+            borderTop: `1px solid ${css.hairline}`,
+            background: "rgba(245,241,236,0.45)",
+            padding: "14px 18px",
           }}
         >
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-              gap: 12,
-              marginBottom: 20,
+              display: "flex",
+              flexDirection: "column",
+              gap: 0,
             }}
           >
             {platforms.map((p) => (
@@ -1014,57 +1252,44 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
                 key={p.id}
                 style={{
                   background: css.white,
-                  padding: "16px",
-                  borderRadius: css.r_btn,
-                  border: "1.2px solid rgba(20,20,19,0.06)",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.02)",
+                  padding: "11px 12px",
+                  borderBottom: `1px solid ${css.hairline}`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
                 }}
               >
                 <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: 12,
+                    gap: 10,
+                    minWidth: 0,
                   }}
                 >
                   <div
-                    style={{ display: "flex", alignItems: "center", gap: 8 }}
-                  >
-                    <div
-                      style={{
-                        width: 24,
-                        height: 24,
-                        borderRadius: "50%",
-                        background: PLATFORM_COLORS[p.id] || css.slate,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      {getPlatformIcon(p.id)}
-                    </div>
-                    <span
-                      style={{ fontSize: 13, fontWeight: 600, color: css.ink }}
-                    >
-                      {p.name}
-                    </span>
-                  </div>
-                  <span
                     style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      padding: "3px 10px",
-                      borderRadius: css.r_pill,
-                      background: p.success
-                        ? "rgba(34,197,94,0.08)"
-                        : "rgba(239,68,68,0.08)",
-                      color: p.success ? "#15803d" : "#b91c1c",
-                      border: `1px solid ${p.success ? "rgba(34,197,94,0.2)" : "rgba(239,68,68,0.2)"}`,
+                      width: 28,
+                      height: 28,
+                      borderRadius: 7,
+                      background: "#f3eee8",
+                      border: `1px solid ${css.hairline}`,
+                      display: "grid",
+                      placeItems: "center",
+                      flexShrink: 0,
                     }}
                   >
-                    {p.success ? "Success" : "Failed"}
-                  </span>
+                    {getPlatformIcon(p.id)}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: css.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {resolvePlatformLabel(p, connectedAccounts)}
+                    </div>
+                    <div style={{ fontSize: 11, fontWeight: 650, color: p.success ? "#15803d" : "#b91c1c" }}>
+                      {p.success ? "Success" : p.error || "Failed"}
+                    </div>
+                  </div>
                 </div>
                 {p.success ? (
                   p.url ? (
@@ -1099,65 +1324,56 @@ function ListRow({ post, expanded, onToggle, formatDate }) {
                     </div>
                   )
                 ) : (
-                  <p
+                  <span
                     style={{
                       fontSize: 11,
                       color: "#ef4444",
-                      fontStyle: "italic",
-                      margin: 0,
-                      lineHeight: 1.4,
+                      fontWeight: 650,
+                      textAlign: "right",
                     }}
                   >
-                    {p.error || "Connection error"}
-                  </p>
+                    Action needed
+                  </span>
                 )}
               </div>
             ))}
           </div>
-          {post.caption && (
-            <div
-              style={{
-                background: css.white,
-                padding: "20px",
-                borderRadius: css.r_btn,
-                border: "1.2px solid rgba(243, 115, 56, 0.1)",
-                boxShadow: "0 8px 24px rgba(243, 115, 56, 0.05)",
-              }}
-            >
-              <div
-                className="eyebrow"
-                style={{ marginBottom: 10, fontSize: 10 }}
-              >
-                Full Caption
-              </div>
-              <p
-                style={{
-                  fontSize: 14,
-                  color: css.ink,
-                  whiteSpace: "pre-wrap",
-                  lineHeight: 1.6,
-                  margin: 0,
-                }}
-              >
-                {post.caption}
-              </p>
+        </div>
+      )}
+
+      {post.status === 'processing' && (
+        <>
+          {post.step && (
+            <div style={{ position: 'absolute', bottom: 8, left: 18, fontSize: 11, color: '#eab308', fontWeight: 600 }}>
+              {post.step}
             </div>
           )}
-        </div>
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: 4, background: 'rgba(234,179,8,0.2)'
+          }}>
+            <div style={{
+              height: '100%', width: `${post.progress || 0}%`, background: '#eab308', transition: 'width 0.5s ease-out'
+            }} />
+          </div>
+        </>
       )}
     </div>
   );
 }
 
 /* ── Skeleton card for loading state ── */
-const SKELETON_HEIGHTS = [
-  280, 180, 350, 220, 315, 260, 385, 200, 295, 340, 170, 235,
-];
-
 function SkeletonCard({ height }) {
   return (
-    <div className="masonry-card skeleton-card">
-      <div className="skeleton-shimmer" style={{ height }} />
+    <div
+      className="masonry-card skeleton-card"
+      style={{
+        borderRadius: 16,
+        overflow: "hidden",
+        border: `1px solid ${css.hairline}`,
+        boxShadow: "none",
+      }}
+    >
+      <div className="skeleton-shimmer" style={{ height, minHeight: 170 }} />
       <div
         style={{
           padding: "12px 14px 14px",
@@ -1195,7 +1411,7 @@ function SkeletonCard({ height }) {
    MAIN DASHBOARD
    ══════════════════════════════════════════════════════ */
 function Dashboard() {
-  const { user, refreshAccounts } = useAuth();
+  const { user, connectedAccounts, refreshAccounts } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState("sent");
@@ -1204,7 +1420,7 @@ function Dashboard() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState("grid");
+  const [viewMode, setViewMode] = useState("list");
   const [selectedPost, setSelectedPost] = useState(null);
   const [queueCount, setQueueCount] = useState(0);
 
@@ -1239,6 +1455,8 @@ function Dashboard() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get("error");
+    const oauthMessage = params.get("message") || params.get("details");
     
     const verifyPayment = async () => {
       const paymentLinkStatus = params.get("razorpay_payment_link_status");
@@ -1276,6 +1494,13 @@ function Dashboard() {
       verifyPayment();
     }
 
+    if (oauthError) {
+      const readable =
+        oauthMessage || oauthError.replaceAll("_", " ");
+      alert(`Connection failed: ${readable}`);
+      window.history.replaceState({}, "", "/dashboard");
+    }
+
     if (params.get("success")) {
       refreshAccounts();
       window.history.replaceState({}, "", "/dashboard");
@@ -1296,21 +1521,61 @@ function Dashboard() {
     setDisplayCount(BATCH_SIZE);
   }, [searchTerm]);
 
-  const fetchBroadcasts = async () => {
+  const fetchBroadcasts = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       let params = {};
       if (activeTab === "sent") params.status = "sent";
       else if (activeTab === "queue") params.status = "scheduled";
 
-      const response = await apiClient.get("/api/broadcasts", { params });
-      setBroadcasts(response.data.broadcasts || []);
+      const [resBroadcasts, resJobs] = await Promise.all([
+        apiClient.get("/api/broadcasts", { params }),
+        apiClient.get("/api/jobs").catch(() => ({ data: { jobs: [] } }))
+      ]);
+
+      let bcastData = resBroadcasts.data.broadcasts || [];
+      const jobsData = resJobs.data?.jobs || [];
+
+      const activeJobs = jobsData.filter(j => j.status === 'pending' || j.status === 'processing');
+      const pseudoBroadcasts = activeJobs.map(job => ({
+        id: job.id,
+        status: "processing",
+        caption: job.meta?.caption || "",
+        media_type: job.meta?.mediaType || "image",
+        media_url: job.meta?.previewUrl || "",
+        thumbnail_url: job.meta?.previewUrl || "",
+        selected_channels: job.meta?.channels || [],
+        posted_at: job.createdAt ? new Date(job.createdAt).toISOString() : new Date().toISOString(),
+        progress: job.progress,
+        step: job.step
+      }));
+
+      let displayPseudo = [];
+      if (activeTab === "queue" || activeTab === "history" || activeTab === "all") {
+        displayPseudo = pseudoBroadcasts;
+      }
+
+      // Filter out any broadcasts that might already exist with the same sourceJobId (if they just completed)
+      const existingJobIds = new Set(bcastData.map(b => b.platform_data?.sourceJobId || b.platform_data?.source_job_id).filter(Boolean));
+      const filteredPseudo = displayPseudo.filter(p => !existingJobIds.has(p.id));
+
+      setBroadcasts([...filteredPseudo, ...bcastData]);
     } catch (err) {
       setBroadcasts([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const hasActiveJobs = broadcasts.some(b => b.status === 'processing');
+    if (hasActiveJobs) {
+      const interval = setInterval(() => {
+        fetchBroadcasts(true);
+      }, 5000); // Poll every 5s while jobs are active
+      return () => clearInterval(interval);
+    }
+  }, [broadcasts, activeTab, searchTerm]);
 
   const formatDate = useCallback((dateString) =>
     new Date(dateString).toLocaleDateString('en-US', {
@@ -1323,19 +1588,36 @@ function Dashboard() {
 
   const selectedPlatform = searchParams.get("platform") || "all";
 
-  const filtered = broadcasts.filter((b) => {
+  const filtered = useMemo(() => broadcasts.filter((b) => {
     const matchesSearch = (b.caption || "")
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
     if (selectedPlatform === "all") return matchesSearch;
-    const matchesPlatform = buildPlatforms(b).some(
-      (p) => p.id === selectedPlatform,
-    );
+    const matchesPlatform = buildPlatforms(b).some((p) => {
+      if (p.id === selectedPlatform) return true;
+      if (selectedPlatform === "instagram" && p.id.startsWith("instagram")) return true;
+      return false;
+    });
     return matchesSearch && matchesPlatform;
-  });
+  }), [broadcasts, searchTerm, selectedPlatform]);
 
-  const displayedItems = filtered.slice(0, displayCount);
+  const displayedItems = useMemo(
+    () => filtered.slice(0, displayCount),
+    [filtered, displayCount],
+  );
   const hasMore = displayCount < filtered.length;
+  const masonryItems = useMemo(() => {
+    const posts = displayedItems.map((post) => ({ type: "post", post }));
+    if (!isLoadingMore || viewMode !== "grid") return posts;
+    return [
+      ...posts,
+      ...LOAD_MORE_SKELETON_HEIGHTS.map((height, index) => ({
+        type: "skeleton",
+        height,
+        key: `load-more-${displayCount}-${index}`,
+      })),
+    ];
+  }, [displayedItems, displayCount, isLoadingMore, viewMode]);
 
   useEffect(() => {
     if (!hasMore || isLoadingMore) return;
@@ -1361,18 +1643,115 @@ function Dashboard() {
 
   return (
     <div
+      className="dashboard-intercom"
       style={{
         minHeight: "100vh",
         background: css.canvas,
-        fontFamily: "var(--font)",
+        fontFamily: "var(--font-body)",
       }}
     >
       {/* ── Top header ── */}
+      <style>{`
+        .dashboard-masonry {
+          display: flex;
+          align-items: flex-start;
+          width: auto;
+          margin-left: -18px;
+        }
+        .dashboard-masonry_col {
+          padding-left: 18px;
+          background-clip: padding-box;
+        }
+        .dashboard-masonry_col > .masonry-card {
+          margin-bottom: 18px;
+          break-inside: avoid;
+        }
+        @media (max-width: 560px) {
+          .dashboard-masonry { margin-left: -12px; }
+          .dashboard-masonry_col { padding-left: 12px; }
+          .dashboard-masonry_col > .masonry-card { margin-bottom: 12px; }
+        }
+        .timeline-list {
+          max-width: 1120px;
+          margin: 0 auto;
+        }
+        .timeline-group {
+          display: grid;
+          grid-template-columns: 120px minmax(0, 1fr);
+          column-gap: 24px;
+          align-items: start;
+        }
+        .timeline-date {
+          grid-column: 1 / -1;
+          margin: 0 0 18px 120px;
+          color: ${css.ink};
+          font-size: 17px;
+          font-weight: 750;
+          letter-spacing: -0.01em;
+        }
+        .timeline-time {
+          color: ${css.ink};
+          font-size: 13px;
+          font-weight: 700;
+          line-height: 1.35;
+          padding-top: 6px;
+          position: sticky;
+          top: 12px;
+        }
+        .timeline-status {
+          color: ${css.slate};
+          font-size: 11px;
+          font-weight: 500;
+          margin-top: 5px;
+        }
+        .timeline-card-main {
+          grid-template-columns: minmax(0, 1fr) 240px;
+        }
+        @media (max-width: 860px) {
+          .timeline-list { max-width: 680px; }
+          .timeline-group {
+            grid-template-columns: 76px minmax(0, 1fr);
+            column-gap: 14px;
+          }
+          .timeline-date { margin-left: 76px; }
+          .timeline-card-main {
+            grid-template-columns: minmax(0, 1fr) 156px !important;
+            gap: 14px !important;
+          }
+          .timeline-thumb { height: 112px !important; }
+          .timeline-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+        }
+        @media (max-width: 620px) {
+          .timeline-group {
+            display: block;
+            margin-bottom: 18px;
+          }
+          .timeline-date { margin: 0 0 14px; }
+          .timeline-time {
+            position: static;
+            display: flex;
+            gap: 8px;
+            align-items: baseline;
+            margin: 0 0 8px;
+            padding-top: 0;
+          }
+          .timeline-status { margin-top: 0; }
+          .timeline-card-main {
+            grid-template-columns: 1fr !important;
+          }
+          .timeline-thumb {
+            width: 100% !important;
+            height: auto !important;
+            aspect-ratio: 16 / 9;
+          }
+          .timeline-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+        }
+      `}</style>
       <div
         style={{
           background: css.lifted,
-          borderBottom: "1px solid rgba(20,20,19,0.08)",
-          padding: "clamp(14px, 3vw, 20px) 16px",
+          borderBottom: `1px solid ${css.hairline}`,
+          padding: "clamp(24px, 4vw, 40px) clamp(18px, 3vw, 32px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -1395,32 +1774,44 @@ function Dashboard() {
             </div>
             <h1
               style={{
-                fontSize: "clamp(20px, 4vw, 26px)",
-                fontWeight: 600,
+                fontSize: "clamp(36px, 5vw, 56px)",
+                fontWeight: 500,
                 color: css.ink,
                 margin: 0,
-                letterSpacing: "-0.02em",
-                lineHeight: 1,
+                letterSpacing: "-0.025em",
+                lineHeight: 1.08,
               }}
             >
               Analytics
             </h1>
+
           </div>
           {selectedPlatform !== "all" && (
             <div
               style={{
                 padding: "4px 10px",
-                background: "rgba(20,20,19,0.05)",
-                borderRadius: css.r_btn,
-                border: "1px solid rgba(20,20,19,0.1)",
+                background: "var(--canvas)",
+              borderRadius: css.r_btn,
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
+                border: "1px solid rgba(20,20,19,0.08)",
               }}
             >
               <span style={{ fontSize: 11, fontWeight: 700, color: css.ink }}>
-                {selectedPlatform.charAt(0).toUpperCase() +
-                  selectedPlatform.slice(1)}
+                {(() => {
+                  if (selectedPlatform.startsWith("instagram:")) {
+                    const igId = selectedPlatform.split(":")[1];
+                    const acc = connectedAccounts?.instagramAccounts?.find((a) => a.id === igId);
+                    if (acc && acc.username) return `Instagram (@${acc.username})`;
+                    return "Instagram Account";
+                  }
+                  if (selectedPlatform === "instagram") return "Instagram";
+                  return (
+                    selectedPlatform.charAt(0).toUpperCase() +
+                    selectedPlatform.slice(1)
+                  );
+                })()}
               </span>
               <button
                 onClick={() => navigate("/dashboard")}
@@ -1447,7 +1838,7 @@ function Dashboard() {
               gap: 8,
               fontSize: 14,
               padding: "10px 20px",
-              borderRadius: css.r_pill,
+              borderRadius: css.r_btn,
             }}
           >
             <Plus size={16} />
@@ -1460,8 +1851,8 @@ function Dashboard() {
       {/* ── Tabs ── */}
       <div
         style={{
-          background: css.lifted,
-          borderBottom: "1px solid rgba(20,20,19,0.08)",
+          background: css.canvas,
+          borderBottom: `1px solid ${css.hairline}`,
           padding: "0 16px",
           display: "flex",
           alignItems: "center",
@@ -1488,8 +1879,8 @@ function Dashboard() {
                 padding: "14px 0",
                 fontSize: 11,
                 fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
+                textTransform: "none",
+                letterSpacing: 0,
                 color: active ? css.ink : css.slate,
                 border: "none",
                 background: "transparent",
@@ -1533,7 +1924,7 @@ function Dashboard() {
           <div
             style={{
               background: css.canvas,
-              borderBottom: "1px solid rgba(20,20,19,0.06)",
+              borderBottom: `1px solid ${css.hairline}`,
               padding: "12px 16px",
               display: "flex",
               flexDirection: window.innerWidth < 768 ? "column" : "row",
@@ -1571,7 +1962,7 @@ function Dashboard() {
                 style={{
                   width: 1,
                   height: 16,
-                  background: "rgba(20,20,19,0.1)",
+                background: css.hairline,
                   flexShrink: 0,
                 }}
               />
@@ -1628,8 +2019,8 @@ function Dashboard() {
                   style={{
                     padding: "8px 16px 8px 32px",
                     background: css.lifted,
-                    border: "1px solid rgba(20,20,19,0.1)",
-                    borderRadius: css.r_pill,
+                    border: `1px solid ${css.hairline}`,
+                    borderRadius: css.r_btn,
                     fontSize: 13,
                     color: css.ink,
                     fontFamily: "var(--font)",
@@ -1642,7 +2033,7 @@ function Dashboard() {
                 style={{
                   display: "flex",
                   background: css.lifted,
-                  border: "1px solid rgba(20,20,19,0.08)",
+                  border: `1px solid ${css.hairline}`,
                   borderRadius: css.r_pill,
                   padding: 3,
                   gap: 2,
@@ -1684,15 +2075,9 @@ function Dashboard() {
       >
         {loading ? (
           <Masonry
-            breakpointCols={{
-              default: 4,
-              1400: 3,
-              1100: 3,
-              768: 2,
-              480: 1,
-            }}
-            className="masonry-grid"
-            columnClassName="masonry-grid_column"
+            breakpointCols={DASHBOARD_MASONRY_COLS}
+            className="dashboard-masonry"
+            columnClassName="dashboard-masonry_col"
           >
             {SKELETON_HEIGHTS.map((h, i) => (
               <SkeletonCard key={i} height={h} />
@@ -1705,75 +2090,86 @@ function Dashboard() {
           <>
             {viewMode === "grid" ? (
               <Masonry
-                breakpointCols={{
-                  default: 4,
-                  1400: 3,
-                  1100: 3,
-                  768: 2,
-                  480: 1,
-                }}
-                className="masonry-grid"
-                columnClassName="masonry-grid_column"
+                breakpointCols={DASHBOARD_MASONRY_COLS}
+                className="dashboard-masonry"
+                columnClassName="dashboard-masonry_col"
               >
-                {displayedItems.map((post) => (
-                  <PinterestCard
-                    key={post.id}
-                    post={post}
-                    onOpen={() => setSelectedPost(post)}
-                    formatDate={formatDate}
-                  />
-                ))}
+                {masonryItems.map((item) =>
+                  item.type === "skeleton" ? (
+                    <SkeletonCard key={item.key} height={item.height} />
+                  ) : (
+                    <PinterestCard
+                      key={item.post.id}
+                      post={item.post}
+                      onOpen={() => setSelectedPost(item.post)}
+                      formatDate={formatDate}
+                    />
+                  )
+                )}
               </Masonry>
             ) : (
               <div
+                className="timeline-list"
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: 12,
-                  maxWidth: 860,
-                  margin: "0 auto",
+                  gap: 0,
                 }}
               >
-                {displayedItems.map((post) => (
-                  <div
-                    key={post.id}
-                    onClick={() => setSelectedPost(post)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <ListRow
-                      post={post}
-                      expanded={expandedId === post.id}
-                      onToggle={(e) => {
-                        e?.stopPropagation();
-                        toggleExpand(post.id);
-                      }}
-                      formatDate={formatDate}
-                    />
-                  </div>
-                ))}
+                {displayedItems.map((post, index) => {
+                  const dateValue = getPostDateValue(post);
+                  const currentDay = formatTimelineDay(dateValue);
+                  const previous = displayedItems[index - 1];
+                  const previousDay = previous ? formatTimelineDay(getPostDateValue(previous)) : null;
+                  return (
+                    <React.Fragment key={post.id}>
+                      {currentDay !== previousDay && (
+                        <h3
+                          className="timeline-date"
+                          style={{
+                            marginTop: index === 0 ? 0 : 30,
+                          }}
+                        >
+                          {currentDay}
+                        </h3>
+                      )}
+                      <div
+                        className="timeline-group"
+                        style={{ marginBottom: 18 }}
+                      >
+                        <div
+                          className="timeline-time"
+                        >
+                          {formatTimelineTime(dateValue)}
+                          <div className="timeline-status">
+                            {post.status === "scheduled" ? "Scheduled" : "Published"}
+                          </div>
+                        </div>
+                        <div
+                          onClick={() => setSelectedPost(post)}
+                          style={{ cursor: "pointer", minWidth: 0 }}
+                        >
+                          <ListRow
+                            post={post}
+                            expanded={expandedId === post.id}
+                            onToggle={(e) => {
+                              e?.stopPropagation();
+                              toggleExpand(post.id);
+                            }}
+                            connectedAccounts={connectedAccounts}
+                          />
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
               </div>
             )}
 
             {/* ── Infinite scroll sentinel + skeletons ── */}
             <div ref={loadMoreRef} style={{ marginTop: 8 }} />
 
-            {isLoadingMore && viewMode === "grid" && (
-              <Masonry
-                breakpointCols={{
-                  default: 4,
-                  1400: 3,
-                  1100: 3,
-                  768: 2,
-                  480: 1,
-                }}
-                className="masonry-grid"
-                columnClassName="masonry-grid_column"
-              >
-                {SKELETON_HEIGHTS.slice(0, 8).map((h, i) => (
-                  <SkeletonCard key={i} height={h} />
-                ))}
-              </Masonry>
-            )}
+            
             {isLoadingMore && viewMode === "list" && (
               <div
                 style={{
@@ -1856,7 +2252,7 @@ function Dashboard() {
             style={{
               background: css.lifted,
               borderRadius: css.r_hero,
-              border: "1px dashed rgba(20,20,19,0.15)",
+              border: `1px dashed ${css.hairline}`,
               padding: "80px 40px",
               textAlign: "center",
             }}
@@ -1886,7 +2282,7 @@ function Dashboard() {
                   position: "relative",
                   width: 64,
                   height: 64,
-                  borderRadius: "50%",
+                  borderRadius: css.r_btn,
                   background: css.ink,
                   display: "flex",
                   alignItems: "center",
@@ -1899,7 +2295,7 @@ function Dashboard() {
             </div>
             <h3
               style={{
-                fontSize: 22,
+              fontSize: 28,
                 fontWeight: 500,
                 color: css.ink,
                 margin: "0 0 10px",
@@ -1967,6 +2363,18 @@ function Dashboard() {
           <PostPreviewModal
             post={selectedPost}
             onClose={() => setSelectedPost(null)}
+            onDelete={async (id) => {
+              try {
+                const res = await apiClient.delete(`/api/broadcasts/${id}`);
+                if (res.data.success) {
+                  setBroadcasts(prev => prev.filter(b => b.id !== id));
+                  setSelectedPost(null);
+                }
+              } catch (error) {
+                console.error("Failed to delete post:", error);
+                alert("Failed to delete post.");
+              }
+            }}
           />
         )}
       </AnimatePresence>

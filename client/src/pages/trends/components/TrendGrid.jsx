@@ -20,7 +20,7 @@ const BREAKPOINTS = { default: 3, 1280: 3, 1024: 2, 768: 2, 640: 1 };
 const SkeletonCard = memo(function SkeletonCard({ h = 400 }) {
   return (
     <div style={{
-      background: "#fcfbfa", borderRadius: 20, marginBottom: 20, overflow: "hidden",
+      background: "#ffffff", borderRadius: 20, marginBottom: 20, overflow: "hidden",
       border: "1px solid rgba(20,20,19,0.07)", height: h,
     }}>
       <div style={{
@@ -44,7 +44,7 @@ const EmptyState = () => (
   <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
     style={{ textAlign: "center", padding: "60px 20px" }}>
     <div style={{ fontSize: 44, marginBottom: 10 }}>🤷</div>
-    <h3 style={{ fontSize: 17, fontWeight: 700, color: "#141413", margin: "0 0 5px" }}>No trends found</h3>
+    <h3 style={{ fontSize: 17, fontWeight: 700, color: "#111111", margin: "0 0 5px" }}>No trends found</h3>
     <p style={{ fontSize: 13, color: "#696969", margin: 0 }}>Try changing your filters or clearing the search.</p>
   </motion.div>
 );
@@ -87,7 +87,7 @@ const TrendGrid = memo(function TrendGrid({
 
       <div ref={sentinelRef} style={{ height: 60, display: "flex", alignItems: "center", justifyContent: "center", margin: "32px 0" }}>
         {loadingMore && (
-          <div style={{ width: 28, height: 28, borderRadius: "50%", border: "3px solid rgba(20,20,19,0.07)", borderTopColor: "#f37338", animation: "spin 0.65s linear infinite" }} />
+          <div style={{ width: 28, height: 28, borderRadius: "50%", border: "3px solid rgba(20,20,19,0.07)", borderTopColor: "#ff5600", animation: "spin 0.65s linear infinite" }} />
         )}
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>

@@ -14,28 +14,70 @@
   font-display: swap;
 }
 
+/* ── Body Font: Geist ── */
+@font-face {
+  font-family: "Geist";
+  src: url("/font/Geist-VariableFont_wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Heading Font: ES Klarheit ── */
+@font-face {
+  font-family: "ESKlarheit";
+  src: url("/font/ESKlarheitGrotesk-Bd-TRIAL-BF6618a70049644.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ESKlarheit";
+  src: url("/font/ESKlarheitGrotesk-Smbd-TRIAL-BF6618a70009538.otf") format("opentype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ESKlarheit";
+  src: url("/font/ESKlarheitGrotesk-Md-TRIAL-BF6618a7001a5a8.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ESKlarheit";
+  src: url("/font/ESKlarheitGrotesk-Rg-TRIAL-BF6618a7002c70f.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* ── Color Primitives ── */
-  --color-ink-950:  #0a0a09;
-  --color-ink-900:  #141413;
-  --color-ink-800:  #1e1e1c;
-  --color-ink-700:  #2d2d2b;
-  --color-slate-600: #696969;
-  --color-slate-400: #9a9a96;
-  --color-dust-300: #d1cdc7;
-  --color-dust-200: #e8e2da;
-  --color-canvas-100: #f3f0ee;
-  --color-canvas-50: #fcfbfa;
+  --color-ink-950:  #1f0404;
+  --color-ink-900:  #3F0808;
+  --color-ink-800:  #5c1111;
+  --color-ink-700:  #7a1818;
+  --color-slate-600: #626260;
+  --color-slate-400: #7b7b78;
+  --color-dust-300: #d3cec6;
+  --color-dust-200: #ebe7e1;
+  --color-canvas-100: #f5f1ec;
+  --color-canvas-50: #ffffff;
   --color-white: #ffffff;
 
   /* ── Arc (Mastercard Orange) ── */
-  --color-arc-700: #b03a00;
-  --color-arc-600: #cf4500;
-  --color-arc-500: #f37338;
-  --color-arc-400: #f5935a;
-  --color-arc-300: #f8b38d;
-  --color-arc-100: rgba(243, 115, 56, 0.1);
-  --color-arc-050: rgba(243, 115, 56, 0.05);
+  --color-arc-700: #c74400;
+  --color-arc-600: #e84f00;
+  --color-arc-500: #ff5600;
+  --color-arc-400: #ff7a38;
+  --color-arc-300: #ffad86;
+  --color-arc-100: rgba(255, 86, 0, 0.1);
+  --color-arc-050: rgba(255, 86, 0, 0.05);
 
   /* ── Semantic Tokens ── */
   --canvas:        var(--color-canvas-100);
@@ -46,7 +88,7 @@
   --dust:          var(--color-dust-300);
   --arc:           var(--color-arc-500);
   --signal:        var(--color-arc-600);
-  --link:          #3860be;
+  --link:          #0007cb;
 
   /* ── Status Colors ── */
   --success:       #059669;
@@ -58,13 +100,14 @@
   --danger:        #dc2626;
   --danger-bg:     rgba(220, 38, 38, 0.06);
   --danger-border: rgba(220, 38, 38, 0.15);
-  --info:          #0085ff;
-  --info-bg:       rgba(0, 133, 255, 0.06);
-  --info-border:   rgba(0, 133, 255, 0.15);
+  --info:          #0007cb;
+  --info-bg:       rgba(0, 7, 203, 0.06);
+  --info-border:   rgba(0, 7, 203, 0.15);
 
   /* ── Typography ── */
-  --font-display: "Plus Jakarta Sans", "Sofia Sans", "Helvetica Neue", sans-serif;
-  --font-body:    "Plus Jakarta Sans", "Sofia Sans", system-ui, sans-serif;
+  --font-display: "ESKlarheit", "Plus Jakarta Sans", "Sofia Sans", "Helvetica Neue", sans-serif;
+  --font-body:    "Geist", "Plus Jakarta Sans", "Sofia Sans", system-ui, sans-serif;
+  --font-secondary: "Geist", "Plus Jakarta Sans", system-ui, sans-serif;
   --font-logo:    "Geffroge Authentic", "Syne", "Plus Jakarta Sans", sans-serif;
   --font-mono:    "JetBrains Mono", "Fira Code", monospace;
 
@@ -109,22 +152,22 @@
   /* ── Border Radius ── */
   --r-xs:   4px;
   --r-sm:   6px;
-  --r-btn:  10px;
-  --r-chip: 14px;
-  --r-hero: 18px;
-  --r-card: 20px;
-  --r-xl:   28px;
+  --r-btn:  8px;
+  --r-chip: 8px;
+  --r-hero: 12px;
+  --r-card: 8px;
+  --r-xl:   16px;
   --r-pill: 9999px;
 
   /* ── Shadows ── */
-  --shadow-xs:    0 1px 2px rgba(20, 20, 19, 0.05);
-  --shadow-sm:    0 1px 3px rgba(20, 20, 19, 0.06), 0 1px 2px rgba(20, 20, 19, 0.04);
-  --shadow-card:  0 4px 12px rgba(20, 20, 19, 0.06), 0 2px 4px rgba(20, 20, 19, 0.03);
-  --shadow-nav:   0 8px 24px rgba(20, 20, 19, 0.08), 0 2px 6px rgba(20, 20, 19, 0.04);
-  --shadow-modal: 0 25px 60px rgba(20, 20, 19, 0.18), 0 8px 20px rgba(20, 20, 19, 0.07);
-  --shadow-premium: 0 20px 40px rgba(20, 20, 19, 0.12), 0 4px 12px rgba(20, 20, 19, 0.05);
-  --shadow-arc:   0 8px 24px rgba(243, 115, 56, 0.25);
-  --shadow-deep:  rgba(0, 0, 0, 0.15) 0px 30px 60px -12px, rgba(0, 0, 0, 0.2) 0px 18px 36px -18px;
+  --shadow-xs:    none;
+  --shadow-sm:    none;
+  --shadow-card:  none;
+  --shadow-nav:   none;
+  --shadow-modal: 0 24px 70px rgba(17, 17, 17, 0.18);
+  --shadow-premium: none;
+  --shadow-arc:   none;
+  --shadow-deep:  none;
 
   /* ── Transitions ── */
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
@@ -153,31 +196,7 @@
    GLOBAL RESETS & BASE STYLES
 ═══════════════════════════════════════════════════════════════════ */
 
-*, *::before, *::after {
-  box-sizing: border-box;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
 
-html {
-  scroll-behavior: smooth;
-  text-rendering: optimizeLegibility;
-  -webkit-text-size-adjust: 100%;
-}
-
-body {
-  background: var(--canvas);
-  color: var(--ink);
-  font-family: var(--font-body);
-  font-size: var(--text-base);
-  line-height: var(--leading-normal);
-  min-height: 100vh;
-}
-
-img, video {
-  max-width: 100%;
-  height: auto;
-}
 
 /* ── Reduced Motion ── */
 @media (prefers-reduced-motion: reduce) {
@@ -284,7 +303,7 @@ img, video {
 
 .btn-arc:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 32px rgba(243, 115, 56, 0.35);
+  box-shadow: 0 12px 32px rgba(255, 86, 0, 0.35);
 }
 
 .btn-arc:disabled {
@@ -733,7 +752,7 @@ button:hover .svg-wrapper {
   width: 140%;
   height: 140%;
   background:
-    radial-gradient(ellipse 60% 45% at 20% 30%, rgba(243, 115, 56, 0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 45% at 20% 30%, rgba(255, 86, 0, 0.06) 0%, transparent 70%),
     radial-gradient(ellipse 55% 40% at 80% 70%, rgba(207, 69, 0, 0.04) 0%, transparent 70%);
   pointer-events: none;
 }

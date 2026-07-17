@@ -19,15 +19,17 @@ cloudinary.config({
 const CHUNK_SIZE = 20 * 1024 * 1024;
 
 // Cloudinary free-tier hard limit (100 MB). We compress at 95 MB to leave headroom.
-const CLOUDINARY_MAX_BYTES = 100 * 1024 * 1024;
-const COMPRESS_THRESHOLD = 95 * 1024 * 1024;
+const CLOUDINARY_VIDEO_MAX_BYTES = 100 * 1024 * 1024;
+const VIDEO_COMPRESS_THRESHOLD = 95 * 1024 * 1024;
+const CLOUDINARY_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
+const IMAGE_COMPRESS_THRESHOLD = 9 * 1024 * 1024;
 
 /**
  * Compress a video file using FFmpeg so it fits under Cloudinary's 100 MB limit.
  * Targets H.264 video at 4 Mbps + AAC audio at 128 kbps.
  * Returns the path to the compressed file (caller must delete it).
  */
-async function compressVideo(inputPath) {
+async function compressVideo(inputPath, onProgress) {
   const tmpOutput = path.join(os.tmpdir(), `qp_compressed_${Date.now()}.mp4`);
   console.log(`🗜️  Compressing video: ${inputPath} → ${tmpOutput}`);
 
@@ -45,7 +47,11 @@ async function compressVideo(inputPath) {
       .output(tmpOutput)
       .on('start', (cmd) => console.log(`🎬 FFmpeg started`))
       .on('progress', (p) => {
-        if (p.percent) process.stdout.write(`\r   ↳ Compressing… ${Math.round(p.percent)}%`);
+        if (p.percent) {
+          const pct = Math.round(p.percent);
+          if (onProgress) onProgress(pct);
+          process.stdout.write(`\r   ↳ Compressing… ${pct}%`);
+        }
       })
       .on('end', () => {
         process.stdout.write('\n');
@@ -61,6 +67,20 @@ async function compressVideo(inputPath) {
   });
 }
 
+async function compressImage(inputPath) {
+  const tmpOutput = path.join(os.tmpdir(), `qp_compressed_${Date.now()}.jpg`);
+  console.log(`Compressing image: ${inputPath} -> ${tmpOutput}`);
+
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .outputOptions(['-frames:v 1', '-q:v 4'])
+      .output(tmpOutput)
+      .on('end', () => resolve(tmpOutput))
+      .on('error', (err) => reject(new Error(`Image compression failed: ${err.message}`)))
+      .run();
+  });
+}
+
 /**
  * Upload a file to Cloudinary.
  * Automatically compresses videos that exceed the 95 MB threshold.
@@ -69,12 +89,29 @@ async function compressVideo(inputPath) {
  * @param {string} resourceType - 'image' or 'video'
  * @returns {Promise<Object>} Cloudinary upload result with secure_url
  */
-export async function uploadToCloudinary(filePath, resourceType = 'auto') {
+export async function uploadToCloudinary(filePath, resourceType = 'auto', onProgress) {
   let uploadPath = filePath;
   let compressedTmp = null;
 
   try {
     console.log(`☁️  Uploading ${resourceType} to Cloudinary...`);
+
+    if (resourceType === 'image') {
+      const fileSizeBytes = fs.statSync(filePath).size;
+
+      if (fileSizeBytes > IMAGE_COMPRESS_THRESHOLD) {
+        compressedTmp = await compressImage(filePath);
+        const compressedSize = fs.statSync(compressedTmp).size;
+        if (compressedSize > CLOUDINARY_IMAGE_MAX_BYTES) {
+          throw new Error(
+            `Image is too large even after compression ` +
+            `(${(compressedSize / 1024 / 1024).toFixed(1)} MB). ` +
+            `Please use a smaller image (max 10 MB).`
+          );
+        }
+        uploadPath = compressedTmp;
+      }
+    }
 
     // ── Auto-compress oversized videos ──────────────────────────────────────
     if (resourceType === 'video') {
@@ -82,12 +119,14 @@ export async function uploadToCloudinary(filePath, resourceType = 'auto') {
       const fileSizeMB = (fileSizeBytes / 1024 / 1024).toFixed(1);
       console.log(`📏 Video size: ${fileSizeMB} MB`);
 
-      if (fileSizeBytes > COMPRESS_THRESHOLD) {
-        console.log(`⚠️  File exceeds ${COMPRESS_THRESHOLD / 1024 / 1024} MB — compressing before upload...`);
-        compressedTmp = await compressVideo(filePath);
+      if (fileSizeBytes > VIDEO_COMPRESS_THRESHOLD) {
+        console.log(`⚠️  File exceeds ${VIDEO_COMPRESS_THRESHOLD / 1024 / 1024} MB — compressing before upload...`);
+        compressedTmp = await compressVideo(filePath, (pct) => {
+          if (onProgress) onProgress({ phase: 'compressing', percent: pct });
+        });
 
         const compressedSize = fs.statSync(compressedTmp).size;
-        if (compressedSize > CLOUDINARY_MAX_BYTES) {
+        if (compressedSize > CLOUDINARY_VIDEO_MAX_BYTES) {
           throw new Error(
             `Video is too large even after compression ` +
             `(${(compressedSize / 1024 / 1024).toFixed(1)} MB). ` +
@@ -98,20 +137,22 @@ export async function uploadToCloudinary(filePath, resourceType = 'auto') {
       }
     }
 
+    const isGif = uploadPath.toLowerCase().endsWith('.gif');
+    
     const uploadOptions = {
       resource_type: resourceType,
       folder: 'quickpost',
       use_filename: false,
       unique_filename: true,
       // Chunked upload for videos avoids 413 payload-too-large errors
-      ...(resourceType === 'video' && {
+      ...(resourceType === 'video' && !isGif && {
         chunk_size: CHUNK_SIZE,
       }),
     };
 
     // Use upload_large for videos (handles chunking transparently)
     const result = await new Promise((resolve, reject) => {
-      if (resourceType === 'video') {
+      if (resourceType === 'video' && !isGif) {
          cloudinary.uploader.upload_large(uploadPath, uploadOptions, (error, res) => {
             if (error) reject(error);
             else resolve(res);

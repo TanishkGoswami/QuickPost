@@ -16,7 +16,7 @@ import {
   ExternalLink, ChevronDown, Lightbulb,
 } from "lucide-react";
 
-const C = { ink: "#141413", canvas: "#f2f0ed", white: "#ffffff", slate: "#6b6b68", dust: "#c4bfb8", arc: "#f37338", border: "rgba(20,20,19,0.09)" };
+const C = { ink: "#111111", canvas: "#f2f0ed", white: "#ffffff", slate: "#6b6b68", dust: "#c4bfb8", arc: "#ff5600", border: "rgba(20,20,19,0.09)" };
 
 // ─── LAZY IMAGE ───────────────────────────────────────────────────
 export const LazyImage = memo(function LazyImage({ src, alt = "", style = {} }) {

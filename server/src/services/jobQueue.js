@@ -90,6 +90,27 @@ export function getJobsForUser(userId) {
     .sort((a, b) => b.createdAt - a.createdAt);
 }
 
+export function deleteJob(jobId, userId) {
+  const job = jobs.get(jobId);
+  if (!job || job.userId !== userId) return false;
+  jobs.delete(jobId);
+  return true;
+}
+
+export function clearTerminalJobsForUser(userId) {
+  let removed = 0;
+  for (const [id, job] of jobs.entries()) {
+    if (
+      job.userId === userId &&
+      (job.status === 'completed' || job.status === 'failed' || job.status === 'stalled')
+    ) {
+      jobs.delete(id);
+      removed++;
+    }
+  }
+  return removed;
+}
+
 /**
  * Update a job's fields and emit a 'updated' event.
  * @param {string} jobId
@@ -160,4 +181,4 @@ const cleanupInterval = setInterval(() => {
 // Don't block process exit
 if (cleanupInterval.unref) cleanupInterval.unref();
 
-export default { createJob, getJob, getJobsForUser, updateJob, failJob };
+export default { createJob, getJob, getJobsForUser, deleteJob, clearTerminalJobsForUser, updateJob, failJob };

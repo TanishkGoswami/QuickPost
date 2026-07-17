@@ -1,19 +1,3 @@
-/**
- * useAllTrends.js v3 — Production-grade data hook
- * ────────────────────────────────────────────────────────────────
- * What's new / fixed vs v2:
- *  1. Proper AbortController per-fetch (not per-load cycle)
- *  2. useDeferredValue for search debounce (no setTimeout leak)
- *  3. Ref-guarded loadMore — cannot double-fire
- *  4. Distinguishes AbortError from real errors
- *  5. Exponential backoff retry on server errors
- *  6. Weighted subreddit pool (niche-aware rotation)
- *  7. Deduplication by URL across pages
- *
- * Replace: client/src/pages/trends/hooks/useAllTrends.js
- * ────────────────────────────────────────────────────────────────
- */
-
 import {
   useState, useEffect, useCallback, useRef, useDeferredValue,
 } from "react";
@@ -44,6 +28,10 @@ function dedup(existing, incoming, key = "url") {
   return incoming.filter(x => !x[key] || !seen.has(x[key]));
 }
 
+function withBatch(items, batch) {
+  return items.map(item => ({ ...item, _batch: batch }));
+}
+
 // ─── API FUNCTIONS ────────────────────────────────────────────────
 async function loadNews({ limit, offset, categories, query }, signal) {
   const p = new URLSearchParams({ limit, offset, categories, ...(query && { q: query }) });
@@ -51,13 +39,70 @@ async function loadNews({ limit, offset, categories, query }, signal) {
   return data.articles || [];
 }
 
+async function loadVideos({ limit, query }, signal) {
+  const p = new URLSearchParams({
+    limit: String(limit),
+    q: query || "trending videos India",
+  });
+  const data = await safeFetch(`${BASE}/api/trends/youtube?${p}`, signal);
+  return data.videos || [];
+}
+
+// ─── REDDIT: direct browser fetch (no backend needed) ────────────
+async function fetchSubreddit(sr, limit, after, signal) {
+  const params = new URLSearchParams({ limit: String(limit), raw_json: "1" });
+  if (after) params.set("after", after);
+
+  const res = await fetch(`https://www.reddit.com/r/${sr}/hot.json?${params}`, {
+    signal,
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) throw new Error(`Reddit r/${sr}: HTTP ${res.status}`);
+  const data = await res.json();
+
+  const posts = (data?.data?.children || [])
+    .map((c) => c.data)
+    .filter((p) => !p.over_18 && !p.stickied)
+    .map((p) => {
+      // Best image: hires preview → thumbnail → direct url
+      let image = null;
+      if (p.preview?.images?.[0]?.source?.url) {
+        image = p.preview.images[0].source.url.replace(/&amp;/g, "&");
+      } else if (p.thumbnail?.startsWith("http")) {
+        image = p.thumbnail;
+      } else if (/\.(jpg|jpeg|png|gif|webp)$/i.test(p.url || "")) {
+        image = p.url;
+      }
+
+      const isVideo = p.is_video || !!p.media?.reddit_video;
+      const videoUrl =
+        p.media?.reddit_video?.fallback_url?.replace(/&amp;/g, "&") || null;
+
+      return {
+        id: p.id,
+        title: p.title,
+        image,
+        score: p.score,
+        upvotes: p.ups,
+        comments: p.num_comments,
+        subreddit: p.subreddit,
+        url: `https://reddit.com${p.permalink}`,
+        link: `https://reddit.com${p.permalink}`,
+        isVideo,
+        videoUrl,
+        isImage: !!image,
+      };
+    })
+    .filter((p) => p.image || p.isVideo);
+
+  return { sr, posts, after: data?.data?.after || null };
+}
+
 async function loadReddit({ subreddits, limitPerSub, afters }, signal) {
   const results = await Promise.allSettled(
-    subreddits.map(async sr => {
-      const p = new URLSearchParams({ sr, limit: String(limitPerSub), ...(afters[sr] && { after: afters[sr] }) });
-      const data = await safeFetch(`${BASE}/api/trends/reddit?${p}`, signal);
-      return { sr, posts: data.posts || [], after: data.after || null };
-    })
+    subreddits.map((sr) =>
+      fetchSubreddit(sr, limitPerSub, afters[sr] || "", signal)
+    )
   );
   const posts = [];
   const newAfters = { ...afters };
@@ -75,6 +120,7 @@ const DEFAULTS = {
   newsCategories: "technology,business,entertainment,sports,finance,science,world,health,politics",
   newsLimit: 24,
   memeLimit: 24,
+  videoLimit: 10,
 };
 
 // ─── HOOK ─────────────────────────────────────────────────────────
@@ -84,6 +130,7 @@ export function useAllTrends(rawQuery = "", options = {}) {
 
   const [trends, setTrends]       = useState([]);
   const [memes, setMemes]         = useState([]);
+  const [videos, setVideos]       = useState([]);
   const [loading, setLoading]     = useState(true);
   const [loadingMore, setLM]      = useState(false);
   const [error, setError]         = useState(null);
@@ -92,7 +139,7 @@ export function useAllTrends(rawQuery = "", options = {}) {
   const abortRef   = useRef(null);
   const loadingRef = useRef(false);   // guards loadMore from double-firing
   const mounted    = useRef(true);
-  const pagination = useRef({ newsOffset: 0, redditAfters: {} });
+  const pagination = useRef({ newsOffset: 0, redditAfters: {}, batch: 0 });
 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
@@ -105,7 +152,7 @@ export function useAllTrends(rawQuery = "", options = {}) {
     abortRef.current = ctrl;
 
     if (isInitial) {
-      pagination.current = { newsOffset: 0, redditAfters: {} };
+      pagination.current = { newsOffset: 0, redditAfters: {}, batch: 0 };
       if (mounted.current) { setLoading(true); setError(null); }
     } else {
       loadingRef.current = true;
@@ -113,35 +160,43 @@ export function useAllTrends(rawQuery = "", options = {}) {
     }
 
     const { newsOffset, redditAfters } = pagination.current;
+    const batch = isInitial ? 0 : pagination.current.batch + 1;
     const subs = pickSubs(4);
     const limitPerSub = Math.ceil(opts.memeLimit / 4);
 
     try {
-      const [nRes, rRes] = await Promise.allSettled([
+      const [nRes, rRes, yRes] = await Promise.allSettled([
         loadNews({ limit: opts.newsLimit, offset: newsOffset, categories: opts.newsCategories, query }, ctrl.signal),
         loadReddit({ subreddits: subs, limitPerSub, afters: redditAfters }, ctrl.signal),
+        isInitial ? loadVideos({ limit: opts.videoLimit, query }, ctrl.signal) : Promise.resolve([]),
       ]);
 
       if (!mounted.current || ctrl.signal.aborted) return;
 
       const newNews  = nRes.status === "fulfilled" ? nRes.value : [];
       const newMemes = rRes.status === "fulfilled" ? rRes.value.posts : [];
+      const newVideos = yRes.status === "fulfilled" ? yRes.value : [];
       const newAfts  = rRes.status === "fulfilled" ? rRes.value.newAfters : redditAfters;
 
       // Update pagination
       pagination.current.newsOffset += opts.newsLimit;
       pagination.current.redditAfters = newAfts;
+      pagination.current.batch = batch;
 
       // Shuffle memes for variety
       const shuffled = [...newMemes].sort(() => Math.random() - 0.5);
+      const batchedNews = withBatch(newNews, batch);
+      const batchedMemes = withBatch(shuffled, batch);
+      const batchedVideos = withBatch(newVideos, batch);
 
-      setTrends(prev => isInitial ? newNews : [...prev, ...dedup(prev, newNews)]);
-      setMemes(prev => isInitial ? shuffled : [...prev, ...shuffled]);
+      setTrends(prev => isInitial ? batchedNews : [...prev, ...dedup(prev, batchedNews)]);
+      setMemes(prev => isInitial ? batchedMemes : [...prev, ...dedup(prev, batchedMemes)]);
+      setVideos(prev => isInitial ? batchedVideos : prev);
       setHasMore(newNews.length > 0 || newMemes.length > 0);
 
       // Partial errors — show non-blocking warning
-      if (nRes.status === "rejected" || rRes.status === "rejected") {
-        const errMsg = [nRes, rRes].filter(r => r.status === "rejected").map(r => r.reason?.message).join("; ");
+      if (nRes.status === "rejected" || rRes.status === "rejected" || yRes.status === "rejected") {
+        const errMsg = [nRes, rRes, yRes].filter(r => r.status === "rejected").map(r => r.reason?.message).join("; ");
         if (mounted.current) setError(errMsg || "Some data failed to load");
       } else {
         if (mounted.current) setError(null);
@@ -156,7 +211,7 @@ export function useAllTrends(rawQuery = "", options = {}) {
         loadingRef.current = false;
       }
     }
-  }, [query, opts.newsCategories, opts.newsLimit, opts.memeLimit]);
+  }, [query, opts.newsCategories, opts.newsLimit, opts.memeLimit, opts.videoLimit]);
 
   // Initial load + reload on query change
   useEffect(() => {
@@ -170,5 +225,5 @@ export function useAllTrends(rawQuery = "", options = {}) {
 
   const refetch = useCallback(() => load(true), [load]);
 
-  return { trends, memes, images: [], loading, loadingMore, error, hasMore, refetch, loadMore };
+  return { trends, memes, videos, images: [], loading, loadingMore, error, hasMore, refetch, loadMore };
 }

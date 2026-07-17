@@ -5,18 +5,21 @@
 
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { DialogProvider } from './context/DialogContext';
 import { UploadJobProvider } from './context/UploadJobContext';
+import { AutoDMProvider } from './context/AutoDMContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import UploadManagerPanel from './components/UploadManagerPanel';
-import CookieConsent from './components/CookieConsent';
+import ComplianceBanner from './components/ComplianceBanner';
 import ContentProtection from './components/ContentProtection';
 import { useAuth } from './context/AuthContext';
 
 // ── Synchronous imports (auth-critical path) ──
 import AuthPage from './components/AuthPage';
 import AuthCallback from './components/AuthCallback';
+import SSOPage from './pages/SSOPage';
 import DashboardLayout from './components/DashboardLayout';
 import { NotFoundPage } from './components/ui/404-page-not-found';
 
@@ -33,28 +36,41 @@ const AllTrendsPage  = lazy(() => import('./pages/trends/AllTrendsPage'));
 const Onboarding     = lazy(() => import('./components/Onboarding'));
 const BillingPage    = lazy(() => import('./pages/BillingPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
+const InstagramBots = lazy(() => import('./pages/InstagramBots'));
+const InstagramConnect = lazy(() => import('./pages/InstagramConnect'));
+const InstagramInbox = lazy(() => import('./pages/InstagramInbox'));
+const YouTubeManagerPage = lazy(() => import('./pages/YouTubeManagerPage'));
+
+// ── AutoDM workspace ──
+const AutoDMLayout             = lazy(() => import('./pages/auto-dm/AutoDMLayout'));
+const AutoDMHomePage           = lazy(() => import('./pages/auto-dm/AutoDMHomePage'));
+const AutoDMAutomationsPage    = lazy(() => import('./pages/auto-dm/AutoDMAutomationsPage'));
+const AutomationEditorPage     = lazy(() => import('./pages/auto-dm/AutomationEditorPage'));
+const AutoDMContactsPage       = lazy(() => import('./pages/auto-dm/AutoDMContactsPage'));
+const AutoDMInstagramProfilePage = lazy(() => import('./pages/auto-dm/AutoDMInstagramProfilePage'));
+const ProfilePage              = lazy(() => import('./pages/ProfilePage'));
+const ConnectInstagramPage     = lazy(() => import('./pages/connect/ConnectInstagramPage'));
+const ConnectSuccessPage       = lazy(() => import('./pages/connect/ConnectSuccessPage'));
+const SelectAccountsPage       = lazy(() => import('./pages/connect/SelectAccountsPage'));
 
 // ── Page loader ──
 const PageLoader = () => (
   <div
     style={{
       minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
       background: 'var(--canvas)',
+      padding: '88px 24px 40px',
     }}
   >
-    <div
-      style={{
-        width: 32,
-        height: 32,
-        border: '2px solid rgba(20,20,19,0.08)',
-        borderTopColor: 'var(--arc)',
-        borderRadius: '50%',
-        animation: 'spin 0.7s linear infinite',
-      }}
-    />
+    <div style={{ maxWidth: 1120, margin: '0 auto', display: 'grid', gap: 18 }}>
+      <div className="skeleton-shimmer" style={{ height: 132, borderRadius: 8 }} />
+      <div className="skeleton-shimmer" style={{ height: 88, borderRadius: 8 }} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+        <div className="skeleton-shimmer" style={{ height: 220, borderRadius: 8 }} />
+        <div className="skeleton-shimmer" style={{ height: 220, borderRadius: 8 }} />
+        <div className="skeleton-shimmer" style={{ height: 220, borderRadius: 8 }} />
+      </div>
+    </div>
   </div>
 );
 
@@ -81,13 +97,17 @@ function AppContent() {
       />
 
       <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/social-sso"   element={<SSOPage />} />
       <Route
         path="/onboarding"
         element={isAuthenticated ? <Onboarding /> : <Navigate to="/login" replace />}
       />
+      <Route path="/connect" element={isAuthenticated ? <ConnectInstagramPage /> : <Navigate to="/login" replace />} />
+      <Route path="/connect/success" element={isAuthenticated ? <ConnectSuccessPage /> : <Navigate to="/login" replace />} />
+      <Route path="/connect/select" element={isAuthenticated ? <SelectAccountsPage /> : <Navigate to="/login" replace />} />
 
       // Protected dashboard
-      <Route path="/dashboard" element={<DashboardLayout />}>
+        <Route path="/dashboard" element={<DashboardLayout />}>
         <Route index           element={<Dashboard />} />
         <Route path="compose"  element={<BroadcastForm />} />
         <Route path="history"  element={<History />} />
@@ -95,6 +115,21 @@ function AppContent() {
         <Route path="trends"   element={<AllTrendsPage />} />
         <Route path="billing"  element={<BillingPage />} />
         <Route path="payment-success" element={<PaymentSuccessPage />} />
+        <Route path="instapilot" element={<InstagramBots />} />
+        <Route path="instapilot/connect" element={<InstagramConnect />} />
+        <Route path="instapilot/inbox" element={<InstagramInbox />} />
+        <Route path="youtube" element={<YouTubeManagerPage />} />
+        <Route path="profile"  element={<AutoDMProvider><ProfilePage /></AutoDMProvider>} />
+
+        {/* AutoDM workspace — has its own full-screen layout */}
+        <Route path="auto-dm" element={<AutoDMLayout />}>
+          <Route index                       element={<AutoDMHomePage />} />
+          <Route path="automations"          element={<AutoDMAutomationsPage />} />
+          <Route path="automations/new"      element={<AutomationEditorPage />} />
+          <Route path="automations/:id"      element={<AutomationEditorPage />} />
+          <Route path="contacts"             element={<AutoDMContactsPage />} />
+          <Route path="instagram-profile"    element={<AutoDMInstagramProfilePage />} />
+        </Route>
       </Route>
 
       // 404
@@ -113,8 +148,9 @@ function App() {
               <Suspense fallback={<PageLoader />}>
                 <AppContent />
               </Suspense>
+              <Toaster position="top-right" />
               <UploadManagerPanel />
-              <CookieConsent />
+              <ComplianceBanner />
               <ContentProtection />
             </BrowserRouter>
           </UploadJobProvider>

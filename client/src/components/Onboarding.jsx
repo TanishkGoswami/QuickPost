@@ -86,8 +86,8 @@ function OnboardingShell({ children, step }) {
           <div>
             {/* Orbital arc hint */}
             <svg style={{ opacity: 0.25, marginBottom: 24 }} width="200" height="80" viewBox="0 0 200 80" fill="none">
-              <path d="M -20 60 Q 60 10 160 50 Q 190 65 230 30" stroke="#F37338" strokeWidth="1.5" />
-              <circle cx="160" cy="50" r="4" fill="#F37338" />
+              <path d="M -20 60 Q 60 10 160 50 Q 190 65 230 30" stroke="#FF5600" strokeWidth="1.5" />
+              <circle cx="160" cy="50" r="4" fill="#FF5600" />
             </svg>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--arc)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
               Step {step} of 3
@@ -149,23 +149,24 @@ function OnboardingShell({ children, step }) {
 }
 
 /* ── Continue button ── */
-function ContinueBtn({ onClick, active, label = 'Continue' }) {
+function ContinueBtn({ onClick, active, label = 'Continue', loading = false }) {
   return (
     <button
       onClick={onClick}
-      disabled={!active}
-      className={active ? 'btn-ink' : ''}
+      disabled={!active || loading}
+      className={(active && !loading) ? 'btn-ink' : ''}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 8,
         padding: '11px 28px', borderRadius: 'var(--r-btn)',
         fontSize: 15, fontWeight: 500, letterSpacing: '-0.01em',
-        ...(!active ? {
+        opacity: loading ? 0.7 : 1,
+        ...((!active || loading) ? {
           background: 'rgba(20,20,19,0.07)', color: 'var(--dust)',
           border: 'none', cursor: 'not-allowed',
         } : {}),
       }}
     >
-      {label} {active && <ArrowRight size={15} />}
+      {loading ? 'Processing...' : label} {(active && !loading) && <ArrowRight size={15} />}
     </button>
   );
 }
@@ -178,6 +179,7 @@ export default function Onboarding() {
   const [selectedChannels, setSelectedChannels] = useState([]);
   const [selectedTools, setSelectedTools]       = useState([]);
   const [selectedType, setSelectedType]         = useState(null);
+  const [isSaving, setIsSaving]                 = useState(false);
 
   const firstName = user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
 
@@ -185,20 +187,46 @@ export default function Onboarding() {
     const check = async () => {
       try {
         const res = await apiClient.get('/api/onboarding');
-        if (res.data.completed) { localStorage.setItem('qp_onboarding_done', 'true'); navigate('/dashboard', { replace: true }); }
-      } catch {
-        if (localStorage.getItem('qp_onboarding_done')) navigate('/dashboard', { replace: true });
+        if (res.data.completed) {
+          localStorage.setItem('qp_onboarding_done', 'true');
+          navigate('/dashboard', { replace: true });
+        }
+      } catch (err) {
+        if (localStorage.getItem('qp_onboarding_done')) {
+          navigate('/dashboard', { replace: true });
+        }
       }
     };
     check();
   }, [navigate]);
 
   const finish = async (finalType = selectedType) => {
-    try { await apiClient.post('/api/onboarding', { channels: selectedChannels, tools: selectedTools, user_type: finalType, completed: true }); }
-    catch (e) { console.error('Onboarding save failed:', e); }
-    finally { localStorage.setItem('qp_onboarding_done', 'true'); navigate('/dashboard', { replace: true }); }
+    if (isSaving) return;
+    setIsSaving(true);
+    console.log('[Onboarding] Finishing with:', { finalType, selectedChannels, selectedTools });
+    
+    try {
+      await apiClient.post('/api/onboarding', {
+        channels: selectedChannels,
+        tools: selectedTools,
+        user_type: finalType,
+        completed: true
+      });
+    } catch (e) {
+      console.error('[Onboarding] Save failed:', e);
+    } finally {
+      localStorage.setItem('qp_onboarding_done', 'true');
+      console.log('[Onboarding] Navigating to dashboard');
+      navigate('/dashboard', { replace: true });
+      setIsSaving(false);
+    }
   };
-  const skip = () => finish(null);
+
+  const skip = (e) => {
+    if (e) e.preventDefault();
+    finish(null);
+  };
+
   const toggleChannel = id => setSelectedChannels(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
   const toggleTool = id => setSelectedTools(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 
@@ -207,8 +235,8 @@ export default function Onboarding() {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--canvas)', fontFamily: 'var(--font)', position: 'relative', overflow: 'hidden' }}>
       {/* Decorative orbital arc */}
       <svg aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} viewBox="0 0 1200 800" preserveAspectRatio="none">
-        <path d="M -80 520 Q 360 120 820 480 Q 1060 680 1500 280" stroke="#F37338" strokeWidth="1.5" fill="none" opacity="0.4" />
-        <path d="M 60 650 Q 380 280 940 560" stroke="#F37338" strokeWidth="1" fill="none" opacity="0.2" />
+        <path d="M -80 520 Q 360 120 820 480 Q 1060 680 1500 280" stroke="#FF5600" strokeWidth="1.5" fill="none" opacity="0.4" />
+        <path d="M 60 650 Q 380 280 940 560" stroke="#FF5600" strokeWidth="1" fill="none" opacity="0.2" />
       </svg>
 
       {/* Ghost platform icons */}
@@ -275,12 +303,25 @@ export default function Onboarding() {
         <p style={{ fontSize: 16, fontWeight: 450, color: 'var(--slate)', lineHeight: 1.5, margin: '0 0 36px' }}>
           Let's set up GAP Social-pilot for you.<br />It only takes a minute.
         </p>
-        <button onClick={() => setStep(1)} className="btn-ink" style={{ fontSize: 16, padding: '13px 36px' }}>
-          Get started <ArrowRight size={16} />
+        <button 
+          onClick={() => setStep(1)} 
+          disabled={isSaving}
+          className="btn-ink" 
+          style={{ fontSize: 16, padding: '13px 36px', opacity: isSaving ? 0.5 : 1 }}
+        >
+          {isSaving ? 'Please wait...' : 'Get started'} {!isSaving && <ArrowRight size={16} />}
         </button>
         <div style={{ marginTop: 16 }}>
-          <button onClick={skip} style={{ fontSize: 13, color: 'var(--slate)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)' }}>
-            Skip setup
+          <button 
+            onClick={skip} 
+            disabled={isSaving}
+            style={{ 
+              fontSize: 13, color: 'var(--slate)', background: 'none', border: 'none', 
+              cursor: isSaving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font)',
+              opacity: isSaving ? 0.5 : 1
+            }}
+          >
+            {isSaving ? 'Skipping...' : 'Skip setup'}
           </button>
         </div>
       </div>
@@ -293,11 +334,11 @@ export default function Onboarding() {
       <div style={{ flex: 1, padding: '48px 40px', maxWidth: 640, margin: '0 auto', width: '100%' }}>
         <h1 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: '0 0 6px' }}>Which channels are you active on?</h1>
         <p style={{ fontSize: 14, color: 'var(--slate)', margin: '0 0 32px' }}>Select all that apply. You can connect accounts after setup.</p>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', 
-          gap: 12, 
-          marginBottom: 36 
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+          gap: 12,
+          marginBottom: 36
         }}>
           {PLATFORMS.map(p => {
             const sel = selectedChannels.includes(p.id);
@@ -334,8 +375,18 @@ export default function Onboarding() {
           })}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <ContinueBtn onClick={() => setStep(2)} active={selectedChannels.length > 0} />
-          <button onClick={skip} style={{ fontSize: 13, color: 'var(--slate)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600 }}>Skip</button>
+          <ContinueBtn onClick={() => setStep(2)} active={selectedChannels.length > 0} loading={isSaving} />
+          <button 
+            onClick={skip} 
+            disabled={isSaving}
+            style={{ 
+              fontSize: 13, color: 'var(--slate)', background: 'none', border: 'none', 
+              cursor: isSaving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font)', fontWeight: 600,
+              opacity: isSaving ? 0.5 : 1
+            }}
+          >
+            {isSaving ? 'Skipping...' : 'Skip'}
+          </button>
         </div>
       </div>
     </OnboardingShell>
@@ -379,8 +430,18 @@ export default function Onboarding() {
           })}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <ContinueBtn onClick={() => setStep(3)} active={selectedTools.length > 0} />
-          <button onClick={skip} style={{ fontSize: 13, color: 'var(--slate)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600 }}>Skip</button>
+          <ContinueBtn onClick={() => setStep(3)} active={selectedTools.length > 0} loading={isSaving} />
+          <button 
+            onClick={skip} 
+            disabled={isSaving}
+            style={{ 
+              fontSize: 13, color: 'var(--slate)', background: 'none', border: 'none', 
+              cursor: isSaving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font)', fontWeight: 600,
+              opacity: isSaving ? 0.5 : 1
+            }}
+          >
+            {isSaving ? 'Skipping...' : 'Skip'}
+          </button>
         </div>
       </div>
     </OnboardingShell>
@@ -392,11 +453,11 @@ export default function Onboarding() {
       <div style={{ flex: 1, padding: '48px 40px', maxWidth: 640, margin: '0 auto', width: '100%' }}>
         <h1 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: '0 0 6px' }}>How would you describe yourself?</h1>
         <p style={{ fontSize: 14, color: 'var(--slate)', margin: '0 0 32px' }}>Choose the option that best fits your role.</p>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', 
-          gap: 10, 
-          marginBottom: 36 
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+          gap: 10,
+          marginBottom: 36
         }}>
           {USER_TYPES.map(u => {
             const sel = selectedType === u.id;
@@ -428,8 +489,18 @@ export default function Onboarding() {
           })}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <ContinueBtn onClick={() => finish(selectedType)} active={!!selectedType} label="Finish setup" />
-          <button onClick={skip} style={{ fontSize: 13, color: 'var(--slate)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600 }}>Skip</button>
+          <ContinueBtn onClick={() => finish(selectedType)} active={!!selectedType} label="Finish setup" loading={isSaving} />
+          <button 
+            onClick={skip} 
+            disabled={isSaving}
+            style={{ 
+              fontSize: 13, color: 'var(--slate)', background: 'none', border: 'none', 
+              cursor: isSaving ? 'not-allowed' : 'pointer', fontFamily: 'var(--font)', fontWeight: 600,
+              opacity: isSaving ? 0.5 : 1
+            }}
+          >
+            {isSaving ? 'Skipping...' : 'Skip'}
+          </button>
         </div>
       </div>
     </OnboardingShell>

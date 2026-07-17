@@ -1,4 +1,31 @@
 import { default as supabase } from "./supabase.js";
+import { findFullScheduledChannel } from '../config/queuePolicy.js';
+
+export async function assertScheduledQueueCapacity(userId, channels, perChannelLimit) {
+  if (!Number.isFinite(perChannelLimit) || perChannelLimit >= 1_000_000) return;
+  const requestedChannels = [...new Set((channels || []).map(String).filter(Boolean))];
+  if (requestedChannels.length === 0) throw new Error('Select at least one channel');
+
+  const { data, error } = await supabase
+    .from('broadcasts')
+    .select('selected_channels')
+    .eq('user_id', userId)
+    .in('status', ['scheduled', 'queued', 'processing']);
+  if (error) throw new Error(`Failed to check scheduled queue capacity: ${error.message}`);
+
+  const fullChannel = findFullScheduledChannel(
+    requestedChannels,
+    data || [],
+    perChannelLimit,
+  );
+  if (fullChannel) {
+    const error = new Error(`Your scheduled queue limit for ${fullChannel} has been reached`);
+    error.code = 'PLAN_LIMIT_REACHED';
+    error.metric = 'scheduled_queue';
+    throw error;
+  }
+}
+
 
 /**
  * Save broadcast record to database
@@ -36,7 +63,7 @@ export async function saveBroadcast(
       media_urls: mediaUrls,           // Store all URLs
       thumbnail_url: thumbnailUrl,     // Preview thumbnail URL
       selected_channels: platformData.selectedChannels || [],
-      platform_data: platformData,
+      platform_data: { ...platformData, results },
 
       // Instagram results
       instagram_success: results.instagram?.success || false,
@@ -219,7 +246,7 @@ export async function updateBroadcastResults(
 /**
  * Get broadcasts for a user
  */
-export async function getBroadcasts(userId, status = null) {
+export async function getBroadcasts(userId, status = null, historyDays = null) {
   try {
     let query = supabase
       .from("broadcasts")
@@ -229,6 +256,10 @@ export async function getBroadcasts(userId, status = null) {
 
     if (status) {
       query = query.eq("status", status);
+    }
+    if (Number.isFinite(historyDays)) {
+      const cutoff = new Date(Date.now() - historyDays * 24 * 60 * 60 * 1000).toISOString();
+      query = query.gte("created_at", cutoff);
     }
 
     const { data, error } = await query;
@@ -447,7 +478,7 @@ export async function getScheduledBroadcasts(userId) {
       .from('broadcasts')
       .select('*')
       .eq('user_id', userId)
-      .in('status', ['scheduled', 'processing', 'failed', 'cancelled'])
+      .in('status', ['scheduled', 'queued', 'processing', 'failed', 'cancelled'])
       .order('scheduled_for', { ascending: true });
 
     if (error) throw error;
@@ -467,7 +498,7 @@ export async function getScheduledStats(userId) {
       .from('broadcasts')
       .select('status')
       .eq('user_id', userId)
-      .in('status', ['scheduled', 'processing']);
+      .in('status', ['scheduled', 'queued', 'processing']);
 
     if (error) throw error;
     return { pending: (data || []).length };

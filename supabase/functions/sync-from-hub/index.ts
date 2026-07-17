@@ -13,12 +13,18 @@ function jsonRes(status: number, body: Record<string, unknown>): Response {
   });
 }
 
-// Plans that include Social Pilot access
-function isSocialPlan(planId: string): boolean {
-  if (!planId) return false;
-  const p = planId.toLowerCase();
-  return p.startsWith("social_pilot") || p.startsWith("all_in_one");
-}
+// Plans that include Social Pilot access mapping dictionary
+const HUB_PLAN_MAPPING: Record<string, "free" | "slite" | "sgrowth"> = {
+  "free_trial": "free",
+  "social_pilot_starter": "slite",
+  "social_pilot_growth": "sgrowth",
+  "social_pilot_pro": "sgrowth",
+  "social_pilot_quarterly": "slite",
+  "social_pilot_half_yearly": "slite",
+  "all_in_one_bundle_monthly": "sgrowth",
+  "all_in_one_bundle_quarterly": "sgrowth",
+  "all_in_one_bundle_half_yearly": "sgrowth"
+};
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS")
@@ -50,7 +56,8 @@ Deno.serve(async (req: Request) => {
       hub_user_id,
       profile_picture,
       plan_id,
-      plan,
+      plan_label,
+      subscription_status,
       expires_at,
     } = body;
 
@@ -62,25 +69,36 @@ Deno.serve(async (req: Request) => {
       auth: { persistSession: false },
     });
 
-    const rawPlanId = plan_id || plan || "free";
-    // Store exact plan_label from hub if this is a social-relevant plan
-    // plan_label comes in as e.g. "Social Pilot" or "GAP Ultimate Ecosystem"
-    const planLabel = body.plan_label || null;
-    const hasSocial = isSocialPlan(rawPlanId);
-    const storedPlan = hasSocial
-      ? planLabel ||
-        (rawPlanId.startsWith("all_in_one")
-          ? "GAP Ultimate Ecosystem"
-          : "Social Pilot")
-      : "Free";
+    // Normalize plan_id to match exact mapping keys
+    const rawPlanId = plan_id ? String(plan_id).toLowerCase().trim() : "";
+    const mappedPlan = HUB_PLAN_MAPPING[rawPlanId] || "free";
+    
+    // Normalize status.
+    const rawStatus = subscription_status ? String(subscription_status).trim().toLowerCase() : "";
+    const isActive = ["active", "created", "authenticated", "trialing"].includes(rawStatus);
+
+    // 1. Fetch existing subscription for expires_at fallback
+    const { data: existingSub } = await supabase
+      .from("hub_subscriptions")
+      .select("expires_at, plan, plan_id, subscription_status")
+      .eq("email", email)
+      .maybeSingle();
+
+    // Map storedPlan name for display (requires explicit active status check)
+    let storedPlan = "Free";
+    if (mappedPlan !== "free" && isActive) {
+      storedPlan = plan_label ? String(plan_label).trim() : mappedPlan;
+    }
+
+    // null expires_at in payload must not accidentally erase existing valid non-null expires_at in DB
+    const finalExpiresAt = expires_at || existingSub?.expires_at || null;
 
     // ── Upsert into hub_subscriptions (email as primary key) ──────────────
-    // No auth user creation. No UUID conflicts. Simple and fast.
     const record: Record<string, unknown> = {
       email,
       plan: storedPlan,
-      plan_id: rawPlanId,
-      subscription_status: "active",
+      plan_id: plan_id || null, // Write raw plan_id to DB
+      subscription_status: subscription_status ? String(subscription_status).trim() : null,
       updated_at: new Date().toISOString(),
       synced_at: new Date().toISOString(),
     };
@@ -88,7 +106,7 @@ Deno.serve(async (req: Request) => {
     if (name) record.name = name;
     if (hub_user_id) record.hub_user_id = hub_user_id;
     if (profile_picture) record.profile_picture = profile_picture;
-    if (expires_at) record.expires_at = expires_at;
+    if (finalExpiresAt) record.expires_at = finalExpiresAt;
 
     const { error: upsertError } = await supabase
       .from("hub_subscriptions")
@@ -100,7 +118,7 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log(
-      `[sync-from-hub] ✅ ${email} → plan=${storedPlan} (${rawPlanId})`,
+      `[sync-from-hub] ✅ ${email} → plan=${storedPlan} (${plan_id})`,
     );
 
     return jsonRes(200, {

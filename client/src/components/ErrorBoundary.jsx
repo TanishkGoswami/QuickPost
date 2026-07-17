@@ -36,7 +36,7 @@ export class ErrorBoundary extends React.Component {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'var(--canvas, #f3f0ee)',
+            background: 'var(--canvas, #f5f1ec)',
             fontFamily: 'var(--font-body, "Sofia Sans", sans-serif)',
             padding: '24px',
           }}
@@ -73,7 +73,7 @@ export class ErrorBoundary extends React.Component {
               style={{
                 fontSize: 22,
                 fontWeight: 700,
-                color: 'var(--ink, #141413)',
+                color: 'var(--ink, #111111)',
                 margin: '0 0 8px',
                 letterSpacing: '-0.02em',
               }}
@@ -137,8 +137,8 @@ export class ErrorBoundary extends React.Component {
                 alignItems: 'center',
                 gap: 8,
                 padding: '10px 24px',
-                background: 'var(--ink, #141413)',
-                color: 'var(--canvas, #f3f0ee)',
+                background: 'var(--ink, #111111)',
+                color: 'var(--canvas, #f5f1ec)',
                 border: 'none',
                 borderRadius: 10,
                 fontSize: 14,
@@ -152,7 +152,7 @@ export class ErrorBoundary extends React.Component {
                 (e.currentTarget.style.background = '#1e1e1c')
               }
               onMouseLeave={e =>
-                (e.currentTarget.style.background = 'var(--ink, #141413)')
+                (e.currentTarget.style.background = 'var(--ink, #111111)')
               }
             >
               <RefreshCw size={15} aria-hidden="true" />
@@ -165,7 +165,7 @@ export class ErrorBoundary extends React.Component {
                 href="/"
                 style={{
                   fontSize: 13,
-                  color: 'var(--arc, #f37338)',
+                  color: 'var(--arc, #ff5600)',
                   textDecoration: 'none',
                   fontWeight: 600,
                 }}
@@ -197,7 +197,7 @@ import { DialogProvider } from './context/DialogContext';
 import { UploadJobProvider } from './context/UploadJobContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import UploadManagerPanel from './components/UploadManagerPanel';
-import CookieConsent from './components/CookieConsent';
+import ComplianceBanner from './components/ComplianceBanner';
 import { useAuth } from './context/AuthContext';
 
 // ── Synchronous imports (auth-critical path) ──
@@ -296,7 +296,7 @@ function App() {
                 <AppContent />
               </Suspense>
               <UploadManagerPanel />
-              <CookieConsent />
+              <ComplianceBanner />
             </BrowserRouter>
           </UploadJobProvider>
         </DialogProvider>

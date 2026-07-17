@@ -6,54 +6,61 @@ import { useAuth } from '../context/AuthContext';
 const PLATFORMS = [
   {
     id: 'facebook', name: 'Facebook', borderColor: 'border-blue-600',
-    icon: <img src="/icons/facebook-round-color-icon.svg" className="w-5 h-5 object-contain" alt="Facebook" />
+    icon: <img src="/icons/facebook-round-color-icon.svg" className="w-8 h-8 object-contain" alt="Facebook" />
   },
   {
     id: 'youtube', name: 'YouTube', borderColor: 'border-red-600',
-    icon:<img src="/icons/youtube-color-icon.svg" className="w-5 h-5 object-contain" alt="Youtube" />
+    icon:<img src="/icons/youtube-color-icon.svg" className="w-8 h-8 object-contain" alt="Youtube" />
   },
   {
     id: 'instagram', name: 'Instagram', borderColor: 'border-pink-600',
-    icon: <img src="/icons/ig-instagram-icon.svg" className="w-5 h-5 object-contain" alt="Instagram" />
+    icon: <img src="/icons/ig-instagram-icon.svg" className="w-8 h-8 object-contain" alt="Instagram" />
   },
   {
     id: 'linkedin', name: 'LinkedIn', borderColor: 'border-blue-700',
-    icon: <img src="/icons/linkedin-icon.svg" className="w-5 h-5 object-contain" alt="LinkedIn" />
+    icon: <img src="/icons/linkedin-icon.svg" className="w-8 h-8 object-contain" alt="LinkedIn" />
   },
   {
     id: 'threads', name: 'Threads', borderColor: 'border-black',
-    icon: <img src="/icons/threads-icon.svg" className="w-5 h-5 object-contain" alt="Threads" />
+    icon: <img src="/icons/threads-icon.svg" className="w-8 h-8 object-contain" alt="Threads" />
   },
   {
     id: 'x', name: 'X', borderColor: 'border-black',
-    icon: <img src="/icons/x-social-media-round-icon.svg" className="w-5 h-5 object-contain" alt="X" />,
+    icon: <img src="/icons/x-social-media-round-icon.svg" className="w-8 h-8 object-contain" alt="X" />,
     comingSoon: true,
   },
   {
     id: 'pinterest', name: 'Pinterest', borderColor: 'border-red-600',
-    icon: <img src="/icons/pinterest-round-color-icon.svg" className="w-5 h-5 object-contain" alt="Pinterest" />,
+    icon: <img src="/icons/pinterest-round-color-icon.svg" className="w-8 h-8 object-contain" alt="Pinterest" />,
     comingSoon: true,
   },
   {
     id: 'bluesky', name: 'Bluesky', borderColor: 'border-blue-500',
-    icon: <img src="/icons/bluesky-circle-color-icon.svg" className="w-5 h-5 object-contain" alt="Bluesky" />
+    icon: <img src="/icons/bluesky-circle-color-icon.svg" className="w-8 h-8 object-contain" alt="Bluesky" />
   },
   {
     id: 'mastodon', name: 'Mastodon', borderColor: 'border-purple-600',
-    icon: <img src="/icons/mastodon-round-icon.svg" className="w-5 h-5 object-contain" alt="Mastodon" />,
+    icon: <img src="/icons/mastodon-round-icon.svg" className="w-8 h-8 object-contain" alt="Mastodon" />,
   },
 
   {
     id: 'reddit',
     name: 'Reddit',
-    icon: <img src="/icons/reddit-icon.svg" className="w-5 h-5 object-contain" alt="Reddit" />,
+    icon: <img src="/icons/reddit-icon.svg" className="w-8 h-8 object-contain" alt="Reddit" />,
     borderColor: 'border-orange-600',
+    comingSoon: true,
+  },
+  {
+    id: 'googleBusiness',
+    name: 'Google Business',
+    icon: <img src="/icons/google-icon.svg" className="w-8 h-8 object-contain" alt="Google Business" />,
+    borderColor: 'border-blue-500',
     comingSoon: true,
   },
   {
     id: 'snapchat',
     name: 'Snapchat',
-    icon: <img src="/icons/snapchat-square-color-icon.svg" className="w-5 h-5 object-contain" alt="Snapchat" />,
+    icon: <img src="/icons/snapchat-square-color-icon.svg" className="w-8 h-8 object-contain" alt="Snapchat" />,
     borderColor: 'border-yellow-400',
     comingSoon: true,
   },
@@ -61,16 +68,59 @@ const PLATFORMS = [
 
 function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect, rightContent }) {
   const { connectedAccounts, user } = useAuth();
-  const isFree = user?.plan === 'Free' || !user?.plan;
-  const allowedFreePlatforms = ['youtube', 'linkedin', 'bluesky'];
   const [connectedOpen, setConnectedOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const connectedRef = useRef(null);
   const moreRef = useRef(null);
 
+  const accountArrayKey = (platformId) => `${platformId}Accounts`;
+  const getPlatformAccounts = (platformId) => connectedAccounts?.[accountArrayKey(platformId)] || [];
+
   // Split platforms
-  const connectedPlatforms = PLATFORMS.filter(p => connectedAccounts?.[p.id]?.connected);
-  const unconnectedPlatforms = PLATFORMS.filter(p => !connectedAccounts?.[p.id]?.connected);
+  const connectedPlatforms = [];
+  PLATFORMS.forEach(p => {
+    if (p.id === 'instagram') {
+      const igAccounts = connectedAccounts?.instagramAccounts || [];
+      if (igAccounts.length > 0) {
+        igAccounts.forEach(acc => {
+          connectedPlatforms.push({
+            id: `instagram:${acc.id}`,
+            name: acc.username ? `Instagram (@${acc.username})` : 'Instagram',
+            borderColor: p.borderColor,
+            icon: acc.profilePicture ? (
+              <img src={acc.profilePicture} className="w-full h-full object-cover" alt={acc.username || 'Instagram'} />
+            ) : p.icon,
+            platformIcon: p.icon,
+            isInstagram: true
+          });
+        });
+      } else if (connectedAccounts?.instagram?.connected) {
+         connectedPlatforms.push(p);
+      }
+    } else {
+      const accounts = getPlatformAccounts(p.id);
+      if (accounts.length > 0) {
+        accounts.forEach(acc => {
+          connectedPlatforms.push({
+            id: `${p.id}:${acc.id}`,
+            name: acc.username ? `${p.name} (${acc.username})` : p.name,
+            borderColor: p.borderColor,
+            icon: acc.profilePicture ? (
+              <img src={acc.profilePicture} className="w-full h-full object-cover" alt={acc.username || p.name} />
+            ) : p.icon,
+            platformIcon: p.icon
+          });
+        });
+      } else if (connectedAccounts?.[p.id]?.connected) {
+        connectedPlatforms.push(p);
+      }
+    }
+  });
+
+  const unconnectedPlatforms = PLATFORMS.filter(p => {
+    if (p.id === 'instagram') return !connectedAccounts?.instagram?.connected && !(connectedAccounts?.instagramAccounts?.length > 0);
+    return !connectedAccounts?.[p.id]?.connected && getPlatformAccounts(p.id).length === 0;
+  });
   const visibleUnconnected = unconnectedPlatforms.slice(0, 3);
   const hiddenUnconnected = unconnectedPlatforms.slice(3);
 
@@ -98,7 +148,7 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect, righ
           <button
             type="button"
             onClick={() => onBulkSelect(isAllSelected ? [] : connectedIds)}
-            className={`text-[9px] font-black uppercase tracking-[0.15em] py-1 px-3 rounded-full transition-all duration-300 ${
+            className={`text-[11px] font-medium py-1 px-3 rounded-full transition-all duration-300 ${
               isAllSelected
                 ? "bg-ink text-white shadow-md scale-105"
                 : "bg-white text-ink border border-gray-200 hover:border-ink"
@@ -110,50 +160,42 @@ function ChannelSelector({ selectedChannels, onChannelToggle, onBulkSelect, righ
       </div>
 
       <div className="flex items-center gap-3.5 flex-wrap">
-        {connectedPlatforms.map((p) => {
+        {connectedPlatforms.map((p, index) => {
           const isSelected = selectedChannels.includes(p.id);
-          const isLocked = isFree && !allowedFreePlatforms.includes(p.id);
           return (
             <button
               key={p.id}
               type="button"
-              onClick={() => {
-                if (isLocked) {
-                  alert("Please upgrade to Pro to post on this platform.");
-                  return;
-                }
-                onChannelToggle(p.id);
-              }}
+              onClick={() => onChannelToggle(p.id)}
               title={p.name}
-              className={`group relative w-[52px] h-[52px] rounded-2xl flex items-center justify-center transition-all duration-500 ${
-                isLocked ? "bg-gray-100 opacity-60 cursor-not-allowed" :
+              className={`group relative rounded-full flex items-center justify-center transition-all duration-300 ${
                 isSelected
-                  ? "bg-white shadow-[0_12px_32px_rgba(20,20,19,0.12)] border-[2.5px] border-ink scale-110 z-10"
-                  : "bg-white border border-gray-100 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 hover:scale-105 hover:shadow-lg"
+                  ? "ring-[2px] ring-offset-[3px] ring-ink scale-105 shadow-md z-10"
+                  : "ring-1 ring-offset-[2px] ring-gray-100 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:scale-105 hover:shadow-sm"
               }`}
             >
-              <div className={`w-8 h-8 flex items-center justify-center transition-transform duration-500 ${isSelected ? 'scale-110' : 'group-hover:scale-110'} ${isLocked ? 'grayscale opacity-50' : ''}`}>
+              <div className="w-[42px] h-[42px] rounded-full overflow-hidden bg-white flex items-center justify-center [&>img]:w-full [&>img]:h-full [&>img]:object-cover">
                 {p.icon}
               </div>
-
-              {isSelected && !isLocked && (
-                <motion.div
-                  initial={{ scale: 0, rotate: -45 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-ink rounded-full flex items-center justify-center border-2 border-white shadow-xl"
-                >
-                  <Check size={12} color="white" strokeWidth={4} />
-                </motion.div>
-              )}
               
-              {isLocked && (
-                <div className="absolute -bottom-2 -right-2 w-5 h-5 bg-gray-200 rounded-full flex items-center justify-center border-2 border-white shadow-sm z-20">
-                  <Lock size={10} className="text-gray-500" />
+              {p.platformIcon && (
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-100 [&>img]:w-2.5 [&>img]:h-2.5 [&>img]:object-contain pointer-events-none">
+                  {p.platformIcon}
                 </div>
               )}
 
-              <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-ink text-white text-[9px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none uppercase tracking-widest z-30 whitespace-nowrap">
-                {p.name} {isLocked ? "(PRO)" : ""}
+              {isSelected && (
+                <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-ink rounded-full flex items-center justify-center border-[1.5px] border-white shadow-sm pointer-events-none transition-transform duration-300 scale-in-center">
+                  <Check size={10} color="white" strokeWidth={4} />
+                </div>
+              )}
+
+              <div
+                className={`absolute -top-10 px-2.5 py-1.5 bg-ink text-white text-[11px] font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30 whitespace-nowrap shadow-sm ${
+                  index === 0 ? "left-0" : "left-1/2 -translate-x-1/2"
+                }`}
+              >
+                {p.name}
               </div>
             </button>
           );

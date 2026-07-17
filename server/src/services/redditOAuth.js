@@ -99,6 +99,7 @@ class RedditOAuth {
         access_token: tokenData.accessToken,
         refresh_token: tokenData.refreshToken,
         token_expiry: expiryDate.toISOString(),
+        account_id: tokenData.username || tokenData.userInfo?.name,
         username: tokenData.username,
         profile_data: tokenData.userInfo,
         updated_at: new Date().toISOString()
@@ -106,7 +107,7 @@ class RedditOAuth {
 
       const { data, error } = await supabase
         .from('social_tokens')
-        .upsert(payload, { onConflict: 'user_id,provider' })
+        .upsert(payload, { onConflict: 'user_id,provider,account_id' })
         .select();
 
       if (error) throw error;
@@ -119,7 +120,7 @@ class RedditOAuth {
     }
   }
 
-  async refreshAccessToken(userId, refreshToken) {
+  async refreshAccessToken(userId, refreshToken, tokenRowId = null) {
     try {
       console.log('🔄 Reddit: Refreshing access token...');
       const authHeader = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
@@ -137,13 +138,18 @@ class RedditOAuth {
 
       const tokenData = response.data;
       
-      // Update DB with new tokens
-      await this.storeTokens(userId, {
-        accessToken: tokenData.access_token,
-        refreshToken: tokenData.refresh_token || refreshToken, // Refresh can be same
-        expiresIn: tokenData.expires_in,
-        username: null // Use existing username if possible, or refetch
-      });
+      let query = supabase
+        .from('social_tokens')
+        .update({
+          access_token: tokenData.access_token,
+          refresh_token: tokenData.refresh_token || refreshToken,
+          token_expiry: new Date(Date.now() + (tokenData.expires_in || 3600) * 1000).toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId)
+        .eq('provider', 'reddit');
+      if (tokenRowId) query = query.eq('id', tokenRowId);
+      await query;
 
       return tokenData.access_token;
     } catch (error) {

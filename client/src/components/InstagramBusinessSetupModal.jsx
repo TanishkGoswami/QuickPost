@@ -1,202 +1,155 @@
 import React from 'react';
-import { X, ExternalLink, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ExternalLink, CheckCircle2, AlertCircle, Smartphone, Settings, UserCircle2, Briefcase, ArrowRight } from 'lucide-react';
+import PlatformSetupModalLayout from './platforms/PlatformSetupModalLayout';
 
-function InstagramBusinessSetupModal({ isOpen, onClose, onProceed }) {
-  if (!isOpen) return null;
+export default function InstagramBusinessSetupModal({ isOpen, onClose, onProceed }) {
+  const handleProceed = () => {
+    if (onProceed) {
+      onProceed();
+    } else {
+      onClose();
+    }
+  };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div 
-        className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 bg-white">
-          <h2 className="text-xl font-semibold text-gray-900">Instagram Business Account Setup</h2>
-          <button
-            onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-6">
-          {/* Alert */}
-          <div className="p-4 bg-gray-100 border border-gray-300 rounded-lg flex gap-3">
-            <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-blue-900">Instagram Business Account Required</p>
-              <p className="text-sm text-blue-700 mt-1">
-                To post to Instagram via QuickPost, you need to convert your personal Instagram account to a Business or Creator account.
-              </p>
-            </div>
-          </div>
-
-          {/* Why Business Account */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Why Do I Need a Business Account?</h3>
-            <ul className="space-y-2 text-sm text-gray-700">
-              <li className="flex gap-2">
-                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                <span>Access to Instagram Graph API for automated posting</span>
-              </li>
-              <li className="flex gap-2">
-                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                <span>Advanced analytics and insights</span>
-              </li>
-              <li className="flex gap-2">
-                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                <span>Ability to run ads and promotions</span>
-              </li>
-              <li className="flex gap-2">
-                <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
-                <span>Professional tools and features</span>
-              </li>
-            </ul>
-          </div>
-
-          {/* Step-by-step Guide */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">How to Convert Your Account</h3>
-            
-            <div className="space-y-4">
-              {/* Step 1 */}
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-link text-white rounded-full flex items-center justify-center font-semibold text-sm">
-                  1
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 mb-1">Open Instagram App</h4>
-                  <p className="text-sm text-gray-600">Launch the Instagram app on your mobile device and log into your account.</p>
-                </div>
-              </div>
-
-              {/* Step 2 */}
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-link text-white rounded-full flex items-center justify-center font-semibold text-sm">
-                  2
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 mb-1">Go to Settings</h4>
-                  <p className="text-sm text-gray-600">Tap your profile picture → Menu (☰) → Settings and privacy</p>
-                </div>
-              </div>
-
-              {/* Step 3 */}
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-link text-white rounded-full flex items-center justify-center font-semibold text-sm">
-                  3
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 mb-1">Switch Account Type</h4>
-                  <p className="text-sm text-gray-600">Tap "Account type and tools" → "Switch to professional account"</p>
-                </div>
-              </div>
-
-              {/* Step 4 */}
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-link text-white rounded-full flex items-center justify-center font-semibold text-sm">
-                  4
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 mb-1">Choose Account Type</h4>
-                  <p className="text-sm text-gray-600">Select either "Business" or "Creator" → Follow the prompts</p>
-                </div>
-              </div>
-
-              {/* Step 5 */}
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-link text-white rounded-full flex items-center justify-center font-semibold text-sm">
-                  5
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 mb-1">Create/Link Facebook Page</h4>
-                  <p className="text-sm text-gray-600 mb-2">
-                    You'll need to create a Facebook Page or link an existing one. This is required for the Instagram Graph API.
-                  </p>
-                  <a
-                    href="https://www.facebook.com/pages/creation"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-sm text-link hover:underline"
-                  >
-                    Create Facebook Page
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              </div>
-
-              {/* Step 6 */}
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-link text-white rounded-full flex items-center justify-center font-semibold text-sm">
-                  6
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 mb-1">Complete Setup</h4>
-                  <p className="text-sm text-gray-600">Fill in your business details and complete the setup process.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Additional Resources */}
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <h4 className="font-semibold text-gray-900 mb-2">Need Help?</h4>
-            <div className="space-y-2">
-              <a
-                href="https://help.instagram.com/502981923235522"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-link hover:underline"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Instagram Official Guide: Switch to Business Account
-              </a>
-              <a
-                href="https://www.facebook.com/business/help/898752960195806"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-link hover:underline"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Connect Instagram Business Account to Facebook Page
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex justify-between items-center">
-          <div>
-            <p className="text-sm text-gray-600">This process takes about 2-3 minutes</p>
-            <p className="text-xs text-gray-500 mt-1">Already have a Business account? Click Continue</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-200 font-medium rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => {
-                if (onProceed) {
-                  onProceed();
-                } else {
-                  onClose();
-                }
-              }}
-              className="px-4 py-2 bg-link hover:opacity-90 text-white font-medium rounded-lg transition-colors shadow-sm"
-            >
-              Continue to Connect
-            </button>
-          </div>
-        </div>
+  const footer = (
+    <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div className="text-left w-full sm:w-auto">
+        <p className="text-sm font-semibold text-gray-900">Ready to connect?</p>
+        <p className="text-xs text-gray-500 mt-0.5">Ensure you have a Business/Creator account.</p>
+      </div>
+      <div className="flex items-center gap-3 w-full sm:w-auto">
+        <button
+          onClick={onClose}
+          className="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleProceed}
+          className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-sm font-bold rounded-xl shadow-md shadow-pink-500/20 transition-all hover:-translate-y-0.5"
+        >
+          Continue
+          <ArrowRight className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );
-}
 
-export default InstagramBusinessSetupModal;
+  return (
+    <PlatformSetupModalLayout
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Instagram Setup"
+      icon="/icons/ig-instagram-icon.svg"
+      iconBgColor="bg-pink-50"
+      footer={footer}
+    >
+      <div className="space-y-8">
+        {/* Important Alert */}
+        <div className="flex items-start gap-4 p-5 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl">
+          <div className="p-2 bg-blue-100 rounded-full shrink-0">
+            <AlertCircle className="w-5 h-5 text-blue-600" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-blue-900">Professional Account Required</h3>
+            <p className="text-sm text-blue-800/80 mt-1 leading-relaxed">
+              QuickPost uses Instagram's official API, which requires a <span className="font-semibold">Business</span> or <span className="font-semibold">Creator</span> account. Personal accounts cannot be connected.
+            </p>
+          </div>
+        </div>
+
+        {/* Benefits Grid */}
+        <div>
+          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Why upgrade?</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {[
+              "Direct auto-posting",
+              "Advanced analytics",
+              "Auto DM features",
+              "Comment management"
+            ].map((benefit, i) => (
+              <div key={i} className="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-xl shadow-sm">
+                <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+                <span className="text-sm font-medium text-gray-700">{benefit}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Conversion Steps */}
+        <div>
+          <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-5">How to convert your account</h3>
+          
+          <div className="relative space-y-6 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-200 before:to-transparent">
+            
+            {/* Step 1 */}
+            <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-indigo-100 text-indigo-600 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                <Smartphone className="w-4 h-4" />
+              </div>
+              <div className="w-[calc(100%-3rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl bg-white border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="font-bold text-gray-900 text-sm">Open App</h4>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">Launch Instagram on your phone and go to your profile.</p>
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-blue-100 text-blue-600 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                <Settings className="w-4 h-4" />
+              </div>
+              <div className="w-[calc(100%-3rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl bg-white border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="font-bold text-gray-900 text-sm">Settings</h4>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">Tap Menu (☰) → Settings and privacy.</p>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-fuchsia-100 text-fuchsia-600 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                <UserCircle2 className="w-4 h-4" />
+              </div>
+              <div className="w-[calc(100%-3rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl bg-white border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="font-bold text-gray-900 text-sm">Account Type</h4>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">Tap "Account type and tools" → "Switch to professional account".</p>
+              </div>
+            </div>
+
+            {/* Step 4 */}
+            <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-pink-100 text-pink-600 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                <Briefcase className="w-4 h-4" />
+              </div>
+              <div className="w-[calc(100%-3rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl bg-white border border-gray-100 shadow-sm transition-all hover:shadow-md">
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="font-bold text-gray-900 text-sm">Complete</h4>
+                </div>
+                <p className="text-xs text-gray-500 leading-relaxed">Select "Business" or "Creator" and follow the on-screen prompts.</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Support Link */}
+        <div className="flex items-center justify-center pt-2">
+          <a
+            href="https://help.instagram.com/502981923235522"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors"
+          >
+            <ExternalLink className="w-4 h-4" />
+            View Official Instagram Guide
+          </a>
+        </div>
+      </div>
+    </PlatformSetupModalLayout>
+  );
+}

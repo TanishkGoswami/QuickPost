@@ -8,21 +8,21 @@ import PinterestConnectModal from "./PinterestConnectModal";
 import LinkedInConnectModal from "./LinkedInConnectModal";
 import MastodonConnectModal from "./MastodonConnectModal";
 import InstagramBusinessSetupModal from "./InstagramBusinessSetupModal";
+import FacebookSetupModal from "./FacebookSetupModal";
+import { startAutoDMInstagramOAuth } from "../services/autodm/supabaseClient";
 
 const SESSION_KEY = "qp_channels_skipped";
 
 const platforms = [
   { id: "instagram",  name: "Instagram",       icon: "/icons/ig-instagram-icon.svg",              type: "oauth-instagram" },
-  { id: "facebook",   name: "Facebook",         icon: "/icons/facebook-round-color-icon.svg",      type: "oauth" },
-  { id: "x",          name: "X",                icon: "/icons/x-social-media-round-icon.svg",      type: "coming-soon" },
+  { id: "facebook",   name: "Facebook",         icon: "/icons/facebook-round-color-icon.svg",      type: "oauth-facebook", allowMultiple: true },
   { id: "linkedin",   name: "LinkedIn",         icon: "/icons/linkedin-icon.svg",                  type: "modal-linkedin" },
+
+
   { id: "youtube",    name: "YouTube",          icon: "/icons/youtube-color-icon.svg",             type: "oauth" },
-  { id: "pinterest",  name: "Pinterest",        icon: "/icons/pinterest-round-color-icon.svg",     type: "coming-soon" },
-  { id: "threads",    name: "Threads",          icon: "/icons/threads-icon.svg",                   type: "oauth" },
+  { id: "threads",    name: "Threads",          icon: "/icons/threads-icon.svg",                   type: "oauth", allowMultiple: true },
   { id: "mastodon",   name: "Mastodon",         icon: "/icons/mastodon-round-icon.svg",            type: "modal-mastodon" },
-  { id: "bluesky",    name: "Bluesky",          icon: "/icons/bluesky-circle-color-icon.svg",      type: "modal-bluesky" },
-  { id: "googleBusiness", name: "Google Business", icon: "/icons/google-icon.svg",               type: "coming-soon" },
-  { id: "reddit",     name: "Reddit",           icon: "/icons/reddit-icon.svg",                    type: "coming-soon" },
+  { id: "bluesky",    name: "Bluesky",          icon: "/icons/bluesky-circle-color-icon.svg",      type: "modal-bluesky", allowMultiple: true },
 ];
 
 export default function ConnectChannelsModal() {
@@ -33,6 +33,7 @@ export default function ConnectChannelsModal() {
   const [showLinkedInModal, setShowLinkedInModal] = useState(false);
   const [showMastodonModal, setShowMastodonModal] = useState(false);
   const [showInstagramModal, setShowInstagramModal] = useState(false);
+  const [showFacebookModal, setShowFacebookModal] = useState(false);
 
   useEffect(() => {
     localStorage.removeItem("qp_channels_skipped");
@@ -61,9 +62,14 @@ export default function ConnectChannelsModal() {
       setShowInstagramModal(true);
       return;
     }
+    if (type === "oauth-facebook") {
+      setShowFacebookModal(true);
+      return;
+    }
     if (type === "oauth") {
       if (!token) return;
-      window.location.href = `/api/auth/${id}?token=${token}`;
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      window.location.href = `${apiUrl}/api/auth/${id}?token=${token}`;
       return;
     }
     if (type === "modal-linkedin")  { setShowLinkedInModal(true);  return; }
@@ -76,7 +82,7 @@ export default function ConnectChannelsModal() {
   };
 
   const unconnectedPlatforms = platforms.filter(
-    (p) => !connectedAccounts[p.id]?.connected
+    (p) => !connectedAccounts[p.id]?.connected || p.allowMultiple
   );
 
   if (!visible) return null;
@@ -85,112 +91,54 @@ export default function ConnectChannelsModal() {
     <>
       <AnimatePresence>
         {visible && (
-          <>
-            {/* Backdrop + centering container */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={dismiss}
+            className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 sm:p-6"
+          >
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={dismiss}
-              style={{
-                position: "fixed",
-                inset: 0,
-                background: "rgba(20,20,19,0.55)",
-                backdropFilter: "blur(6px)",
-                zIndex: 9998,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-            {/* Modal */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.92, y: 24 }}
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, y: 16 }}
-              transition={{ type: "spring", stiffness: 340, damping: 28 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", stiffness: 320, damping: 25 }}
               onClick={(e) => e.stopPropagation()}
-              style={{
-                zIndex: 9999,
-                width: "min(520px, 92vw)",
-                background: "rgba(255, 255, 255, 0.95)",
-                backdropFilter: "blur(20px)",
-                borderRadius: 32,
-                boxShadow: "0 32px 100px rgba(20,20,19,0.25), 0 4px 16px rgba(20,20,19,0.08)",
-                overflow: "hidden",
-                border: "1px solid rgba(255, 255, 255, 0.5)",
-              }}
+              className="relative w-full max-w-xl bg-white shadow-2xl rounded-3xl overflow-hidden flex flex-col max-h-[90vh]"
             >
-              {/* Header gradient strip */}
-              <div style={{
-                backgroundImage: 'url("/download (2).jpg")',
-                backgroundSize: 'cover',
-                backgroundPosition: '20% 50%',
-                padding: "32px 28px 28px",
-                position: "relative",
-              }}>
+              {/* Header */}
+              <div 
+                className="relative p-8 overflow-hidden bg-cover bg-center"
+                style={{ backgroundImage: "linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.6)), url('/connect-bg.jpg')" }}
+              >
+                
                 <button
                   onClick={dismiss}
-                  style={{
-                    position: "absolute",
-                    top: 16,
-                    right: 16,
-                    width: 32,
-                    height: 32,
-                    borderRadius: "50%",
-                    background: "rgba(255,255,255,0.2)",
-                    backdropFilter: "blur(4px)",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#fff",
-                    transition: "all 0.2s",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.3)"}
-                  onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.2)"}
+                  className="absolute top-4 right-4 p-2 bg-black/10 hover:bg-black/20 text-white/90 hover:text-white rounded-full transition-colors backdrop-blur-md"
                 >
-                  <X size={16} />
+                  <X className="w-5 h-5" />
                 </button>
 
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                  <div style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 12,
-                    background: "rgba(255,255,255,0.25)",
-                    backdropFilter: "blur(8px)",
-                    border: "1px solid rgba(255,255,255,0.3)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}>
-                    <Sparkles size={18} color="#fff" fill="rgba(255,255,255,0.5)" />
+                <div className="relative z-10">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/25 backdrop-blur-md border border-white/15 text-white text-xs font-semibold tracking-wide uppercase mb-4 shadow-sm">
+                    <Sparkles className="w-3.5 h-3.5 text-white/80" />
+                    <span>Onboarding</span>
                   </div>
-                  <span style={{ color: "rgba(255,255,255,0.95)", fontSize: 12, fontWeight: 700, letterSpacing: 1.2, textTransform: "uppercase" }}>
-                    Onboarding
-                  </span>
+                  <h2 className="text-3xl font-extrabold text-white tracking-tight mb-2">
+                    Connect your channels
+                  </h2>
+                  <p className="text-white/80 font-medium max-w-sm text-sm leading-relaxed">
+                    Post to all your networks from one place. Connect at least one channel to unlock your dashboard.
+                  </p>
                 </div>
-
-                <h2 style={{ color: "#fff", fontSize: 26, fontWeight: 700, margin: 0, lineHeight: 1.2, letterSpacing: "-0.02em" }}>
-                  Connect your social channels
-                </h2>
-                <p style={{ color: "rgba(255,255,255,0.9)", fontSize: 14, margin: "8px 0 0", lineHeight: 1.5, fontWeight: 500 }}>
-                  Post to all your networks from one place. Connect at least one channel to unlock your dashboard.
-                </p>
               </div>
 
-              {/* Platform grid */}
-              <div style={{ padding: "24px 28px 12px" }}>
-                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--slate)", letterSpacing: 1, textTransform: "uppercase", margin: "0 0 16px" }}>
-                  Choose platforms to connect
+              {/* Platform Grid */}
+              <div className="p-8 pb-4 bg-gray-50/50 flex-1 overflow-y-auto">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">
+                  Available Platforms
                 </p>
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))",
-                  gap: 12,
-                }}>
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 sm:gap-4">
                   {unconnectedPlatforms.map((platform) => (
                     <PlatformTile
                       key={platform.id}
@@ -199,79 +147,62 @@ export default function ConnectChannelsModal() {
                     />
                   ))}
                   {unconnectedPlatforms.length === 0 && (
-                    <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "24px 0", background: "rgba(20,20,19,0.02)", borderRadius: 16 }}>
-                      <p style={{ color: "var(--ink)", fontWeight: 600, fontSize: 14, margin: 0 }}>
-                        All channels connected! 🎉
-                      </p>
+                    <div className="col-span-full py-12 flex flex-col items-center justify-center text-center bg-gray-100/50 rounded-2xl border border-gray-200 border-dashed">
+                      <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-3">
+                        <Sparkles className="w-6 h-6" />
+                      </div>
+                      <p className="text-gray-900 font-semibold">All channels connected! 🎉</p>
+                      <p className="text-sm text-gray-500 mt-1">You're ready to start posting.</p>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Footer */}
-              <div style={{
-                padding: "16px 28px 32px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}>
+              <div className="p-6 bg-white border-t border-gray-100 flex items-center justify-between shrink-0">
                 <button
                   onClick={dismiss}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "var(--slate)",
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    padding: "8px 0",
-                    transition: "color 0.2s",
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.color = "var(--ink)"}
-                  onMouseLeave={e => e.currentTarget.style.color = "var(--slate)"}
+                  className="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors rounded-xl hover:bg-gray-100"
                 >
                   Skip for now
                 </button>
                 <button
                   onClick={dismiss}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    backgroundImage: 'url("/download (2).jpg")',
-                    backgroundSize: 'cover',
-                    backgroundPosition: '20% 50%',
-                    color: "#fff",
-                    border: "1px solid rgba(255, 255, 255, 0.3)",
-                    borderRadius: 14,
-                    padding: "12px 24px",
-                    fontSize: 14,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    boxShadow: "0 0 20px rgba(255, 255, 255, 0.1), 0 10px 30px rgba(0, 0, 0, 0.2)",
-                    transition: "transform 0.2s, brightness 0.2s",
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.transform = "scale(1.02)"; e.currentTarget.style.filter = "brightness(1.1)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.filter = "brightness(1)"; }}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 bg-gray-900 hover:bg-black text-white text-sm font-bold rounded-xl shadow-lg shadow-gray-900/20 transition-all hover:-translate-y-0.5"
                 >
                   Go to Dashboard
-                  <ArrowRight size={16} />
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </motion.div>
-            </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
 
       {/* Sub-modals */}
       {showInstagramModal && (
         <InstagramBusinessSetupModal
+          isOpen={showInstagramModal}
           onClose={() => setShowInstagramModal(false)}
-          onProceed={() => {
+          onProceed={async () => {
             setShowInstagramModal(false);
+            try {
+              const redirectTo = await startAutoDMInstagramOAuth(window.location.origin);
+              window.location.assign(redirectTo);
+            } catch (error) {
+              alert(error?.message || "Failed to start Instagram login.");
+            }
+          }}
+        />
+      )}
+      {showFacebookModal && (
+        <FacebookSetupModal
+          isOpen={showFacebookModal}
+          onClose={() => setShowFacebookModal(false)}
+          onProceed={() => {
+            setShowFacebookModal(false);
             const token = getToken();
-            if (token) window.location.href = `/api/auth/instagram?token=${token}`;
+            if (token) window.location.href = `/api/auth/facebook?token=${token}`;
           }}
         />
       )}
@@ -305,48 +236,20 @@ export default function ConnectChannelsModal() {
 }
 
 function PlatformTile({ platform, onClick }) {
-  const [hovered, setHovered] = useState(false);
-
   return (
     <button
       onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       title={`Connect ${platform.name}`}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 8,
-        padding: "16px 10px",
-        borderRadius: 20,
-        border: hovered ? "1px solid var(--arc)" : "1px solid rgba(20,20,19,0.06)",
-        background: hovered ? "rgba(243, 115, 56, 0.04)" : "var(--canvas-lifted)",
-        cursor: "pointer",
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        transform: hovered ? "translateY(-4px)" : "none",
-        boxShadow: hovered ? "0 12px 24px rgba(243, 115, 56, 0.12)" : "none",
-      }}
+      className="group flex flex-col items-center justify-center gap-3 p-4 bg-white border border-gray-200/60 rounded-2xl cursor-pointer transition-all duration-300 hover:border-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/10 hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
     >
-      <div style={{
-        width: 40,
-        height: 40,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        transition: "transform 0.3s ease",
-        transform: hovered ? "scale(1.1)" : "none",
-      }}>
-        <img src={platform.icon} alt={platform.name} style={{ width: 32, height: 32, objectFit: "contain" }} />
+      <div className="w-12 h-12 flex items-center justify-center rounded-xl bg-gray-50 group-hover:bg-indigo-50/50 transition-colors duration-300">
+        <img 
+          src={platform.icon} 
+          alt={platform.name} 
+          className="w-7 h-7 object-contain transform transition-transform duration-300 group-hover:scale-110" 
+        />
       </div>
-      <span style={{
-        fontSize: 11,
-        fontWeight: 700,
-        color: hovered ? "var(--ink)" : "var(--slate)",
-        textAlign: "center",
-        lineHeight: 1.2,
-        transition: "color 0.2s",
-      }}>
+      <span className="text-xs font-bold text-gray-600 group-hover:text-indigo-600 transition-colors duration-300 text-center leading-tight">
         {platform.name}
       </span>
     </button>

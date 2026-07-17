@@ -195,9 +195,7 @@ function History() {
       >
         {filteredBroadcasts.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center shadow-sm">
-            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Clock className="w-10 h-10 text-gray-300" />
-            </div>
+            <img src="https://illustrations.popsy.co/amber/success.svg" alt="No posts found" className="h-40 object-contain mx-auto mb-6" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
               No posts found
             </h3>
@@ -208,6 +206,10 @@ function History() {
         ) : (
           <div className="space-y-6">
             {filteredBroadcasts.map((post) => {
+              const selectedBasePlatforms = new Set([
+                ...(post.selected_channels || []),
+                ...(post.platform_data?.selectedChannels || []),
+              ].map((channel) => String(channel).split(":")[0]));
               const platforms = [
                 {
                   id: "linkedin",
@@ -225,7 +227,7 @@ function History() {
                 },
                 {
                   id: "instagram",
-                  success: post.instagram_success,
+                  success: post.instagram_success || (selectedBasePlatforms.has("instagram") && post.status === "sent"),
                   name: "Instagram",
                   error: post.instagram_error,
                   url: post.instagram_url,
@@ -280,9 +282,12 @@ function History() {
                   error: post.reddit_error,
                   url: post.reddit_url,
                 },
-              ].filter(
-                (p) => p.success || (p.error && p.error !== "Not selected"),
-              ); // FILTER OUT NOT SELECTED
+              ].map((platform) => ({
+                ...platform,
+                selected: selectedBasePlatforms.has(platform.id),
+              })).filter(
+                (p) => p.selected || p.success || (p.error && p.error !== "Not selected"),
+              );
 
               return (
                 <div

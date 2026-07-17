@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { supabase } from '../lib/supabase';
 
 // In dev, use empty base URL so requests go through Vite's proxy (avoids ngrok CORS/interstitial).
 // In production, use the full API URL from the env.
@@ -13,12 +14,34 @@ const apiClient = axios.create({
   },
 });
 
-// Request interceptor to add auth token
+const isUsableAuthToken = (token) => {
+  if (!token) return false;
+  const trimmed = token.trim();
+  return trimmed !== 'null' && trimmed !== 'undefined' && trimmed.split('.').length === 3;
+};
+
+// Request interceptor to add auth token dynamically from Supabase session
 apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('quickpost_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+  async (config) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      
+      if (isUsableAuthToken(token)) {
+        config.headers.Authorization = `Bearer ${token}`;
+        // Sync back to localStorage for any remaining legacy flows
+        localStorage.setItem('quickpost_token', token);
+      } else {
+        // Fallback to localStorage if session is not loaded yet or if we have an older flow
+        const localToken = localStorage.getItem('quickpost_token');
+        if (isUsableAuthToken(localToken)) {
+          config.headers.Authorization = `Bearer ${localToken}`;
+        } else {
+          delete config.headers.Authorization;
+        }
+      }
+    } catch (err) {
+      console.error('[apiClient] Error getting supabase session:', err);
     }
     return config;
   },
@@ -30,13 +53,24 @@ apiClient.interceptors.request.use(
 // Response interceptor to handle errors
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid — just log it.
-      // Do NOT force window.location redirect here: that wipes React state
-      // and causes an infinite login/dashboard redirect loop.
-      // Components that need to handle 401 (e.g. logout) should do so explicitly.
-      console.warn('[apiClient] 401 Unauthorized:', error.config?.url);
+      console.warn('[apiClient] 401 Unauthorized received:', error.config?.url);
+      
+      const isPublicPage = window.location.pathname === '/login' || 
+                           window.location.pathname === '/register' || 
+                           window.location.pathname === '/' ||
+                           window.location.pathname.startsWith('/auth/callback');
+      
+      if (!isPublicPage) {
+        console.warn('[apiClient] 401 received on protected route. Logging out...');
+        // Clear local storage token
+        localStorage.removeItem('quickpost_token');
+        // Sign out from Supabase safely to let the React router handle redirect cleanly
+        await supabase.auth.signOut().catch((err) => {
+          console.warn('[apiClient] Supabase signOut failed:', err);
+        });
+      }
     }
     return Promise.reject(error);
   }

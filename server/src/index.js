@@ -1,17 +1,24 @@
-import express from 'express';
+import express from 'express'; // trigger restart
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import 'dotenv/config'; // Load variables before other imports
+import 'dotenv/config';
 
 import broadcastRouter from './routes/broadcast.js';
 import authRouter from './routes/auth.js';
+import ssoRouter from './routes/sso.js';
 import broadcastsRouter from './routes/broadcasts.js';
 import onboardingRouter from './routes/onboarding.js';
 import jobsRouter from './routes/jobs.js';
 import trendsRouter from './routes/trends.js';
 import aiRouter from './routes/ai.js';
+import instapilotRouter from './routes/instapilot.js';
+import autodmRouter from './routes/autodm.js';
+import billingRouter from './routes/billing.js';
+import youtubeRouter from './routes/youtube.js';
 import { initScheduler } from './services/scheduler.js';
+import supabase from './services/supabase.js';
+import { processInstagramWebhook } from './services/instapilot.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,7 +34,12 @@ const allowedOrigins = [
   'http://127.0.0.1:5173',
   'https://social.getaipilot.in',
   'https://api.getaipilot.in',
-  /https:\/\/.*\.ngrok-free\.dev$/
+  'https://getaipilot.in',
+  'https://getaipilot.com',
+  'https://www.getaipilot.in',
+  'https://www.getaipilot.com',
+  /https:\/\/.*\.ngrok-free\.dev$/,
+  /https:\/\/.*\.vercel\.app$/
 ];
 
 const corsOptions = {
@@ -39,16 +51,21 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Explicitly handle preflight requests with the same options
 app.options('*', cors(corsOptions));
 
-// Add ngrok skip header to all responses
 app.use((req, res, next) => {
   res.header('ngrok-skip-browser-warning', 'true');
   next();
 });
 
-app.use(express.json({ limit: '100mb' }));
+app.use(express.json({
+  limit: '100mb',
+  verify: (req, res, buf) => {
+    if (req.originalUrl?.includes('/webhooks/instagram')) {
+      req.rawBody = Buffer.from(buf);
+    }
+  },
+}));
 
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
@@ -57,12 +74,40 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/auth', authRouter);
+app.use('/api/auth', ssoRouter);
 app.use('/api', broadcastRouter);
 app.use('/api', broadcastsRouter);
 app.use('/api', onboardingRouter);
 app.use('/api', jobsRouter);
 app.use('/api', trendsRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/instapilot', instapilotRouter);
+app.use('/api/autodm', autodmRouter);
+app.use('/api/billing', billingRouter);
+app.use('/api/youtube', youtubeRouter);
+
+// Global SSE clients list for Realtime Frontend Updates
+const sseClients = [];
+
+// SSE Endpoint for InstaPilot Realtime
+app.get('/api/instapilot/stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const pingInterval = setInterval(() => {
+    res.write(':\n\n');
+  }, 15000);
+
+  sseClients.push(res);
+
+  req.on('close', () => {
+    clearInterval(pingInterval);
+    const index = sseClients.indexOf(res);
+    if (index !== -1) sseClients.splice(index, 1);
+  });
+});
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -121,5 +166,54 @@ const server = app.listen(PORT, () => {
 // Set server timeout to 5 minutes for large uploads
 server.timeout = 300000;
 server.keepAliveTimeout = 300000;
+
+const isAutoDMButtonInteraction = (webhookPayload = {}) =>
+  Boolean(webhookPayload?.message?.quick_reply?.payload || webhookPayload?.postback);
+
+// Setup Supabase Realtime listener for Edge Function Webhooks
+// Triggering nodemon restart...
+supabase
+  .channel('webhook_logs_listener')
+  .on(
+    'postgres_changes',
+    { event: 'INSERT', schema: 'public', table: 'webhook_logs' },
+    async (payload) => {
+      const log = payload.new;
+      if (log.event_type === 'messages' || log.event_type === 'messaging_postbacks') {
+        // Skip outbound messages (where sender is the page itself) to prevent infinite loops!
+        if (log.payload?.message?.is_echo) return;
+        if (isAutoDMButtonInteraction(log.payload)) {
+          console.log('Skipping InstaPilot for AutoDM button interaction');
+          return;
+        }
+        console.log('⚡ Detected new DM from Edge Function webhook log!');
+        // Wrap the payload back into standard Meta format
+        const metaPayload = {
+          object: 'instagram',
+          entry: [
+            {
+              id: log.payload.recipient?.id,
+              time: Math.floor(Date.now() / 1000),
+              messaging: [log.payload]
+            }
+          ]
+        };
+        try {
+          // Process the reconstructed webhook payload
+          await processInstagramWebhook(metaPayload);
+          console.log('✅ Reconstructed webhook processed successfully');
+          // Emit Realtime event to all connected React Frontends
+          sseClients.forEach(client => client.write('data: refresh\n\n'));
+        } catch (e) {
+          console.error('❌ Error processing reconstructed webhook:', e);
+        }
+      }
+    }
+  )
+  .subscribe((status) => {
+    if (status === 'SUBSCRIBED') {
+      console.log('📡 Listening for incoming Meta Webhooks from Edge Function...');
+    }
+  });
 
 export default app;

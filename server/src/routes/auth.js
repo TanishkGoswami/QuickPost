@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 
 import googleOAuth from "../services/googleOAuth.js";
+import googleBusinessOAuth from "../services/googleBusinessOAuth.js";
 import instagramOAuth from "../services/instagramOAuth.js";
 import pinterestOAuth from "../services/pinterestOAuth.js";
 import facebookOAuth from "../services/facebookOAuth.js";
@@ -13,11 +14,13 @@ import mastodonOAuth from "../services/mastodonOAuth.js";
 import threadsOAuth from "../services/threadsOAuth.js";
 import xOAuth from "../services/xOAuth.js";
 import redditOAuth from "../services/redditOAuth.js";
+import { startAutoDMInstagramOAuth } from "../services/autodm.js";
 
 import supabase, {
   createOrUpdateUser,
   getConnectedAccounts,
 } from "../services/supabase.js";
+import { getEntitlements } from "../services/entitlements.js";
 import {
   authenticateUser,
   generateToken,
@@ -25,6 +28,7 @@ import {
 
 const router = express.Router();
 const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
+const pendingOAuthSelections = new Map();
 
 function decodeState(state) {
   try {
@@ -40,6 +44,52 @@ function requireJwtSecret() {
   }
 }
 requireJwtSecret();
+
+async function getConnectedTargetCount(userId) {
+  const [{ count: socialCount, error: socialError }, { count: instagramCount, error: instagramError }] = await Promise.all([
+    supabase
+      .from("social_tokens")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .neq("provider", "instagram"),
+    supabase
+      .from("instagram_accounts")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("is_connected", true),
+  ]);
+  if (socialError) throw socialError;
+  if (instagramError) throw instagramError;
+  return (socialCount || 0) + (instagramCount || 0);
+}
+
+async function assertCanConnectTarget({ user, provider, accountId }) {
+  const userId = user.userId;
+  const entitlementUserId = user.authUserId || userId;
+  const entitlements = await getEntitlements(entitlementUserId, user.email, user.token);
+  const limit = entitlements.limits.social_accounts;
+
+  if (!Number.isFinite(limit)) return;
+
+  if (accountId) {
+    const { data: existingToken, error: existingTokenError } = await supabase
+      .from("social_tokens")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("provider", provider)
+      .eq("account_id", accountId)
+      .maybeSingle();
+    if (existingTokenError) throw existingTokenError;
+    if (existingToken) return;
+  }
+
+  const used = await getConnectedTargetCount(userId);
+  if (used >= limit) {
+    const error = new Error(`Your plan allows ${limit} connected social account${limit === 1 ? "" : "s"}. Disconnect one account or upgrade to connect more.`);
+    error.code = "PLAN_LIMIT_REACHED";
+    throw error;
+  }
+}
 
 /* ---------------- GOOGLE ---------------- */
 
@@ -141,6 +191,77 @@ router.get("/google/callback", async (req, res) => {
   }
 });
 
+/* ---------------- GOOGLE BUSINESS PROFILE ---------------- */
+
+router.get("/googleBusiness", async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token)
+      return res.redirect(`${CLIENT_URL}/dashboard?error=missing_token`);
+
+    let userId;
+    try {
+      console.log(
+        `\n🔵 [AUTH] Google Business init for token: ${token?.substring(0, 20)}...`,
+      );
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser(token);
+      if (error || !user) throw error || new Error("User not found");
+
+      // Sync user and get consistent ID
+      const dbUser = await createOrUpdateUser(
+        user.email,
+        user.user_metadata?.full_name || user.email?.split("@")[0],
+        user.id,
+        user.user_metadata?.avatar_url,
+      );
+      userId = dbUser.id;
+
+      console.log(`✅ [AUTH] Token verified and synced for user: ${userId}`);
+    } catch (e) {
+      console.error("❌ [AUTH] Token verification failed:", e.message);
+      return res.redirect(
+        `${CLIENT_URL}/dashboard?error=invalid_token&details=${encodeURIComponent(e.message)}`,
+      );
+    }
+
+    const state = googleBusinessOAuth.makeState(userId);
+    const authUrl = googleBusinessOAuth.getAuthorizationUrl(state);
+    res.redirect(authUrl);
+  } catch (error) {
+    console.error("Google Business OAuth init error:", error);
+    res.redirect(`${CLIENT_URL}/dashboard?error=googleBusiness_oauth_failed`);
+  }
+});
+
+router.get("/googleBusiness/callback", async (req, res) => {
+  const { code, error, state } = req.query;
+
+  if (error) return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied`);
+  if (!code) return res.redirect(`${CLIENT_URL}/dashboard?error=no_code`);
+
+  try {
+    const decodedState = decodeState(state);
+    const tokenData = await googleBusinessOAuth.exchangeCodeForTokens(code);
+
+    if (decodedState && decodedState.userId) {
+      console.log(
+        "🔗 [AUTH] Connecting Google Business account for user:",
+        decodedState.userId,
+      );
+      await googleBusinessOAuth.storeTokens(decodedState.userId, tokenData);
+      return res.redirect(`${CLIENT_URL}/dashboard?success=googleBusiness_connected`);
+    }
+
+    res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
+  } catch (err) {
+    console.error("Google Business callback error:", err);
+    res.redirect(`${CLIENT_URL}/dashboard?error=googleBusiness_connection_failed`);
+  }
+});
+
 /* ---------------- INSTAGRAM ---------------- */
 
 router.get("/instagram", async (req, res) => {
@@ -175,9 +296,13 @@ router.get("/instagram", async (req, res) => {
       );
     }
 
-    const state = instagramOAuth.makeState(userId);
-    const authUrl = instagramOAuth.getAuthorizationUrl(state);
-    return res.redirect(authUrl);
+    const redirectTo = await startAutoDMInstagramOAuth(
+      { userId },
+      CLIENT_URL,
+      `Bearer ${token}`,
+      false,
+    );
+    return res.redirect(redirectTo);
   } catch (error) {
     console.error("Instagram init error:", error);
     res.redirect(`${CLIENT_URL}/dashboard?error=instagram_oauth_failed`);
@@ -204,12 +329,22 @@ router.get("/instagram/callback", async (req, res) => {
 
   try {
     const tokenData = await instagramOAuth.exchangeCodeForToken(code);
+    await assertCanConnectTarget({
+      user: { userId: parsed.userId },
+      provider: "instagram",
+      accountId: tokenData.instagramBusinessId,
+    });
     await instagramOAuth.storeTokens(parsed.userId, tokenData);
 
     res.redirect(`${CLIENT_URL}/dashboard?success=instagram_connected`);
   } catch (err) {
     console.error("❌ IG callback error:", err.message);
-    res.redirect(`${CLIENT_URL}/dashboard?error=instagram_connection_failed`);
+    const message = encodeURIComponent(
+      err?.message || "Failed to connect Instagram account",
+    );
+    res.redirect(
+      `${CLIENT_URL}/dashboard?error=instagram_connection_failed&message=${message}`,
+    );
   }
 });
 
@@ -276,6 +411,22 @@ router.get("/facebook/callback", async (req, res) => {
 
   try {
     const tokenData = await facebookOAuth.exchangeCodeForToken(code);
+    if (tokenData.pages?.length > 1) {
+      const pendingId = crypto.randomUUID();
+      pendingOAuthSelections.set(pendingId, {
+        provider: "facebook",
+        userId: parsed.userId,
+        tokenData,
+        expiresAt: Date.now() + 10 * 60 * 1000,
+      });
+      return res.redirect(`${CLIENT_URL}/connect/select?provider=facebook&pending=${pendingId}`);
+    }
+    const page = tokenData.pages?.[0];
+    await assertCanConnectTarget({
+      user: { userId: parsed.userId },
+      provider: "facebook",
+      accountId: page?.pageId || tokenData.pageId,
+    });
     await facebookOAuth.storeTokens(parsed.userId, tokenData);
 
     res.redirect(`${CLIENT_URL}/dashboard?success=facebook_connected`);
@@ -378,6 +529,14 @@ router.post("/bluesky/connect", authenticateUser, async (req, res) => {
 
     // Authenticate with Bluesky
     const sessionData = await blueskyAuth.authenticate(handle, appPassword);
+
+    // Fetch profile
+    try {
+      const profile = await blueskyAuth.getProfile(sessionData.accessJwt, sessionData.did);
+      sessionData.profile = profile;
+    } catch (err) {
+      console.warn("Could not fetch Bluesky profile", err);
+    }
 
     // Store credentials
     await blueskyAuth.storeCredentials(userId, sessionData);
@@ -602,6 +761,11 @@ router.get("/threads/callback", async (req, res) => {
 
   try {
     const tokenData = await threadsOAuth.exchangeCodeForToken(code);
+    await assertCanConnectTarget({
+      user: { userId: parsed.userId },
+      provider: "threads",
+      accountId: tokenData.threadsUserId,
+    });
     await threadsOAuth.storeTokens(parsed.userId, tokenData);
 
     console.log(
@@ -937,13 +1101,71 @@ router.get("/me", authenticateUser, (req, res) => {
 
 router.get("/accounts", authenticateUser, async (req, res) => {
   try {
-    const accounts = await getConnectedAccounts(req.user.userId);
-    res.json({ success: true, accounts });
+    const accounts = await getConnectedAccounts(req.user);
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.json({
+      success: true,
+      accounts,
+    });
   } catch (error) {
     console.error("Get accounts error:", error);
     res
       .status(500)
       .json({ success: false, error: "Failed to get connected accounts" });
+  }
+});
+
+router.get("/pending-selection/:id", authenticateUser, async (req, res) => {
+  const pending = pendingOAuthSelections.get(req.params.id);
+  if (!pending || pending.expiresAt < Date.now()) {
+    pendingOAuthSelections.delete(req.params.id);
+    return res.status(404).json({ success: false, error: "Selection expired. Please reconnect." });
+  }
+  if (pending.userId !== req.user.userId) {
+    return res.status(403).json({ success: false, error: "Selection does not belong to this user." });
+  }
+  res.json({
+    success: true,
+    provider: pending.provider,
+    accounts: (pending.tokenData.pages || []).map((page) => ({
+      id: page.pageId,
+      name: page.userInfo?.pageName,
+      picture: page.userInfo?.picture?.data?.url || page.userInfo?.picture?.url || null,
+    })),
+  });
+});
+
+router.post("/pending-selection/:id", authenticateUser, async (req, res) => {
+  try {
+    const pending = pendingOAuthSelections.get(req.params.id);
+    if (!pending || pending.expiresAt < Date.now()) {
+      pendingOAuthSelections.delete(req.params.id);
+      return res.status(404).json({ success: false, error: "Selection expired. Please reconnect." });
+    }
+    if (pending.userId !== req.user.userId || pending.provider !== "facebook") {
+      return res.status(403).json({ success: false, error: "Selection does not belong to this user." });
+    }
+    const selectedIds = new Set((req.body?.selectedIds || []).map(String));
+    const pages = (pending.tokenData.pages || []).filter((page) => selectedIds.has(String(page.pageId)));
+    if (!pages.length) {
+      return res.status(400).json({ success: false, error: "Select at least one account." });
+    }
+    for (const page of pages) {
+      await assertCanConnectTarget({
+        user: req.user,
+        provider: "facebook",
+        accountId: page.pageId,
+      });
+    }
+    await facebookOAuth.storeTokens(req.user.userId, { ...pending.tokenData, pages });
+    pendingOAuthSelections.delete(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(error.code === "PLAN_LIMIT_REACHED" ? 403 : 500).json({
+      success: false,
+      error: error.message,
+      code: error.code,
+    });
   }
 });
 
@@ -971,11 +1193,83 @@ router.delete("/disconnect/:provider", authenticateUser, async (req, res) => {
         .json({ success: false, error: "Invalid provider" });
     }
 
-    const { error } = await supabase
+    const { accountId } = req.query;
+    console.log(`[DISCONNECT] provider=${provider}, accountId=${accountId}, userId=${req.user.userId}`);
+
+    if (provider === "instagram") {
+      // Soft-disconnect: preserve automations, contacts, sessions, metrics
+      // (previously this was .delete() which triggered ON DELETE CASCADE
+      //  and permanently destroyed all automations — see instapilot.js for the safe pattern)
+      let igQuery = supabase
+        .from("instagram_accounts")
+        .update({
+          is_connected: false,
+          token_status: "disconnected",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", req.user.userId);
+
+      if (accountId) {
+        igQuery = igQuery.eq("id", accountId);
+      }
+      const { data: igData, error: igError } = await igQuery.select();
+      console.log(`[DISCONNECT] igData=${JSON.stringify(igData)} error=${JSON.stringify(igError)}`);
+      
+      if (igError) throw igError;
+
+      const disconnectedBusinessIds = (igData || [])
+        .map((account) => account.instagram_business_account_id)
+        .filter(Boolean);
+
+      if (!accountId || disconnectedBusinessIds.length > 0) {
+        let tokenQuery = supabase
+          .from("social_tokens")
+          .delete()
+          .eq("user_id", req.user.userId)
+          .eq("provider", "instagram");
+
+        if (disconnectedBusinessIds.length > 0) {
+          tokenQuery = tokenQuery.in("account_id", disconnectedBusinessIds);
+        }
+
+        const { error: tokenError } = await tokenQuery;
+        if (tokenError) throw tokenError;
+      }
+
+      // Pause all active automations for disconnected account(s)
+      // so they don't attempt to run with invalid/null tokens
+      const disconnectedIds = (igData || []).map(a => a.id);
+      if (disconnectedIds.length > 0) {
+        const { error: pauseError } = await supabase
+          .from("automations")
+          .update({ is_active: false, updated_at: new Date().toISOString() })
+          .in("instagram_account_id", disconnectedIds);
+        if (pauseError) {
+          console.warn(`[DISCONNECT] Failed to pause automations: ${pauseError.message}`);
+        } else {
+          console.log(`[DISCONNECT] Paused automations for account(s): ${disconnectedIds.join(", ")}`);
+        }
+      }
+      
+      if (accountId) {
+        return res.json({
+          success: true,
+          message: `Instagram account disconnected successfully`,
+        });
+      }
+    }
+
+    let query = supabase
       .from("social_tokens")
       .delete()
       .eq("user_id", req.user.userId)
       .eq("provider", provider);
+
+    if (accountId && provider !== "instagram") {
+      query = query.eq("id", accountId);
+    }
+
+    const { error } = await query;
 
     if (error) throw error;
 

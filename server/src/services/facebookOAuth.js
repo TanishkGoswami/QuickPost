@@ -185,17 +185,17 @@ class FacebookOAuth {
         );
       }
 
-      const selectedPage = pages[0];
-
       return {
         userAccessToken: longUserToken,
-        pageAccessToken: selectedPage.access_token || longUserToken,
-        pageId: selectedPage.id,
-        userInfo: {
-          pageName: selectedPage.name,
-          pageId: selectedPage.id,
-          picture: selectedPage.picture
-        }
+        pages: pages.map((page) => ({
+          pageAccessToken: page.access_token || longUserToken,
+          pageId: page.id,
+          userInfo: {
+            pageName: page.name,
+            pageId: page.id,
+            picture: page.picture
+          }
+        }))
       };
     } catch (error) {
       console.error('❌ FB token exchange error:', error.response?.data || error.message);
@@ -212,21 +212,22 @@ class FacebookOAuth {
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + 60);
 
-      const payload = {
+      const targets = tokenData.pages?.length ? tokenData.pages : [tokenData];
+      const rows = targets.map((target) => ({
         user_id: userId,
         provider: 'facebook',
-        access_token: tokenData.pageAccessToken,
+        access_token: target.pageAccessToken,
         token_expiry: expiryDate.toISOString(),
-        page_id: tokenData.pageId,
-        account_id: tokenData.pageId,
-        username: tokenData.userInfo?.pageName,
-        profile_data: tokenData.userInfo,
+        page_id: target.pageId,
+        account_id: target.pageId,
+        username: target.userInfo?.pageName,
+        profile_data: target.userInfo,
         updated_at: new Date().toISOString()
-      };
+      }));
 
       const { data, error } = await supabase
         .from('social_tokens')
-        .upsert(payload, { onConflict: 'user_id,provider' })
+        .upsert(rows, { onConflict: 'user_id,provider,account_id' })
         .select();
 
       if (error) throw error;

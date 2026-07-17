@@ -8,7 +8,7 @@ class PinterestOAuth {
     this.clientId = process.env.PINTEREST_APP_ID;
     this.clientSecret = process.env.PINTEREST_APP_SECRET;
     this.redirectUri = process.env.PINTEREST_REDIRECT_URI || 'http://localhost:5000/auth/pinterest/callback';
-    this.scopes = 'boards:read,pins:read,pins:write';
+    this.scopes = 'boards:read,pins:read,pins:write,user_accounts:read';
   }
 
   /**
@@ -60,6 +60,7 @@ class PinterestOAuth {
         tokenType: token_type,
         userInfo: {
           username: userInfo.username,
+          id: userInfo.id || userInfo.username,
           profileImage: userInfo.profile_image
         },
         boardId: defaultBoard?.id || null,
@@ -127,13 +128,14 @@ class PinterestOAuth {
           provider: 'pinterest',
           access_token: tokenData.accessToken,
           refresh_token: tokenData.refreshToken,
+          account_id: tokenData.userInfo?.id || tokenData.userInfo?.username,
           pinterest_board_id: tokenData.boardId,
           username: tokenData.userInfo?.username,
           profile_data: tokenData.userInfo,
           expires_at: null, // Pinterest tokens don't expire
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'user_id,provider'
+          onConflict: 'user_id,provider,account_id'
         })
         .select()
         .single();

@@ -1,8 +1,11 @@
 import axios from 'axios';
 import crypto from 'crypto';
 import supabase from './supabase.js';
+import { importInstagramAccountToAutoDM } from './autodm.js';
 
 const GRAPH_VERSION = 'v21.0';
+const FACEBOOK_TOKEN_REFRESH_BUFFER_MS = 7 * 24 * 60 * 60 * 1000;
+const DIRECT_IG_TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
 // ✅ Add instagram_content_publish (required for posting)
 const INSTAGRAM_SCOPES = [
@@ -11,8 +14,11 @@ const INSTAGRAM_SCOPES = [
   'pages_read_engagement',
   'pages_manage_metadata',
   'instagram_basic',
+  'instagram_manage_messages',
+  'instagram_manage_comments',
   'instagram_manage_insights',
-  'instagram_content_publish'
+  'instagram_content_publish',
+  'pages_messaging'
 ];
 
 function base64urlEncode(obj) {
@@ -42,6 +48,10 @@ class InstagramOAuthService {
       nonce: crypto.randomUUID(),
       ts: Date.now()
     });
+  }
+
+  isDirectInstagramToken(accessToken) {
+    return accessToken?.startsWith('IG') || accessToken?.startsWith('IGA');
   }
 
   /**
@@ -158,7 +168,10 @@ class InstagramOAuthService {
       const mustHave = [
         'pages_show_list',
         'pages_read_engagement',
+        'pages_messaging',
         'instagram_basic',
+        'instagram_manage_messages',
+        'instagram_manage_comments',
         'instagram_content_publish'
       ];
 
@@ -167,10 +180,11 @@ class InstagramOAuthService {
       );
 
       if (missing.length) {
-        throw new Error(
-          `Missing required permissions: ${missing.join(', ')}. ` +
-            `Fix: Remove app from Facebook -> Settings -> Apps and Websites AND Business Integrations, then login again. ` +
-            `During consent, select your Page + IG account and continue.`
+        // Some Meta app/account combinations do not always echo all granted
+        // permissions here even though downstream Graph calls still succeed.
+        // Keep the flow alive and validate with real Graph fetches below.
+        console.warn(
+          `⚠️ IG: Permission probe reports missing scopes: ${missing.join(', ')}. Continuing with page/account fetch validation.`
         );
       }
 
@@ -237,7 +251,7 @@ class InstagramOAuthService {
       console.log('\n📄 Pages Count:', pages.length);
       if (!pages.length) {
         throw new Error(
-          'No Facebook Pages found for this token. Make sure you selected your Page during consent and try again.'
+          'No Facebook Pages found for this account. In Meta consent, select at least one Facebook Page and its linked Instagram Business account, then retry.'
         );
       }
 
@@ -249,7 +263,7 @@ class InstagramOAuthService {
 
       if (!pageWithIG) {
         throw new Error(
-          'No Instagram Business account connected to your Page. Please connect Instagram to your Facebook Page (Business/Creator account).'
+          'No linked Instagram Business/Creator account found on selected Facebook Pages. Link IG to a Facebook Page in Meta Business settings, then reconnect.'
         );
       }
 
@@ -313,10 +327,27 @@ class InstagramOAuthService {
 
       const { data, error } = await supabase
         .from('social_tokens')
-        .upsert(payload, { onConflict: 'user_id,provider' })
+        .upsert(payload, { onConflict: 'user_id,provider,account_id' })
         .select();
 
       if (error) throw error;
+
+      // Automatically sync connected Instagram account to AutoDM
+      try {
+        console.log(`🔄 [AUTODM-SYNC] Automatically syncing Instagram connection to AutoDM for user ${userId}...`);
+        const { data: userRow } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+        const user = {
+          userId,
+          email: userRow?.email,
+          name: userRow?.name,
+          profilePicture: userRow?.profile_picture
+        };
+        await importInstagramAccountToAutoDM(user);
+        console.log(`✅ [AUTODM-SYNC] AutoDM sync successful for user ${userId}`);
+      } catch (syncErr) {
+        console.warn(`⚠️ [AUTODM-SYNC] AutoDM automatic sync failed (non-fatal):`, syncErr.message);
+      }
+
       return data;
     } catch (error) {
       console.error('❌ Error storing IG tokens:', error);
@@ -326,25 +357,38 @@ class InstagramOAuthService {
 
   async refreshAccessToken(currentToken) {
     try {
-      const response = await axios.get(
-        `https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token`,
-        {
-          params: {
-            grant_type: 'fb_exchange_token',
-            client_id: this.appId,
-            client_secret: this.appSecret,
-            fb_exchange_token: currentToken
-          }
-        }
-      );
+      const isDirectInstagramToken = this.isDirectInstagramToken(currentToken);
+      const response = isDirectInstagramToken
+        ? await axios.get('https://graph.instagram.com/refresh_access_token', {
+            params: {
+              grant_type: 'ig_refresh_token',
+              access_token: currentToken
+            }
+          })
+        : await axios.get(
+            `https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token`,
+            {
+              params: {
+                grant_type: 'fb_exchange_token',
+                client_id: this.appId,
+                client_secret: this.appSecret,
+                fb_exchange_token: currentToken
+              }
+            }
+          );
 
       return {
         accessToken: response.data.access_token,
         expiresIn: response.data.expires_in
       };
     } catch (error) {
+      const graphMessage =
+        error.response?.data?.error?.message ||
+        error.response?.data?.error?.error_user_msg ||
+        error.response?.data?.error?.type ||
+        error.message;
       console.error('❌ IG refresh token error:', error.response?.data || error.message);
-      throw new Error('Failed to refresh Instagram token');
+      throw new Error(`Failed to refresh Instagram token: ${graphMessage}`);
     }
   }
 
@@ -360,12 +404,16 @@ class InstagramOAuthService {
 
     const now = new Date();
     const expiry = new Date(data.token_expiry);
+    const isDirectInstagramToken = this.isDirectInstagramToken(data.access_token);
+    const refreshBufferMs = isDirectInstagramToken
+      ? DIRECT_IG_TOKEN_REFRESH_BUFFER_MS
+      : FACEBOOK_TOKEN_REFRESH_BUFFER_MS;
 
-    if (expiry - now < 7 * 24 * 60 * 60 * 1000) {
+    if (!data.token_expiry || Number.isNaN(expiry.getTime()) || expiry - now < refreshBufferMs) {
       const refreshed = await this.refreshAccessToken(data.access_token);
 
       const newExpiry = new Date();
-      newExpiry.setDate(newExpiry.getDate() + 60);
+      newExpiry.setSeconds(newExpiry.getSeconds() + (refreshed.expiresIn || 60 * 24 * 60 * 60));
 
       await supabase
         .from('social_tokens')
@@ -377,17 +425,35 @@ class InstagramOAuthService {
         .eq('user_id', userId)
         .eq('provider', 'instagram');
 
+      // Automatically sync refreshed Instagram token to AutoDM
+      try {
+        console.log(`🔄 [AUTODM-SYNC] Automatically syncing refreshed Instagram token to AutoDM for user ${userId}...`);
+        const { data: userRow } = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+        const user = {
+          userId,
+          email: userRow?.email,
+          name: userRow?.name,
+          profilePicture: userRow?.profile_picture
+        };
+        await importInstagramAccountToAutoDM(user);
+        console.log(`✅ [AUTODM-SYNC] AutoDM refresh sync successful for user ${userId}`);
+      } catch (syncErr) {
+        console.warn(`⚠️ [AUTODM-SYNC] AutoDM automatic refresh sync failed (non-fatal):`, syncErr.message);
+      }
+
       return {
         accessToken: refreshed.accessToken,
         instagramBusinessId: data.instagram_business_id,
-        pageId: data.page_id
+        pageId: data.page_id,
+        tokenExpiry: newExpiry.toISOString()
       };
     }
 
     return {
       accessToken: data.access_token,
       instagramBusinessId: data.instagram_business_id,
-      pageId: data.page_id
+      pageId: data.page_id,
+      tokenExpiry: data.token_expiry
     };
   }
 }
