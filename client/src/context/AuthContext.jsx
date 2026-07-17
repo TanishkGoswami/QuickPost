@@ -82,6 +82,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [connectedAccounts, setConnectedAccounts] = useState(EMPTY_CONNECTED_ACCOUNTS);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   const fetchConnectedAccounts = useCallback(async () => {
     try {
@@ -96,14 +97,25 @@ export function AuthProvider({ children }) {
   }, []);
 
   const fetchUserProfile = useCallback(async (sessionUser) => {
+    setProfileLoading(true);
     try {
       // Load standalone entitlements and legacy records in parallel. Standalone
       // entitlements are authoritative once a paid app subscription exists.
       const { data } = await apiClient.get('/api/billing/entitlements');
       const entitlements = data?.entitlements || FREE_ENTITLEMENTS;
 
-      setUser(buildAuthenticatedUser(sessionUser, entitlements));
-      return entitlements;
+      setUser(prev => prev ? {
+        ...prev,
+        plan: entitlements.plan.name,
+        subscription_status: entitlements.subscription.status,
+        entitlements,
+      } : null);
+    } catch (err) {
+      console.error("Error fetching user profile:", err);
+    } finally {
+      setProfileLoading(false);
+    }
+  }, []);
 
       /*
        * Disabled legacy migration code retained temporarily for reference.
@@ -182,29 +194,28 @@ export function AuthProvider({ children }) {
       localStorage.setItem("last_supabase_url", currentSupabaseUrl);
     }
 
-    let isMounted = true;
-
-    const hydrateSession = async (nextSession) => {
-      setSession(nextSession);
-      if (nextSession) {
-        localStorage.setItem("quickpost_token", nextSession.access_token);
-        await Promise.all([
-          fetchConnectedAccounts(),
-          fetchUserProfile(nextSession.user),
-        ]);
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) {
+        const userData = {
+          userId: session.user.id,
+          email: session.user.email,
+          name:
+            session.user.user_metadata?.full_name ||
+            session.user.email?.split("@")[0],
+          plan: 'Free',
+          subscription_status: 'active',
+          entitlements: FREE_ENTITLEMENTS,
+          picture: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture,
+        };
+        setUser(userData);
+        localStorage.setItem("quickpost_token", session.access_token);
+        fetchUserProfile(session.user);
       } else {
         setUser(null);
         localStorage.removeItem("quickpost_token");
-        setConnectedAccounts(EMPTY_CONNECTED_ACCOUNTS);
-      }
-    };
-
-    // Check active sessions and wait for the authoritative plan before rendering.
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      try {
-        await hydrateSession(session);
-      } finally {
-        if (isMounted) setLoading(false);
+        setProfileLoading(false);
       }
     });
 
@@ -220,6 +231,23 @@ export function AuthProvider({ children }) {
         if (_event === "SIGNED_IN" || _event === "USER_UPDATED") {
           syncUserToHub(session.user);
         }
+      } else {
+        setUser(null);
+        localStorage.removeItem("quickpost_token");
+        setProfileLoading(false);
+        setConnectedAccounts({
+          instagram: { connected: false },
+          youtube: { connected: false },
+          pinterest: { connected: false },
+          facebook: { connected: false },
+          bluesky: { connected: false },
+          linkedin: { connected: false },
+          mastodon: { connected: false },
+          threads: { connected: false },
+          x: { connected: false },
+          reddit: { connected: false },
+          googleBusiness: { connected: false },
+        });
       }
     });
 
@@ -290,6 +318,7 @@ export function AuthProvider({ children }) {
       session,
       connectedAccounts,
       loading,
+      profileLoading,
       login,
       signUp,
       googleSignIn,
@@ -298,7 +327,7 @@ export function AuthProvider({ children }) {
       refreshProfile,
       isAuthenticated: !!user,
     }),
-    [user, session, connectedAccounts, loading, refreshAccounts, refreshProfile],
+    [user, session, connectedAccounts, loading, profileLoading, refreshAccounts, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
