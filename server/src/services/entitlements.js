@@ -53,7 +53,14 @@ export async function getEntitlements(userId, email = null, token = null) {
       // Scoped client using user's own token to satisfy RLS SELECT policy:
       // "Anyone can read hub_subscriptions by own email" (USING (email = auth.jwt() ->> 'email'))
       const clientUrl = process.env.SUPABASE_URL;
-      const clientToUse = token ? createClient(clientUrl, token) : supabase;
+      const clientToUse = token ? createClient(clientUrl, process.env.SUPABASE_ANON_KEY, {
+        auth: { persistSession: false },
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      }) : supabase;
 
       const { data: hubSubscription } = await clientToUse
         .from('hub_subscriptions')
@@ -61,7 +68,9 @@ export async function getEntitlements(userId, email = null, token = null) {
         .eq('email', userEmail)
         .maybeSingle();
 
-      if (hubSubscription && hubSubscription.subscription_status === 'active') {
+      const subStatus = String(hubSubscription?.subscription_status || '').toLowerCase().trim();
+      const isStatusActive = ['active', 'created', 'authenticated', 'trialing'].includes(subStatus);
+      if (hubSubscription && isStatusActive) {
         const expiresAt = hubSubscription.expires_at;
         const isNotExpired = !expiresAt || new Date(expiresAt) > new Date();
         if (isNotExpired) {

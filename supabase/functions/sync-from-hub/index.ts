@@ -71,9 +71,9 @@ Deno.serve(async (req: Request) => {
     const rawPlanId = plan_id ? String(plan_id).toLowerCase().trim() : "";
     const mappedPlan = HUB_PLAN_MAPPING[rawPlanId] || "free";
     
-    // Normalize status. Require exact case-insensitive match for "active".
+    // Normalize status.
     const rawStatus = subscription_status ? String(subscription_status).trim().toLowerCase() : "";
-    const isActive = rawStatus === "active";
+    const isActive = ["active", "created", "authenticated", "trialing"].includes(rawStatus);
 
     // 1. Fetch existing subscription for expires_at fallback
     const { data: existingSub } = await supabase
