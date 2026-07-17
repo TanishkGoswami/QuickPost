@@ -3,6 +3,7 @@ dist/
 coverage/
 
 .env
+.env.production
 *.log
 .DS_Store
 supabase/.temp/
