@@ -133,11 +133,12 @@ class LinkedInOAuth {
           access_token: tokenData.accessToken,
           refresh_token: null, // LinkedIn tokens don't have refresh tokens in v2
           expires_at: expiresAt.toISOString(),
+          account_id: tokenData.userInfo?.id,
           profile_data: tokenData.userInfo,
           username: tokenData.userInfo?.name,
           updated_at: new Date().toISOString()
         }, {
-          onConflict: 'user_id,provider'
+          onConflict: 'user_id,provider,account_id'
         })
         .select()
         .single();

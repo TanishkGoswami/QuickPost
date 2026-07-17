@@ -607,30 +607,11 @@ export async function importInstagramAccountToAutoDM(user, targetInstagramAccoun
     updated_at: new Date().toISOString(),
   };
 
-  const { data: existing } = await autoDMSupabase
+  const { data, error } = await autoDMSupabase
     .from('instagram_accounts')
-    .select('id')
-    .eq('instagram_user_id', upsertPayload.instagram_user_id)
-    .in('user_id', userIds)
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  let data, error;
-  if (existing) {
-    ({ data, error } = await autoDMSupabase
-      .from('instagram_accounts')
-      .update(upsertPayload)
-      .eq('id', existing.id)
-      .select('*')
-      .single());
-  } else {
-    ({ data, error } = await autoDMSupabase
-      .from('instagram_accounts')
-      .insert(upsertPayload)
-      .select('*')
-      .single());
-  }
+    .upsert(upsertPayload, { onConflict: 'user_id,instagram_business_account_id' })
+    .select('*')
+    .single();
 
   if (error) {
     throw new Error(`Failed to import Instagram account into AutoDM: ${error.message}`);
@@ -816,6 +797,12 @@ function cleanAutomationPayload(payload = {}, user, { includeUserId = true } = {
               ? rest.response_flow
               : { nodes: [], opening_message_enabled: false, opening_message: '' },
         }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(rest, 'require_follow')
+      ? { require_follow: Boolean(rest.require_follow) }
+      : {}),
+    ...(Object.prototype.hasOwnProperty.call(rest, 'fallback_comment_reply')
+      ? { fallback_comment_reply: rest.fallback_comment_reply ? String(rest.fallback_comment_reply).trim() : null }
       : {}),
     ...(includeUserId ? { user_id: getPrimaryUserId(user) } : {}),
     updated_at: new Date().toISOString(),
@@ -1274,6 +1261,8 @@ function buildComposerAutomationPayload({ user, account, config, publication, so
     comment_reply_enabled: Boolean(config.commentReplyEnabled),
     comment_reply_text: commentReplyText,
     reply_text: commentReplyText || getFirstResponseFlowText(responseFlow),
+    require_follow: Boolean(config.requireFollow),
+    fallback_comment_reply: config.requireFollow ? (config.fallbackCommentReply || null) : null,
     response_flow: responseFlow,
     is_active: true,
     source: 'social_pilot_composer',
@@ -1724,6 +1713,7 @@ export async function getAutomationAnalytics(user, automationId) {
       : { data: [] };
 
   let webhookCommentCount = 0;
+  let followGateBlockedCount = 0;
   const recentErrors = [];
   for (const row of webhookRows || []) {
     if (row.payload?.value?.media?.id === automation.media_id) {
@@ -1733,6 +1723,10 @@ export async function getAutomationAnalytics(user, automationId) {
         : null;
       const errorText = row.processing_error || legacyCrash;
       if (errorText) {
+        if (errorText === 'follow_gate_blocked') {
+          followGateBlockedCount += 1;
+          continue;
+        }
         if (errorText === 'account_not_connected' && isConnected) {
           continue;
         }
@@ -1747,10 +1741,13 @@ export async function getAutomationAnalytics(user, automationId) {
   const failed = outbound.filter((r) => r.status === 'failed').length;
   const dmsSent = outbound.length;
   const comments = Math.max(inbound.length, webhookCommentCount);
+  const followersCommented = Math.max(0, comments - followGateBlockedCount);
 
   return {
     automation,
     comments,
+    followGateBlockedCount,
+    followersCommented,
     dmsSent,
     dms_sent: dmsSent,
     messagesSent: dmsSent,

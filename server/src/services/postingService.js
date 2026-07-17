@@ -20,6 +20,7 @@ import { getValidInstagramTokensForPosting, isInstagramAuthError } from './insta
 import { decryptToken } from './instapilot.js';
 import { resolveInstagramPublishChannels } from '../utils/instagramChannels.js';
 import { resolvePublishPostType } from '../utils/postType.js';
+import { resolveSocialPublishChannels, setAggregateResult } from '../utils/socialChannels.js';
 
 /**
  * Core function to broadcast to platforms
@@ -57,12 +58,11 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
     const results = { mediaUrl: primaryMediaUrl, mediaUrls: mediaUrls };
     let platformPromises = [];
 
-    // Pinterest
-    if (channels.includes('pinterest') && tokens.pinterest) {
-      const resolvedCaption = resolveMentions(platData?.pinterest?.title || caption, 'pinterest', tokens.pinterest);
+    for (const account of resolveSocialPublishChannels('pinterest', channels, tokens.pinterestAccounts || [])) {
+      const resolvedCaption = resolveMentions(platData?.pinterest?.title || caption, 'pinterest', account);
       platformPromises.push(
-        postToPinterest(primaryMediaUrl, resolvedCaption, tokens.pinterest, platData?.pinterest?.link, platData?.pinterest?.boardId)
-          .then(result => ({ platform: 'pinterest', result }))
+        postToPinterest(primaryMediaUrl, resolvedCaption, account, platData?.pinterest?.link, platData?.pinterest?.boardId || account.boardId)
+          .then(result => ({ platform: account.channel, result }))
       );
     }
     
@@ -123,69 +123,78 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
       }
     }
 
-    // Facebook
-    if (channels.includes('facebook') && tokens.facebook?.pageId) {
-      const resolvedCaption = resolveMentions(caption, 'facebook', tokens.facebook);
+    for (const account of resolveSocialPublishChannels('facebook', channels, tokens.facebookAccounts || [])) {
+      const resolvedCaption = resolveMentions(caption, 'facebook', account);
       const videoUrl = mediaUrls[filePaths.findIndex(p => p.includes('video-'))] || primaryMediaUrl;
       const fbAction = instagramPostType === 'story'
-        ? postFacebookStory(tokens.facebook.accessToken, tokens.facebook.pageId, resolvedCaption, isVideo ? videoUrl : primaryMediaUrl, mediaType)
+        ? postFacebookStory(account.accessToken, account.pageId, resolvedCaption, isVideo ? videoUrl : primaryMediaUrl, mediaType)
         : instagramPostType === 'reel'
-          ? postFacebookReel(tokens.facebook.accessToken, tokens.facebook.pageId, resolvedCaption, videoUrl)
+          ? postFacebookReel(account.accessToken, account.pageId, resolvedCaption, videoUrl)
           : isVideo
-            ? postVideoToFacebook(tokens.facebook.accessToken, tokens.facebook.pageId, resolvedCaption, videoUrl, coverImageUrl)
-            : postToFacebook(tokens.facebook.accessToken, tokens.facebook.pageId, resolvedCaption, mediaUrls);
-      platformPromises.push(fbAction.then(result => ({ platform: 'facebook', result })));
+            ? postVideoToFacebook(account.accessToken, account.pageId, resolvedCaption, videoUrl, coverImageUrl)
+            : postToFacebook(account.accessToken, account.pageId, resolvedCaption, mediaUrls);
+      platformPromises.push(fbAction.then(result => ({ platform: account.channel, result })));
     }
 
-    // LinkedIn
-    if (channels.includes('linkedin') && tokens.linkedin) {
-      const resolvedCaption = resolveMentions(caption, 'linkedin', tokens.linkedin);
+    for (const account of resolveSocialPublishChannels('linkedin', channels, tokens.linkedinAccounts || [])) {
+      const resolvedCaption = resolveMentions(caption, 'linkedin', account);
       platformPromises.push(
-        postToLinkedIn(mediaUrls, resolvedCaption, tokens.linkedin)
-          .then(result => ({ platform: 'linkedin', result }))
+        postToLinkedIn(mediaUrls, resolvedCaption, account)
+          .then(result => ({ platform: account.channel, result }))
       );
     }
 
-    // Bluesky
-    if (channels.includes('bluesky') && tokens.bluesky?.did) {
-      const resolvedCaption = resolveMentions(caption, 'bluesky', tokens.bluesky);
+    for (const account of resolveSocialPublishChannels('bluesky', channels, tokens.blueskyAccounts || [])) {
+      const resolvedCaption = resolveMentions(caption, 'bluesky', account);
       const blobs = filePaths.map(p => fs.existsSync(p) ? fs.readFileSync(p) : null).filter(Boolean);
       platformPromises.push(
-        postToBluesky(tokens.bluesky.accessToken, tokens.bluesky.did, resolvedCaption, mediaUrls, blobs, isVideo)
-          .then(result => ({ platform: 'bluesky', result }))
+        postToBluesky(account.accessToken, account.did, resolvedCaption, mediaUrls, blobs, isVideo)
+          .then(result => ({ platform: account.channel, result }))
       );
     }
 
-    // X
-    if (channels.includes('x') && tokens.x) {
-      const resolvedCaption = resolveMentions(caption, 'x', tokens.x);
+    for (const account of resolveSocialPublishChannels('x', channels, tokens.xAccounts || [])) {
+      const resolvedCaption = resolveMentions(caption, 'x', account);
       platformPromises.push(
-        broadcastToX(resolvedCaption, mediaUrls, tokens.x, userId)
-          .then(result => ({ platform: 'x', result }))
+        broadcastToX(resolvedCaption, mediaUrls, account, userId)
+          .then(result => ({ platform: account.channel, result }))
       );
     }
 
     // YouTube — always refresh the Google token before posting
     // Google access tokens expire after 1 hour; scheduled posts may fire much later
-    if (channels.includes('youtube') && isVideo && tokens.youtube) {
+    for (const account of resolveSocialPublishChannels('youtube', channels, tokens.youtubeAccounts || [])) {
+      if (!isVideo) continue;
       const primaryVideoPath = filePaths.find(p => p.includes('video-'));
       if (primaryVideoPath && fs.existsSync(primaryVideoPath)) {
         platformPromises.push(
           (async () => {
             // Refresh token right before posting (BUG 4 FIX)
-            let ytTokens = tokens.youtube;
+            let ytTokens = account;
             try {
-              const freshAccessToken = await googleOAuth.getValidAccessToken(userId);
-              ytTokens = { ...tokens.youtube, accessToken: freshAccessToken };
+              const freshAccessToken = await googleOAuth.getValidAccessToken(userId, account.id);
+              ytTokens = { ...account, accessToken: freshAccessToken };
             } catch (tokenErr) {
               console.warn(`⚠️ [postingService] Could not refresh YouTube token: ${tokenErr.message}. Using stored token.`);
             }
-            return postToYouTube(primaryVideoPath, resolveMentions(caption, 'youtube', ytTokens), ytTokens)
+            const isShort = (platformData?.youtube?.type === "short");
+            const visibility = platformData?.youtube?.visibility || "public";
+            const description = platformData?.youtube?.description || "";
+            return postToYouTube(primaryVideoPath, resolveMentions(caption, 'youtube', ytTokens), ytTokens, null, visibility, isShort, description)
               .then(async result => {
                 if (result.success && result.mediaId && coverImagePath && fs.existsSync(coverImagePath)) {
                   await setVideoThumbnail(result.mediaId, coverImagePath, ytTokens);
                 }
-                return { platform: 'youtube', result };
+                return {
+                  platform: account.channel,
+                  result: {
+                    ...result,
+                    accountId: account.id,
+                    channelId: account.accountId || account.account_id,
+                    username: account.username,
+                    profilePicture: account.profilePicture || account.profile_picture,
+                  },
+                };
               });
           })()
         );
@@ -196,45 +205,43 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
     
 
 
-    // Mastodon
-    if (channels.includes('mastodon') && tokens.mastodon) {
-      const resolvedCaption = resolveMentions(caption, 'mastodon', tokens.mastodon);
+    for (const account of resolveSocialPublishChannels('mastodon', channels, tokens.mastodonAccounts || [])) {
+      const resolvedCaption = resolveMentions(caption, 'mastodon', account);
       platformPromises.push(
-        mastodon.postStatus(tokens.mastodon.accessToken, tokens.mastodon.instanceUrl, resolvedCaption, filePaths.filter(p => fs.existsSync(p)))
-          .then(result => ({ platform: 'mastodon', result }))
+        mastodon.postStatus(account.accessToken, account.instanceUrl, resolvedCaption, filePaths.filter(p => fs.existsSync(p)))
+          .then(result => ({ platform: account.channel, result }))
       );
     }
 
-    // Reddit
-    if (channels.includes('reddit') && tokens.reddit) {
-      const resolvedCaption = resolveMentions(caption, 'reddit', tokens.reddit);
+    for (const account of resolveSocialPublishChannels('reddit', channels, tokens.redditAccounts || [])) {
+      const resolvedCaption = resolveMentions(caption, 'reddit', account);
       platformPromises.push(
-        postToReddit(userId, resolvedCaption, primaryMediaUrl, tokens.reddit, platData?.reddit)
-          .then(result => ({ platform: 'reddit', result }))
+        postToReddit(userId, resolvedCaption, primaryMediaUrl, account, platData?.reddit)
+          .then(result => ({ platform: account.channel, result }))
       );
     }
     
     // Google Business Profile
-    if (channels.includes('googleBusiness') && tokens.googleBusiness) {
-      const resolvedCaption = resolveMentions(caption, 'googleBusiness', tokens.googleBusiness);
+    for (const account of resolveSocialPublishChannels('googleBusiness', channels, tokens.googleBusinessAccounts || [])) {
+      const resolvedCaption = resolveMentions(caption, 'googleBusiness', account);
       platformPromises.push(
         (async () => {
-          let gbpTokens = tokens.googleBusiness;
+          let gbpTokens = account;
           try {
-            const freshAccessToken = await googleBusinessOAuth.getValidAccessToken(userId);
-            gbpTokens = { ...tokens.googleBusiness, accessToken: freshAccessToken };
+            const freshAccessToken = await googleBusinessOAuth.getValidAccessToken(userId, account.id);
+            gbpTokens = { ...account, accessToken: freshAccessToken };
           } catch (tokenErr) {
             console.warn(`⚠️ [postingService] Could not refresh GBP token: ${tokenErr.message}. Using stored token.`);
           }
           return postToGoogleBusiness(resolvedCaption, mediaUrls, gbpTokens, platData?.googleBusiness)
-            .then(result => ({ platform: 'googleBusiness', result }));
+            .then(result => ({ platform: account.channel, result }));
         })()
       );
     }
 
     // Threads — supports single image, single video, and carousel (mixed images+videos)
-    if (channels.includes('threads') && tokens.threads) {
-      const resolvedCaption = resolveMentions(caption, 'threads', tokens.threads);
+    for (const account of resolveSocialPublishChannels('threads', channels, tokens.threadsAccounts || [])) {
+      const resolvedCaption = resolveMentions(caption, 'threads', account);
 
       // Build mediaItems array: [{url, type}] — one entry per uploaded file
       const threadsMediaItems = mediaUrls.map((url, idx) => ({
@@ -244,13 +251,13 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
 
       platformPromises.push(
         postToThreads(
-          tokens.threads.accessToken,
-          tokens.threads.account_id,
+          account.accessToken,
+          account.account_id,
           resolvedCaption,
           mediaUrls[0],   // fallback single url
           mediaType,
           threadsMediaItems // full list for carousel detection
-        ).then(result => ({ platform: 'threads', result }))
+        ).then(result => ({ platform: account.channel, result }))
       );
     }
 
@@ -279,6 +286,9 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
     if (instagramResults.length > 0) {
       results.instagram = instagramResults.find((result) => result?.success) || instagramResults[0];
       results.instagramAccounts = instagramResults;
+    }
+    for (const provider of ['facebook', 'youtube', 'pinterest', 'bluesky', 'linkedin', 'mastodon', 'threads', 'x', 'reddit', 'googleBusiness']) {
+      setAggregateResult(results, provider);
     }
 
     const failedPlatformEntries = Object.entries(results)

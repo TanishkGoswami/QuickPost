@@ -411,7 +411,15 @@ const YouTubePreview = memo(
             aspectRatio: "9/16",
           }}
         >
-          <MediaCarousel mediaFiles={mediaFiles} cssClass={cssClass} />
+          {thumbUrl ? (
+            <img
+              src={thumbUrl}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              alt="Custom Shorts Thumbnail"
+            />
+          ) : (
+            <MediaCarousel mediaFiles={mediaFiles} cssClass={cssClass} />
+          )}
           {/* Shorts Overlay */}
           <div
             style={{
@@ -425,7 +433,7 @@ const YouTubePreview = memo(
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <UserAvatar user={user} picture={platformPicture} size={36} background="#f00" />
+              <UserAvatar user={user} picture="/icons/youtube-color-icon.svg" size={36} background="#fff" />
               <span style={{ color: "white", fontSize: 14, fontWeight: 700 }}>@{username.replace(/\s+/g, "").toLowerCase()}</span>
               <button style={{ background: "white", color: "black", fontSize: 12, fontWeight: 700, padding: "6px 14px", borderRadius: 20 }}>Subscribe</button>
             </div>
@@ -439,7 +447,7 @@ const YouTubePreview = memo(
             <div style={{ textAlign: "center" }}><MessageSquare size={26} color="white" fill="white" /><span style={{ color: "white", fontSize: 11, marginTop: 4, fontWeight: 600 }}>{metrics.comments}</span></div>
             <div style={{ textAlign: "center" }}><Share2 size={26} color="white" fill="white" /><span style={{ color: "white", fontSize: 11, marginTop: 4, fontWeight: 600 }}>Share</span></div>
             <div style={{ width: 32, height: 32, borderRadius: 6, border: "2px solid white", overflow: "hidden" }}>
-               <UserAvatar user={user} picture={platformPicture} size={32} />
+               <UserAvatar user={user} picture="/icons/youtube-color-icon.svg" size={32} />
             </div>
           </div>
         </div>
@@ -447,12 +455,18 @@ const YouTubePreview = memo(
     }
 
     return (
-      <div
-        style={{ background: "#0f0f0f", borderRadius: 12, overflow: "hidden" }}
+      <div 
+        style={{ 
+          background: "white", 
+          borderRadius: 12, 
+          overflow: "hidden",
+          border: "1px solid #e5e7eb",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
+        }}
       >
         <div
           className={`relative w-full ${cssClass}`}
-          style={{ overflow: "hidden" }}
+          style={{ overflow: "hidden", background: "#f8f9fa" }}
         >
           {thumbUrl ? (
             <img
@@ -468,34 +482,34 @@ const YouTubePreview = memo(
               position: "absolute",
               bottom: 6,
               right: 6,
-              background: "rgba(0,0,0,0.85)",
+              background: "rgba(0,0,0,0.8)",
               color: "white",
               fontSize: 9,
               fontWeight: 800,
               padding: "2px 5px",
-              borderRadius: 3,
+              borderRadius: 4,
             }}
           >
             0:00
           </span>
         </div>
 
-        <div style={{ display: "flex", gap: 10, padding: "10px 12px" }}>
-          <UserAvatar user={user} picture={platformPicture} size={32} background="#e00" />
+        <div style={{ display: "flex", gap: 10, padding: "12px" }}>
+          <UserAvatar user={user} picture={platformPicture} size={36} background="#e00" />
           <div style={{ flex: 1, minWidth: 0 }}>
             <p
               style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: "white",
+                fontSize: 13,
+                fontWeight: 600,
+                color: "#0f0f0f",
                 margin: 0,
                 lineHeight: 1.4,
               }}
             >
               {caption || "Video Title"}
             </p>
-            <p style={{ fontSize: 11, color: "#aaa", margin: "4px 0 0" }}>
-              {username} · {metrics.views.toLocaleString()} views ·{" "}
+            <p style={{ fontSize: 11, color: "#606060", margin: "4px 0 0" }}>
+              {username} • {metrics.views.toLocaleString()} views •{" "}
               {metrics.timestamp}
             </p>
           </div>
@@ -817,6 +831,54 @@ const XPreview = memo(
   },
 );
 
+const ThreadsPreview = memo(
+  ({ caption, mediaFiles, cssClass, user, platformPicture, platformUsername }) => {
+    const metrics = usePlatformMetrics(caption);
+    const username = platformUsername || user?.name?.toLowerCase().replace(/\s+/g, "_") || "yourhandle";
+
+    return (
+      <div style={{ background: "white", borderRadius: 8, overflow: "hidden", border: "1px solid #d3d3d3" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, height: 44, padding: "0 14px", color: "#000" }}>
+          <span style={{ fontSize: 20, lineHeight: 1 }}>‹</span>
+          <span style={{ fontSize: 16, fontWeight: 700 }}>Thread</span>
+          <MoreHorizontal size={18} style={{ marginLeft: "auto" }} />
+        </div>
+        <div style={{ border: "1px solid #d9d9d9", borderRadius: 22, margin: "0 8px", padding: 14 }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <UserAvatar user={user} picture={platformPicture} size={34} background="#eee" />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: "#000" }}>{username}</span>
+                <span style={{ fontSize: 12, color: "#8b8b8b" }}>{metrics.timestamp}</span>
+                <MoreHorizontal size={16} style={{ marginLeft: "auto", color: "#aaa" }} />
+              </div>
+              {caption && (
+                <p style={{ margin: "0 0 10px", fontSize: 13, lineHeight: 1.35, color: "#000" }}>{caption}</p>
+              )}
+              <div style={{ borderRadius: 6, overflow: "hidden", border: "1px solid #eee" }}>
+                <MediaCarousel mediaFiles={mediaFiles} cssClass={cssClass} />
+              </div>
+              <div style={{ display: "flex", gap: 18, marginTop: 12, color: "#111" }}>
+                <Heart size={18} />
+                <MessageCircle size={18} />
+                <Repeat size={18} />
+                <Send size={18} />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style={{ borderLeft: "1px solid #d9d9d9", borderRight: "1px solid #d9d9d9", margin: "0 8px", padding: "14px 16px 18px" }}>
+          <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "#8b8b8b" }}>No replies yet</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid #e2e2e2", borderRadius: 999, background: "#f7f7f7", padding: "7px 10px" }}>
+            <UserAvatar user={user} picture={platformPicture} size={26} background="#eee" />
+            <span style={{ fontSize: 12, color: "#9a9a9a" }}>Reply to {username}...</span>
+          </div>
+        </div>
+      </div>
+    );
+  },
+);
+
 /* Generic fallback for Threads, Bluesky, etc. */
 const GenericPreview = memo(
   ({ caption, mediaFiles, cssClass, user, platformPicture, platformId }) => {
@@ -866,6 +928,7 @@ const PREVIEW_MAP = {
   facebook: FacebookPreview,
   linkedin: LinkedInPreview,
   x: XPreview,
+  threads: ThreadsPreview,
 };
 
 /* ── Main PreviewPanel ── */
@@ -883,9 +946,14 @@ const PreviewPanel = memo(function PreviewPanel({
 }) {
   const activeId = activePlatform || selectedChannels[0] || null;
   const baseActiveId = String(activeId || "").split(":")[0];
-  const selectedInstagramId = selectedChannels.find((channel) => String(channel).startsWith("instagram:"))?.split(":")[1];
-  const selectedInstagramAccount = selectedInstagramId
-    ? connectedAccounts?.instagramAccounts?.find((account) => String(account.id) === selectedInstagramId)
+  const selectedAccountId = String(activeId || "").includes(":")
+    ? String(activeId).split(":")[1]
+    : null;
+  const selectedInstagramAccount = baseActiveId === "instagram" && selectedAccountId
+    ? connectedAccounts?.instagramAccounts?.find((account) => String(account.id) === selectedAccountId)
+    : null;
+  const selectedPlatformAccount = selectedAccountId
+    ? connectedAccounts?.[`${baseActiveId}Accounts`]?.find((account) => String(account.id) === selectedAccountId)
     : null;
 
   // Compute CSS class for the media container from the selected ratio
@@ -895,8 +963,8 @@ const PreviewPanel = memo(function PreviewPanel({
   }, [selectedRatio]);
 
   const PreviewComponent = PREVIEW_MAP[baseActiveId] || GenericPreview;
-  const platformUsername = selectedInstagramAccount?.username || connectedAccounts?.[baseActiveId]?.username || "your_account";
-  const platformPicture = selectedInstagramAccount?.profilePicture || connectedAccounts?.[baseActiveId]?.profilePicture || user?.picture;
+  const platformUsername = selectedInstagramAccount?.username || selectedPlatformAccount?.username || connectedAccounts?.[baseActiveId]?.username || "your_account";
+  const platformPicture = selectedInstagramAccount?.profilePicture || selectedPlatformAccount?.profilePicture || connectedAccounts?.[baseActiveId]?.profilePicture || user?.picture;
 
   return (
     <div
@@ -908,27 +976,39 @@ const PreviewPanel = memo(function PreviewPanel({
       }}
     >
       {/* Platform tabs — only shown when multiple platforms selected */}
-      {selectedChannels.length > 1 && (
-        <div
-          style={{
-            display: "flex",
-            gap: 5,
-            padding: "8px 12px",
-            overflowX: "auto",
-            scrollbarWidth: "none",
-            borderBottom: "1px solid rgba(20,20,19,0.08)",
-            flexShrink: 0,
-          }}
-        >
-          {selectedChannels.map((pid) => {
-            const basePid = String(pid || "").split(":")[0];
-            const meta = PLATFORM_META[basePid];
-            if (!meta) return null;
-            const isActive = activeId === pid;
-            return (
+      {(() => {
+        const uniqueBasePlatforms = [];
+        const seen = new Set();
+        selectedChannels.forEach(pid => {
+          const basePid = String(pid || "").split(":")[0];
+          if (!seen.has(basePid)) {
+            seen.add(basePid);
+            uniqueBasePlatforms.push({ basePid, firstPid: pid });
+          }
+        });
+
+        if (uniqueBasePlatforms.length <= 1) return null;
+
+        return (
+          <div
+            style={{
+              display: "flex",
+              gap: 5,
+              padding: "8px 12px",
+              overflowX: "auto",
+              scrollbarWidth: "none",
+              borderBottom: "1px solid rgba(20,20,19,0.08)",
+              flexShrink: 0,
+            }}
+          >
+            {uniqueBasePlatforms.map(({ basePid, firstPid }) => {
+              const meta = PLATFORM_META[basePid];
+              if (!meta) return null;
+              const isActive = baseActiveId === basePid;
+              return (
                 <motion.button
-                  key={pid}
-                  onClick={() => onActivePlatformChange(pid)}
+                  key={basePid}
+                  onClick={() => onActivePlatformChange(firstPid)}
                   title={meta.label}
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.94 }}
@@ -953,8 +1033,8 @@ const PreviewPanel = memo(function PreviewPanel({
                   <img
                     src={meta.icon}
                     style={{
-                      width: 18,
-                      height: 18,
+                      width: 20,
+                      height: 20,
                       objectFit: "contain",
                       transition: "all 0.2s"
                     }}
@@ -962,10 +1042,11 @@ const PreviewPanel = memo(function PreviewPanel({
                     onError={(e) => (e.target.style.display = "none")}
                   />
                 </motion.button>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Preview content */}
       <div
@@ -1037,7 +1118,7 @@ const PreviewPanel = memo(function PreviewPanel({
                 cssClass={cssClass}
                 user={user}
                 platformId={activeId}
-                thumbnailFile={activeId === "youtube" ? youtubeThumbnail : null}
+                thumbnailFile={baseActiveId === "youtube" ? youtubeThumbnail : null}
                 platformUsername={platformUsername}
                 platformPicture={platformPicture}
                 selectedRatio={selectedRatio}
@@ -1053,7 +1134,7 @@ const PreviewPanel = memo(function PreviewPanel({
                   marginTop: 10,
                 }}
               >
-                Live Preview · {PLATFORM_META[activeId]?.label}
+                Live Preview · {PLATFORM_META[baseActiveId]?.label}
               </p>
             </motion.div>
           </AnimatePresence>

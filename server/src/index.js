@@ -1,4 +1,4 @@
-import express from 'express';
+import express from 'express'; // trigger restart
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -15,6 +15,7 @@ import aiRouter from './routes/ai.js';
 import instapilotRouter from './routes/instapilot.js';
 import autodmRouter from './routes/autodm.js';
 import billingRouter from './routes/billing.js';
+import youtubeRouter from './routes/youtube.js';
 import { initScheduler } from './services/scheduler.js';
 import supabase from './services/supabase.js';
 import { processInstagramWebhook } from './services/instapilot.js';
@@ -37,7 +38,8 @@ const allowedOrigins = [
   'https://getaipilot.com',
   'https://www.getaipilot.in',
   'https://www.getaipilot.com',
-  /https:\/\/.*\.ngrok-free\.dev$/
+  /https:\/\/.*\.ngrok-free\.dev$/,
+  /https:\/\/.*\.vercel\.app$/
 ];
 
 const corsOptions = {
@@ -82,6 +84,7 @@ app.use('/api/ai', aiRouter);
 app.use('/api/instapilot', instapilotRouter);
 app.use('/api/autodm', autodmRouter);
 app.use('/api/billing', billingRouter);
+app.use('/api/youtube', youtubeRouter);
 
 // Global SSE clients list for Realtime Frontend Updates
 const sseClients = [];

@@ -369,6 +369,7 @@ export default function Hero() {
           >
             <h1
               style={{
+                fontFamily: "'ESKlarheit', sans-serif",
                 fontSize: "clamp(40px, 8.5vw, 92px)",
                 fontWeight: 700,
                 color: "var(--ink)",

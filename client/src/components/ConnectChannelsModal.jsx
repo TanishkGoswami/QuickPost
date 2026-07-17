@@ -15,14 +15,14 @@ const SESSION_KEY = "qp_channels_skipped";
 
 const platforms = [
   { id: "instagram",  name: "Instagram",       icon: "/icons/ig-instagram-icon.svg",              type: "oauth-instagram" },
-  { id: "facebook",   name: "Facebook",         icon: "/icons/facebook-round-color-icon.svg",      type: "oauth-facebook" },
+  { id: "facebook",   name: "Facebook",         icon: "/icons/facebook-round-color-icon.svg",      type: "oauth-facebook", allowMultiple: true },
   { id: "linkedin",   name: "LinkedIn",         icon: "/icons/linkedin-icon.svg",                  type: "modal-linkedin" },
 
 
   { id: "youtube",    name: "YouTube",          icon: "/icons/youtube-color-icon.svg",             type: "oauth" },
-  { id: "threads",    name: "Threads",          icon: "/icons/threads-icon.svg",                   type: "oauth" },
+  { id: "threads",    name: "Threads",          icon: "/icons/threads-icon.svg",                   type: "oauth", allowMultiple: true },
   { id: "mastodon",   name: "Mastodon",         icon: "/icons/mastodon-round-icon.svg",            type: "modal-mastodon" },
-  { id: "bluesky",    name: "Bluesky",          icon: "/icons/bluesky-circle-color-icon.svg",      type: "modal-bluesky" },
+  { id: "bluesky",    name: "Bluesky",          icon: "/icons/bluesky-circle-color-icon.svg",      type: "modal-bluesky", allowMultiple: true },
 ];
 
 export default function ConnectChannelsModal() {
@@ -82,7 +82,7 @@ export default function ConnectChannelsModal() {
   };
 
   const unconnectedPlatforms = platforms.filter(
-    (p) => !connectedAccounts[p.id]?.connected
+    (p) => !connectedAccounts[p.id]?.connected || p.allowMultiple
   );
 
   if (!visible) return null;
@@ -120,9 +120,9 @@ export default function ConnectChannelsModal() {
                 </button>
 
                 <div className="relative z-10">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/20 text-white/90 text-xs font-semibold tracking-wide uppercase mb-4">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Onboarding
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/25 backdrop-blur-md border border-white/15 text-white text-xs font-semibold tracking-wide uppercase mb-4 shadow-sm">
+                    <Sparkles className="w-3.5 h-3.5 text-white/80" />
+                    <span>Onboarding</span>
                   </div>
                   <h2 className="text-3xl font-extrabold text-white tracking-tight mb-2">
                     Connect your channels

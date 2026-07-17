@@ -9,6 +9,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { DialogProvider } from './context/DialogContext';
 import { UploadJobProvider } from './context/UploadJobContext';
+import { AutoDMProvider } from './context/AutoDMContext';
 import ErrorBoundary from './components/ErrorBoundary';
 import UploadManagerPanel from './components/UploadManagerPanel';
 import ComplianceBanner from './components/ComplianceBanner';
@@ -38,6 +39,7 @@ const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
 const InstagramBots = lazy(() => import('./pages/InstagramBots'));
 const InstagramConnect = lazy(() => import('./pages/InstagramConnect'));
 const InstagramInbox = lazy(() => import('./pages/InstagramInbox'));
+const YouTubeManagerPage = lazy(() => import('./pages/YouTubeManagerPage'));
 
 // ── AutoDM workspace ──
 const AutoDMLayout             = lazy(() => import('./pages/auto-dm/AutoDMLayout'));
@@ -46,9 +48,10 @@ const AutoDMAutomationsPage    = lazy(() => import('./pages/auto-dm/AutoDMAutoma
 const AutomationEditorPage     = lazy(() => import('./pages/auto-dm/AutomationEditorPage'));
 const AutoDMContactsPage       = lazy(() => import('./pages/auto-dm/AutoDMContactsPage'));
 const AutoDMInstagramProfilePage = lazy(() => import('./pages/auto-dm/AutoDMInstagramProfilePage'));
-const AutoDMSettingsPage       = lazy(() => import('./pages/auto-dm/AutoDMSettingsPage'));
+const ProfilePage              = lazy(() => import('./pages/ProfilePage'));
 const ConnectInstagramPage     = lazy(() => import('./pages/connect/ConnectInstagramPage'));
 const ConnectSuccessPage       = lazy(() => import('./pages/connect/ConnectSuccessPage'));
+const SelectAccountsPage       = lazy(() => import('./pages/connect/SelectAccountsPage'));
 
 // ── Page loader ──
 const PageLoader = () => (
@@ -101,6 +104,7 @@ function AppContent() {
       />
       <Route path="/connect" element={isAuthenticated ? <ConnectInstagramPage /> : <Navigate to="/login" replace />} />
       <Route path="/connect/success" element={isAuthenticated ? <ConnectSuccessPage /> : <Navigate to="/login" replace />} />
+      <Route path="/connect/select" element={isAuthenticated ? <SelectAccountsPage /> : <Navigate to="/login" replace />} />
 
       // Protected dashboard
         <Route path="/dashboard" element={<DashboardLayout />}>
@@ -114,6 +118,8 @@ function AppContent() {
         <Route path="instapilot" element={<InstagramBots />} />
         <Route path="instapilot/connect" element={<InstagramConnect />} />
         <Route path="instapilot/inbox" element={<InstagramInbox />} />
+        <Route path="youtube" element={<YouTubeManagerPage />} />
+        <Route path="profile"  element={<AutoDMProvider><ProfilePage /></AutoDMProvider>} />
 
         {/* AutoDM workspace — has its own full-screen layout */}
         <Route path="auto-dm" element={<AutoDMLayout />}>
@@ -123,7 +129,6 @@ function AppContent() {
           <Route path="automations/:id"      element={<AutomationEditorPage />} />
           <Route path="contacts"             element={<AutoDMContactsPage />} />
           <Route path="instagram-profile"    element={<AutoDMInstagramProfilePage />} />
-          <Route path="settings"             element={<AutoDMSettingsPage />} />
         </Route>
       </Route>
 

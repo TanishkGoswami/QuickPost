@@ -74,7 +74,7 @@ export async function postToReddit(userId, caption, mediaUrl, redditTokens, plat
     if (error.response?.status === 401 && redditTokens.refreshToken) {
       try {
         console.log('🔄 Reddit: Token expired, refreshing...');
-        const newAccessToken = await redditOAuth.refreshAccessToken(userId, redditTokens.refreshToken);
+        const newAccessToken = await redditOAuth.refreshAccessToken(userId, redditTokens.refreshToken, redditTokens.id);
         // Retry with new token
         redditTokens.accessToken = newAccessToken;
         return postToReddit(userId, caption, mediaUrl, redditTokens, platformData);

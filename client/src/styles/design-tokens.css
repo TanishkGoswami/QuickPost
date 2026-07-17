@@ -14,12 +14,54 @@
   font-display: swap;
 }
 
+/* ── Body Font: Geist ── */
+@font-face {
+  font-family: "Geist";
+  src: url("/font/Geist-VariableFont_wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Heading Font: ES Klarheit ── */
+@font-face {
+  font-family: "ESKlarheit";
+  src: url("/font/ESKlarheitGrotesk-Bd-TRIAL-BF6618a70049644.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ESKlarheit";
+  src: url("/font/ESKlarheitGrotesk-Smbd-TRIAL-BF6618a70009538.otf") format("opentype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ESKlarheit";
+  src: url("/font/ESKlarheitGrotesk-Md-TRIAL-BF6618a7001a5a8.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ESKlarheit";
+  src: url("/font/ESKlarheitGrotesk-Rg-TRIAL-BF6618a7002c70f.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* ── Color Primitives ── */
-  --color-ink-950:  #000000;
-  --color-ink-900:  #111111;
-  --color-ink-800:  #262626;
-  --color-ink-700:  #3b3b39;
+  --color-ink-950:  #1f0404;
+  --color-ink-900:  #3F0808;
+  --color-ink-800:  #5c1111;
+  --color-ink-700:  #7a1818;
   --color-slate-600: #626260;
   --color-slate-400: #7b7b78;
   --color-dust-300: #d3cec6;
@@ -63,8 +105,9 @@
   --info-border:   rgba(0, 7, 203, 0.15);
 
   /* ── Typography ── */
-  --font-display: "Plus Jakarta Sans", "Sofia Sans", "Helvetica Neue", sans-serif;
-  --font-body:    "Plus Jakarta Sans", "Sofia Sans", system-ui, sans-serif;
+  --font-display: "ESKlarheit", "Plus Jakarta Sans", "Sofia Sans", "Helvetica Neue", sans-serif;
+  --font-body:    "Geist", "Plus Jakarta Sans", "Sofia Sans", system-ui, sans-serif;
+  --font-secondary: "Geist", "Plus Jakarta Sans", system-ui, sans-serif;
   --font-logo:    "Geffroge Authentic", "Syne", "Plus Jakarta Sans", sans-serif;
   --font-mono:    "JetBrains Mono", "Fira Code", monospace;
 
@@ -153,31 +196,7 @@
    GLOBAL RESETS & BASE STYLES
 ═══════════════════════════════════════════════════════════════════ */
 
-*, *::before, *::after {
-  box-sizing: border-box;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
 
-html {
-  scroll-behavior: smooth;
-  text-rendering: optimizeLegibility;
-  -webkit-text-size-adjust: 100%;
-}
-
-body {
-  background: var(--canvas);
-  color: var(--ink);
-  font-family: var(--font-body);
-  font-size: var(--text-base);
-  line-height: var(--leading-normal);
-  min-height: 100vh;
-}
-
-img, video {
-  max-width: 100%;
-  height: auto;
-}
 
 /* ── Reduced Motion ── */
 @media (prefers-reduced-motion: reduce) {

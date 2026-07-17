@@ -29,6 +29,8 @@ interface AutomationRecord {
   media_id?: string;
   comment_reply_enabled?: boolean;
   comment_reply_text?: string | null;
+  require_follow?: boolean;
+  fallback_comment_reply?: string | null;
   response_flow: ResponseFlow | string;
   schedule_type?: "manual" | "duration" | "custom" | string;
   starts_at?: string | null;
@@ -158,6 +160,14 @@ const fetchInstagramScopedUserProfile = async (
   try {
     const response = await fetch(url.toString());
     const json = await response.json().catch(() => ({}));
+    
+    // TEMPORARY LOGGING FOR DEBUGGING
+    logInfo("Graph API response for scoped profile", {
+      requestId,
+      senderId,
+      json
+    });
+
     if (!response.ok || json?.error) {
       throw new Error(
         json?.error?.message ||
@@ -829,7 +839,7 @@ interface PendingAutomationSession {
 }
 
 const automationSelectFields =
-  "id,name,user_id,keywords,response_flow,trigger_type,media_id,instagram_account_id,comment_reply_enabled,comment_reply_text,schedule_type,starts_at,ends_at,expired_at";
+  "id,name,user_id,keywords,response_flow,trigger_type,media_id,instagram_account_id,comment_reply_enabled,comment_reply_text,schedule_type,starts_at,ends_at,expired_at,require_follow,fallback_comment_reply";
 const instagramAccountSelectFields =
   "id,user_id,page_id,ig_id:instagram_user_id,webhook_ig_id:webhook_instagram_user_id,access_token_encrypted,token_expires_at,is_connected";
 
@@ -1710,6 +1720,37 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
       payload.requestId,
     ),
   );
+
+  if (
+    matched.require_follow === true &&
+    payload.triggerType === "comment" &&
+    senderProfile.isFollowingYou !== true
+  ) {
+    const fallbackText =
+      (matched.fallback_comment_reply || "").trim() ||
+      "Please follow us to receive the automated message!";
+    logInfo("Follow gate triggered", {
+      requestId: payload.requestId,
+      automationId: matched.id,
+      senderId: payload.senderId,
+    });
+
+    if (payload.eventId) {
+      await sendInstagramCommentReply(
+        payload.eventId,
+        fallbackText,
+        tokenBundle.pageAccessToken,
+        payload.requestId,
+      );
+    }
+
+    await supabase
+      .from("webhook_logs")
+      .update({ processed: true, processing_error: "follow_gate_blocked" })
+      .eq("dedupe_key", payload.dedupeKey);
+    return { status: "follow_gate_blocked" as const };
+  }
+
   let responseActions = continuationSession
     ? buildResponseActions(
         matched,

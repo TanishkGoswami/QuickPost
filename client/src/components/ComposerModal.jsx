@@ -28,6 +28,8 @@ import {
   RectangleVertical,
   Lock,
   Upload,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { Reorder } from "framer-motion";
 
@@ -93,7 +95,7 @@ const INSTAGRAM_POST_TYPE_PRESETS = {
   reel: "ig-reel",
 };
 
-const ClockView = memo(function ClockView({ value, onChange, minTime }) {
+const ClockView = memo(function ClockView({ value, onChange, minTime, onClose }) {
   const [mode, setMode] = useState("hours"); // 'hours' or 'minutes'
   const initialH = parseInt(value.split(":")[0]) || 0;
   const initialM = parseInt(value.split(":")[1]) || 0;
@@ -580,10 +582,12 @@ const ClockView = memo(function ClockView({ value, onChange, minTime }) {
         onClick={(e) => {
           if (isCurrentSelectionPast) return;
           e.stopPropagation();
-          onChange(
-            `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`,
-          );
-          window.dispatchEvent(new MouseEvent("mousedown"));
+          onChange(to24h(hour, minute, meridiem));
+          if (typeof onClose === "function") {
+            onClose();
+          } else {
+            window.dispatchEvent(new MouseEvent("mousedown"));
+          }
         }}
         style={{
           width: "100%",
@@ -977,6 +981,7 @@ const CustomSelect = memo(function CustomSelect({
                 onChange={(v) => {
                   onChange(v);
                 }}
+                onClose={() => setOpen(false)}
               />
             ) : (
               <div
@@ -1243,10 +1248,15 @@ function ComposerModal({
   const [selectedChannels, setSelectedChannels] = useState([]);
   const hasInstagram = selectedChannels.some(c => c === "instagram" || c.startsWith("instagram:"));
   const getBasePlatform = (c) => c?.split(':')[0] || c;
-  const normalizeSelectedChannels = (channels) =>
-    channels.some((channel) => String(channel).startsWith("instagram:"))
-      ? channels.filter((channel) => channel !== "instagram")
-      : channels;
+  const normalizeSelectedChannels = (channels) => {
+    const specificProviders = new Set(
+      channels
+        .map((channel) => String(channel))
+        .filter((channel) => channel.includes(":"))
+        .map((channel) => channel.split(":")[0]),
+    );
+    return [...new Set(channels)].filter((channel) => !specificProviders.has(String(channel)));
+  };
   const [caption, setCaption] = useState("");
   const [mediaFiles, setMediaFiles] = useState([]);
   const [isScheduled, setIsScheduled] = useState(false);
@@ -1311,6 +1321,14 @@ function ComposerModal({
   }));
   const [youtubeThumbnail, setYoutubeThumbnail] = useState(null);
 
+  useEffect(() => {
+    const ytType = platformData.youtube?.type || "video";
+    setPlatformPresets((prev) => ({
+      ...prev,
+      youtube: ytType === "short" ? "yt-shorts" : "yt-video",
+    }));
+  }, [platformData.youtube?.type]);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isGlobalDragging, setIsGlobalDragging] = useState(false);
@@ -1350,6 +1368,40 @@ function ComposerModal({
       } else {
         resolve(null);
       }
+    });
+  };
+
+  const cropYouTubeThumbnail = (file, position = "center") => {
+    if (!file?.type?.startsWith("image/")) return Promise.resolve(file);
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const targetRatio = 16 / 9;
+        const sourceRatio = img.width / img.height;
+        let sx = 0;
+        let sy = 0;
+        let sw = img.width;
+        let sh = img.height;
+
+        if (sourceRatio > targetRatio) {
+          sw = img.height * targetRatio;
+          sx = (img.width - sw) / 2;
+        } else if (sourceRatio < targetRatio) {
+          sh = img.width / targetRatio;
+          sy = position === "top" ? 0 : position === "bottom" ? img.height - sh : (img.height - sh) / 2;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = 1280;
+        canvas.height = 720;
+        canvas.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, 1280, 720);
+        canvas.toBlob((blob) => {
+          URL.revokeObjectURL(img.src);
+          resolve(blob ? new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }) : file);
+        }, "image/jpeg", 0.92);
+      };
+      img.onerror = () => resolve(file);
+      img.src = URL.createObjectURL(file);
     });
   };
 
@@ -1397,6 +1449,7 @@ function ComposerModal({
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [mobileActiveTab, setMobileActiveTab] = useState("compose");
   const [autoFixMsg, setAutoFixMsg] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const isMobile = windowWidth < 768;
 
   useEffect(() => {
@@ -1460,8 +1513,8 @@ function ComposerModal({
       setActivePreviewPlatform("instagram");
       return;
     }
-    if (!selectedChannels.some(c => getBasePlatform(c) === activePreviewPlatform))
-      setActivePreviewPlatform(getBasePlatform(selectedChannels[0]));
+    if (!selectedChannels.includes(activePreviewPlatform))
+      setActivePreviewPlatform(selectedChannels[0]);
   }, [JSON.stringify(selectedChannels), activePreviewPlatform]);
 
   useEffect(() => {
@@ -1475,10 +1528,17 @@ function ComposerModal({
     if (isOpen && selectedChannels.length === 0) {
       const instagramChannels = (connectedAccounts.instagramAccounts || [])
         .map((account) => `instagram:${account.id}`);
+      const accountChannels = Object.keys(connectedAccounts)
+        .filter((key) => key.endsWith("Accounts") && key !== "instagramAccounts")
+        .flatMap((key) => {
+          const provider = key.replace(/Accounts$/, "");
+          return (connectedAccounts[key] || []).map((account) => `${provider}:${account.id}`);
+        });
       const connected = [
         ...instagramChannels,
+        ...accountChannels,
         ...Object.keys(connectedAccounts).filter(
-          (key) => key !== "instagram" && connectedAccounts[key]?.connected && PLATFORM_META[key],
+          (key) => key !== "instagram" && connectedAccounts[key]?.connected && PLATFORM_META[key] && !(connectedAccounts[`${key}Accounts`]?.length > 0),
         ),
       ];
       setSelectedChannels(normalizeSelectedChannels(connected));
@@ -1610,8 +1670,14 @@ function ComposerModal({
   useEffect(() => {
     if (!isScheduled) return;
     const dv = datePart || minDate;
-    const opts = buildTimeOpts(dv);
-    const nt = timePart && opts.includes(timePart) ? timePart : opts[0] || "";
+    let nt = timePart;
+    
+    if (!nt) {
+      nt = buildTimeOpts(dv)[0] || "";
+    } else if (dv === minDate && nt < minTime) {
+      nt = minTime;
+    }
+
     if (!nt) return;
     const nv = `${dv}T${nt}`;
     if (scheduledAt !== nv) setScheduledAt(nv);
@@ -1766,7 +1832,10 @@ function ComposerModal({
       });
 
       if (youtubeThumbnail) {
-        formData.append("youtubeThumbnail", youtubeThumbnail);
+        formData.append(
+          "youtubeThumbnail",
+          await cropYouTubeThumbnail(youtubeThumbnail, publishPlatformData.youtube?.thumbnailCrop),
+        );
       }
 
       formData.append("selectedAspectRatio", selectedRatio || "1:1");
@@ -1922,6 +1991,8 @@ function ComposerModal({
   if (!isOpen) return null;
 
   const publishDisabled = loading || hasBlockingError;
+  const shellFullscreen = isFullscreen || isMobile;
+  const previewWidth = isFullscreen ? 360 : 300;
 
   const MOBILE_TABS = [
     { id: "compose", label: "Compose" },
@@ -1936,13 +2007,20 @@ function ComposerModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px]"
+        className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
+        style={{ padding: shellFullscreen ? 0 : 16 }}
       >
         <motion.div
+          layout
           initial={{ opacity: 0, scale: 0.94, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 20 }}
-          transition={{ type: "spring", stiffness: 300, damping: 28 }}
+          transition={{
+            type: "spring",
+            stiffness: 300,
+            damping: 28,
+            layout: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+          }}
           onDragOver={(e) => {
             e.preventDefault();
             setIsGlobalDragging(true);
@@ -1952,15 +2030,15 @@ function ComposerModal({
           style={{
             position: "relative",
             width: "100%",
-            maxWidth: isMobile ? "100%" : 960,
-            height: isMobile ? "100%" : "90vh",
-            background: "var(--canvas,#fff)",
-            borderRadius: isMobile ? 0 : "var(--r-hero,20px)",
+            maxWidth: shellFullscreen ? "100%" : 960,
+            height: shellFullscreen ? "100vh" : "90vh",
+            background: isFullscreen ? "#f7f6f3" : "var(--canvas,#fff)",
+            borderRadius: shellFullscreen ? 0 : "var(--r-hero,20px)",
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
-            boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
-            border: isMobile ? "none" : "1px solid rgba(20,20,19,0.08)",
+            boxShadow: shellFullscreen ? "none" : "0 25px 50px -12px rgba(0,0,0,0.25)",
+            border: shellFullscreen ? "none" : "1px solid rgba(20,20,19,0.08)",
           }}
         >
           {/* Global Drag Overlay */}
@@ -2024,13 +2102,14 @@ function ComposerModal({
           {/* ── HEADER ── */}
           <div
             style={{
-              padding: "16px 22px",
+              padding: isFullscreen ? "14px 24px" : "16px 22px",
               borderBottom: "1px solid rgba(20,20,19,0.08)",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               background: "white",
               flexShrink: 0,
+              minHeight: isFullscreen ? 60 : "auto",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -2065,6 +2144,30 @@ function ComposerModal({
               </motion.div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {!isMobile && (
+                <motion.button
+                  type="button"
+                  onClick={() => setIsFullscreen((value) => !value)}
+                  aria-label={isFullscreen ? "Exit fullscreen composer" : "Open fullscreen composer"}
+                  title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                  whileHover={{ scale: 1.05, background: "rgba(20,20,19,0.06)" }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: "50%",
+                    border: isFullscreen ? "1px solid var(--ink,#141413)" : "1px solid rgba(20,20,19,0.1)",
+                    background: isFullscreen ? "white" : "transparent",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: isFullscreen ? "var(--ink,#141413)" : "var(--slate,#8a8a82)",
+                  }}
+                >
+                  {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                </motion.button>
+              )}
               <motion.button
                 type="button"
                 onClick={handleClose}
@@ -2163,14 +2266,19 @@ function ComposerModal({
               display: "flex",
               flex: 1,
               overflow: "hidden",
-              height: isMobile ? "calc(100vh - 105px)" : "calc(90vh - 115px)",
+              background: isFullscreen ? "#f7f6f3" : "transparent",
+              height: isMobile
+                ? "calc(100vh - 105px)"
+                : isFullscreen
+                  ? "calc(100vh - 115px)"
+                  : "calc(90vh - 115px)",
             }}
           >
             {/* ── PREVIEW PANEL (right column on desktop, tab on mobile) ── */}
             {(!isMobile || mobileActiveTab === "preview") && (
               <div
                 style={{
-                  width: isMobile ? "100%" : 300,
+                  width: isMobile ? "100%" : previewWidth,
                   flexShrink: 0,
                   borderLeft: isMobile
                     ? "none"
@@ -2178,13 +2286,13 @@ function ComposerModal({
                   display: "flex",
                   flexDirection: "column",
                   overflow: "hidden",
-                  background: "var(--canvas-lifted,#fafaf9)",
+                  background: "#fff",
                   order: 1,
                 }}
               >
                 <div
                   style={{
-                    padding: "11px 14px",
+                    padding: isFullscreen ? "14px 18px" : "11px 14px",
                     borderBottom: "1px solid rgba(20,20,19,0.08)",
                     flexShrink: 0,
                   }}
@@ -2224,10 +2332,14 @@ function ComposerModal({
                 style={{
                   flex: 1,
                   overflowY: "auto",
-                  padding: "24px 28px",
+                  minWidth: 0,
+                  maxWidth: isFullscreen ? 960 : "none",
+                  margin: isFullscreen ? "0 auto" : 0,
+                  padding: isFullscreen ? "24px 28px 36px" : "24px 28px",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 24,
+                  gap: isFullscreen ? 18 : 24,
+                  boxSizing: "border-box",
                   scrollbarWidth: "none",
                 }}
               >
@@ -2271,62 +2383,7 @@ function ComposerModal({
                       />
                     </Section>
 
-                    {hasInstagram && (
-                      <Section label="Instagram" mb={16}>
-                        <div
-                          style={{
-                            background: "white",
-                            border: "1px solid rgba(20,20,19,0.08)",
-                            borderRadius: 14,
-                            padding: 14,
-                          }}
-                        >
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-                            <img src="/icons/ig-instagram-icon.svg" alt="" style={{ width: 18, height: 18 }} />
-                            <span style={{ fontSize: 14, fontWeight: 800, color: "var(--ink,#141413)" }}>
-                              Instagram
-                            </span>
-                          </div>
 
-                          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 16, marginBottom: 16 }}>
-                            {[
-                              ["post", "Feed Post"],
-                              ["story", "Story"],
-                              ["reel", "Reel"],
-                            ].map(([value, label]) => (
-                              <label key={value} className="flex items-center gap-2 cursor-pointer group">
-                                <input
-                                  type="radio"
-                                  name="ig-type"
-                                  checked={(platformData.instagram?.type || "post") === value}
-                                  onChange={() => updateInstagramData("type", value)}
-                                  className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
-                                />
-                                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors">
-                                  {label}
-                                </span>
-                              </label>
-                            ))}
-                          </div>
-
-                          {effectivePostType !== "story" && (
-                            <>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                First Comment (for hashtags)
-                              </label>
-                              <textarea
-                                value={platformData.instagram?.firstComment || ""}
-                                onChange={(e) => updateInstagramData("firstComment", e.target.value)}
-                                placeholder="Add hashtags as a first comment to keep your caption clean..."
-                                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm resize-none placeholder:text-gray-400 transition-all"
-                                rows={3}
-                                maxLength={2200}
-                              />
-                            </>
-                          )}
-                        </div>
-                      </Section>
-                    )}
 
                     {!isInstagramStoryOnly && (
                       <>
@@ -2935,6 +2992,7 @@ function ComposerModal({
                   }
                   youtubeThumbnail={youtubeThumbnail}
                   onYoutubeThumbnailChange={setYoutubeThumbnail}
+                  postType={effectivePostType}
                 />
 
                 {/* ✨ Smart Warnings ✨ */}
@@ -3040,16 +3098,17 @@ function ComposerModal({
           <div
             style={{
               borderTop: "1px solid rgba(20,20,19,0.08)",
-              padding: isMobile ? "12px 16px" : "14px 22px",
-              background: "var(--canvas-lifted,#fafaf9)",
+              padding: isMobile ? "12px 16px" : isFullscreen ? "12px 24px" : "14px 22px",
+              background: "white",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               flexShrink: 0,
-              borderBottomLeftRadius: isMobile ? 0 : "var(--r-hero,20px)",
-              borderBottomRightRadius: isMobile ? 0 : "var(--r-hero,20px)",
+              borderBottomLeftRadius: shellFullscreen ? 0 : "var(--r-hero,20px)",
+              borderBottomRightRadius: shellFullscreen ? 0 : "var(--r-hero,20px)",
               gap: isMobile ? 8 : 16,
               flexWrap: isMobile ? "wrap" : "nowrap",
+              boxShadow: isFullscreen ? "0 -2px 8px rgba(20,20,19,0.04)" : "none",
             }}
           >
             <motion.button

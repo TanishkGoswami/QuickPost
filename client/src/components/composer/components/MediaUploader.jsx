@@ -23,12 +23,14 @@ import {
   Film,
   GripVertical,
   Image as ImageIcon,
+  Crop,
 } from "lucide-react";
+import ImageCropperModal from "./ImageCropperModal";
 
 const MAX_FILES = 10;
 
 /* ── Single draggable media thumbnail ── */
-const MediaThumb = memo(function MediaThumb({ item, index, onRemove }) {
+const MediaThumb = memo(function MediaThumb({ item, index, onRemove, onCrop }) {
   const [hovered, setHovered] = useState(false);
   const [imgError, setImgError] = useState(false);
   const isVideo = item.file?.type?.startsWith("video/");
@@ -131,50 +133,68 @@ const MediaThumb = memo(function MediaThumb({ item, index, onRemove }) {
         />
       )}
 
-      {/* Hover overlay: remove button */}
-      <AnimatePresence>
-        {hovered && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.12 }}
-            style={{
-              position: "absolute",
-              inset: 0,
-              zIndex: 4,
-              background: "rgba(0,0,0,0.35)",
-              display: "flex",
-              alignItems: "flex-start",
-              justifyContent: "flex-end",
-              padding: 5,
+      {/* Action buttons overlay (permanently visible) */}
+      <div
+        style={{
+          position: "absolute",
+          top: 4,
+          right: 4,
+          zIndex: 4,
+          display: "flex",
+          gap: 4,
+        }}
+      >
+        {!isVideo && (
+          <motion.button
+            whileHover={{ scale: 1.1, background: "var(--arc, #ff5600)" }}
+            whileTap={{ scale: 0.9 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onCrop(index);
             }}
+            style={{
+              width: 24,
+              height: 24,
+              borderRadius: "50%",
+              background: "rgba(20,20,19,0.75)",
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              color: "white",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.15)",
+            }}
+            title="Crop image"
           >
-            <motion.button
-              whileHover={{ scale: 1.15, background: "#dc2626" }}
-              whileTap={{ scale: 0.9 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove(index);
-              }}
-              style={{
-                width: 20,
-                height: 20,
-                borderRadius: "50%",
-                background: "rgba(0,0,0,0.7)",
-                border: "none",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                color: "white",
-              }}
-            >
-              <X size={10} />
-            </motion.button>
-          </motion.div>
+            <Crop size={12} />
+          </motion.button>
         )}
-      </AnimatePresence>
+        <motion.button
+          whileHover={{ scale: 1.1, background: "#dc2626" }}
+          whileTap={{ scale: 0.9 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove(index);
+          }}
+          style={{
+            width: 24,
+            height: 24,
+            borderRadius: "50%",
+            background: "rgba(20,20,19,0.75)",
+            border: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "white",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.15)",
+          }}
+          title="Remove file"
+        >
+          <X size={12} />
+        </motion.button>
+      </div>
 
       {/* Drag handle hint */}
       <div
@@ -204,6 +224,37 @@ const MediaUploader = memo(function MediaUploader({
   const fileInputRef = useRef(null);
   const [dragActive, setDragActive] = useState(false);
   const [dropSuccess, setDropSuccess] = useState(false);
+  const [croppingIndex, setCroppingIndex] = useState(null);
+  const [isCropOpen, setIsCropOpen] = useState(false);
+
+  const handleSaveCrop = useCallback(async (croppedFile) => {
+    if (croppingIndex === null) return;
+
+    const getDimensions = (file) => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          resolve({ width: img.width, height: img.height, ratio: img.width / img.height });
+          URL.revokeObjectURL(img.src);
+        };
+        img.src = URL.createObjectURL(file);
+      });
+    };
+
+    const dimensions = await getDimensions(croppedFile);
+
+    setMediaFiles((prev) => {
+      const copy = [...prev];
+      if (copy[croppingIndex]) {
+        copy[croppingIndex] = {
+          ...copy[croppingIndex],
+          file: croppedFile,
+          dimensions,
+        };
+      }
+      return copy;
+    });
+  }, [croppingIndex, setMediaFiles]);
 
   /* Add validated files */
   const addFiles = useCallback(
@@ -440,6 +491,10 @@ const MediaUploader = memo(function MediaUploader({
                     item={item}
                     index={idx}
                     onRemove={removeFile}
+                    onCrop={(i) => {
+                      setCroppingIndex(i);
+                      setIsCropOpen(true);
+                    }}
                   />
                 ))}
               </AnimatePresence>
@@ -458,6 +513,15 @@ const MediaUploader = memo(function MediaUploader({
           </motion.div>
         )}
       </AnimatePresence>
+      <ImageCropperModal
+        isOpen={isCropOpen}
+        onClose={() => {
+          setIsCropOpen(false);
+          setCroppingIndex(null);
+        }}
+        file={croppingIndex !== null ? mediaFiles[croppingIndex]?.file : null}
+        onSave={handleSaveCrop}
+      />
     </div>
   );
 });

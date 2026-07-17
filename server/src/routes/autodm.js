@@ -160,6 +160,8 @@ router.get('/automations/:id', authenticateUser, async (req, res) => {
   }
 });
 
+import { supermailbox } from '../services/supermailbox.js';
+
 router.post(
   '/automations',
   authenticateUser,
@@ -168,6 +170,19 @@ router.post(
   async (req, res) => {
   try {
     const automation = await createAutomationForUser(req.user, req.body || {});
+    
+    // Dispatch automation creation email via SupermailBox
+    if (req.user?.email) {
+      supermailbox.sendEmail({
+        to: req.user.email,
+        templateKey: 'automation_created',
+        variables: {
+          automation_name: automation.name || 'New Automation',
+          trigger_type: automation.trigger_type || 'Unknown'
+        }
+      }).catch(err => console.warn('Failed to send automation email:', err.message));
+    }
+    
     res.status(201).json({ success: true, automation });
   } catch (error) {
     console.error('[AUTODM] Create automation error:', error);

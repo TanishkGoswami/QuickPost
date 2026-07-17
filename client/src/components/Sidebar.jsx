@@ -10,13 +10,19 @@ import {
   Users,
   Instagram,
   Settings,
+  UserRound,
   ChevronDown,
   X,
+  Plus,
   Flame,
   Sparkles,
   Lock,
   MessagesSquare,
   Bot,
+  Youtube,
+  LogOut,
+  HelpCircle,
+  CreditCard,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
 import logo from "/logo.png";
@@ -34,6 +40,137 @@ function isFree(plan) {
   if (!plan) return true;
   return plan.toLowerCase() === 'free';
 }
+
+const countConnectedTargets = (accounts = {}) => {
+  const arrayCount = Object.keys(accounts)
+    .filter((key) => key.endsWith("Accounts"))
+    .reduce((sum, key) => sum + (Array.isArray(accounts[key]) ? accounts[key].length : 0), 0);
+
+  const singleCount = Object.entries(accounts).filter(
+    ([key, value]) => !key.endsWith("Accounts") && value?.connected && !(accounts[`${key}Accounts`]?.length > 0),
+  ).length;
+
+  return arrayCount + singleCount;
+};
+
+const platformDetails = {
+  facebook: {
+    name: "Facebook",
+    icon: (
+      <img
+        src="/icons/facebook-round-color-icon.svg"
+        style={{ width: 20, height: 20 }}
+        alt=""
+      />
+    ),
+  },
+  instagram: {
+    name: "Instagram",
+    icon: (
+      <img
+        src="/icons/ig-instagram-icon.svg"
+        style={{ width: 20, height: 20 }}
+        alt=""
+      />
+    ),
+  },
+  x: {
+    name: "X",
+    icon: (
+      <img
+        src="/icons/x-social-media-round-icon.svg"
+        style={{ width: 20, height: 20 }}
+        alt=""
+      />
+    ),
+  },
+  linkedin: {
+    name: "LinkedIn",
+    icon: (
+      <img
+        src="/icons/linkedin-icon.svg"
+        style={{ width: 20, height: 20 }}
+        alt=""
+      />
+    ),
+  },
+  youtube: {
+    name: "YouTube",
+    icon: (
+      <img
+        src="/icons/youtube-color-icon.svg"
+        style={{ width: 20, height: 20 }}
+        alt=""
+      />
+    ),
+  },
+  pinterest: {
+    name: "Pinterest",
+    icon: (
+      <img
+        src="/icons/pinterest-round-color-icon.svg"
+        style={{ width: 20, height: 20 }}
+        alt=""
+      />
+    ),
+  },
+  threads: {
+    name: "Threads",
+    icon: (
+      <img
+        src="/icons/threads-icon.svg"
+        style={{ width: 20, height: 20 }}
+        alt=""
+      />
+    ),
+  },
+  mastodon: {
+    name: "Mastodon",
+    icon: (
+      <img
+        src="/icons/mastodon-round-icon.svg"
+        style={{ width: 20, height: 20 }}
+        alt=""
+      />
+    ),
+  },
+  bluesky: {
+    name: "Bluesky",
+    icon: (
+      <img
+        src="/icons/bluesky-circle-color-icon.svg"
+        style={{ width: 20, height: 20 }}
+        alt=""
+      />
+    ),
+  },
+  googleBusiness: {
+    name: "Google Business",
+    icon: (
+      <img
+        src="/icons/google-icon.svg"
+        style={{ width: 20, height: 20 }}
+        alt=""
+      />
+    ),
+  },
+  reddit: {
+    name: "Reddit",
+    icon: (
+      <img
+        src="/icons/reddit-icon.svg"
+        style={{ width: 20, height: 20 }}
+        alt=""
+      />
+    ),
+  },
+};
+
+const getPlatformId = (target) => {
+  if (target.providerId) return target.providerId;
+  if (target.id && target.id.startsWith("instagram")) return "instagram";
+  return target.id;
+};
 
 /* ── tiny SVG orbital arc decoration ── */
 const OrbitalArc = () => (
@@ -62,8 +199,12 @@ function Sidebar() {
       ? new URLSearchParams(location.search).get("platform")
       : null;
 
-  const { user, connectedAccounts, refreshAccounts, logout } = useAuth();
+  const { user, connectedAccounts, refreshAccounts, logout, loading, profileLoading } = useAuth();
   const { confirm, alert } = useDialog();
+  const [expandedPlatforms, setExpandedPlatforms] = useState({});
+  const [showChannelsPopover, setShowChannelsPopover] = useState(false);
+  const [popoverCoords, setPopoverCoords] = useState({ top: 0, left: 0 });
+  const plusButtonRef = React.useRef(null);
   const [showBusinessSetupModal, setShowBusinessSetupModal] = useState(false);
   const [showBlueskyModal, setShowBlueskyModal] = useState(false);
   const [showPinterestModal, setShowPinterestModal] = useState(false);
@@ -72,15 +213,35 @@ function Sidebar() {
   const [showFacebookModal, setShowFacebookModal] = useState(false);
   const [connectingPlatform, setConnectingPlatform] = useState(null);
   const [disconnectingPlatform, setDisconnectingPlatform] = useState(null);
-  const [connectedOpen, setConnectedOpen] = useState(
-    !location.pathname.startsWith("/dashboard/auto-dm"),
-  );
+  const connectedOpen = true;
   const [autoDMOpen, setAutoDMOpen] = useState(
     location.pathname.startsWith("/dashboard/auto-dm"),
   );
   const [imgError, setImgError] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+
+  const handleLogout = async () => {
+    const confirmed = await confirm("Logout", "Are you sure you want to log out?", {
+      intent: "logout",
+      confirmText: "Logout",
+      cancelText: "Stay logged in",
+    });
+    if (!confirmed) return;
+    logout();
+    navigate("/login");
+  };
 
   const handleConnectInstagram = () => setShowBusinessSetupModal(true);
+  const handleOpenPopover = () => {
+    if (plusButtonRef.current) {
+      const rect = plusButtonRef.current.getBoundingClientRect();
+      setPopoverCoords({
+        top: rect.top - 10,
+        left: rect.left + rect.width + 12,
+      });
+    }
+    setShowChannelsPopover(true);
+  };
   const handleProceedToConnect = async () => {
     setShowBusinessSetupModal(false);
     setConnectingPlatform("instagram");
@@ -213,13 +374,20 @@ function Sidebar() {
         />
       ),
       onConnect: handleConnectFacebook,
+      allowMultiple: true,
     },
     ...(connectedAccounts.instagramAccounts?.length > 0 
       ? connectedAccounts.instagramAccounts.map(acc => ({
           id: `instagram:${acc.id}`,
           name: acc.username || "Instagram",
           connected: true,
-          icon: (
+          icon: acc.profilePicture ? (
+            <img
+              src={acc.profilePicture}
+              style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover" }}
+              alt=""
+            />
+          ) : (
             <img
               src="/icons/ig-instagram-icon.svg"
               style={{ width: 20, height: 20 }}
@@ -302,6 +470,7 @@ function Sidebar() {
         />
       ),
       onConnect: handleConnectYouTube,
+      allowMultiple: true,
     },
     {
       id: "pinterest",
@@ -332,6 +501,7 @@ function Sidebar() {
         />
       ),
       onConnect: handleConnectThreads,
+      allowMultiple: true,
     },
     {
       id: "mastodon",
@@ -358,6 +528,7 @@ function Sidebar() {
         />
       ),
       onConnect: () => setShowBlueskyModal(true),
+      allowMultiple: true,
     },
     {
       id: "googleBusiness",
@@ -395,9 +566,42 @@ function Sidebar() {
     },
   ];
 
+  const connectedTargets = platforms.flatMap((platform) => {
+    if (platform.id === "instagram_connect" || !platform.connected) return [];
+    const accounts = connectedAccounts[`${platform.id}Accounts`] || [];
+    if (!accounts.length) return [platform];
+
+    return accounts.map((account) => ({
+      ...platform,
+      id: `${platform.id}:${account.id}`,
+      providerId: platform.id,
+      name: account.username || account.account_id || platform.name,
+      icon: account.profilePicture ? (
+        <img
+          src={account.profilePicture}
+          style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover" }}
+          alt=""
+        />
+      ) : platform.icon,
+    }));
+  });
+
+  const groupedConnected = React.useMemo(() => {
+    const groups = {};
+    connectedTargets.forEach((target) => {
+      const pid = getPlatformId(target);
+      if (!groups[pid]) {
+        groups[pid] = [];
+      }
+      groups[pid].push(target);
+    });
+    return groups;
+  }, [connectedTargets]);
+
+
   const isActive = (path) => {
     if (path === "/dashboard/auto-dm") {
-      return location.pathname.startsWith("/dashboard/auto-dm") && !location.pathname.startsWith("/dashboard/auto-dm/settings");
+      return location.pathname.startsWith("/dashboard/auto-dm");
     }
     if (path === "/dashboard") {
       return location.pathname === "/dashboard";
@@ -482,10 +686,10 @@ function Sidebar() {
       {/* ── Scrollable body ── */}
       <div
         className="flex-1 overflow-y-auto custom-scrollbar"
-        style={{ padding: "12px 12px 0" }}
+        style={{ padding: "8px 12px 0" }}
       >
         {/* ── Primary nav ── */}
-        <div style={{ marginBottom: 20 }}>
+        <div style={{ marginBottom: 12 }}>
           {[
             {
               to: "/dashboard",
@@ -503,14 +707,14 @@ function Sidebar() {
               icon: <Bot size={16} />,
             },
             {
+              to: "/dashboard/youtube",
+              label: "YouTube Studio",
+              icon: <Youtube size={16} />,
+            },
+            {
               to: "/dashboard/auto-dm",
               label: "GAP AutoDM",
               icon: <MessagesSquare size={16} />,
-            },
-            {
-              to: "/dashboard/auto-dm/settings",
-              label: "Settings",
-              icon: <Settings size={16} />,
             },
             {
               to: "/dashboard/trends",
@@ -526,8 +730,8 @@ function Sidebar() {
               <>
                 <span
                   style={{
-                    width: 28,
-                    height: 28,
+                    width: 24,
+                    height: 24,
                     borderRadius: "var(--r-sm)",
                     background: active
                       ? "rgba(255,255,255,0.15)"
@@ -548,10 +752,10 @@ function Sidebar() {
             const style = {
               display: "flex",
               alignItems: "center",
-              gap: 10,
-              padding: "9px 12px",
+              gap: 9,
+              padding: "6px 10px",
               borderRadius: "var(--r-btn)",
-              marginBottom: 2,
+              marginBottom: 1,
               background: active ? "var(--ink)" : "transparent",
               color: active
                 ? "var(--canvas)"
@@ -596,15 +800,14 @@ function Sidebar() {
                       to={to}
                       onClick={() => {
                         setAutoDMOpen(true);
-                        setConnectedOpen(false);
                       }}
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: 10,
+                        gap: 9,
                         minWidth: 0,
                         flex: 1,
-                        padding: "9px 0 9px 12px",
+                        padding: "6px 0 6px 10px",
                         color: "inherit",
                         textDecoration: "none",
                       }}
@@ -618,7 +821,6 @@ function Sidebar() {
                         event.stopPropagation();
                         setAutoDMOpen((open) => {
                           const nextOpen = !open;
-                          if (nextOpen) setConnectedOpen(false);
                           return nextOpen;
                         });
                       }}
@@ -684,104 +886,28 @@ function Sidebar() {
         {/* ── Connected platforms ── */}
         <div style={{ marginTop: 8 }}>
           {(() => {
-            const connectedPlatforms = platforms.filter((p) => p.connected);
+            const connectedPlatforms = connectedTargets;
             const visibleIcons = connectedPlatforms.slice(0, 3);
             const extraCount = Math.max(0, connectedPlatforms.length - 3);
 
             return (
-              <button
-                className="qp-sidebar-connected-toggle"
-                onClick={() => {
-
-                  setConnectedOpen((open) => {
-                    const nextOpen = !open;
-                    if (nextOpen) setAutoDMOpen(false);
-                    return nextOpen;
-                  });
-                }}
+              <div
                 style={{
                   width: "100%",
                   display: "flex",
                   alignItems: "center",
                   padding: "8px 12px",
-                  borderRadius: "100px",
-                  background: "var(--canvas-lifted)",
-                  border: "1px solid rgba(20,20,19,0.08)",
-                  cursor: "pointer",
+                  borderRadius: "var(--r-btn)",
+                  background: "var(--side-surface)",
+                  border: "1px solid var(--side-hairline)",
                   marginBottom: 8,
-                  transition: "all 0.2s",
                 }}
               >
-                <AnimatePresence mode="popLayout" initial={false}>
-                  {!connectedOpen && (
-                    <motion.div
-                      key="icons"
-                      initial={{ opacity: 0, width: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, width: "auto", scale: 1 }}
-                      exit={{ opacity: 0, width: 0, scale: 0.8 }}
-                      transition={{ duration: 0.2, ease: "easeOut" }}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {visibleIcons.map((p, i) => (
-                        <div
-                          key={p.id}
-                          style={{
-                            width: 22,
-                            height: 22,
-                            borderRadius: "50%",
-                            background: "var(--white)",
-                            border: "1.5px solid var(--canvas-lifted)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            marginLeft: i === 0 ? 0 : -8,
-                            zIndex: 3 - i,
-                            overflow: "hidden",
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                          }}
-                        >
-                          {React.cloneElement(p.icon, {
-                            style: { width: 14, height: 14 },
-                          })}
-                        </div>
-                      ))}
-                      {extraCount > 0 && (
-                        <div
-                          style={{
-                            width: 22,
-                            height: 22,
-                            borderRadius: "50%",
-                            background: "var(--canvas)",
-                            border: "1.5px solid var(--canvas-lifted)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            marginLeft: -8,
-                            zIndex: 0,
-                            fontSize: 9,
-                            fontWeight: 700,
-                            color: "var(--slate)",
-                            boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-                          }}
-                        >
-                          +{extraCount}
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                <motion.span
-                  animate={{ marginLeft: connectedOpen ? 6 : 8 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                  style={{ fontSize: 13, fontWeight: 500, color: "var(--ink)" }}
+                <span
+                  style={{ fontSize: 13, fontWeight: 600, color: "var(--side-ink)", marginLeft: 4 }}
                 >
                   Connected
-                </motion.span>
+                </span>
                 <div
                   style={{
                     marginLeft: "auto",
@@ -790,13 +916,42 @@ function Sidebar() {
                     gap: 6,
                   }}
                 >
+                  <button
+                    ref={plusButtonRef}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenPopover();
+                    }}
+                    title="Connect channels"
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: "50%",
+                      background: "rgba(20, 20, 19, 0.05)",
+                      border: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      transition: "background 0.2s",
+                      marginRight: 2,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "rgba(20, 20, 19, 0.12)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "rgba(20, 20, 19, 0.05)";
+                    }}
+                  >
+                    <Plus size={12} style={{ color: "var(--side-ink)" }} />
+                  </button>
                   {connectedPlatforms.length > 0 && (
                     <div
                       style={{
                         width: 18,
                         height: 18,
                         borderRadius: "50%",
-                        background: "#6366f1",
+                        background: "var(--side-fin)",
                         color: "white",
                         display: "flex",
                         alignItems: "center",
@@ -808,18 +963,8 @@ function Sidebar() {
                       {connectedPlatforms.length}
                     </div>
                   )}
-                  <ChevronDown
-                    size={14}
-                    style={{
-                      color: "var(--slate)",
-                      transform: connectedOpen
-                        ? "rotate(180deg)"
-                        : "rotate(0deg)",
-                      transition: "transform 0.2s",
-                    }}
-                  />
                 </div>
-              </button>
+              </div>
             );
           })()}
 
@@ -833,312 +978,319 @@ function Sidebar() {
                 style={{
                   display: "flex",
                   flexDirection: "column",
-                  gap: 2,
+                  gap: 4,
                   overflow: "hidden",
                 }}
               >
-                {platforms
-                  .filter((p) => p.connected)
-                  .map((platform) => {
-                    const isSelected =
-                      selectedDashboardPlatform === platform.id &&
-                      location.pathname === "/dashboard";
+                {Object.entries(groupedConnected).map(([platformId, targets]) => {
+                  const details = platformDetails[platformId] || {
+                    name: platformId.charAt(0).toUpperCase() + platformId.slice(1),
+                    icon: <Share2 size={16} />,
+                  };
+                  const isExpanded = expandedPlatforms[platformId] !== false; // default to expanded/true
+
+                  // Check if any target in this platform is selected
+                  const isAnySelected = targets.some((target) => {
+                    const dashboardPlatform = target.providerId || target.id;
                     return (
+                      (selectedDashboardPlatform === platformId ||
+                        selectedDashboardPlatform === dashboardPlatform) &&
+                      location.pathname === "/dashboard"
+                    );
+                  });
+
+                  return (
+                    <div key={platformId} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                      {/* Parent platform item */}
                       <div
-                        key={platform.id}
-                        onClick={() =>
-                          navigate(`/dashboard?platform=${platform.id}`)
-                        }
-                        className="qp-sidebar-connected-item group"
+                        onClick={() => {
+                          setExpandedPlatforms((prev) => ({
+                            ...prev,
+                            [platformId]: prev[platformId] === false ? true : false,
+                          }));
+                          navigate(`/dashboard?platform=${platformId}`);
+                        }}
+                        className={`qp-sidebar-connected-parent-item ${isAnySelected ? "qp-sidebar-connected-parent-item-active" : ""}`}
                         style={{
                           display: "flex",
                           alignItems: "center",
                           gap: 10,
-                          padding: "8px 10px",
+                          padding: "6px 10px",
                           borderRadius: "var(--r-btn)",
                           cursor: "pointer",
-                          transition: "background 0.15s",
-                          background: isSelected
-                            ? "rgba(20,20,19,0.07)"
-                            : "transparent",
+                          transition: "all 0.15s ease",
                         }}
                       >
                         <div style={{ position: "relative", flexShrink: 0 }}>
                           <div
                             style={{
-                              width: 30,
-                              height: 30,
-                              borderRadius: "var(--r-sm)",
-                              background: "var(--canvas-lifted)",
-                              border: "1px solid rgba(20,20,19,0.08)",
+                              width: 26,
+                              height: 26,
+                              borderRadius: "6px",
+                              background: "var(--side-surface)",
+                              border: "1px solid var(--side-hairline)",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
                             }}
                           >
-                            {platform.icon}
+                            {details.icon}
                           </div>
+                        </div>
+
+                        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 6 }}>
                           <span
                             style={{
-                              position: "absolute",
-                              bottom: -1,
-                              right: -1,
-                              width: 8,
-                              height: 8,
-                              background: "#22c55e",
-                              borderRadius: "50%",
-                              border: "1.5px solid var(--canvas)",
-                            }}
-                          />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div
-                            style={{
                               fontSize: 13,
-                              fontWeight: 500,
-                              color: "var(--ink)",
-                              lineHeight: 1.2,
+                              fontWeight: 600,
+                              color: "var(--side-ink)",
                               overflow: "hidden",
                               textOverflow: "ellipsis",
                               whiteSpace: "nowrap",
                             }}
                           >
-                            {connectedAccounts[platform.id]?.username ||
-                              platform.name}
-                          </div>
-                          <div
+                            {details.name}
+                          </span>
+                          <span
                             style={{
                               fontSize: 10,
-                              color: "var(--slate)",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
+                              fontWeight: 700,
+                              color: "var(--side-muted)",
+                              background: "var(--side-surface-2)",
+                              padding: "1px 6px",
+                              borderRadius: "10px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
                             }}
                           >
-                            Active
-                          </div>
+                            {targets.length}
+                          </span>
                         </div>
+
+                        <ChevronDown
+                          size={14}
+                          style={{
+                            color: "var(--side-muted)",
+                            transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
+                            transition: "transform 0.2s",
+                          }}
+                        />
                       </div>
-                    );
-                  })}
+
+                      {/* Children list */}
+                      <AnimatePresence initial={false}>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2, ease: "easeInOut" }}
+                            className="qp-sidebar-connected-children"
+                          >
+                            {targets.map((target) => {
+                              const dashboardPlatform = target.providerId || target.id;
+                              const isSelected =
+                                selectedDashboardPlatform === dashboardPlatform &&
+                                location.pathname === "/dashboard";
+                              return (
+                                <div
+                                  key={target.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/dashboard?platform=${dashboardPlatform}`);
+                                  }}
+                                  className="qp-sidebar-connected-item group"
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                    padding: "6px 8px",
+                                    borderRadius: "8px",
+                                    cursor: "pointer",
+                                    transition: "background 0.15s",
+                                    background: isSelected
+                                      ? "var(--side-surface-2)"
+                                      : "transparent",
+                                  }}
+                                >
+                                  <div style={{ position: "relative", flexShrink: 0 }}>
+                                    <div
+                                      style={{
+                                        width: 22,
+                                        height: 22,
+                                        borderRadius: "50%",
+                                        background: "var(--side-surface)",
+                                        border: "1px solid var(--side-hairline)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        overflow: "hidden",
+                                      }}
+                                    >
+                                      {target.icon}
+                                    </div>
+                                    <span
+                                      style={{
+                                        position: "absolute",
+                                        bottom: -1,
+                                        right: -1,
+                                        width: 6,
+                                        height: 6,
+                                        background: "#22c55e",
+                                        borderRadius: "50%",
+                                        border: "1px solid var(--side-canvas)",
+                                      }}
+                                    />
+                                  </div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div
+                                      style={{
+                                        fontSize: 12,
+                                        fontWeight: 500,
+                                        color: "var(--side-ink)",
+                                        lineHeight: 1.2,
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      {connectedAccounts[target.id]?.username ||
+                                        target.name}
+                                    </div>
+                                    <div
+                                      style={{
+                                        fontSize: 9,
+                                        color: "var(--side-muted)",
+                                        overflow: "hidden",
+                                        textOverflow: "ellipsis",
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      Active
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })}
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
-
-        {/* ── Add Channels ── */}
-        <div style={{ marginTop: 24, padding: "0 4px" }}>
-          <div
-            className="eyebrow"
-            style={{ padding: "0 6px", marginBottom: 12 }}
-          >
-            Connect Channels
-          </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 8,
-            }}
-          >
-            {platforms
-              .filter((p) => !p.connected)
-              .map((platform) => (
-                <button
-                  className="qp-sidebar-channel-button"
-                  key={platform.id}
-                  onClick={(e) => {
-                    const limit = user?.entitlements?.limits?.social_accounts || 1;
-                    const connectedCount = platforms.filter(p => p.connected).length;
-                    if (connectedCount >= limit) {
-                      e.preventDefault();
-                      alert("Upgrade Required", `You have reached your limit of ${limit} social account${limit === 1 ? '' : 's'} on the ${user?.entitlements?.plan?.name || 'Free'} plan. Please upgrade to connect more channels.`, { intent: "warning" });
-                      return;
-                    }
-                    platform.onConnect();
-                  }}
-                  title={`Connect ${platform.name}`}
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: "var(--r-btn)",
-                    background: "var(--canvas-lifted)",
-                    border: "1px dashed rgba(20,20,19,0.2)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    opacity: platform.disabled ? 0.4 : 1,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "var(--ink)";
-                    e.currentTarget.style.background = "var(--white)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(20,20,19,0.2)";
-                    e.currentTarget.style.background = "var(--canvas-lifted)";
-                  }}
-                >
-                  <div
-                    style={{
-                      transition: "all 0.2s",
-                      transform: "scale(1)",
-                      filter: "none",
-                      opacity: 1,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = "scale(1.1)";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "scale(1)";
-                    }}
-                  >
-                    {platform.icon}
-                  </div>
-                </button>
-              ))}
-          </div>
         </div>
       </div>
 
       {/* ── Footer ── */}
       <div
+        className="qp-sidebar-footer"
         style={{
-          padding: "12px 12px 16px",
+          padding: "10px",
           borderTop: "1px solid rgba(20,20,19,0.08)",
-          background: "var(--canvas)",
         }}
       >
-        {user && (
-          <div
-            className="qp-sidebar-user-card"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "10px 12px",
-              borderRadius: "var(--r-btn)",
-              background: "var(--canvas-lifted)",
-              border: "1px solid rgba(20,20,19,0.08)",
-              marginBottom: 10,
-            }}
-          >
-            <div
-              style={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                background:
-                  user.picture && !imgError ? "transparent" : "var(--ink)",
-                color: "var(--canvas)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 12,
-                fontWeight: 700,
-                flexShrink: 0,
-                overflow: "hidden",
-                border:
-                  user.picture && !imgError
-                    ? "1px solid rgba(20,20,19,0.08)"
-                    : "none",
-              }}
-            >
-              {user.picture && !imgError ? (
-                <img
-                  src={user.picture}
-                  alt=""
-                  onError={() => setImgError(true)}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              ) : (
-                (user.name || user.email || "U")[0].toUpperCase()
-              )}
+        {loading || profileLoading ? (
+          <div className="qp-sidebar-account-details-skeleton">
+            <div className="qp-sidebar-skeleton-avatar qp-shimmer-loading" />
+            <div className="qp-sidebar-skeleton-text-group">
+              <div className="qp-sidebar-skeleton-line name qp-shimmer-loading" />
+              <div className="qp-sidebar-skeleton-line sub qp-shimmer-loading" />
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="qp-sidebar-skeleton-pill qp-shimmer-loading" />
+          </div>
+        ) : user ? (
+          <div className={`qp-sidebar-account-details ${accountMenuOpen ? "is-open" : ""}`}>
+            <button
+              type="button"
+              className="qp-sidebar-account-summary"
+              aria-expanded={accountMenuOpen}
+              onClick={() => setAccountMenuOpen((open) => !open)}
+            >
               <div
+                className="qp-sidebar-account-avatar"
                 style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "var(--ink)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
+                  background:
+                    user.picture && !imgError ? "transparent" : "var(--ink)",
+                  color: "var(--canvas)",
                 }}
               >
-                <span
-                  style={{
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    flex: 1,
-                    minWidth: 0,
-                  }}
-                >
-                  {user.name || "My Account"}
-                </span>
-                {user.plan && (
-                  <span
-                    style={{
-                      fontSize: 8,
-                      fontWeight: 800,
-                      padding: "2px 5px",
-                      borderRadius: 4,
-                      background:
-                        isFree(user.plan) ? "var(--dust)" : "var(--arc)",
-                      color: isFree(user.plan) ? "var(--slate)" : "white",
-                      textTransform: "uppercase",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {user.plan || 'Free'}
-                  </span>
+                {user.picture && !imgError ? (
+                  <img
+                    src={user.picture}
+                    alt=""
+                    onError={() => setImgError(true)}
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  (user.name || user.email || "U")[0].toUpperCase()
                 )}
               </div>
-              <div
-                style={{
-                  fontSize: 10,
-                  color: "var(--slate)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="qp-sidebar-account-name" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user.organization_name || user.name || "My Organization"}
+                  </span>
+                  {user.plan && (
+                    <span className={`qp-sidebar-plan-pill ${isFree(user.plan) ? "is-free" : "is-pro"}`}>
+                      {user.plan || "Free"}
+                    </span>
+                  )}
+                </div>
+                <div className="qp-sidebar-account-subtitle" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user.plan || "Free"} plan - {countConnectedTargets(connectedAccounts)} channels
+                </div>
+              </div>
+              <ChevronDown size={14} className="qp-sidebar-account-chevron" />
+            </button>
+            <div className="qp-sidebar-account-panel">
+              <div className="qp-sidebar-account-menu">
+            {[
+              { to: "/dashboard/profile", label: "Profile", icon: <UserRound size={15} /> },
+              { to: "/dashboard", label: "Channels", icon: <LayoutDashboard size={15} /> },
+              { to: "/dashboard/billing", label: "Plans and Billing", icon: <CreditCard size={15} /> },
+            ].map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="qp-sidebar-account-link"
               >
-                {user.email}
+                {item.icon}
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
+              </Link>
+            ))}
+            <a
+              href="mailto:support@gapsocialpilot.com"
+              className="qp-sidebar-account-link"
+            >
+              <HelpCircle size={15} />
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Help & Support</span>
+            </a>
+            {isFree(user?.plan) && (
+              <button
+                type="button"
+                onClick={() => navigate("/dashboard/billing")}
+                className="qp-sidebar-account-upgrade"
+              >
+                <Sparkles size={15} />
+                Upgrade plan
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="qp-sidebar-account-link qp-sidebar-account-logout"
+            >
+              <LogOut size={15} />
+              Log out
+            </button>
               </div>
             </div>
           </div>
-        )}
-
-        {/* ── Upgrade Button ── */}
-        {isFree(user?.plan) && (
-          <button
-            className="qp-sidebar-upgrade"
-            onClick={() => navigate("/dashboard/billing")}
-            style={{
-              width: "100%",
-              padding: "8px 12px",
-              borderRadius: "var(--r-btn)",
-              border: "none",
-              background:
-                "linear-gradient(135deg, var(--arc) 0%, #ff8c42 100%)",
-              color: "var(--white)",
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer",
-              marginBottom: 8,
-              boxShadow: "0 4px 12px rgba(255,86,0,0.2)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-            }}
-          >
-            <Sparkles size={14} />
-            Upgrade to QuickPost
-          </button>
-        )}
+        ) : null}
 
       </div>
 
@@ -1181,6 +1333,123 @@ function Sidebar() {
               window.location.href = `${apiUrl}/api/auth/facebook?token=${token}`;
             }}
           />
+
+          <AnimatePresence>
+            {showChannelsPopover && (
+              <>
+                {/* Popover overlay background click handler */}
+                <div
+                  onClick={() => setShowChannelsPopover(false)}
+                  style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    width: "100vw",
+                    height: "100vh",
+                    zIndex: 9998,
+                    background: "transparent",
+                  }}
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, x: -10 }}
+                  animate={{ opacity: 1, scale: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, x: -10 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                  style={{
+                    position: "fixed",
+                    top: popoverCoords.top,
+                    left: popoverCoords.left,
+                    zIndex: 9999,
+                    width: 260,
+                    background: "rgba(255, 255, 255, 0.85)",
+                    backdropFilter: "blur(16px)",
+                    WebkitBackdropFilter: "blur(16px)",
+                    border: "1px solid var(--side-hairline)",
+                    borderRadius: "12px",
+                    padding: "16px",
+                    boxShadow: "0 10px 30px -5px rgba(0, 0, 0, 0.08), 0 8px 12px -6px rgba(0, 0, 0, 0.04)",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 12,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--side-ink)" }}>
+                      Connect Channels
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--side-muted)", marginTop: 2 }}>
+                      Select a platform to link your account.
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(4, 1fr)",
+                      gap: 8,
+                    }}
+                  >
+                    {platforms
+                      .filter((p) => !p.connected || p.allowMultiple)
+                      .map((platform) => (
+                        <button
+                          className="qp-sidebar-channel-button"
+                          key={platform.id}
+                          onClick={(e) => {
+                            setShowChannelsPopover(false);
+                            const limit = user?.entitlements?.limits?.social_accounts || 1;
+                            const connectedCount = countConnectedTargets(connectedAccounts);
+                            if (connectedCount >= limit) {
+                              e.preventDefault();
+                              alert("Upgrade Required", `You have reached your limit of ${limit} social account${limit === 1 ? '' : 's'} on the ${user?.entitlements?.plan?.name || 'Free'} plan. Please upgrade to connect more channels.`, { intent: "warning" });
+                              return;
+                            }
+                            platform.onConnect();
+                          }}
+                          title={`Connect ${platform.name}`}
+                          style={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: "var(--r-btn)",
+                            background: "var(--side-surface)",
+                            border: "1px dashed rgba(20,20,19,0.2)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            transition: "all 0.2s",
+                            opacity: platform.disabled ? 0.4 : 1,
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = "var(--side-ink)";
+                            e.currentTarget.style.background = "var(--side-surface-2)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = "rgba(20,20,19,0.2)";
+                            e.currentTarget.style.background = "var(--side-surface)";
+                          }}
+                        >
+                          <div
+                            style={{
+                              transition: "all 0.2s",
+                              transform: "scale(1)",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = "scale(1.1)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = "scale(1)";
+                            }}
+                          >
+                            {platform.icon}
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </>,
         document.body,
       )}

@@ -9,15 +9,15 @@ import {
 } from "@/services/autodm/accounts";
 import { isAutoDMConfigured } from "@/services/autodm/supabaseClient";
 
-const AutoDMContext = createContext(null);
+const AutoDMContext = createContext<any>(null);
 
-export function AutoDMProvider({ children }) {
+export function AutoDMProvider({ children }: any) {
   const { user, connectedAccounts } = useAuth();
-  const [accounts, setAccounts] = useState([]);
-  const [activeAccountId, setActiveAccountId] = useState(null);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [activeAccountId, setActiveAccountId] = useState<any>(null);
   const [statusLoading, setStatusLoading] = useState(true);
   const [hasSocialInstagramConnection, setHasSocialInstagramConnection] = useState(false);
-  const [socialInstagram, setSocialInstagram] = useState(null);
+  const [socialInstagram, setSocialInstagram] = useState<any>(null);
   const [syncingAccount, setSyncingAccount] = useState(false);
   const configured = isAutoDMConfigured();
 
@@ -47,8 +47,8 @@ export function AutoDMProvider({ children }) {
       setAccounts(status.autodmAccounts || []);
       setHasSocialInstagramConnection(Boolean(status.hasSocialInstagramConnection));
       setSocialInstagram(status.socialInstagram || null);
-      setActiveAccountId((current) => current || status.autodmAccounts?.[0]?.id || null);
-    } catch (error) {
+      setActiveAccountId((current: any) => current || status.autodmAccounts?.[0]?.id || null);
+    } catch (error: any) {
       console.error("[AutoDM] Failed to refresh status:", error);
       if (!silent) {
         toast.error(error.message || "Failed to load Auto DM status");
@@ -70,7 +70,7 @@ export function AutoDMProvider({ children }) {
       await refreshStatus({ silent: true });
       setActiveAccountId(account?.id || null);
       return account;
-    } catch (error) {
+    } catch (error: any) {
       toast.error(error.message || "Failed to sync Instagram account");
       throw error;
     } finally {
@@ -83,11 +83,11 @@ export function AutoDMProvider({ children }) {
     const status = await getAutoDMStatus();
     const data = status.autodmAccounts || [];
     setAccounts(data);
-    setActiveAccountId((current) => current || data[0]?.id || null);
+    setActiveAccountId((current: any) => current || data[0]?.id || null);
     return data;
   };
 
-  const disconnectAccount = async (accountId) => {
+  const disconnectAccount = async (accountId: any) => {
     if (!user?.userId) return;
     await disconnectInstagramAccount(accountId, user.userId);
     await refreshAccountsFromSupabase();

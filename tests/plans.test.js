@@ -11,8 +11,8 @@ describe('canonical QuickPost plans', () => {
 
   it('matches the documented prices', () => {
     expect(PLANS.free.prices).toEqual({ month: 0, year: 0 });
-    expect(PLANS.pro.prices).toEqual({ month: 999, year: 9588 });
-    expect(PLANS.enterprise.prices).toEqual({ month: 2999, year: 29988 });
+    expect(PLANS.slite.prices).toEqual({ month: 999, year: 9588 });
+    expect(PLANS.sgrowth.prices).toEqual({ month: 1999, year: 19988 });
   });
 
   it('matches account, automation, reply, contact, team, and history limits', () => {
@@ -26,13 +26,13 @@ describe('canonical QuickPost plans', () => {
       autodm_replies_per_month: 50,
       contacts: 100,
     });
-    expect(PLANS.pro.limits).toMatchObject({
+    expect(PLANS.slite.limits).toMatchObject({
       social_accounts: 10,
       team_members: 1,
       history_days: 90,
       autodm_accounts: 10,
     });
-    expect(PLANS.enterprise.limits).toMatchObject({
+    expect(PLANS.sgrowth.limits).toMatchObject({
       social_accounts: 30,
       team_members: 10,
       history_days: 365,
@@ -50,17 +50,17 @@ describe('canonical QuickPost plans', () => {
       api: false,
       priority_support: false,
     });
-    expect(PLANS.pro.features.priority_support).toBe(true);
-    expect(PLANS.pro.features.api).toBe(false);
-    expect(PLANS.enterprise.features.approval_workflow).toBe(true);
-    expect(PLANS.enterprise.features.api).toBe(true);
+    expect(PLANS.slite.features.priority_support).toBe(true);
+    expect(PLANS.slite.features.api).toBe(false);
+    expect(PLANS.sgrowth.features.approval_workflow).toBe(true);
+    expect(PLANS.sgrowth.features.api).toBe(true);
   });
 
   it('keeps plan objects immutable', () => {
     expect(PLAN_IDS).toEqual({
       FREE: 'free',
-      PRO: 'pro',
-      ENTERPRISE: 'enterprise',
+      SLITE: 'slite',
+      SGROWTH: 'sgrowth',
     });
     expect(Object.isFrozen(PLANS)).toBe(true);
     expect(Object.isFrozen(PLANS.free.limits)).toBe(true);

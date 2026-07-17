@@ -3,6 +3,8 @@ dist/
 coverage/
 
 .env
+.env.production
+.env.staging
 *.log
 .DS_Store
 supabase/.temp/
@@ -11,3 +13,4 @@ uploads/*.mov
 uploads/*.avi
 !uploads/.gitkeep
 .codex-history
+.graph-it/

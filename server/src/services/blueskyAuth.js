@@ -130,12 +130,14 @@ class BlueskyAuth {
             provider: 'bluesky',
             access_token: sessionData.accessJwt,
             refresh_token: sessionData.refreshJwt,
+            account_id: sessionData.did,
             bluesky_did: sessionData.did,
             bluesky_handle: sessionData.handle,
             username: sessionData.handle,
+            profile_data: sessionData.profile || null,
             updated_at: new Date().toISOString()
           },
-          { onConflict: 'user_id,provider' }
+          { onConflict: 'user_id,provider,account_id' }
         );
 
       if (error) throw error;

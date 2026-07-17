@@ -3,6 +3,18 @@
 // Drop this file into any of your 4-5 projects to manage all outbound emails.
 // ============================================================================
 
+let econnrefusedWarned = false;
+function logSdkError(action, error) {
+  if (error.cause?.code === 'ECONNREFUSED' || error.code === 'ECONNREFUSED') {
+    if (!econnrefusedWarned) {
+      console.warn(`[SupermailBox SDK] ${action} failed: Service not reachable (ECONNREFUSED) - muting further warnings`);
+      econnrefusedWarned = true;
+    }
+  } else {
+    console.error(`[SupermailBox SDK] ${action} failed:`, error);
+  }
+}
+
 export class SupermailboxClient {
   constructor(apiKey, baseUrl) {
     this.apiKey = apiKey || process.env.SUPERMAILBOX_API_KEY || 'supermailbox-secret-key-12345';
@@ -31,7 +43,7 @@ export class SupermailboxClient {
       });
       return await response.json();
     } catch (error) {
-      console.error('[SupermailBox SDK] Contact sync failed:', error);
+      logSdkError('Contact sync', error);
       return { success: false };
     }
   }
@@ -56,7 +68,7 @@ export class SupermailboxClient {
       });
       return await response.json();
     } catch (error) {
-      console.error('[SupermailBox SDK] Send email failed:', error);
+      logSdkError('Send email', error);
       return { success: false };
     }
   }
@@ -77,7 +89,7 @@ export class SupermailboxClient {
       });
       return await response.json();
     } catch (error) {
-      console.error('[SupermailBox SDK] Send broadcast failed:', error);
+      logSdkError('Send broadcast', error);
       return { success: false };
     }
   }

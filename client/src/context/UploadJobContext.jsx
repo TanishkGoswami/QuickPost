@@ -21,6 +21,7 @@ import React, {
   useMemo,
 } from 'react';
 import apiClient from '../utils/apiClient';
+import { useAuth } from './AuthContext';
 
 /**
  * @typedef {Object} UploadJob
@@ -41,6 +42,7 @@ const MAX_POLL_ERRORS  = 12; // give slow uploads/server cold starts enough time
 
 export function UploadJobProvider({ children }) {
   const [jobs, setJobs] = useState([]);
+  const { isAuthenticated } = useAuth();
 
   /**
    * Maps jobId → { intervalId, errorCount }
@@ -186,6 +188,8 @@ export function UploadJobProvider({ children }) {
 
   useEffect(() => {
     let mounted = true;
+    if (!isAuthenticated) return;
+
     const fetchInitialJobs = async () => {
       try {
         const { data } = await apiClient.get('/api/jobs');
@@ -209,7 +213,7 @@ export function UploadJobProvider({ children }) {
     return () => {
       mounted = false;
     };
-  }, [startPolling]);
+  }, [startPolling, isAuthenticated]);
 
   /* ─────────────────────────────────────────────────────────────
      PUBLIC API
