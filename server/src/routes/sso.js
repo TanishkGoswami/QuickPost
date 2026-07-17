@@ -66,8 +66,13 @@ function decodePayload(encoded) {
 function constantTimeEqual(a, b) {
   const bufA = Buffer.from(a, 'utf8');
   const bufB = Buffer.from(b, 'utf8');
-  if (bufA.length !== bufB.length) return false;
-  return crypto.timingSafeEqual(bufA, bufB);
+  
+  let mismatch = bufA.length !== bufB.length ? 1 : 0;
+  
+  // Use a dummy comparison buffer if lengths differ to ensure timingSafeEqual still runs
+  const compareBuf = mismatch ? bufA : bufB;
+  
+  return crypto.timingSafeEqual(bufA, compareBuf) && !mismatch;
 }
 
 // ── Route ─────────────────────────────────────────────────────────────────
