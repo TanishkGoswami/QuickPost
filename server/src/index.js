@@ -38,7 +38,8 @@ const allowedOrigins = [
   'https://getaipilot.com',
   'https://www.getaipilot.in',
   'https://www.getaipilot.com',
-  /https:\/\/.*\.ngrok-free\.dev$/
+  /https:\/\/.*\.ngrok-free\.dev$/,
+  /https:\/\/.*\.vercel\.app$/
 ];
 
 const corsOptions = {

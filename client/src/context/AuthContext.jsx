@@ -158,7 +158,10 @@ export function AuthProvider({ children }) {
         };
         setUser(userData);
         localStorage.setItem("quickpost_token", session.access_token);
-        await fetchUserProfile(session.user);
+        await Promise.all([
+          fetchUserProfile(session.user),
+          fetchConnectedAccounts()
+        ]);
       } else {
         setUser(null);
         localStorage.removeItem("quickpost_token");

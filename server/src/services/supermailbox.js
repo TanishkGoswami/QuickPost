@@ -3,9 +3,13 @@
 // Drop this file into any of your 4-5 projects to manage all outbound emails.
 // ============================================================================
 
+let econnrefusedWarned = false;
 function logSdkError(action, error) {
   if (error.cause?.code === 'ECONNREFUSED' || error.code === 'ECONNREFUSED') {
-    console.warn(`[SupermailBox SDK] ${action} failed: Service not reachable (ECONNREFUSED)`);
+    if (!econnrefusedWarned) {
+      console.warn(`[SupermailBox SDK] ${action} failed: Service not reachable (ECONNREFUSED) - muting further warnings`);
+      econnrefusedWarned = true;
+    }
   } else {
     console.error(`[SupermailBox SDK] ${action} failed:`, error);
   }
