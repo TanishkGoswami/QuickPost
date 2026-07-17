@@ -1230,18 +1230,20 @@ function Sidebar() {
                 )}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="qp-sidebar-account-name">
-                  {user.organization_name || user.name || "My Organization"}
+                <div className="qp-sidebar-account-name" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user.organization_name || user.name || "My Organization"}
+                  </span>
+                  {user.plan && (
+                    <span className={`qp-sidebar-plan-pill ${isFree(user.plan) ? "is-free" : "is-pro"}`}>
+                      {user.plan || "Free"}
+                    </span>
+                  )}
                 </div>
-                <div className="qp-sidebar-account-subtitle">
+                <div className="qp-sidebar-account-subtitle" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {user.plan || "Free"} plan - {countConnectedTargets(connectedAccounts)} channels
                 </div>
               </div>
-              {user.plan && (
-                <span className={`qp-sidebar-plan-pill ${isFree(user.plan) ? "is-free" : "is-pro"}`}>
-                  {user.plan || "Free"}
-                </span>
-              )}
               <ChevronDown size={14} className="qp-sidebar-account-chevron" />
             </button>
             <div className="qp-sidebar-account-panel">
