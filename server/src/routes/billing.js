@@ -12,42 +12,52 @@ router.get('/plans', async (_req, res) => {
   try {
     const socialPricing = await getSocialPricing();
     const starterPlan = socialPricing.find(p => p.plan_name === 'social_pilot_starter');
+    const growthPlan = socialPricing.find(p => p.plan_name === 'social_pilot_growth');
 
     const freePlan = JSON.parse(JSON.stringify(PLANS.free));
-    const proPlan = JSON.parse(JSON.stringify(PLANS.pro));
-    const enterprisePlan = JSON.parse(JSON.stringify(PLANS.enterprise));
+    const slitePlan = JSON.parse(JSON.stringify(PLANS.slite));
+    const sgrowthPlan = JSON.parse(JSON.stringify(PLANS.sgrowth));
 
     if (starterPlan) {
       const base = starterPlan.amount;
-      proPlan.prices = {
+      slitePlan.prices = {
         month: base / 100,
         quarterly: Math.round(base * 3 * 0.90) / 100 / 3,
         six_months: Math.round(base * 6 * 0.80) / 100 / 6,
         year: Math.round(base * 12 * 0.70) / 100 / 12
       };
     } else {
-      proPlan.prices = { month: null, quarterly: null, six_months: null, year: null };
+      slitePlan.prices = { month: null, quarterly: null, six_months: null, year: null };
     }
 
-    // No matching Enterprise plan in Hub, checkout disabled
-    enterprisePlan.prices = { month: null, year: null };
+    if (growthPlan) {
+      const base = growthPlan.amount;
+      sgrowthPlan.prices = {
+        month: base / 100,
+        quarterly: Math.round(base * 3 * 0.90) / 100 / 3,
+        six_months: Math.round(base * 6 * 0.80) / 100 / 6,
+        year: Math.round(base * 12 * 0.70) / 100 / 12
+      };
+    } else {
+      sgrowthPlan.prices = { month: null, quarterly: null, six_months: null, year: null };
+    }
 
     res.json({
       success: true,
-      plans: [freePlan, proPlan, enterprisePlan],
+      plans: [freePlan, slitePlan, sgrowthPlan],
     });
   } catch (error) {
     console.error('Failed to load dynamic pricing, failing closed:', error.message);
     const freePlan = JSON.parse(JSON.stringify(PLANS.free));
-    const proPlan = JSON.parse(JSON.stringify(PLANS.pro));
-    const enterprisePlan = JSON.parse(JSON.stringify(PLANS.enterprise));
+    const slitePlan = JSON.parse(JSON.stringify(PLANS.slite));
+    const sgrowthPlan = JSON.parse(JSON.stringify(PLANS.sgrowth));
 
-    proPlan.prices = { month: null, quarterly: null, six_months: null, year: null };
-    enterprisePlan.prices = { month: null, quarterly: null, six_months: null, year: null };
+    slitePlan.prices = { month: null, quarterly: null, six_months: null, year: null };
+    sgrowthPlan.prices = { month: null, quarterly: null, six_months: null, year: null };
 
     res.json({
       success: true,
-      plans: [freePlan, proPlan, enterprisePlan],
+      plans: [freePlan, slitePlan, sgrowthPlan],
     });
   }
 });

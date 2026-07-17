@@ -9,17 +9,21 @@ import {
 
 const HUB_PLAN_MAPPING = {
   'free_trial': 'free',
-  'social_pilot_starter': 'pro',
-  'social_pilot_quarterly': 'pro',
-  'social_pilot_half_yearly': 'pro',
-  'all_in_one_bundle_monthly': 'pro',
-  'all_in_one_bundle_quarterly': 'pro',
-  'all_in_one_bundle_half_yearly': 'pro'
+  'social_pilot_starter': 'slite',
+  'social_pilot_growth': 'sgrowth',
+  'social_pilot_pro': 'sgrowth',
+  'social_pilot_quarterly': 'slite',
+  'social_pilot_half_yearly': 'slite',
+  'all_in_one_bundle_monthly': 'sgrowth',
+  'all_in_one_bundle_quarterly': 'sgrowth',
+  'all_in_one_bundle_half_yearly': 'sgrowth'
 };
 
 const HUB_PLAN_DURATION = {
   'free_trial': 'monthly',
   'social_pilot_starter': 'monthly',
+  'social_pilot_growth': 'monthly',
+  'social_pilot_pro': 'monthly',
   'social_pilot_quarterly': 'quarterly',
   'social_pilot_half_yearly': 'six_months',
   'all_in_one_bundle_monthly': 'monthly',
@@ -74,16 +78,42 @@ export async function getEntitlements(userId, email = null, token = null) {
         const expiresAt = hubSubscription.expires_at;
         const isNotExpired = !expiresAt || new Date(expiresAt) > new Date();
         if (isNotExpired) {
-          // Map hub plan to QuickPost plans: free, pro, enterprise
-          const p = String(hubSubscription.plan_id || hubSubscription.plan || '').toLowerCase().trim();
-          const mappedPlanId = HUB_PLAN_MAPPING[p] || 'free';
+          // Map hub plan to QuickPost plans. Handle case where plan_id is a JSON array string.
+          let planList = [];
+          const rawPlanId = hubSubscription.plan_id || hubSubscription.plan || '';
+          try {
+            const parsed = JSON.parse(rawPlanId);
+            if (Array.isArray(parsed)) {
+              planList = parsed;
+            } else {
+              planList = [parsed];
+            }
+          } catch (e) {
+            planList = [rawPlanId];
+          }
+
+          let mappedPlanId = 'free';
+          let matchedHubPlan = 'free';
+
+          for (const item of planList) {
+            const p = String(item || '').toLowerCase().trim();
+            if (HUB_PLAN_MAPPING[p]) {
+              if (HUB_PLAN_MAPPING[p] === 'sgrowth') {
+                mappedPlanId = 'sgrowth';
+                matchedHubPlan = p;
+                break; // Highest tier, stop searching
+              }
+              mappedPlanId = HUB_PLAN_MAPPING[p];
+              matchedHubPlan = p;
+            }
+          }
 
           if (mappedPlanId !== 'free') {
             subscriptions.push({
               plan_id: mappedPlanId,
               source: 'hub',
               status: 'active',
-              billing_interval: HUB_PLAN_DURATION[p] || 'monthly',
+              billing_interval: HUB_PLAN_DURATION[matchedHubPlan] || 'monthly',
               current_period_end: expiresAt || null,
               cancel_at_period_end: false,
               grace_period_ends_at: null,

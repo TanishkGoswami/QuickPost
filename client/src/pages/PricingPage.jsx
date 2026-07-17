@@ -164,26 +164,26 @@ export default function PricingPage() {
                 <tr>
                   <th style={{ padding: '16px 24px', borderBottom: '1px solid rgba(20,20,19,0.1)', fontSize: 13, fontWeight: 600, color: 'var(--slate)' }}>Features</th>
                   <th style={{ padding: '16px 24px', borderBottom: '1px solid rgba(20,20,19,0.1)', fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>Free</th>
-                  <th style={{ padding: '16px 24px', borderBottom: '1px solid rgba(20,20,19,0.1)', fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>Pro</th>
-                  <th style={{ padding: '16px 24px', borderBottom: '1px solid rgba(20,20,19,0.1)', fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>Enterprise</th>
+                  <th style={{ padding: '16px 24px', borderBottom: '1px solid rgba(20,20,19,0.1)', fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>Starter</th>
+                  <th style={{ padding: '16px 24px', borderBottom: '1px solid rgba(20,20,19,0.1)', fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>Growth</th>
                 </tr>
               </thead>
               <tbody>
                 {[
                   { section: 'Publishing' },
-                  { feature: 'Connected Social Accounts', free: '3', pro: '10', ent: 'Unlimited' },
-                  { feature: 'Posts per month', free: '10 / channel', pro: 'Unlimited', ent: 'Unlimited' },
-                  { feature: 'Automated Publishing', free: true, pro: true, ent: true },
-                  { feature: 'Bulk Upload', free: false, pro: true, ent: true },
-                  { feature: 'Custom Timezones', free: false, pro: true, ent: true },
+                  { feature: 'Connected Social Accounts', free: '3', slite: '10', sgrowth: 'Unlimited' },
+                  { feature: 'Posts per month', free: '10 / channel', slite: 'Unlimited', sgrowth: 'Unlimited' },
+                  { feature: 'Automated Publishing', free: true, slite: true, sgrowth: true },
+                  { feature: 'Bulk Upload', free: false, slite: true, sgrowth: true },
+                  { feature: 'Custom Timezones', free: false, slite: true, sgrowth: true },
                   { section: 'Analytics' },
-                  { feature: 'Basic Reporting', free: true, pro: true, ent: true },
-                  { feature: 'Engagement Metrics', free: false, pro: true, ent: true },
-                  { feature: 'Custom Export (CSV/PDF)', free: false, pro: false, ent: true },
+                  { feature: 'Basic Reporting', free: true, slite: true, sgrowth: true },
+                  { feature: 'Engagement Metrics', free: false, slite: true, sgrowth: true },
+                  { feature: 'Custom Export (CSV/PDF)', free: false, slite: false, sgrowth: true },
                   { section: 'Team & Support' },
-                  { feature: 'Team Members', free: '1', pro: 'Up to 5', ent: 'Unlimited' },
-                  { feature: 'Approval Workflows', free: false, pro: false, ent: true },
-                  { feature: 'Support Level', free: 'Community', pro: 'Priority Email', ent: '24/7 Dedicated' },
+                  { feature: 'Team Members', free: '1', slite: 'Up to 5', sgrowth: 'Unlimited' },
+                  { feature: 'Approval Workflows', free: false, slite: false, sgrowth: true },
+                  { feature: 'Support Level', free: 'Community', slite: 'Priority Email', sgrowth: '24/7 Dedicated' },
                 ].map((row, i) => (
                   row.section ? (
                     <tr key={`sec-${i}`}>
@@ -198,10 +198,10 @@ export default function PricingPage() {
                         {row.free === true ? <Check size={18} color="var(--ink)" /> : row.free === false ? <span style={{ color: 'rgba(20,20,19,0.2)' }}>—</span> : row.free}
                       </td>
                       <td style={{ padding: '16px 24px', borderBottom: '1px solid rgba(20,20,19,0.05)', fontSize: 14, color: 'var(--slate)' }}>
-                        {row.pro === true ? <Check size={18} color="var(--ink)" /> : row.pro === false ? <span style={{ color: 'rgba(20,20,19,0.2)' }}>—</span> : row.pro}
+                        {row.slite === true ? <Check size={18} color="var(--ink)" /> : row.slite === false ? <span style={{ color: 'rgba(20,20,19,0.2)' }}>—</span> : row.slite}
                       </td>
                       <td style={{ padding: '16px 24px', borderBottom: '1px solid rgba(20,20,19,0.05)', fontSize: 14, color: 'var(--slate)' }}>
-                        {row.ent === true ? <Check size={18} color="var(--ink)" /> : row.ent === false ? <span style={{ color: 'rgba(20,20,19,0.2)' }}>—</span> : row.ent}
+                        {row.sgrowth === true ? <Check size={18} color="var(--ink)" /> : row.sgrowth === false ? <span style={{ color: 'rgba(20,20,19,0.2)' }}>—</span> : row.sgrowth}
                       </td>
                     </tr>
                   )
