@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { autodmSupabase, startAutoDMInstagramOAuth } from '../../services/autodm/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
-import { Loader2, CheckCircle, Shield, Users, Instagram, Send } from 'lucide-react';
+import { Loader2, CheckCircle, Shield, Instagram, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function ConnectInstagramPage() {
@@ -101,157 +101,244 @@ export default function ConnectInstagramPage() {
     }
   };
 
+  const trustItems = [
+    'Official Meta OAuth login',
+    'Business and Creator accounts supported',
+    'You can disconnect access anytime',
+  ];
+
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: '#f7f7f7',
-      padding: 20,
-      color: '#1a1a1a',
-      fontFamily: 'var(--font, Inter, sans-serif)'
-    }}>
-      <div style={{ width: '100%', maxWidth: 440 }}>
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 16 }}>
-            <div style={{
-              width: 44,
-              height: 40,
-              background: '#6366f1',
-              color: 'white',
-              borderRadius: 8,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Send size={20} />
-            </div>
-            <span style={{ fontSize: 24, fontWeight: 700, color: '#111827' }}>GAP AutoDM</span>
+    <main className="autodm-connect">
+      <style>{`
+        .autodm-connect {
+          min-height: 100vh;
+          display: grid;
+          place-items: center;
+          padding: 32px 18px;
+          background: var(--canvas, #f5f1ec);
+          color: var(--ink, #111);
+          font-family: var(--font, Inter, sans-serif);
+        }
+        .autodm-panel {
+          width: 100%;
+          max-width: 520px;
+        }
+        .autodm-heading {
+          margin-bottom: 20px;
+          text-align: center;
+        }
+        .autodm-brand {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 18px;
+          color: var(--ink, #111);
+          font-size: 23px;
+          font-weight: 700;
+        }
+        .autodm-mark {
+          width: 42px;
+          height: 42px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 8px;
+          background: var(--ink, #111);
+          color: #fff;
+        }
+        .autodm-heading h1 {
+          margin: 0 0 8px;
+          color: var(--ink, #111);
+          font-size: clamp(24px, 4vw, 31px);
+          font-weight: 700;
+          line-height: 1.1;
+          letter-spacing: -0.01em;
+        }
+        .autodm-heading p,
+        .autodm-card p,
+        .autodm-note {
+          color: var(--slate, #626260);
+        }
+        .autodm-card {
+          margin-bottom: 12px;
+          padding: 20px;
+          border: 1px solid var(--dust, #d3cec6);
+          border-radius: 8px;
+          background: #fff;
+          box-shadow: none;
+        }
+        .autodm-card-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 12px;
+          color: var(--ink, #111);
+          font-size: 15px;
+          font-weight: 650;
+        }
+        .autodm-card-header span:first-child {
+          width: 30px;
+          height: 30px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          background: #fff4e8;
+          color: var(--arc, #ff5600);
+        }
+        .autodm-card p {
+          margin: 0 0 16px;
+          font-size: 13px;
+          line-height: 1.5;
+        }
+        .autodm-checks {
+          display: grid;
+          gap: 8px;
+        }
+        .autodm-checks div {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: var(--ink, #111);
+          font-size: 13px;
+        }
+        .autodm-checks svg {
+          color: #12823b;
+          flex-shrink: 0;
+        }
+        .autodm-actions {
+          display: grid;
+          gap: 12px;
+        }
+        .autodm-btn {
+          min-height: 46px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          border-radius: 8px;
+          border: 1px solid var(--ink, #111);
+          background: var(--ink, #111);
+          color: #fff;
+          font-size: 14px;
+          font-weight: 650;
+          cursor: pointer;
+        }
+        .autodm-btn:disabled {
+          cursor: not-allowed;
+          opacity: 0.65;
+        }
+        .autodm-btn.secondary {
+          background: #fff;
+          color: var(--ink, #111);
+        }
+        .autodm-btn.danger {
+          border-color: #e4b2aa;
+          background: #fff8f6;
+          color: #b62216;
+        }
+        .autodm-connected-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 14px;
+        }
+        .autodm-connected-head strong {
+          display: block;
+          margin-bottom: 3px;
+          font-size: 14px;
+        }
+        .autodm-note {
+          margin: 12px 0 0;
+          font-size: 12px;
+          text-align: center;
+        }
+        .autodm-loading {
+          display: flex;
+          justify-content: center;
+          padding: 22px 0;
+          color: var(--arc, #ff5600);
+        }
+        .spin {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0); }
+          to { transform: rotate(360deg); }
+        }
+        @media (max-width: 520px) {
+          .autodm-connected-head {
+            align-items: stretch;
+            flex-direction: column;
+          }
+        }
+      `}</style>
+      <div className="autodm-panel">
+        <header className="autodm-heading">
+          <div className="autodm-brand">
+            <span className="autodm-mark"><Send size={20} /></span>
+            <span>GAP AutoDM</span>
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#111827', margin: '0 0 6px' }}>Connect Instagram Account</h1>
-          <p style={{ fontSize: 14, color: '#6b7280', margin: 0 }}>Link your professional account to start automations.</p>
-        </div>
+          <h1>Connect Instagram Account</h1>
+          <p>Link a professional Instagram account to start official Meta automations.</p>
+        </header>
 
-        {/* Trust Card */}
-        <div style={{
-          background: 'white',
-          borderRadius: 16,
-          padding: 24,
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          marginBottom: 24
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#6366f1', fontWeight: 600, fontSize: 15, marginBottom: 12 }}>
-            <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Shield size={15} />
-            </div>
-            <span>Meta-Verified Business Partner</span>
+        <section className="autodm-card">
+          <div className="autodm-card-header">
+            <span><Shield size={15} /></span>
+            <span>Official Meta connection</span>
           </div>
-          <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 16px', lineHeight: 1.5 }}>
-            We only use official Instagram APIs. Your Instagram account is secure, and you stay in full control.
+          <p>
+            QuickPost uses Instagram's official OAuth and API access. You stay in control of the account connection.
           </p>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151' }}>
-              <CheckCircle size={14} color="#22c55e" />
-              <span>Official Meta OAuth login</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151' }}>
-              <CheckCircle size={14} color="#22c55e" />
-              <span>Safe and Secure</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151' }}>
-              <CheckCircle size={14} color="#22c55e" />
-              <span>Used by 1000+ creators</span>
-            </div>
+          <div className="autodm-checks">
+            {trustItems.map((item) => (
+              <div key={item}>
+                <CheckCircle size={14} />
+                <span>{item}</span>
+              </div>
+            ))}
           </div>
-        </div>
+        </section>
 
-        {/* Connect Action */}
         {checkingAccounts ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
-            <Loader2 style={{ animation: 'spin 1s linear infinite' }} color="#6366f1" size={24} />
+          <div className="autodm-loading">
+            <Loader2 className="spin" size={24} />
           </div>
         ) : instagramAccounts.length > 0 ? (
-          <div style={{
-            background: 'white',
-            borderRadius: 16,
-            padding: 24,
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+          <section className="autodm-card">
+            <div className="autodm-connected-head">
               <div>
-                <p style={{ fontSize: 14, fontWeight: 600, color: '#111827', margin: '0 0 2px' }}>Instagram connected</p>
-                <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>
-                  Connected as @{activeInstagramAccount?.username || instagramAccounts[0]?.username}
-                </p>
+                <strong>Instagram connected</strong>
+                <p>Connected as @{activeInstagramAccount?.username || instagramAccounts[0]?.username}</p>
               </div>
-              <button 
-                onClick={() => navigate('/dashboard/auto-dm')} 
-                style={{
-                  padding: '8px 16px', borderRadius: 8, border: 'none',
-                  background: '#6366f1', color: 'white', fontSize: 13,
-                  fontWeight: 600, cursor: 'pointer'
-                }}
-              >
+              <button type="button" className="autodm-btn secondary" onClick={() => navigate('/dashboard/auto-dm')}>
                 Go to Dashboard
               </button>
             </div>
-            <button
-              onClick={handleDisconnect}
-              disabled={isDisconnecting}
-              style={{
-                width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #fecaca',
-                background: '#fef2f2', color: '#dc2626', fontSize: 13,
-                fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', gap: 6
-              }}
-            >
-              {isDisconnecting && <Loader2 style={{ animation: 'spin 1s linear infinite' }} size={14} />}
+            <button type="button" className="autodm-btn danger" onClick={handleDisconnect} disabled={isDisconnecting}>
+              {isDisconnecting && <Loader2 className="spin" size={14} />}
               Disconnect Instagram
             </button>
-            <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 12, textAlign: 'center' }}>
-              To connect a different Instagram account, disconnect this one first.
-            </p>
-          </div>
+            <p className="autodm-note">To connect a different Instagram account, disconnect this one first.</p>
+          </section>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <button
-              onClick={handleConnect}
-              disabled={isLoading}
-              style={{
-                width: '100%', padding: '14px', borderRadius: 12, border: 'none',
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white',
-                fontSize: 16, fontWeight: 600, cursor: isLoading ? 'not-allowed' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                boxShadow: '0 4px 12px rgba(99,102,241,0.2)',
-                opacity: isLoading ? 0.7 : 1
-              }}
-            >
-              {isLoading ? (
-                <Loader2 style={{ animation: 'spin 1s linear infinite' }} size={18} />
-              ) : (
-                <Instagram size={18} />
-              )}
+          <div className="autodm-actions">
+            <button type="button" className="autodm-btn" onClick={handleConnect} disabled={isLoading}>
+              {isLoading ? <Loader2 className="spin" size={18} /> : <Instagram size={18} />}
               Connect Instagram Account
             </button>
-
-            <div style={{ padding: 16, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 12 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: '#374151', margin: '0 0 4px' }}>
-                Supports Business & Creator Accounts
-              </p>
-              <p style={{ fontSize: 11, color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
-                Log in directly with Instagram to connect your Business or Creator account.
-              </p>
-            </div>
+            <section className="autodm-card">
+              <div className="autodm-card-header">
+                <span><Instagram size={15} /></span>
+                <span>Business and Creator accounts</span>
+              </div>
+              <p>Log in directly with Instagram and choose the professional account you want to connect.</p>
+            </section>
           </div>
         )}
-
-        <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
       </div>
-    </div>
+    </main>
   );
 }

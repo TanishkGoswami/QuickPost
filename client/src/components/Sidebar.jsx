@@ -23,6 +23,7 @@ import {
   LogOut,
   HelpCircle,
   CreditCard,
+  LineChart,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
 import logo from "/logo.png";
@@ -693,8 +694,13 @@ function Sidebar() {
           {[
             {
               to: "/dashboard",
-              label: "All Channels",
+              label: "Dashboard",
               icon: <LayoutDashboard size={16} />,
+            },
+            {
+              to: "/dashboard/analytics",
+              label: "All Channels",
+              icon: <LineChart size={16} />,
             },
             {
               to: "/dashboard/queue",

@@ -28,7 +28,8 @@ const LandingPage    = lazy(() => import('./pages/LandingPage'));
 const PricingPage    = lazy(() => import('./pages/PricingPage'));
 const PrivacyPolicy  = lazy(() => import('./pages/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('./pages/TermsOfService'));
-const Dashboard      = lazy(() => import('./components/Dashboard'));
+const DashboardOverview = lazy(() => import('./components/DashboardOverview'));
+const Analytics      = lazy(() => import('./components/Analytics'));
 const BroadcastForm  = lazy(() => import('./components/BroadcastForm'));
 const History        = lazy(() => import('./pages/History'));
 const ScheduledQueue = lazy(() => import('./pages/ScheduledQueue'));
@@ -108,7 +109,8 @@ function AppContent() {
 
       // Protected dashboard
         <Route path="/dashboard" element={<DashboardLayout />}>
-        <Route index           element={<Dashboard />} />
+        <Route index           element={<DashboardOverview />} />
+        <Route path="analytics" element={<Analytics />} />
         <Route path="compose"  element={<BroadcastForm />} />
         <Route path="history"  element={<History />} />
         <Route path="queue"    element={<ScheduledQueue />} />
