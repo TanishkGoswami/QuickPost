@@ -112,68 +112,16 @@ export function AuthProvider({ children }) {
       } : null);
     } catch (err) {
       console.error("Error fetching user profile:", err);
+      setUser(buildAuthenticatedUser(sessionUser, FREE_ENTITLEMENTS));
+      return FREE_ENTITLEMENTS;
     } finally {
       setProfileLoading(false);
     }
   }, []);
 
-      /*
-       * Disabled legacy migration code retained temporarily for reference.
-       * Hub product labels must never be used as QuickPost plan IDs.
-       *
-      // Priority: hub_subscriptions > local users table > auth user_metadata
-      let resolvedPlan   = hasStandalonePaidPlan
-        ? entitlements.plan.name
-        : hubSub?.plan
-        || localUser?.plan
-        || sessionUser.user_metadata?.plan   // ← set by verify-subscription immediately after payment
-        || 'Free';
-      let resolvedStatus = hasStandalonePaidPlan
-        ? entitlements.subscription.status
-        : hubSub?.subscription_status
-        || localUser?.subscription_status
-        || sessionUser.user_metadata?.subscription_status
-        || 'active';
-
-      // Normalise — if somehow "Pro"/"Enterprise" slipped through from old code, map to new names
-      if (!hasStandalonePaidPlan) {
-        const p = resolvedPlan.toLowerCase();
-        if (p.includes('monthly') || p.includes('core') || p === 'all_in_one_bundle_monthly') resolvedPlan = 'GAP Core';
-        else if (p.includes('quarterly') || p.includes('pro') || p === 'all_in_one_bundle_quarterly') resolvedPlan = 'GAP Pro';
-        else if (p.includes('half_yearly') || p.includes('max') || p === 'all_in_one_bundle_half_yearly') resolvedPlan = 'GAP Max';
-        else if (p.includes('all_in_one') || p.includes('ultimate') || p.includes('enterprise')) resolvedPlan = 'GAP Ultimate Ecosystem';
-        else if (p === 'pro') resolvedPlan = 'Social Pilot';
-      }
-
-      if (resolvedPlan !== 'Free') {
-        console.log('✅ [AUTH] Plan resolved:', resolvedPlan);
-
-        // Write back to hub_subscriptions if not already there
-        if (!hubSub && sessionUser.email) {
-          const { error: hubUpsertErr } = await supabase
-            .from('hub_subscriptions')
-            .upsert({ email: sessionUser.email, plan: resolvedPlan, subscription_status: resolvedStatus, updated_at: new Date().toISOString(), synced_at: new Date().toISOString() }, { onConflict: 'email' });
-          if (hubUpsertErr) console.warn('[AUTH] hub_subscriptions upsert skipped (table may not exist in this project):', hubUpsertErr.message);
-        }
-      }
-
-      setUser(prev => prev ? {
-        ...prev,
-        plan: resolvedPlan,
-        subscription_status: resolvedStatus,
-        entitlements,
-      } : null);
-      */
-
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-      setUser(buildAuthenticatedUser(sessionUser, FREE_ENTITLEMENTS));
-      return FREE_ENTITLEMENTS;
-    }
-  }, []);
-
 
   useEffect(() => {
+    let isMounted = true;
     // ── Stale Session Prevention ─────────────────────────────────────────────
     // If the Supabase URL has changed (e.g. unified to a new instance), clear 
     // old local storage auth keys to prevent "Invalid Refresh Token" loops.
@@ -194,8 +142,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem("last_supabase_url", currentSupabaseUrl);
     }
 
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const hydrateSession = async (session) => {
       setSession(session);
       if (session) {
         const userData = {
@@ -211,12 +158,20 @@ export function AuthProvider({ children }) {
         };
         setUser(userData);
         localStorage.setItem("quickpost_token", session.access_token);
-        fetchUserProfile(session.user);
+        await fetchUserProfile(session.user);
       } else {
         setUser(null);
         localStorage.removeItem("quickpost_token");
         setProfileLoading(false);
+        setConnectedAccounts(EMPTY_CONNECTED_ACCOUNTS);
       }
+    };
+
+    // Check active sessions and sets the user
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      hydrateSession(session).finally(() => {
+        if (isMounted) setLoading(false);
+      });
     });
 
     // Listen for changes on auth state (logged in, signed out, etc.)
@@ -231,23 +186,6 @@ export function AuthProvider({ children }) {
         if (_event === "SIGNED_IN" || _event === "USER_UPDATED") {
           syncUserToHub(session.user);
         }
-      } else {
-        setUser(null);
-        localStorage.removeItem("quickpost_token");
-        setProfileLoading(false);
-        setConnectedAccounts({
-          instagram: { connected: false },
-          youtube: { connected: false },
-          pinterest: { connected: false },
-          facebook: { connected: false },
-          bluesky: { connected: false },
-          linkedin: { connected: false },
-          mastodon: { connected: false },
-          threads: { connected: false },
-          x: { connected: false },
-          reddit: { connected: false },
-          googleBusiness: { connected: false },
-        });
       }
     });
 
