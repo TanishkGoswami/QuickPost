@@ -28,6 +28,8 @@ import {
   RectangleVertical,
   Lock,
   Upload,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { Reorder } from "framer-motion";
 
@@ -1447,6 +1449,7 @@ function ComposerModal({
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [mobileActiveTab, setMobileActiveTab] = useState("compose");
   const [autoFixMsg, setAutoFixMsg] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const isMobile = windowWidth < 768;
 
   useEffect(() => {
@@ -1988,6 +1991,8 @@ function ComposerModal({
   if (!isOpen) return null;
 
   const publishDisabled = loading || hasBlockingError;
+  const shellFullscreen = isFullscreen || isMobile;
+  const previewWidth = isFullscreen ? 360 : 300;
 
   const MOBILE_TABS = [
     { id: "compose", label: "Compose" },
@@ -2002,13 +2007,20 @@ function ComposerModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[2px]"
+        className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 backdrop-blur-[2px]"
+        style={{ padding: shellFullscreen ? 0 : 16 }}
       >
         <motion.div
+          layout
           initial={{ opacity: 0, scale: 0.94, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.94, y: 20 }}
-          transition={{ type: "spring", stiffness: 300, damping: 28 }}
+          transition={{
+            type: "spring",
+            stiffness: 300,
+            damping: 28,
+            layout: { duration: 0.22, ease: [0.22, 1, 0.36, 1] },
+          }}
           onDragOver={(e) => {
             e.preventDefault();
             setIsGlobalDragging(true);
@@ -2018,15 +2030,15 @@ function ComposerModal({
           style={{
             position: "relative",
             width: "100%",
-            maxWidth: isMobile ? "100%" : 960,
-            height: isMobile ? "100%" : "90vh",
-            background: "var(--canvas,#fff)",
-            borderRadius: isMobile ? 0 : "var(--r-hero,20px)",
+            maxWidth: shellFullscreen ? "100%" : 960,
+            height: shellFullscreen ? "100vh" : "90vh",
+            background: isFullscreen ? "#f7f6f3" : "var(--canvas,#fff)",
+            borderRadius: shellFullscreen ? 0 : "var(--r-hero,20px)",
             display: "flex",
             flexDirection: "column",
             overflow: "hidden",
-            boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
-            border: isMobile ? "none" : "1px solid rgba(20,20,19,0.08)",
+            boxShadow: shellFullscreen ? "none" : "0 25px 50px -12px rgba(0,0,0,0.25)",
+            border: shellFullscreen ? "none" : "1px solid rgba(20,20,19,0.08)",
           }}
         >
           {/* Global Drag Overlay */}
@@ -2090,13 +2102,14 @@ function ComposerModal({
           {/* ── HEADER ── */}
           <div
             style={{
-              padding: "16px 22px",
+              padding: isFullscreen ? "14px 24px" : "16px 22px",
               borderBottom: "1px solid rgba(20,20,19,0.08)",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               background: "white",
               flexShrink: 0,
+              minHeight: isFullscreen ? 60 : "auto",
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -2131,6 +2144,30 @@ function ComposerModal({
               </motion.div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {!isMobile && (
+                <motion.button
+                  type="button"
+                  onClick={() => setIsFullscreen((value) => !value)}
+                  aria-label={isFullscreen ? "Exit fullscreen composer" : "Open fullscreen composer"}
+                  title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                  whileHover={{ scale: 1.05, background: "rgba(20,20,19,0.06)" }}
+                  whileTap={{ scale: 0.95 }}
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: "50%",
+                    border: isFullscreen ? "1px solid var(--ink,#141413)" : "1px solid rgba(20,20,19,0.1)",
+                    background: isFullscreen ? "white" : "transparent",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: isFullscreen ? "var(--ink,#141413)" : "var(--slate,#8a8a82)",
+                  }}
+                >
+                  {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                </motion.button>
+              )}
               <motion.button
                 type="button"
                 onClick={handleClose}
@@ -2229,14 +2266,19 @@ function ComposerModal({
               display: "flex",
               flex: 1,
               overflow: "hidden",
-              height: isMobile ? "calc(100vh - 105px)" : "calc(90vh - 115px)",
+              background: isFullscreen ? "#f7f6f3" : "transparent",
+              height: isMobile
+                ? "calc(100vh - 105px)"
+                : isFullscreen
+                  ? "calc(100vh - 115px)"
+                  : "calc(90vh - 115px)",
             }}
           >
             {/* ── PREVIEW PANEL (right column on desktop, tab on mobile) ── */}
             {(!isMobile || mobileActiveTab === "preview") && (
               <div
                 style={{
-                  width: isMobile ? "100%" : 300,
+                  width: isMobile ? "100%" : previewWidth,
                   flexShrink: 0,
                   borderLeft: isMobile
                     ? "none"
@@ -2244,13 +2286,13 @@ function ComposerModal({
                   display: "flex",
                   flexDirection: "column",
                   overflow: "hidden",
-                  background: "var(--canvas-lifted,#fafaf9)",
+                  background: "#fff",
                   order: 1,
                 }}
               >
                 <div
                   style={{
-                    padding: "11px 14px",
+                    padding: isFullscreen ? "14px 18px" : "11px 14px",
                     borderBottom: "1px solid rgba(20,20,19,0.08)",
                     flexShrink: 0,
                   }}
@@ -2290,10 +2332,14 @@ function ComposerModal({
                 style={{
                   flex: 1,
                   overflowY: "auto",
-                  padding: "24px 28px",
+                  minWidth: 0,
+                  maxWidth: isFullscreen ? 960 : "none",
+                  margin: isFullscreen ? "0 auto" : 0,
+                  padding: isFullscreen ? "24px 28px 36px" : "24px 28px",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 24,
+                  gap: isFullscreen ? 18 : 24,
+                  boxSizing: "border-box",
                   scrollbarWidth: "none",
                 }}
               >
@@ -3052,16 +3098,17 @@ function ComposerModal({
           <div
             style={{
               borderTop: "1px solid rgba(20,20,19,0.08)",
-              padding: isMobile ? "12px 16px" : "14px 22px",
-              background: "var(--canvas-lifted,#fafaf9)",
+              padding: isMobile ? "12px 16px" : isFullscreen ? "12px 24px" : "14px 22px",
+              background: "white",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               flexShrink: 0,
-              borderBottomLeftRadius: isMobile ? 0 : "var(--r-hero,20px)",
-              borderBottomRightRadius: isMobile ? 0 : "var(--r-hero,20px)",
+              borderBottomLeftRadius: shellFullscreen ? 0 : "var(--r-hero,20px)",
+              borderBottomRightRadius: shellFullscreen ? 0 : "var(--r-hero,20px)",
               gap: isMobile ? 8 : 16,
               flexWrap: isMobile ? "wrap" : "nowrap",
+              boxShadow: isFullscreen ? "0 -2px 8px rgba(20,20,19,0.04)" : "none",
             }}
           >
             <motion.button
