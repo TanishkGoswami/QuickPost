@@ -607,30 +607,11 @@ export async function importInstagramAccountToAutoDM(user, targetInstagramAccoun
     updated_at: new Date().toISOString(),
   };
 
-  const { data: existing } = await autoDMSupabase
+  const { data, error } = await autoDMSupabase
     .from('instagram_accounts')
-    .select('id')
-    .eq('instagram_user_id', upsertPayload.instagram_user_id)
-    .in('user_id', userIds)
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  let data, error;
-  if (existing) {
-    ({ data, error } = await autoDMSupabase
-      .from('instagram_accounts')
-      .update(upsertPayload)
-      .eq('id', existing.id)
-      .select('*')
-      .single());
-  } else {
-    ({ data, error } = await autoDMSupabase
-      .from('instagram_accounts')
-      .insert(upsertPayload)
-      .select('*')
-      .single());
-  }
+    .upsert(upsertPayload, { onConflict: 'user_id,instagram_business_account_id' })
+    .select('*')
+    .single();
 
   if (error) {
     throw new Error(`Failed to import Instagram account into AutoDM: ${error.message}`);
