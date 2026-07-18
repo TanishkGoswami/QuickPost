@@ -2,8 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { autodmSupabase, startAutoDMInstagramOAuth } from '../../services/autodm/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
-import { Loader2, CheckCircle, Shield, Instagram, Send } from 'lucide-react';
+import { Loader2, CheckCircle2, Lock, ArrowRight, Instagram } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+
+import FacebookSetupModal from '../../components/FacebookSetupModal';
+import LinkedInConnectModal from '../../components/LinkedInConnectModal';
+import MastodonConnectModal from '../../components/MastodonConnectModal';
+import BlueskyConnectModal from '../../components/BlueskyConnectModal';
+import PinterestConnectModal from '../../components/PinterestConnectModal';
 
 export default function ConnectInstagramPage() {
   const navigate = useNavigate();
@@ -15,6 +22,13 @@ export default function ConnectInstagramPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [checkingAccounts, setCheckingAccounts] = useState(true);
+
+  // Modal States
+  const [showFacebookModal, setShowFacebookModal] = useState(false);
+  const [showLinkedInModal, setShowLinkedInModal] = useState(false);
+  const [showMastodonModal, setShowMastodonModal] = useState(false);
+  const [showBlueskyModal, setShowBlueskyModal] = useState(false);
+  const [showPinterestModal, setShowPinterestModal] = useState(false);
 
   const loadAccounts = async () => {
     if (!user?.userId) return;
@@ -55,9 +69,9 @@ export default function ConnectInstagramPage() {
     }
   }, [location.search]);
 
-  const handleConnect = async () => {
+  const handleConnectInstagram = async () => {
     if (instagramAccounts.length > 0) {
-      toast.error('Instagram already connected. Disconnect first to connect a different account.');
+      toast.error('Instagram already connected. Disconnect first.');
       return;
     }
 
@@ -101,244 +115,277 @@ export default function ConnectInstagramPage() {
     }
   };
 
-  const trustItems = [
-    'Official Meta OAuth login',
-    'Business and Creator accounts supported',
-    'You can disconnect access anytime',
+  const handleRedirectConnect = (endpoint) => {
+    const token = localStorage.getItem("quickpost_token");
+    if (!token) {
+      toast.error("Authentication token missing. Please log in again.");
+      return;
+    }
+    const apiUrl = import.meta.env.VITE_API_URL || "";
+    window.location.href = `${apiUrl}/api/auth/${endpoint}?token=${token}`;
+  };
+
+  const socialPlatforms = [
+    { id: 'facebook', name: 'Facebook', description: 'Pages & Groups', icon: '/icons/facebook-round-color-icon.svg', onConnect: () => setShowFacebookModal(true) },
+    { id: 'linkedin', name: 'LinkedIn', description: 'Profiles & Pages', icon: '/icons/linkedin-icon.svg', onConnect: () => setShowLinkedInModal(true) },
+    { id: 'youtube', name: 'YouTube', description: 'Shorts & Videos', icon: '/icons/youtube-color-icon.svg', onConnect: () => handleRedirectConnect('youtube') },
+    { id: 'threads', name: 'Threads', description: 'Text & Media', icon: '/icons/threads-icon.svg', onConnect: () => handleRedirectConnect('threads') },
+    { id: 'bluesky', name: 'Bluesky', description: 'AT Protocol', icon: '/icons/bluesky-circle-color-icon.svg', onConnect: () => setShowBlueskyModal(true) },
   ];
 
+  const comingSoonPlatforms = [
+    { id: 'x', name: 'X (Twitter)', description: 'Posts & Threads', icon: '/icons/x-social-media-round-icon.svg' },
+    { id: 'pinterest', name: 'Pinterest', description: 'Boards & Pins', icon: '/icons/pinterest-round-color-icon.svg' },
+    { id: 'reddit', name: 'Reddit', description: 'Subreddit Posting', icon: '/icons/reddit-icon.svg' },
+    { id: 'whatsapp', name: 'WhatsApp', description: 'Business API', icon: '/icons/wa-whatsapp-icon.svg' },
+    { id: 'telegram', name: 'Telegram', description: 'Bot API', icon: '/icons/telegram-icon.svg' },
+  ];
+
+  const isInstagramConnected = instagramAccounts.length > 0;
+
   return (
-    <main className="autodm-connect">
-      <style>{`
-        .autodm-connect {
-          min-height: 100vh;
-          display: grid;
-          place-items: center;
-          padding: 32px 18px;
-          background: var(--canvas, #f5f1ec);
-          color: var(--ink, #111);
-          font-family: var(--font, Inter, sans-serif);
-        }
-        .autodm-panel {
-          width: 100%;
-          max-width: 520px;
-        }
-        .autodm-heading {
-          margin-bottom: 20px;
-          text-align: center;
-        }
-        .autodm-brand {
-          display: inline-flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 18px;
-          color: var(--ink, #111);
-          font-size: 23px;
-          font-weight: 700;
-        }
-        .autodm-mark {
-          width: 42px;
-          height: 42px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 8px;
-          background: var(--ink, #111);
-          color: #fff;
-        }
-        .autodm-heading h1 {
-          margin: 0 0 8px;
-          color: var(--ink, #111);
-          font-size: clamp(24px, 4vw, 31px);
-          font-weight: 700;
-          line-height: 1.1;
-          letter-spacing: -0.01em;
-        }
-        .autodm-heading p,
-        .autodm-card p,
-        .autodm-note {
-          color: var(--slate, #626260);
-        }
-        .autodm-card {
-          margin-bottom: 12px;
-          padding: 20px;
-          border: 1px solid var(--dust, #d3cec6);
-          border-radius: 8px;
-          background: #fff;
-          box-shadow: none;
-        }
-        .autodm-card-header {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 12px;
-          color: var(--ink, #111);
-          font-size: 15px;
-          font-weight: 650;
-        }
-        .autodm-card-header span:first-child {
-          width: 30px;
-          height: 30px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 50%;
-          background: #fff4e8;
-          color: var(--arc, #ff5600);
-        }
-        .autodm-card p {
-          margin: 0 0 16px;
-          font-size: 13px;
-          line-height: 1.5;
-        }
-        .autodm-checks {
-          display: grid;
-          gap: 8px;
-        }
-        .autodm-checks div {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          color: var(--ink, #111);
-          font-size: 13px;
-        }
-        .autodm-checks svg {
-          color: #12823b;
-          flex-shrink: 0;
-        }
-        .autodm-actions {
-          display: grid;
-          gap: 12px;
-        }
-        .autodm-btn {
-          min-height: 46px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          border-radius: 8px;
-          border: 1px solid var(--ink, #111);
-          background: var(--ink, #111);
-          color: #fff;
-          font-size: 14px;
-          font-weight: 650;
-          cursor: pointer;
-        }
-        .autodm-btn:disabled {
-          cursor: not-allowed;
-          opacity: 0.65;
-        }
-        .autodm-btn.secondary {
-          background: #fff;
-          color: var(--ink, #111);
-        }
-        .autodm-btn.danger {
-          border-color: #e4b2aa;
-          background: #fff8f6;
-          color: #b62216;
-        }
-        .autodm-connected-head {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          margin-bottom: 14px;
-        }
-        .autodm-connected-head strong {
-          display: block;
-          margin-bottom: 3px;
-          font-size: 14px;
-        }
-        .autodm-note {
-          margin: 12px 0 0;
-          font-size: 12px;
-          text-align: center;
-        }
-        .autodm-loading {
-          display: flex;
-          justify-content: center;
-          padding: 22px 0;
-          color: var(--arc, #ff5600);
-        }
-        .spin {
-          animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-          from { transform: rotate(0); }
-          to { transform: rotate(360deg); }
-        }
-        @media (max-width: 520px) {
-          .autodm-connected-head {
-            align-items: stretch;
-            flex-direction: column;
-          }
-        }
-      `}</style>
-      <div className="autodm-panel">
-        <header className="autodm-heading">
-          <div className="autodm-brand">
-            <span className="autodm-mark"><Send size={20} /></span>
-            <span>GAP AutoDM</span>
-          </div>
-          <h1>Connect Instagram Account</h1>
-          <p>Link a professional Instagram account to start official Meta automations.</p>
+    <main style={{ 
+      minHeight: '100vh', 
+      background: 'var(--canvas, #FAF9F6)', 
+      color: 'var(--ink, #141413)', 
+      fontFamily: 'var(--font-body, Inter, sans-serif)',
+      display: 'flex',
+      flexDirection: 'column',
+      padding: '48px 32px 80px',
+      overflowX: 'hidden'
+    }}>
+      
+      <div style={{ width: '100%', maxWidth: '760px', margin: '0 auto' }}>
+        
+        {/* Page Header */}
+        <header style={{ marginBottom: '56px', maxWidth: '640px' }}>
+          <h1 style={{ fontSize: '44px', fontWeight: '700', letterSpacing: '-0.03em', margin: '0 0 16px', lineHeight: '1.1' }}>
+            Channels & Integrations
+          </h1>
+          <p style={{ color: 'var(--slate, #64645F)', fontSize: '17px', margin: 0, lineHeight: '1.5' }}>
+            Manage your connected social accounts and messaging platforms. Authorize GAP to post on your behalf and automate direct messages.
+          </p>
         </header>
 
-        <section className="autodm-card">
-          <div className="autodm-card-header">
-            <span><Shield size={15} /></span>
-            <span>Official Meta connection</span>
-          </div>
-          <p>
-            QuickPost uses Instagram's official OAuth and API access. You stay in control of the account connection.
-          </p>
-          <div className="autodm-checks">
-            {trustItems.map((item) => (
-              <div key={item}>
-                <CheckCircle size={14} />
-                <span>{item}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-
         {checkingAccounts ? (
-          <div className="autodm-loading">
-            <Loader2 className="spin" size={24} />
+          <div style={{ display: 'flex', padding: '60px 0', color: 'var(--slate)' }}>
+            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
+              <Loader2 size={24} />
+            </motion.div>
           </div>
-        ) : instagramAccounts.length > 0 ? (
-          <section className="autodm-card">
-            <div className="autodm-connected-head">
-              <div>
-                <strong>Instagram connected</strong>
-                <p>Connected as @{activeInstagramAccount?.username || instagramAccounts[0]?.username}</p>
-              </div>
-              <button type="button" className="autodm-btn secondary" onClick={() => navigate('/dashboard/auto-dm')}>
-                Go to Dashboard
-              </button>
-            </div>
-            <button type="button" className="autodm-btn danger" onClick={handleDisconnect} disabled={isDisconnecting}>
-              {isDisconnecting && <Loader2 className="spin" size={14} />}
-              Disconnect Instagram
-            </button>
-            <p className="autodm-note">To connect a different Instagram account, disconnect this one first.</p>
-          </section>
         ) : (
-          <div className="autodm-actions">
-            <button type="button" className="autodm-btn" onClick={handleConnect} disabled={isLoading}>
-              {isLoading ? <Loader2 className="spin" size={18} /> : <Instagram size={18} />}
-              Connect Instagram Account
-            </button>
-            <section className="autodm-card">
-              <div className="autodm-card-header">
-                <span><Instagram size={15} /></span>
-                <span>Business and Creator accounts</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '56px' }}>
+            
+            {/* Featured Section: AutoDM (Instagram) */}
+            <section>
+              <h2 style={{ fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--slate)', margin: '0 0 16px' }}>
+                Primary AutoDM Channel
+              </h2>
+              
+              <div style={{
+                background: '#fff',
+                borderRadius: '16px',
+                border: '1px solid rgba(20,20,19,0.08)',
+                display: 'grid',
+                gridTemplateColumns: 'minmax(300px, 1.2fr) 1fr',
+                overflow: 'hidden',
+                boxShadow: '0 4px 24px -12px rgba(20,20,19,0.04)'
+              }}>
+                {/* Left Side: Connection Details */}
+                <div style={{ padding: '40px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+                    <div style={{ 
+                      width: '48px', height: '48px', borderRadius: '12px', 
+                      background: 'var(--canvas, #FAF9F6)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: '1px solid rgba(20,20,19,0.06)'
+                    }}>
+                      <img src="/icons/ig-instagram-icon.svg" alt="Instagram" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: '0 0 2px', fontSize: '18px', fontWeight: '600' }}>Instagram</h3>
+                      <p style={{ margin: 0, color: 'var(--slate)', fontSize: '14px' }}>Official Meta Graph API</p>
+                    </div>
+                  </div>
+
+                  <p style={{ color: 'var(--slate)', fontSize: '14px', lineHeight: '1.5', marginBottom: '32px', maxWidth: '380px' }}>
+                    Connect your professional Instagram account to enable automated DM replies, lead capture flows, and story mentions tracking.
+                  </p>
+
+                  {isInstagramConnected ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <button 
+                        onClick={() => navigate('/dashboard/auto-dm')}
+                        style={{ 
+                          background: 'var(--ink, #141413)', color: '#fff', border: 'none', borderRadius: '8px', 
+                          padding: '10px 20px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', 
+                          display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.15s' 
+                        }}
+                        onMouseOver={e => e.currentTarget.style.background = '#333'}
+                        onMouseOut={e => e.currentTarget.style.background = 'var(--ink)'}
+                      >
+                        Configure AutoDM <ArrowRight size={16} />
+                      </button>
+                      <button 
+                        onClick={handleDisconnect} disabled={isDisconnecting}
+                        style={{ 
+                          background: 'transparent', color: 'var(--slate)', border: '1px solid rgba(20,20,19,0.1)', 
+                          borderRadius: '8px', padding: '9px 16px', fontSize: '14px', fontWeight: '500', 
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s' 
+                        }}
+                        onMouseOver={e => { e.currentTarget.style.color = '#b62216'; e.currentTarget.style.borderColor = '#b62216'; }}
+                        onMouseOut={e => { e.currentTarget.style.color = 'var(--slate)'; e.currentTarget.style.borderColor = 'rgba(20,20,19,0.1)'; }}
+                      >
+                        {isDisconnecting ? <Loader2 size={16} className="spin" style={{ animation: 'spin 1s linear infinite' }} /> : 'Disconnect'}
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={handleConnectInstagram} disabled={isLoading}
+                      style={{ 
+                        background: 'var(--ink, #141413)', color: '#fff', border: 'none', borderRadius: '8px', 
+                        padding: '10px 24px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', 
+                        display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.15s' 
+                      }}
+                      onMouseOver={e => e.currentTarget.style.background = '#333'}
+                      onMouseOut={e => e.currentTarget.style.background = 'var(--ink)'}
+                    >
+                      {isLoading ? <Loader2 size={16} className="spin" style={{ animation: 'spin 1s linear infinite' }} /> : 'Connect Instagram'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Right Side: Status/Graphic Panel */}
+                <div style={{ 
+                  background: 'var(--canvas, #FAF9F6)', 
+                  borderLeft: '1px solid rgba(20,20,19,0.06)',
+                  display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
+                  padding: '40px', position: 'relative', overflow: 'hidden'
+                }}>
+                  {/* Subtle background decoration */}
+                  <div style={{ position: 'absolute', inset: 0, opacity: 0.4, backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(20,20,19,0.04) 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+                  
+                  {isInstagramConnected ? (
+                    <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+                      <div style={{ 
+                        width: '64px', height: '64px', borderRadius: '50%', background: '#fff', 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+                        boxShadow: '0 8px 32px -8px rgba(18,130,59,0.25)', border: '4px solid #fff'
+                      }}>
+                        <CheckCircle2 size={32} color="#12823b" />
+                      </div>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#12823b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Active Connection</div>
+                      <div style={{ fontSize: '15px', color: 'var(--ink)', fontWeight: '500' }}>@{activeInstagramAccount?.username || instagramAccounts[0]?.username}</div>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', position: 'relative', zIndex: 1, opacity: 0.6 }}>
+                      <div style={{ 
+                        width: '64px', height: '64px', borderRadius: '50%', background: '#fff', 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+                        border: '1px solid rgba(20,20,19,0.1)'
+                      }}>
+                        <Instagram size={28} color="var(--slate)" />
+                      </div>
+                      <div style={{ fontSize: '14px', color: 'var(--slate)', fontWeight: '500' }}>Awaiting Connection</div>
+                    </div>
+                  )}
+                </div>
               </div>
-              <p>Log in directly with Instagram and choose the professional account you want to connect.</p>
             </section>
+
+            {/* List Section: Social Networks */}
+            <section>
+              <h2 style={{ fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--slate)', margin: '0 0 16px' }}>
+                Social Media Channels
+              </h2>
+              
+              <div style={{ 
+                background: '#fff', borderRadius: '12px', border: '1px solid rgba(20,20,19,0.08)',
+                overflow: 'hidden'
+              }}>
+                {socialPlatforms.map((platform, index) => (
+                  <div key={platform.id} style={{ 
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
+                    padding: '16px 24px',
+                    borderBottom: index !== socialPlatforms.length - 1 ? '1px solid rgba(20,20,19,0.06)' : 'none',
+                    transition: 'background 0.15s',
+                    cursor: 'default'
+                  }}
+                  onMouseOver={e => e.currentTarget.style.background = 'rgba(20,20,19,0.02)'}
+                  onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img src={platform.icon} alt={platform.name} style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '15px', fontWeight: '500', color: 'var(--ink)' }}>{platform.name}</div>
+                        <div style={{ fontSize: '13px', color: 'var(--slate)' }}>{platform.description}</div>
+                      </div>
+                    </div>
+                    
+                    <button 
+                      onClick={platform.onConnect}
+                      style={{ 
+                        background: '#fff', color: 'var(--ink)', border: '1px solid rgba(20,20,19,0.12)', 
+                        borderRadius: '6px', padding: '6px 16px', fontSize: '13px', fontWeight: '500', 
+                        cursor: 'pointer', transition: 'all 0.15s' 
+                      }}
+                      onMouseOver={e => { e.currentTarget.style.background = 'var(--canvas)'; e.currentTarget.style.borderColor = 'rgba(20,20,19,0.2)'; }}
+                      onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = 'rgba(20,20,19,0.12)'; }}
+                    >
+                      Connect
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* List Section: Coming Soon */}
+            <section>
+              <h2 style={{ fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--slate)', margin: '0 0 16px' }}>
+                Upcoming Integrations
+              </h2>
+              
+              <div style={{ 
+                background: '#fff', borderRadius: '12px', border: '1px solid rgba(20,20,19,0.08)',
+                overflow: 'hidden'
+              }}>
+                {comingSoonPlatforms.map((platform, index) => (
+                  <div key={platform.id} style={{ 
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
+                    padding: '16px 24px',
+                    borderBottom: index !== comingSoonPlatforms.length - 1 ? '1px solid rgba(20,20,19,0.06)' : 'none',
+                    opacity: 0.6
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', filter: 'grayscale(1)' }}>
+                        <img src={platform.icon} alt={platform.name} style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '15px', fontWeight: '500', color: 'var(--ink)' }}>{platform.name}</div>
+                        <div style={{ fontSize: '13px', color: 'var(--slate)' }}>{platform.description}</div>
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--slate)', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', padding: '6px 12px', background: 'var(--canvas)', borderRadius: '6px' }}>
+                      <Lock size={14} /> Soon
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
           </div>
         )}
       </div>
+
+      {/* Render Modals */}
+      <FacebookSetupModal isOpen={showFacebookModal} onClose={() => setShowFacebookModal(false)} />
+      <LinkedInConnectModal isOpen={showLinkedInModal} onClose={() => setShowLinkedInModal(false)} />
+      <MastodonConnectModal isOpen={showMastodonModal} onClose={() => setShowMastodonModal(false)} />
+      <BlueskyConnectModal isOpen={showBlueskyModal} onClose={() => setShowBlueskyModal(false)} />
+      <PinterestConnectModal isOpen={showPinterestModal} onClose={() => setShowPinterestModal(false)} />
     </main>
   );
 }

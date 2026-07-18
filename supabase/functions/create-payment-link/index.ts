@@ -24,10 +24,19 @@ Deno.serve(async (req) => {
       throw new Error("userId and planId are required");
     }
 
-    // Only "pro" (or "999" backward compat) is supported. Enterprise checkout is fail-closed.
     const planKey = String(planId).toLowerCase();
-    if (planKey !== "pro" && planKey !== "999") {
-      throw new Error("Enterprise and invalid plan checkouts are disabled because no matching Hub pricing plan exists");
+    const planConfig: Record<string, { id: "slite" | "sgrowth"; hubName: string; label: string }> = {
+      "999": { id: "slite", hubName: "social_pilot_starter", label: "Starter" },
+      pro: { id: "slite", hubName: "social_pilot_starter", label: "Starter" },
+      slite: { id: "slite", hubName: "social_pilot_starter", label: "Starter" },
+      "1999": { id: "sgrowth", hubName: "social_pilot_growth", label: "Growth" },
+      "2999": { id: "sgrowth", hubName: "social_pilot_growth", label: "Growth" },
+      enterprise: { id: "sgrowth", hubName: "social_pilot_growth", label: "Growth" },
+      sgrowth: { id: "sgrowth", hubName: "social_pilot_growth", label: "Growth" },
+    };
+    const selectedPlan = planConfig[planKey];
+    if (!selectedPlan) {
+      throw new Error("Invalid QuickPost plan requested");
     }
 
     // Validate supported billing intervals.
@@ -85,10 +94,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Lookup active social_pilot_starter
-    const starterPlan = socialPricing.find((p: any) => p.plan_name === "social_pilot_starter" && p.is_active === true);
-    if (!starterPlan) {
-      throw new Error("Active social_pilot_starter pricing plan not found in GetAiPilot catalog");
+    const hubPlan = socialPricing.find((p: any) => p.plan_name === selectedPlan.hubName && p.is_active === true);
+    if (!hubPlan) {
+      throw new Error(`Active ${selectedPlan.hubName} pricing plan not found in GetAiPilot catalog`);
     }
 
     let discountMultiplier = 1.0;
@@ -96,8 +104,8 @@ Deno.serve(async (req) => {
     else if (intervalMonths === 6) discountMultiplier = 0.80;
     else if (intervalMonths === 12) discountMultiplier = 0.70;
 
-    const amount = Math.round(starterPlan.amount * intervalMonths * discountMultiplier);
-    const description = `QuickPost Pro Plan Subscription (${intervalMonths} Month${intervalMonths > 1 ? 's' : ''})`;
+    const amount = Math.round(hubPlan.amount * intervalMonths * discountMultiplier);
+    const description = `QuickPost ${selectedPlan.label} Plan Subscription (${intervalMonths} Month${intervalMonths > 1 ? 's' : ''})`;
 
     // 2. Initialize Supabase client
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
@@ -127,7 +135,7 @@ Deno.serve(async (req) => {
         reminder_enable: true,
         notes: {
           user_id: userId,
-          plan: planId,
+          plan: selectedPlan.id,
           interval: intervalMonths.toString(),
         },
         callback_url: `${req.headers.get("origin") || "http://localhost:5173"}/dashboard?payment=success`,
@@ -162,7 +170,7 @@ Deno.serve(async (req) => {
     const { error: dbError } = await supabase.from("social_payments").insert({
       user_id: userId,
       razorpay_payment_link_id: razorpayData.id,
-      plan: planId === "999" || planId === "pro" ? "Pro" : "Enterprise",
+      plan: selectedPlan.label,
       amount,
       status: "pending",
     });

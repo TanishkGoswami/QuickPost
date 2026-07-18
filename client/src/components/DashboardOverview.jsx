@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import gsap from "gsap";
 import {
   AlertTriangle,
   ArrowRight,
@@ -61,6 +62,10 @@ function formatDateTime(value) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatRefreshTime(value) {
+  return value ? formatDateTime(value) : "Just now";
 }
 
 function shortCaption(value) {
@@ -168,6 +173,7 @@ function SkeletonDashboard() {
 export default function DashboardOverview() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const shellRef = useRef(null);
   const [range, setRange] = useState(30);
   const [instagramAccountId, setInstagramAccountId] = useState("all");
   const [composerOpen, setComposerOpen] = useState(false);
@@ -193,6 +199,25 @@ export default function DashboardOverview() {
   useEffect(() => {
     fetchOverview();
   }, [range, instagramAccountId]);
+
+  useEffect(() => {
+    if (loading || !shellRef.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const context = gsap.context(() => {
+      gsap.fromTo(
+        ".dash-animate",
+        { autoAlpha: 0, y: 14 },
+        { autoAlpha: 1, y: 0, duration: 0.42, ease: "power3.out", stagger: 0.045 },
+      );
+      gsap.fromTo(
+        ".dash-bar-segment",
+        { scaleY: 0, transformOrigin: "bottom" },
+        { scaleY: 1, duration: 0.52, ease: "power3.out", stagger: 0.012, delay: 0.08 },
+      );
+    }, shellRef);
+
+    return () => context.revert();
+  }, [loading, range, instagramAccountId, data.generatedAt]);
 
   const firstName = user?.name?.split(" ")?.[0] || "there";
   const ops = data.operations || emptyOverview.operations;
@@ -235,14 +260,19 @@ export default function DashboardOverview() {
   }
 
   return (
-    <div className="dash-shell">
+    <div className="dash-shell" ref={shellRef}>
       <DashboardStyles />
 
-      <header className="dash-top">
+      <header className="dash-top dash-animate">
         <div>
           <p className="dash-kicker">Workspace overview</p>
           <h1>Good to see you, {firstName}</h1>
           <span>Publishing, growth, queue health, and account risk in one place.</span>
+          <div className="dash-snapshot" aria-label="Workspace snapshot">
+            <span><strong>{formatNumber(ops.totalPosts)}</strong> posts in {range} days</span>
+            <span><strong>{formatNumber(ops.queueCount)}</strong> queued</span>
+            <span><strong>{formatRefreshTime(data.generatedAt)}</strong> last refresh</span>
+          </div>
         </div>
         <div className="dash-actions">
           <div className="dash-range" aria-label="Dashboard range">
@@ -282,7 +312,7 @@ export default function DashboardOverview() {
         </section>
       ) : null}
 
-      <section className="dash-grid primary-grid">
+      <section className="dash-grid primary-grid dash-animate">
         <article className={`dash-card dash-next is-${nextAction.tone}`}>
           <div className="dash-card-head">
             <span>Next action</span>
@@ -323,7 +353,7 @@ export default function DashboardOverview() {
         />
       </section>
 
-      <section className="dash-grid growth-grid">
+      <section className="dash-grid growth-grid dash-animate">
         <article className="dash-card dash-growth">
           <div className="dash-section-title">
             <div>
@@ -371,7 +401,7 @@ export default function DashboardOverview() {
         </article>
       </section>
 
-      <section className="dash-grid ops-grid">
+      <section className="dash-grid ops-grid dash-animate">
         <article className="dash-card dash-trend">
           <div className="dash-section-title">
             <div>
@@ -383,12 +413,25 @@ export default function DashboardOverview() {
           <div className="dash-chart" aria-label="Publishing trend">
             {(data.publishingTrend || []).map((day) => {
               const total = day.sent + day.scheduled + day.failed;
+              const sentHeight = total ? (day.sent / total) * 100 : 0;
+              const scheduledHeight = total ? (day.scheduled / total) * 100 : 0;
+              const failedHeight = total ? (day.failed / total) * 100 : 0;
               return (
                 <div className="dash-bar-wrap" key={day.date} title={`${day.date}: ${total} posts`}>
-                  <span style={{ height: `${Math.max(8, (total / maxTrend) * 100)}%` }} className={day.failed ? "has-failed" : ""} />
+                  <div style={{ height: `${Math.max(8, (total / maxTrend) * 100)}%` }} className="dash-bar-stack">
+                    {day.failed ? <span className="dash-bar-segment failed" style={{ height: `${failedHeight}%` }} /> : null}
+                    {day.scheduled ? <span className="dash-bar-segment scheduled" style={{ height: `${scheduledHeight}%` }} /> : null}
+                    {day.sent ? <span className="dash-bar-segment sent" style={{ height: `${sentHeight}%` }} /> : null}
+                    {!total ? <span className="dash-bar-segment empty" /> : null}
+                  </div>
                 </div>
               );
             })}
+          </div>
+          <div className="dash-chart-legend" aria-hidden="true">
+            <span><i className="sent" />Sent</span>
+            <span><i className="scheduled" />Scheduled</span>
+            <span><i className="failed" />Failed</span>
           </div>
         </article>
 
@@ -405,7 +448,7 @@ export default function DashboardOverview() {
           </div>
           <div className="dash-list">
             {(ops.recentActivity || []).length ? (
-              ops.recentActivity.map((post) => (
+              ops.recentActivity.slice(0, 6).map((post) => (
                 <button type="button" className="dash-row" key={post.id} onClick={() => navigate("/dashboard/history")}>
                   <span className={`dash-status ${statusTone(post.status)}`} />
                   <div>
@@ -452,7 +495,7 @@ export default function DashboardOverview() {
         </article>
       </section>
 
-      <section className="dash-grid media-grid">
+      <section className="dash-grid media-grid dash-animate">
         <article className="dash-card dash-top-content">
           <div className="dash-section-title">
             <div>
@@ -508,40 +551,44 @@ function DashboardStyles() {
     <style>{`
       .dash-shell {
         min-height: 100%;
-        padding: 28px;
+        padding: 32px;
         background: var(--canvas, #f5f1ec);
         color: var(--ink, #111111);
-        font-family: var(--font-body, ui-sans-serif, system-ui);
+        font-family: var(--font-body, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
       }
 
       .dash-top {
         display: flex;
-        align-items: flex-end;
+        align-items: center;
         justify-content: space-between;
         gap: 20px;
-        max-width: 1380px;
-        margin: 0 auto 22px;
+        max-width: 1200px;
+        margin: 0 auto 18px;
+        padding: 20px;
+        border: 1px solid rgba(20, 20, 19, 0.08);
+        border-radius: 14px;
+        background: #ffffff;
       }
 
       .dash-kicker,
       .dash-section-title span,
       .dash-card-head span {
         display: block;
-        margin: 0 0 7px;
+        margin: 0 0 6px;
         color: var(--slate, #626260);
         font-size: 13px;
         font-weight: 600;
-        letter-spacing: 0;
+        letter-spacing: 0.01em;
         text-transform: none;
       }
 
       .dash-top h1 {
         margin: 0;
-        color: var(--ink, #111);
-        font-size: 34px;
+        color: var(--ink, #111111);
+        font-size: 30px;
         font-weight: 600;
-        line-height: 1.08;
-        letter-spacing: -0.02em;
+        line-height: 1.1;
+        letter-spacing: -0.025em;
         text-wrap: balance;
       }
 
@@ -556,36 +603,61 @@ function DashboardStyles() {
       .dash-top > div:first-child > span {
         display: block;
         margin-top: 8px;
-        font-size: 14px;
+        font-size: 15px;
+      }
+
+      .dash-snapshot {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .dash-snapshot span {
+        display: inline-flex;
+        min-height: 30px;
+        align-items: center;
+        gap: 5px;
+        padding: 6px 10px;
+        border: 1px solid rgba(20, 20, 19, 0.08);
+        border-radius: 999px;
+        background: #f7f5f2;
+        color: var(--slate, #626260);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .dash-snapshot strong {
+        color: var(--ink, #111111);
       }
 
       .dash-actions {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
         flex-wrap: wrap;
         justify-content: flex-end;
       }
 
       .dash-range {
         display: inline-flex;
-        gap: 3px;
+        gap: 4px;
         padding: 4px;
         border: 1px solid var(--dust, #d3cec6);
         border-radius: 8px;
-        background: #ebe7e1;
+        background: rgba(0,0,0,0.03);
       }
 
       .dash-range button,
       .dash-btn,
       .dash-link-btn,
       .dash-small-link {
-        min-height: 38px;
+        min-height: 36px;
         border-radius: 8px;
         font-size: 14px;
-        font-weight: 600;
+        font-weight: 500;
         cursor: pointer;
-        transition: background 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+        transition: background 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease;
       }
 
       .dash-range button {
@@ -596,8 +668,10 @@ function DashboardStyles() {
       }
 
       .dash-range button.active {
-        background: #fff;
-        color: var(--ink, #111);
+        background: var(--surface-1, #ffffff);
+        color: var(--ink, #111111);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        font-weight: 600;
       }
 
       .dash-btn {
@@ -606,41 +680,43 @@ function DashboardStyles() {
         justify-content: center;
         gap: 8px;
         border: 1px solid var(--dust, #d3cec6);
-        padding: 0 14px;
-        background: #fff;
-        color: var(--ink, #111);
+        padding: 0 16px;
+        background: var(--surface-1, #ffffff);
+        color: var(--ink, #111111);
       }
 
       .dash-btn.primary {
-        border-color: var(--ink, #111);
-        background: var(--ink, #111);
-        color: #fff;
+        border-color: var(--ink, #111111);
+        background: var(--ink, #111111);
+        color: #ffffff;
       }
 
-      .dash-btn:hover,
-      .dash-range button:hover,
-      .dash-link-btn:hover,
-      .dash-small-link:hover {
-        transform: translateY(-1px);
+      .dash-btn:hover {
+        border-color: var(--ink, #111111);
+        background: #f7f5f2;
+      }
+      .dash-btn.primary:hover {
+        background: #2b2b2b;
       }
 
       .dash-grid {
-        max-width: 1380px;
+        max-width: 1200px;
         margin: 0 auto 16px;
         display: grid;
-        gap: 12px;
+        gap: 14px;
+        align-items: start;
       }
 
       .primary-grid {
-        grid-template-columns: minmax(320px, 1.45fr) repeat(3, minmax(190px, 1fr));
+        grid-template-columns: 1.25fr 1fr 1fr 1fr;
       }
 
       .growth-grid {
-        grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.8fr);
+        grid-template-columns: 1.45fr 1fr;
       }
 
       .ops-grid {
-        grid-template-columns: minmax(360px, 1fr) minmax(340px, 1fr) minmax(300px, 0.85fr);
+        grid-template-columns: 1.2fr 1fr 1fr;
       }
 
       .media-grid {
@@ -650,14 +726,20 @@ function DashboardStyles() {
       .dash-card,
       .dash-error {
         border: 1px solid var(--dust, #d3cec6);
-        border-radius: 8px;
-        background: #fff;
-        box-shadow: none;
+        border-radius: 12px;
+        background: var(--surface-1, #ffffff);
       }
 
       .dash-card {
+        position: relative;
         padding: 20px;
         min-width: 0;
+        transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+      }
+
+      .dash-card:hover {
+        border-color: rgba(20, 20, 19, 0.28);
+        transform: translateY(-1px);
       }
 
       .dash-card-head,
@@ -670,6 +752,12 @@ function DashboardStyles() {
 
       .dash-card-head svg,
       .dash-section-title svg {
+        width: 30px;
+        height: 30px;
+        padding: 7px;
+        border: 1px solid rgba(20, 20, 19, 0.08);
+        border-radius: 8px;
+        background: #f7f5f2;
         color: var(--slate, #626260);
         flex-shrink: 0;
       }
@@ -677,15 +765,15 @@ function DashboardStyles() {
       .dash-next h2,
       .dash-section-title h2 {
         margin: 0;
-        color: var(--ink, #111);
-        font-size: 20px;
-        font-weight: 650;
-        line-height: 1.18;
+        color: var(--ink, #111111);
+        font-size: 17px;
+        font-weight: 600;
+        line-height: 1.2;
         letter-spacing: -0.01em;
       }
 
       .dash-next p {
-        margin: 12px 0 18px;
+        margin: 10px 0 18px;
         max-width: 58ch;
         font-size: 14px;
         line-height: 1.5;
@@ -695,65 +783,65 @@ function DashboardStyles() {
       .dash-small-link {
         display: inline-flex;
         align-items: center;
-        gap: 7px;
+        gap: 6px;
         border: 0;
         background: transparent;
-        color: var(--arc, #ff5600);
+        color: var(--ink, #111111);
+        font-weight: 600;
         padding: 0;
+      }
+      .dash-link-btn:hover,
+      .dash-small-link:hover {
+        color: #3b82f6;
       }
 
       .dash-metric {
-        min-height: 154px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
+        display: block;
       }
 
       .dash-metric strong {
         display: block;
-        margin-top: 18px;
-        color: var(--ink, #111);
-        font-size: 38px;
-        font-weight: 650;
+        margin-top: 10px;
+        color: var(--ink, #111111);
+        font-size: 30px;
+        font-weight: 600;
         line-height: 1;
-        letter-spacing: -0.02em;
+        letter-spacing: -0.03em;
       }
 
       .dash-metric p {
-        margin: 8px 0 0;
+        margin: 6px 0 0;
         font-size: 13px;
         line-height: 1.4;
       }
 
-      .dash-card.is-danger,
-      .dash-metric.is-danger {
-        border-color: #e4b2aa;
-        background: #fff8f6;
+      .dash-card.is-danger .dash-card-head svg, .dash-metric.is-danger .dash-card-head svg {
+        border-color: rgba(220, 38, 38, 0.16);
+        background: #fff1ee;
+        color: #dc2626;
       }
-
-      .dash-card.is-warning,
-      .dash-metric.is-warning {
-        border-color: #e3c08d;
-        background: #fffaf1;
+      .dash-card.is-warning .dash-card-head svg, .dash-metric.is-warning .dash-card-head svg {
+        border-color: rgba(217, 119, 6, 0.2);
+        background: #fff7ed;
+        color: #d97706;
       }
-
-      .dash-card.is-success,
-      .dash-metric.is-success {
-        border-color: #bddac6;
-        background: #f7fff9;
+      .dash-card.is-success .dash-card-head svg, .dash-metric.is-success .dash-card-head svg {
+        border-color: rgba(5, 150, 105, 0.18);
+        background: #ecfdf5;
+        color: #059669;
       }
 
       .dash-growth-stats,
       .dash-mini-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 10px;
-        margin-top: 18px;
+        gap: 12px;
+        margin-top: 20px;
       }
 
       .dash-inline-metric {
         min-width: 0;
-        border: 1px solid rgba(20,20,19,0.08);
+        border: 1px solid var(--dust, #d3cec6);
         border-radius: 8px;
         background: #faf8f5;
         padding: 14px;
@@ -764,46 +852,47 @@ function DashboardStyles() {
         color: var(--slate, #626260);
         font-size: 12px;
         font-weight: 600;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
       }
 
       .dash-inline-metric strong {
         display: block;
         overflow-wrap: anywhere;
-        color: var(--ink, #111);
-        font-size: 22px;
-        font-weight: 650;
+        color: var(--ink, #111111);
+        font-size: 20px;
+        font-weight: 600;
         line-height: 1.1;
+        letter-spacing: -0.02em;
       }
 
       .dash-inline-metric p {
-        margin: 7px 0 0;
+        margin: 4px 0 0;
         font-size: 12px;
         line-height: 1.35;
       }
 
       .dash-section-title select {
-        min-height: 38px;
+        min-height: 36px;
         max-width: 260px;
         border: 1px solid var(--dust, #d3cec6);
-        border-radius: 8px;
-        background: #fff;
-        color: var(--ink, #111);
-        padding: 0 10px;
+        border-radius: 6px;
+        background: var(--surface-1, #ffffff);
+        color: var(--ink, #111111);
+        padding: 0 12px;
         font-size: 13px;
-        font-weight: 600;
+        font-weight: 500;
       }
 
       .dash-note {
         display: flex;
         align-items: flex-start;
         gap: 8px;
-        margin-top: 14px;
-        padding: 10px 12px;
-        border: 1px solid #e3c08d;
+        margin-top: 16px;
+        padding: 12px;
+        border: 1px solid #fef08a;
         border-radius: 8px;
-        background: #fffaf1;
-        color: #6f4b13;
+        background: #fef9c3;
+        color: #854d0e;
         font-size: 13px;
         line-height: 1.4;
       }
@@ -811,44 +900,107 @@ function DashboardStyles() {
       .dash-chart {
         display: flex;
         align-items: flex-end;
-        gap: 5px;
-        height: 174px;
+        gap: 4px;
+        height: 150px;
         margin-top: 24px;
         padding-top: 16px;
-        border-top: 1px solid rgba(20,20,19,0.08);
+        border-top: 1px solid var(--dust, #d3cec6);
+        width: 100%;
+        overflow: hidden;
       }
 
       .dash-bar-wrap {
-        flex: 1;
-        min-width: 4px;
+        flex: 1 1 0;
+        min-width: 1px;
         height: 100%;
         display: flex;
         align-items: flex-end;
         border-radius: 6px;
-        background: #f0ebe4;
+        background: #f2eee8;
         overflow: hidden;
+      }
+
+      .dash-bar-stack {
+        width: 100%;
+        min-height: 8px;
+        display: flex;
+        flex-direction: column-reverse;
       }
 
       .dash-bar-wrap span {
         width: 100%;
         display: block;
-        border-radius: 6px 6px 0 0;
-        background: var(--ink, #111);
+        min-height: 2px;
+        transition: opacity 200ms ease;
       }
 
-      .dash-bar-wrap span.has-failed {
-        background: var(--arc, #ff5600);
+      .dash-bar-segment.sent {
+        background: var(--ink, #111111);
       }
+
+      .dash-bar-segment.scheduled {
+        background: #d97706;
+      }
+
+      .dash-bar-segment.failed {
+        background: #ef4444;
+      }
+
+      .dash-bar-segment.empty {
+        height: 100%;
+        background: #dfd8cf;
+      }
+      
+      .dash-bar-wrap:hover span {
+        opacity: 0.8;
+      }
+
+      .dash-chart-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 12px;
+        color: var(--slate, #626260);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .dash-chart-legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .dash-chart-legend i {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+
+      .dash-chart-legend i.sent { background: var(--ink, #111111); }
+      .dash-chart-legend i.scheduled { background: #d97706; }
+      .dash-chart-legend i.failed { background: #ef4444; }
 
       .dash-list,
       .dash-media-list {
-        display: grid;
-        gap: 8px;
+        display: flex;
+        flex-direction: column;
         margin-top: 16px;
       }
 
-      .dash-list.compact {
-        gap: 6px;
+      .dash-feed .dash-list {
+        max-height: 286px;
+        overflow-y: auto;
+        padding-right: 2px;
+      }
+
+      .dash-feed .dash-row {
+        padding: 8px 8px;
+        gap: 10px;
+      }
+
+      .dash-feed .dash-row p {
+        margin-top: 2px;
       }
 
       .dash-row,
@@ -857,32 +1009,36 @@ function DashboardStyles() {
         min-width: 0;
         display: grid;
         grid-template-columns: auto minmax(0, 1fr);
-        gap: 10px;
+        gap: 12px;
         align-items: center;
-        border: 1px solid rgba(20,20,19,0.08);
-        border-radius: 8px;
-        background: #fff;
-        color: var(--ink, #111);
-        padding: 11px;
+        border: 0;
+        border-bottom: 1px solid var(--dust, #d3cec6);
+        background: transparent;
+        color: var(--ink, #111111);
+        padding: 11px 8px;
         text-align: left;
         text-decoration: none;
         cursor: pointer;
-        transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+        transition: background 150ms ease;
+      }
+      .dash-row:last-child,
+      .dash-media-row:last-child {
+        border-bottom: 0;
       }
 
       .dash-row:hover,
       .dash-media-row:hover {
-        border-color: #bdb6ad;
         background: #faf8f5;
+        border-radius: 8px;
       }
 
       .dash-row strong,
       .dash-media-row strong {
         display: block;
         overflow: hidden;
-        color: var(--ink, #111);
+        color: var(--ink, #111111);
         font-size: 13px;
-        font-weight: 650;
+        font-weight: 600;
         line-height: 1.25;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -899,15 +1055,15 @@ function DashboardStyles() {
       }
 
       .dash-status {
-        width: 9px;
-        height: 9px;
-        border-radius: 999px;
-        background: #9c9fa5;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #cbd5e1;
       }
 
-      .dash-status.success { background: #1b8f43; }
-      .dash-status.warning { background: #c4871d; }
-      .dash-status.danger { background: var(--arc, #ff5600); }
+      .dash-status.success { background: #10b981; }
+      .dash-status.warning { background: #f59e0b; }
+      .dash-status.danger { background: #ef4444; }
 
       .dash-thumb {
         width: 56px;
@@ -918,7 +1074,7 @@ function DashboardStyles() {
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #ebe7e1;
+        background: rgba(0,0,0,0.02);
         color: var(--slate, #626260);
       }
 
@@ -938,7 +1094,7 @@ function DashboardStyles() {
         gap: 8px;
         border: 1px dashed var(--dust, #d3cec6);
         border-radius: 8px;
-        background: #faf8f5;
+        background: rgba(0,0,0,0.01);
         color: var(--slate, #626260);
         text-align: center;
         padding: 16px;
@@ -950,30 +1106,30 @@ function DashboardStyles() {
       }
 
       .dash-error {
-        max-width: 1380px;
+        max-width: 1200px;
         margin: 0 auto 16px;
         padding: 14px;
         display: flex;
         align-items: center;
         gap: 12px;
-        border-color: #e4b2aa;
-        background: #fff8f6;
+        border-color: #fca5a5;
+        background: #fef2f2;
       }
 
       .dash-error strong {
         display: block;
-        color: var(--ink, #111);
+        color: var(--ink, #111111);
         font-size: 14px;
       }
 
       .dash-error p {
-        margin: 3px 0 0;
+        margin: 2px 0 0;
         color: var(--slate, #626260);
         font-size: 13px;
       }
 
       .dash-loading-row {
-        max-width: 1380px;
+        max-width: 1200px;
         margin: 0 auto 22px;
         display: flex;
         justify-content: space-between;
@@ -982,7 +1138,7 @@ function DashboardStyles() {
 
       .dash-skeleton,
       .dash-skeleton-card {
-        background: linear-gradient(90deg, rgba(17,17,17,0.035) 25%, rgba(17,17,17,0.07) 37%, rgba(17,17,17,0.035) 63%);
+        background: linear-gradient(90deg, rgba(17,17,17,0.03) 25%, rgba(17,17,17,0.06) 37%, rgba(17,17,17,0.03) 63%);
         background-size: 400% 100%;
         animation: dash-shimmer 1.4s ease-in-out infinite;
       }
@@ -1005,11 +1161,12 @@ function DashboardStyles() {
         .dash-range button,
         .dash-link-btn,
         .dash-small-link,
+        .dash-card,
         .dash-row,
-        .dash-media-row {
+        .dash-media-row,
+        .dash-bar-wrap span {
           transition: none;
         }
-
         .dash-skeleton,
         .dash-skeleton-card {
           animation: none;
@@ -1022,7 +1179,6 @@ function DashboardStyles() {
         .ops-grid {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
-
         .dash-next,
         .dash-growth,
         .dash-trend {
@@ -1032,58 +1188,51 @@ function DashboardStyles() {
 
       @media (max-width: 768px) {
         .dash-shell {
-          padding: 18px 14px 34px;
+          padding: 24px 16px 40px;
         }
-
         .dash-top,
         .dash-loading-row {
           align-items: stretch;
           flex-direction: column;
         }
-
+        .dash-top {
+          padding: 18px;
+        }
         .dash-actions,
         .dash-range,
         .dash-btn {
           width: 100%;
         }
-
         .dash-range button,
         .dash-btn {
           flex: 1;
         }
-
         .dash-top h1 {
           font-size: 28px;
         }
-
         .primary-grid,
         .growth-grid,
         .ops-grid,
         .media-grid {
           grid-template-columns: 1fr;
         }
-
         .dash-next,
         .dash-growth,
         .dash-trend {
           grid-column: span 1;
         }
-
         .dash-growth-stats,
         .dash-mini-grid {
           grid-template-columns: 1fr;
         }
-
         .dash-section-title {
           flex-direction: column;
           align-items: stretch;
         }
-
         .dash-section-title select {
           max-width: none;
           width: 100%;
         }
-
         .dash-error {
           align-items: flex-start;
           flex-direction: column;
