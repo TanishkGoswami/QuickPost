@@ -22,10 +22,10 @@ function getPlanName(planId: string): string {
   return "Social Pilot"; // default for any paid plan on social
 }
 
-function getStandalonePlanId(planId: string): "pro" | "enterprise" | null {
+function getStandalonePlanId(planId: string): "slite" | "sgrowth" | null {
   const normalized = String(planId || "").toLowerCase();
-  if (normalized === "999" || normalized === "pro") return "pro";
-  if (normalized === "2999" || normalized === "enterprise") return "enterprise";
+  if (normalized === "999" || normalized === "pro" || normalized === "slite") return "slite";
+  if (normalized === "1999" || normalized === "2999" || normalized === "enterprise" || normalized === "sgrowth") return "sgrowth";
   return null;
 }
 
@@ -79,15 +79,11 @@ Deno.serve(async (req) => {
     if (status === "paid" && userId && planId) {
       const standalonePlanId = getStandalonePlanId(planId);
       const planName = standalonePlanId
-        ? (standalonePlanId === "enterprise" ? "Enterprise" : "Pro")
+        ? (standalonePlanId === "sgrowth" ? "Growth" : "Starter")
         : getPlanName(planId);
 
       let intervalMonths = 1;
       if (standalonePlanId) {
-        if (standalonePlanId === "enterprise") {
-          throw new Error("Enterprise checkout activation is currently disabled because no matching Hub pricing plan exists");
-        }
-
         const interval = Number(razorpayData.notes?.interval || "1");
         if (![1, 3, 6, 12].includes(interval)) {
           throw new Error("Invalid billing interval verified");
@@ -143,10 +139,10 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Lookup active social_pilot_starter
-        const starterPlan = socialPricing.find((p: any) => p.plan_name === "social_pilot_starter" && p.is_active === true);
-        if (!starterPlan) {
-          throw new Error("Active social_pilot_starter pricing plan not found in GetAiPilot catalog");
+        const hubPlanName = standalonePlanId === "sgrowth" ? "social_pilot_growth" : "social_pilot_starter";
+        const hubPlan = socialPricing.find((p: any) => p.plan_name === hubPlanName && p.is_active === true);
+        if (!hubPlan) {
+          throw new Error(`Active ${hubPlanName} pricing plan not found in GetAiPilot catalog`);
         }
 
         let discountMultiplier = 1.0;
@@ -154,7 +150,7 @@ Deno.serve(async (req) => {
         else if (interval === 6) discountMultiplier = 0.80;
         else if (interval === 12) discountMultiplier = 0.70;
 
-        const expectedAmount = Math.round(starterPlan.amount * interval * discountMultiplier);
+        const expectedAmount = Math.round(hubPlan.amount * interval * discountMultiplier);
         if (amountPaid !== expectedAmount) {
           throw new Error("Razorpay payment amount is incomplete or inconsistent with authoritative Hub pricing.");
         }
@@ -232,11 +228,12 @@ Deno.serve(async (req) => {
       // Standalone QuickPost entitlement. Payment links sell fixed access
       // periods; recurring provider webhooks can update this same record later.
       if (standalonePlanId) {
+        const activationPlanId = standalonePlanId === "sgrowth" ? "enterprise" : "pro";
         const { data: activationRows, error: appSubscriptionError } = await supabase.rpc(
           "activate_fixed_term_subscription",
           {
             p_user_id: userId,
-            p_plan_id: standalonePlanId,
+            p_plan_id: activationPlanId,
             p_provider: "razorpay",
             p_provider_payment_id: razorpayPaymentLinkId,
             p_interval_months: intervalMonths,

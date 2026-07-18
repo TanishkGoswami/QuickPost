@@ -1238,6 +1238,7 @@ function ComposerModal({
   initialCaption = "",
   initialHashtags = [],
   initialMediaUrls = [],
+  initialScheduledAt = "",
 }) {
   const { user, connectedAccounts } = useAuth();
   const { addJob } = useUploadJobs();
@@ -1545,7 +1546,20 @@ function ComposerModal({
     }
   }, [isOpen]);
 
-  /* ── Pre-fill caption from trend injection ── */
+  /* ── Pre-fill scheduled time from calendar selection ── */
+  useEffect(() => {
+    if (isOpen) {
+      if (initialScheduledAt) {
+        setIsScheduled(true);
+        setScheduledAt(initialScheduledAt);
+      } else {
+        setIsScheduled(false);
+        setScheduledAt("");
+      }
+    }
+  }, [isOpen, initialScheduledAt]);
+
+  /* ── Pre-fill caption from trend injection or duplication ── */
   useEffect(() => {
     if (isOpen && initialCaption) {
       setCaption(initialCaption);
