@@ -5,6 +5,12 @@ coverage/
 .env
 .env.production
 .env.staging
+.env*.local
+.env.vercel
+.env.vercel.*
+!.env.vercel.example
+!client/.env.vercel.example
+.vercel
 *.log
 .DS_Store
 supabase/.temp/

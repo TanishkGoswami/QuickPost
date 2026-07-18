@@ -9,3 +9,6 @@ verify_jwt = true
 
 [functions.sync-from-hub]
 verify_jwt = false
+
+[functions.sync-to-hub]
+verify_jwt = false

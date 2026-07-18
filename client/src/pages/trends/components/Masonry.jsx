@@ -63,13 +63,17 @@ export function estimateTrendHeight(entry) {
   const titleLines = Math.min(3, Math.max(1, Math.ceil(titleLength / 42)));
   const titleHeight = titleLines * 21;
 
-  if (item._type === "meme") {
+  if (item._type === "reddit") {
     const mediaHeight = item.isVideo ? 460 : item.image ? 360 : 0;
     return mediaHeight + titleHeight + 92;
   }
 
-  if (item._type === "video") {
+  if (item._type === "youtube") {
     return 250 + titleHeight + 102;
+  }
+
+  if (["bluesky", "mastodon", "lemmy"].includes(item._type)) {
+    return (item.image ? 245 : 0) + titleHeight + 150;
   }
 
   const mediaHeight = item.image ? 245 : 0;

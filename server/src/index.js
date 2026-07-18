@@ -18,6 +18,7 @@ import autodmRouter from './routes/autodm.js';
 import billingRouter from './routes/billing.js';
 import youtubeRouter from './routes/youtube.js';
 import { initScheduler } from './services/scheduler.js';
+import { initTrendRefreshScheduler } from './services/trends/scheduler.js';
 import supabase from './services/supabase.js';
 import { processInstagramWebhook } from './services/instapilot.js';
 
@@ -160,7 +161,8 @@ const server = app.listen(PORT, () => {
   console.log(`📁 Uploads directory: ${path.join(__dirname, '../uploads')}`);
   
   // Initialize Post Scheduler
-  initScheduler();
+initScheduler();
+initTrendRefreshScheduler(PORT);
 
   console.log(`\n✨ Ready to broadcast!\n`);
 });

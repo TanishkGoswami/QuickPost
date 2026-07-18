@@ -17,7 +17,7 @@ function logSdkError(action, error) {
 
 export class SupermailboxClient {
   constructor(apiKey, baseUrl) {
-    this.apiKey = apiKey || process.env.SUPERMAILBOX_API_KEY || 'supermailbox-secret-key-12345';
+    this.apiKey = apiKey || process.env.SUPERMAILBOX_API_KEY || '';
     this.baseUrl = baseUrl || process.env.SUPERMAILBOX_BASE_URL || 'http://localhost:5050';
   }
 
