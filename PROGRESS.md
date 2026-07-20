@@ -10,3 +10,4 @@
 - Verified with `npm.cmd test -- tests/trendFeed.test.js` and a live Supabase feed read (`items=1`, `hasRankScore=true`).
 - Added the dashboard Trend Feed page with IntersectionObserver-triggered page fetches in the existing Vite React client.
 - Added `react-virtuoso` grid virtualization for the Trend Feed card list.
+- Added browser-scoped per-user seen IDs and API exclusion for already-seen trend posts.

@@ -3,6 +3,7 @@ import {
   decodeTrendCursor,
   encodeTrendCursor,
   getTrendFeedPage,
+  parseSeenPostIds,
   scoreTrendPost,
 } from "../server/src/services/trendFeed.js";
 
@@ -40,6 +41,12 @@ describe("trend feed cursor pagination", () => {
     expect(fast).toBeGreaterThan(stale);
   });
 
+  it("parses a bounded seen id list", () => {
+    const ids = Array.from({ length: 250 }, (_, index) => `id-${index}`).join(",");
+    expect(parseSeenPostIds(ids)).toHaveLength(200);
+    expect(parseSeenPostIds(" a, ,b ")).toEqual(["a", "b"]);
+  });
+
   it("fetches a bounded candidate pool and returns a rank cursor", async () => {
     const rows = [
       { id: "3", ingested_at: "2026-07-20T03:00:00Z", published_at: "2026-07-20T03:00:00Z", engagement_score: 3 },
@@ -70,6 +77,20 @@ describe("trend feed cursor pagination", () => {
     );
 
     expect(secondPage.items[0].id).not.toBe(firstPage.items[0].id);
+  });
+
+  it("excludes seen post ids", async () => {
+    const rows = [
+      { id: "3", ingested_at: "2026-07-20T03:00:00Z", published_at: "2026-07-20T03:00:00Z", engagement_score: 30 },
+      { id: "2", ingested_at: "2026-07-20T02:00:00Z", published_at: "2026-07-20T02:00:00Z", engagement_score: 20 },
+    ];
+
+    const page = await getTrendFeedPage(
+      { limit: 2, seen: "3" },
+      { supabase: mockSupabase(rows), cache: null, now: new Date("2026-07-20T04:00:00Z") },
+    );
+
+    expect(page.items.map((item) => item.id)).toEqual(["2"]);
   });
 
   it("serves and writes hot feed pages through cache", async () => {

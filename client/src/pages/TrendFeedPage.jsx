@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ExternalLink, RefreshCw, Sparkles } from "lucide-react";
 import { VirtuosoGrid } from "react-virtuoso";
+import { useAuth } from "../context/AuthContext";
 import apiClient from "../utils/apiClient";
 
 const PAGE_SIZE = 18;
+const MAX_SEEN_IDS = 200;
 
 function getHost(url) {
   try {
@@ -52,6 +54,7 @@ function TrendCard({ post }) {
 }
 
 export default function TrendFeedPage() {
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [cursor, setCursor] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -60,6 +63,26 @@ export default function TrendFeedPage() {
   const sentinelRef = useRef(null);
   const cursorRef = useRef(null);
   const loadingRef = useRef(false);
+  const seenRef = useRef(new Set());
+  const seenStorageKey = `qp_trend_seen_${user?.userId || user?.email || "anon"}`;
+
+  useEffect(() => {
+    try {
+      seenRef.current = new Set(JSON.parse(localStorage.getItem(seenStorageKey) || "[]"));
+    } catch {
+      seenRef.current = new Set();
+    }
+  }, [seenStorageKey]);
+
+  const rememberSeen = useCallback((posts) => {
+    const seen = seenRef.current;
+    posts.forEach((post) => {
+      if (post?.id) seen.add(post.id);
+    });
+    const trimmed = Array.from(seen).slice(-MAX_SEEN_IDS);
+    seenRef.current = new Set(trimmed);
+    localStorage.setItem(seenStorageKey, JSON.stringify(trimmed));
+  }, [seenStorageKey]);
 
   const loadPage = useCallback(async ({ reset = false } = {}) => {
     if (loadingRef.current) return;
@@ -70,9 +93,14 @@ export default function TrendFeedPage() {
     try {
       const nextCursor = reset ? null : cursorRef.current;
       const { data } = await apiClient.get("/api/trends/feed", {
-        params: { limit: PAGE_SIZE, cursor: nextCursor || undefined },
+        params: {
+          limit: PAGE_SIZE,
+          cursor: nextCursor || undefined,
+          seen: Array.from(seenRef.current).join(",") || undefined,
+        },
       });
       const nextItems = data.items || [];
+      rememberSeen(nextItems);
       setItems((current) => (reset ? nextItems : [...current, ...nextItems]));
       setCursor(data.nextCursor || null);
       cursorRef.current = data.nextCursor || null;
@@ -83,7 +111,7 @@ export default function TrendFeedPage() {
       loadingRef.current = false;
       setLoading(false);
     }
-  }, []);
+  }, [rememberSeen]);
 
   useEffect(() => {
     loadPage({ reset: true });

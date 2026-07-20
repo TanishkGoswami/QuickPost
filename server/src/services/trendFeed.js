@@ -1,4 +1,5 @@
 import IORedis from "ioredis";
+import crypto from "crypto";
 
 const DEFAULT_LIMIT = 24;
 const MAX_LIMIT = 50;
@@ -55,7 +56,12 @@ export function getTrendFeedCache() {
 }
 
 function cacheKey(params) {
-  return `trend:feed:${params.limit || DEFAULT_LIMIT}:${params.cursor || "first"}`;
+  const seenHash = crypto
+    .createHash("sha1")
+    .update((params.seenIds || []).join(","))
+    .digest("hex")
+    .slice(0, 12);
+  return `trend:feed:${params.limit || DEFAULT_LIMIT}:${params.cursor || "first"}:${seenHash}`;
 }
 
 async function readCache(cache, key) {
@@ -97,12 +103,22 @@ function applyRankCursor(posts, cursor) {
   );
 }
 
+export function parseSeenPostIds(value) {
+  return String(value || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .slice(0, 200);
+}
+
 export async function getTrendFeedPage(params = {}, options = {}) {
   const limit = toLimit(params.limit);
   const supabase = options.supabase || await defaultSupabase();
   const now = options.now || new Date();
+  const seenIds = parseSeenPostIds(params.seen);
+  const seen = new Set(seenIds);
   const cache = options.cache === undefined ? getTrendFeedCache() : options.cache;
-  const key = cacheKey({ limit, cursor: params.cursor });
+  const key = cacheKey({ limit, cursor: params.cursor, seenIds });
   const cached = await readCache(cache, key);
   if (cached) return { ...cached, cached: true };
 
@@ -117,6 +133,7 @@ export async function getTrendFeedPage(params = {}, options = {}) {
 
   const ranked = applyRankCursor(
     (data || [])
+      .filter((post) => !seen.has(post.id))
       .map((post) => ({ ...post, rank_score: scoreTrendPost(post, now) }))
       .sort(compareRankedPosts),
     params.cursor,
