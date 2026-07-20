@@ -2,11 +2,7 @@
 
 ✅ Phase 0 done - Supabase `posts` schema, env placeholders, and quota-aware YouTube client wrapper.
 
-## Phase 1 - YouTube ingestion
-- [x] Cron worker: pull `chart=mostPopular` by region/category
-- [x] Normalize into common `posts` schema
-- [x] Dedup by source_url/content hash before insert
-- [ ] Confirm rows landing correctly in Supabase
+✅ Phase 1 done - YouTube `mostPopular` worker pulls, normalizes, dedupes, and writes to Supabase.
 
 ## Phase 2 - Feed API
 - [ ] Cursor-based pagination endpoint (not offset)
