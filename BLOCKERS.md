@@ -19,3 +19,11 @@ Blocked for live Reddit ingestion.
 - User does not currently have Reddit app credentials because app creation is not working.
 - Do not replace this with scraping, browser automation, or unofficial endpoints; that would create a ToS/scraping risk.
 - Phase 4 code is implemented and test-verified, but live Reddit pulls must wait until official credentials are available or the user explicitly approves skipping Reddit live ingestion.
+
+## 2026-07-20 - Phase 6 Claude API tagging cost decision
+
+Blocked before implementing personalization tagging.
+
+- Next unchecked task is `Claude API call per post: niche + format tagging`.
+- Claude API is a paid external API integration, so AGENTS.md requires a hard stop before implementation.
+- Need user sign-off on whether to use Claude, which API key/model/budget to use, or whether to skip AI tagging and continue with non-paid Phase 6 work.
