@@ -2,6 +2,7 @@ import cron from "node-cron";
 import { pathToFileURL } from "url";
 import { listMostPopularYouTubeVideos } from "../services/trendYoutubeClient.js";
 import { normalizeYouTubeVideosToPosts } from "../services/trendPostNormalizer.js";
+import { insertNewTrendPosts } from "../services/trendPostStore.js";
 
 const DEFAULT_REGIONS = ["IN"];
 const DEFAULT_CATEGORIES = [null];
@@ -32,6 +33,7 @@ export async function pullYouTubeMostPopularBatch(options = {}) {
     targets = getYouTubeIngestionTargets(),
     apiKey,
     fetchImpl,
+    insertPosts = insertNewTrendPosts,
     logger = console,
   } = options;
 
@@ -39,11 +41,14 @@ export async function pullYouTubeMostPopularBatch(options = {}) {
   for (const target of targets) {
     const result = await listMostPopularYouTubeVideos({ ...target, apiKey, fetchImpl });
     const posts = normalizeYouTubeVideosToPosts(result.items);
-    results.push({ target, ...result, posts });
+    const write = await insertPosts(posts);
+    results.push({ target, ...result, posts, write });
     logger.log("[TREND-YOUTUBE] pulled mostPopular", {
       regionCode: target.regionCode,
       videoCategoryId: target.videoCategoryId || "all",
       count: result.items.length,
+      inserted: write.inserted.length,
+      skipped: write.skipped,
       quota: result.quota,
     });
   }

@@ -5,7 +5,7 @@
 ## Phase 1 - YouTube ingestion
 - [x] Cron worker: pull `chart=mostPopular` by region/category
 - [x] Normalize into common `posts` schema
-- [ ] Dedup by source_url/content hash before insert
+- [x] Dedup by source_url/content hash before insert
 - [ ] Confirm rows landing correctly in Supabase
 
 ## Phase 2 - Feed API

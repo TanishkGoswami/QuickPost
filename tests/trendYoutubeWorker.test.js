@@ -31,6 +31,7 @@ describe("trend YouTube worker", () => {
       targets: [{ regionCode: "IN", videoCategoryId: null, maxResults: 1 }],
       apiKey: "test-key",
       fetchImpl,
+      insertPosts: async (posts) => ({ inserted: posts, skipped: 0 }),
       logger: { log() {} },
     });
 
