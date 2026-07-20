@@ -34,8 +34,9 @@ export async function postToPinterest(imageUrl, title, tokens, link = '', boardI
     console.log('Image URL:', imageUrl);
     console.log('Board ID:', targetBoardId);
 
+    const baseUrl = process.env.PINTEREST_SANDBOX_TOKEN ? 'https://api-sandbox.pinterest.com/v5' : 'https://api.pinterest.com/v5';
     // Create pin
-    const response = await axios.post('https://api.pinterest.com/v5/pins', {
+    const response = await axios.post(`${baseUrl}/pins`, {
       board_id: targetBoardId,
       title: title.substring(0, 100) || 'QuickPost Pin',
       description: title,
@@ -92,8 +93,9 @@ export async function uploadImageToPinterest(imagePath, caption, tokens) {
     const form = new FormData();
     form.append('image', fs.createReadStream(imagePath));
 
+    const baseUrl = process.env.PINTEREST_SANDBOX_TOKEN ? 'https://api-sandbox.pinterest.com/v5' : 'https://api.pinterest.com/v5';
     // Upload media
-    const uploadResponse = await axios.post('https://api.pinterest.com/v5/media', form, {
+    const uploadResponse = await axios.post(`${baseUrl}/media`, form, {
       headers: {
         'Authorization': `Bearer ${tokens.accessToken}`,
         ...form.getHeaders()
@@ -103,7 +105,7 @@ export async function uploadImageToPinterest(imagePath, caption, tokens) {
     const mediaId = uploadResponse.data.media_id;
 
     // Create pin with uploaded media
-    const pinResponse = await axios.post('https://api.pinterest.com/v5/pins', {
+    const pinResponse = await axios.post(`${baseUrl}/pins`, {
       board_id: tokens.boardId,
       title: caption.substring(0, 100) || 'QuickPost Pin',
       description: caption,
