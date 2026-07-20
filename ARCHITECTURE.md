@@ -23,3 +23,4 @@
 - Trend Feed virtualization uses `react-virtuoso` `listClassName`/`itemClassName`; custom grid wrappers must preserve library measurement props.
 - Short feed pages render with native CSS grid; virtualization starts only after the first page is exceeded.
 - YouTube embeds include page origin/referrer policy, and ingestion records `status.embeddable` so blocked videos fall back to thumbnail links.
+- Reddit ingestion uses official OAuth API app tokens against `oauth.reddit.com`, surfaces 429 retry hints, stores no embeds, and routes normalized posts through the shared `posts` dedupe insert pipeline.

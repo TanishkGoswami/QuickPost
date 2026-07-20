@@ -12,8 +12,7 @@ Done Phase 3 - Dashboard Trend Feed page with IntersectionObserver fetch, virtua
 - [x] Render short feeds without virtual-scroll measurement.
 - [x] Fix YouTube iframe player configuration error.
 
-## Phase 4 - Reddit ingestion
-- [ ] OAuth setup, subreddit puller, same normalize/dedup pipeline
+Done Phase 4 - Official Reddit OAuth app token, subreddit hot puller, normalizer, and shared dedup insert pipeline.
 
 ## Phase 5 - Bluesky firehose
 - [ ] WebSocket consumer, filter/normalize into `posts`

@@ -48,3 +48,37 @@ export function normalizeYouTubeVideoToPost(video, ingestedAt = new Date()) {
 export function normalizeYouTubeVideosToPosts(videos = [], ingestedAt = new Date()) {
   return videos.map((video) => normalizeYouTubeVideoToPost(video, ingestedAt));
 }
+
+function redditPermalink(post) {
+  if (post?.url_overridden_by_dest) return post.url_overridden_by_dest;
+  if (post?.permalink) return `https://www.reddit.com${post.permalink}`;
+  return `https://www.reddit.com/comments/${post.id}`;
+}
+
+function redditThumbnail(post) {
+  const preview = post?.preview?.images?.[0]?.source?.url;
+  const thumbnail = post?.thumbnail && /^https?:\/\//.test(post.thumbnail) ? post.thumbnail : null;
+  return (preview || thumbnail || null)?.replace(/&amp;/g, "&") || null;
+}
+
+export function normalizeRedditPostToTrendPost(post, ingestedAt = new Date()) {
+  if (!post?.id) {
+    throw new Error("Cannot normalize Reddit post without an id.");
+  }
+
+  return {
+    source_platform: "reddit",
+    source_url: redditPermalink(post),
+    embed_html: null,
+    thumbnail_url: redditThumbnail(post),
+    caption: [post.title, post.selftext].filter(Boolean).join("\n\n") || null,
+    engagement_score: Number(post.score || 0) + Number(post.num_comments || 0) * 3,
+    niche_tags: [],
+    published_at: post.created_utc ? new Date(post.created_utc * 1000).toISOString() : null,
+    ingested_at: ingestedAt.toISOString(),
+  };
+}
+
+export function normalizeRedditPostsToTrendPosts(posts = [], ingestedAt = new Date()) {
+  return posts.map((post) => normalizeRedditPostToTrendPost(post, ingestedAt));
+}

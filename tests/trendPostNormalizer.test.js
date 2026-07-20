@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { normalizeYouTubeVideoToPost } from "../server/src/services/trendPostNormalizer.js";
+import {
+  normalizeRedditPostToTrendPost,
+  normalizeYouTubeVideoToPost,
+} from "../server/src/services/trendPostNormalizer.js";
 
 describe("trend post normalizer", () => {
   it("maps a YouTube video resource into the posts schema", () => {
@@ -51,5 +54,33 @@ describe("trend post normalizer", () => {
 
     expect(post.embed_html).toBeNull();
     expect(post.thumbnail_url).toBeNull();
+  });
+
+  it("maps a Reddit listing item into the posts schema", () => {
+    const post = normalizeRedditPostToTrendPost(
+      {
+        id: "abc",
+        title: "Hook idea",
+        selftext: "Breakdown",
+        permalink: "/r/ChatGPT/comments/abc/hook_idea/",
+        score: 10,
+        num_comments: 2,
+        created_utc: 1784548800,
+        preview: { images: [{ source: { url: "https://preview.redd.it/a.jpg?x=1&amp;y=2" } }] },
+      },
+      new Date("2026-07-20T07:00:00Z"),
+    );
+
+    expect(post).toEqual({
+      source_platform: "reddit",
+      source_url: "https://www.reddit.com/r/ChatGPT/comments/abc/hook_idea/",
+      embed_html: null,
+      thumbnail_url: "https://preview.redd.it/a.jpg?x=1&y=2",
+      caption: "Hook idea\n\nBreakdown",
+      engagement_score: 16,
+      niche_tags: [],
+      published_at: "2026-07-20T12:00:00.000Z",
+      ingested_at: "2026-07-20T07:00:00.000Z",
+    });
   });
 });
