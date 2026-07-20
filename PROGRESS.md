@@ -7,3 +7,4 @@
 - Added a standalone YouTube trend cron worker for region/category `mostPopular` pulls via `npm run worker:trends:youtube`.
 - Added YouTube-to-`posts` normalization for source URL, embed, thumbnail, caption, score, tags, and publish/ingest timestamps.
 - Added `content_hash` dedup and insert filtering so repeated source URLs or repeated content are skipped before `posts` inserts.
+- Blocked before Phase 1 confirmation: local Supabase/Docker is unavailable and no `YOUTUBE_DATA_API_KEY` is set for an end-to-end pull.
