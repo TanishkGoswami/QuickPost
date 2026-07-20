@@ -17,3 +17,4 @@
 - Added a native grid path for short feeds while keeping Virtuoso for larger result sets.
 - Added YouTube iframe origin/referrer config and started ingesting `status.embeddable` for safe embed fallback.
 - Completed Phase 4 with official Reddit OAuth client-credentials reads, subreddit hot worker, Reddit normalizer, and shared post dedupe insert path.
+- Completed Phase 5 with Bluesky Jetstream WebSocket ingestion, top-level post filtering, normalizer, and shared dedupe insert path.

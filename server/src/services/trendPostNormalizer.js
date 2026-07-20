@@ -82,3 +82,25 @@ export function normalizeRedditPostToTrendPost(post, ingestedAt = new Date()) {
 export function normalizeRedditPostsToTrendPosts(posts = [], ingestedAt = new Date()) {
   return posts.map((post) => normalizeRedditPostToTrendPost(post, ingestedAt));
 }
+
+export function normalizeBlueskyPostToTrendPost(post, ingestedAt = new Date()) {
+  if (!post?.did || !post?.rkey) {
+    throw new Error("Cannot normalize Bluesky post without a did and rkey.");
+  }
+
+  return {
+    source_platform: "bluesky",
+    source_url: `https://bsky.app/profile/${post.did}/post/${post.rkey}`,
+    embed_html: null,
+    thumbnail_url: null,
+    caption: post.text || null,
+    engagement_score: 1,
+    niche_tags: [],
+    published_at: post.createdAt || null,
+    ingested_at: ingestedAt.toISOString(),
+  };
+}
+
+export function normalizeBlueskyPostsToTrendPosts(posts = [], ingestedAt = new Date()) {
+  return posts.map((post) => normalizeBlueskyPostToTrendPost(post, ingestedAt));
+}

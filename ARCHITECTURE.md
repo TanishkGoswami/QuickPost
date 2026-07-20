@@ -24,3 +24,4 @@
 - Short feed pages render with native CSS grid; virtualization starts only after the first page is exceeded.
 - YouTube embeds include page origin/referrer policy, and ingestion records `status.embeddable` so blocked videos fall back to thumbnail links.
 - Reddit ingestion uses official OAuth API app tokens against `oauth.reddit.com`, surfaces 429 retry hints, stores no embeds, and routes normalized posts through the shared `posts` dedupe insert pipeline.
+- Bluesky ingestion uses the public Jetstream WebSocket filtered to `app.bsky.feed.post`; raw CBOR/CAR `subscribeRepos` is deferred because Jetstream gives the needed public post stream with lower bandwidth and simpler JSON parsing.

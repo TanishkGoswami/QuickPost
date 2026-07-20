@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  normalizeBlueskyPostToTrendPost,
   normalizeRedditPostToTrendPost,
   normalizeYouTubeVideoToPost,
 } from "../server/src/services/trendPostNormalizer.js";
@@ -81,6 +82,30 @@ describe("trend post normalizer", () => {
       niche_tags: [],
       published_at: "2026-07-20T12:00:00.000Z",
       ingested_at: "2026-07-20T07:00:00.000Z",
+    });
+  });
+
+  it("maps a Bluesky post into the posts schema", () => {
+    const post = normalizeBlueskyPostToTrendPost(
+      {
+        did: "did:plc:abc",
+        rkey: "3k",
+        text: "Creator hook idea",
+        createdAt: "2026-07-20T12:00:00.000Z",
+      },
+      new Date("2026-07-20T12:01:00Z"),
+    );
+
+    expect(post).toEqual({
+      source_platform: "bluesky",
+      source_url: "https://bsky.app/profile/did:plc:abc/post/3k",
+      embed_html: null,
+      thumbnail_url: null,
+      caption: "Creator hook idea",
+      engagement_score: 1,
+      niche_tags: [],
+      published_at: "2026-07-20T12:00:00.000Z",
+      ingested_at: "2026-07-20T12:01:00.000Z",
     });
   });
 });
