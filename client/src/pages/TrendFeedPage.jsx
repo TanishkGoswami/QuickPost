@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ExternalLink, RefreshCw, Sparkles } from "lucide-react";
+import { VirtuosoGrid } from "react-virtuoso";
 import apiClient from "../utils/apiClient";
 
 const PAGE_SIZE = 18;
@@ -150,14 +151,20 @@ export default function TrendFeedPage() {
           cursor: pointer;
         }
         .trend-feed-grid {
-          column-width: 280px;
-          column-gap: 16px;
+          height: min(980px, calc(100vh - 210px));
+        }
+        .trend-feed-virtual-list {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+          gap: 16px;
+          align-items: start;
+        }
+        .trend-feed-virtual-item {
+          min-width: 0;
         }
         .trend-feed-card {
-          break-inside: avoid;
-          display: inline-block;
           width: 100%;
-          margin: 0 0 16px;
+          height: 100%;
           border: 1px solid rgba(23, 19, 15, 0.11);
           border-radius: 8px;
           overflow: hidden;
@@ -231,7 +238,7 @@ export default function TrendFeedPage() {
           font-weight: 700;
         }
         .trend-feed-sentinel {
-          height: 1px;
+          height: 40px;
         }
         @media (max-width: 720px) {
           .trend-feed-top {
@@ -260,13 +267,18 @@ export default function TrendFeedPage() {
       {!error && !initialLoaded && <div className="trend-feed-state">Loading trends...</div>}
       {!error && initialLoaded && items.length === 0 && <div className="trend-feed-state">No trend posts yet.</div>}
       {!error && items.length > 0 && (
-        <div className="trend-feed-grid">
-          {items.map((post) => (
-            <TrendCard key={post.id} post={post} />
-          ))}
-        </div>
+        <VirtuosoGrid
+          className="trend-feed-grid"
+          data={items}
+          computeItemKey={(_, post) => post.id}
+          components={{
+            List: React.forwardRef((props, ref) => <div {...props} ref={ref} className="trend-feed-virtual-list" />),
+            Item: (props) => <div {...props} className="trend-feed-virtual-item" />,
+            Footer: () => <div ref={sentinelRef} className="trend-feed-sentinel" aria-hidden="true" />,
+          }}
+          itemContent={(_, post) => <TrendCard post={post} />}
+        />
       )}
-      <div ref={sentinelRef} className="trend-feed-sentinel" aria-hidden="true" />
       {loading && initialLoaded && <div className="trend-feed-state">Loading more...</div>}
     </section>
   );

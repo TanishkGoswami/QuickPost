@@ -8,7 +8,7 @@
 
 ## Phase 3 - Frontend infinite scroll
 - [x] Next.js feed page, IntersectionObserver-triggered fetch
-- [ ] List virtualization
+- [x] List virtualization
 - [ ] Per-user `seen_post_ids` exclusion
 - [ ] Embed rendering (official embeds, no rehosted media)
 
