@@ -6,11 +6,7 @@
 
 ✅ Phase 2 done - Cursor feed API with ranking v1 and optional Redis hot-page cache.
 
-## Phase 3 - Frontend infinite scroll
-- [x] Next.js feed page, IntersectionObserver-triggered fetch
-- [x] List virtualization
-- [x] Per-user `seen_post_ids` exclusion
-- [ ] Embed rendering (official embeds, no rehosted media)
+Done Phase 3 - Dashboard Trend Feed page with IntersectionObserver fetch, virtualization, seen-post exclusion, and official embeds.
 
 ## Phase 4 - Reddit ingestion
 - [ ] OAuth setup, subreddit puller, same normalize/dedup pipeline

@@ -18,3 +18,4 @@
 - Frontend trend work lives in the existing Vite React dashboard client; adding a separate Next.js app is deferred unless the product moves off this client shell.
 - Trend Feed uses `react-virtuoso` grid virtualization in the dashboard route.
 - Seen-post exclusion is browser-scoped per user via localStorage and the feed API `seen` query param; promote to a DB table only when cross-device history is needed.
+- Trend cards render official YouTube iframes from validated embed/source URLs; raw stored embed HTML is never injected into React.

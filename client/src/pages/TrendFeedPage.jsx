@@ -27,16 +27,64 @@ function formatDate(value) {
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(value));
 }
 
+function getOfficialEmbedSrc(post) {
+  const htmlSrc = post.embed_html?.match(/\ssrc=["']([^"']+)["']/i)?.[1];
+  const candidates = [htmlSrc, post.source_url];
+
+  for (const value of candidates) {
+    try {
+      const url = new URL(value);
+      const host = url.hostname.replace(/^www\./, "");
+      const videoId = host === "youtu.be"
+        ? url.pathname.split("/").filter(Boolean)[0]
+        : url.pathname.startsWith("/watch")
+          ? url.searchParams.get("v")
+          : url.pathname.startsWith("/embed/")
+            ? url.pathname.split("/").filter(Boolean)[1]
+            : null;
+
+      if (!videoId || !/^[a-zA-Z0-9_-]{6,}$/.test(videoId)) continue;
+      return `https://www.youtube.com/embed/${videoId}`;
+    } catch {
+      // Keep bad source data out of the DOM and fall through to thumbnail rendering.
+    }
+  }
+
+  return "";
+}
+
+function TrendMedia({ post }) {
+  const embedSrc = post.source_platform === "youtube" ? getOfficialEmbedSrc(post) : "";
+
+  if (embedSrc) {
+    return (
+      <div className="trend-feed-media">
+        <iframe
+          src={embedSrc}
+          title={post.caption || "YouTube trend video"}
+          loading="lazy"
+          allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+
+  return (
+    <a href={post.source_url} target="_blank" rel="noreferrer" className="trend-feed-media">
+      {post.thumbnail_url ? (
+        <img src={post.thumbnail_url} alt="" loading="lazy" />
+      ) : (
+        <span>{post.source_platform}</span>
+      )}
+    </a>
+  );
+}
+
 function TrendCard({ post }) {
   return (
     <article className="trend-feed-card">
-      <a href={post.source_url} target="_blank" rel="noreferrer" className="trend-feed-media">
-        {post.thumbnail_url ? (
-          <img src={post.thumbnail_url} alt="" loading="lazy" />
-        ) : (
-          <span>{post.source_platform}</span>
-        )}
-      </a>
+      <TrendMedia post={post} />
       <div className="trend-feed-card-body">
         <div className="trend-feed-card-meta">
           <span>{post.source_platform}</span>
@@ -211,6 +259,12 @@ export default function TrendFeedPage() {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          display: block;
+        }
+        .trend-feed-media iframe {
+          width: 100%;
+          height: 100%;
+          border: 0;
           display: block;
         }
         .trend-feed-media span {

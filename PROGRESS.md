@@ -11,3 +11,4 @@
 - Added the dashboard Trend Feed page with IntersectionObserver-triggered page fetches in the existing Vite React client.
 - Added `react-virtuoso` grid virtualization for the Trend Feed card list.
 - Added browser-scoped per-user seen IDs and API exclusion for already-seen trend posts.
+- Rendered official YouTube embeds from sanitized embed/source URLs and completed Phase 3.
