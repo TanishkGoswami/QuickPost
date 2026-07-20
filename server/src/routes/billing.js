@@ -8,6 +8,32 @@ const router = express.Router();
 
 import { getSocialPricing } from '../services/pricing.js';
 
+function buildIntervalPrices(plan) {
+  const monthly = plan.prices?.month;
+  const yearly = plan.prices?.year;
+  return {
+    month: monthly,
+    quarterly: Math.round(monthly * 3 * 0.90) / 3,
+    six_months: Math.round(monthly * 6 * 0.80) / 6,
+    year: yearly ? yearly / 12 : Math.round(monthly * 12 * 0.70) / 12,
+  };
+}
+
+function applyPricing(plan, hubPlan) {
+  if (!hubPlan) {
+    plan.prices = buildIntervalPrices(plan);
+    return;
+  }
+
+  const base = hubPlan.amount;
+  plan.prices = {
+    month: base / 100,
+    quarterly: Math.round(base * 3 * 0.90) / 100 / 3,
+    six_months: Math.round(base * 6 * 0.80) / 100 / 6,
+    year: Math.round(base * 12 * 0.70) / 100 / 12
+  };
+}
+
 router.get('/plans', async (_req, res) => {
   try {
     const socialPricing = await getSocialPricing();
@@ -18,29 +44,8 @@ router.get('/plans', async (_req, res) => {
     const slitePlan = JSON.parse(JSON.stringify(PLANS.slite));
     const sgrowthPlan = JSON.parse(JSON.stringify(PLANS.sgrowth));
 
-    if (starterPlan) {
-      const base = starterPlan.amount;
-      slitePlan.prices = {
-        month: base / 100,
-        quarterly: Math.round(base * 3 * 0.90) / 100 / 3,
-        six_months: Math.round(base * 6 * 0.80) / 100 / 6,
-        year: Math.round(base * 12 * 0.70) / 100 / 12
-      };
-    } else {
-      slitePlan.prices = { month: null, quarterly: null, six_months: null, year: null };
-    }
-
-    if (growthPlan) {
-      const base = growthPlan.amount;
-      sgrowthPlan.prices = {
-        month: base / 100,
-        quarterly: Math.round(base * 3 * 0.90) / 100 / 3,
-        six_months: Math.round(base * 6 * 0.80) / 100 / 6,
-        year: Math.round(base * 12 * 0.70) / 100 / 12
-      };
-    } else {
-      sgrowthPlan.prices = { month: null, quarterly: null, six_months: null, year: null };
-    }
+    applyPricing(slitePlan, starterPlan);
+    applyPricing(sgrowthPlan, growthPlan);
 
     res.json({
       success: true,
@@ -52,8 +57,8 @@ router.get('/plans', async (_req, res) => {
     const slitePlan = JSON.parse(JSON.stringify(PLANS.slite));
     const sgrowthPlan = JSON.parse(JSON.stringify(PLANS.sgrowth));
 
-    slitePlan.prices = { month: null, quarterly: null, six_months: null, year: null };
-    sgrowthPlan.prices = { month: null, quarterly: null, six_months: null, year: null };
+    slitePlan.prices = buildIntervalPrices(slitePlan);
+    sgrowthPlan.prices = buildIntervalPrices(sgrowthPlan);
 
     res.json({
       success: true,

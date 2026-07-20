@@ -8,6 +8,7 @@ import broadcastRouter from './routes/broadcast.js';
 import authRouter from './routes/auth.js';
 import ssoRouter from './routes/sso.js';
 import broadcastsRouter from './routes/broadcasts.js';
+import dashboardRouter from './routes/dashboard.js';
 import onboardingRouter from './routes/onboarding.js';
 import jobsRouter from './routes/jobs.js';
 import trendsRouter from './routes/trends.js';
@@ -17,6 +18,7 @@ import autodmRouter from './routes/autodm.js';
 import billingRouter from './routes/billing.js';
 import youtubeRouter from './routes/youtube.js';
 import { initScheduler } from './services/scheduler.js';
+import { initTrendRefreshScheduler } from './services/trends/scheduler.js';
 import supabase from './services/supabase.js';
 import { processInstagramWebhook } from './services/instapilot.js';
 
@@ -77,6 +79,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/auth', ssoRouter);
 app.use('/api', broadcastRouter);
 app.use('/api', broadcastsRouter);
+app.use('/api', dashboardRouter);
 app.use('/api', onboardingRouter);
 app.use('/api', jobsRouter);
 app.use('/api', trendsRouter);
@@ -158,7 +161,8 @@ const server = app.listen(PORT, () => {
   console.log(`📁 Uploads directory: ${path.join(__dirname, '../uploads')}`);
   
   // Initialize Post Scheduler
-  initScheduler();
+initScheduler();
+initTrendRefreshScheduler(PORT);
 
   console.log(`\n✨ Ready to broadcast!\n`);
 });

@@ -286,7 +286,7 @@ Deno.serve(async (req: Request) => {
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Authorization, Content-Type",
+        "Access-Control-Allow-Headers": "Authorization, Content-Type, x-sync-secret",
       },
     });
   }
@@ -298,6 +298,20 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    const syncSecret = Deno.env.get("SOCIAL_SYNC_SECRET") ?? "";
+    const incoming = req.headers.get("x-sync-secret") ?? "";
+
+    if (!syncSecret || incoming !== syncSecret) {
+      console.error("[sync-to-hub] Unauthorized");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      });
+    }
+
     const SOURCE_URL = Deno.env.get("SUPABASE_URL")!;
     const SOURCE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const HUB_URL = Deno.env.get("HUB_SUPABASE_URL");

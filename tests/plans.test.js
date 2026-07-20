@@ -12,7 +12,7 @@ describe('canonical QuickPost plans', () => {
   it('matches the documented prices', () => {
     expect(PLANS.free.prices).toEqual({ month: 0, year: 0 });
     expect(PLANS.slite.prices).toEqual({ month: 999, year: 9588 });
-    expect(PLANS.sgrowth.prices).toEqual({ month: 1999, year: 19988 });
+    expect(PLANS.sgrowth.prices).toEqual({ month: 1999, year: 19188 });
   });
 
   it('matches account, automation, reply, contact, team, and history limits', () => {
