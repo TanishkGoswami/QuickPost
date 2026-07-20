@@ -8,3 +8,4 @@
 ## Execution
 - Phase work follows `TODO.md` order.
 - Paid APIs, scraping/ToS risk, Supabase data deletion, or architecture conflicts must stop in `BLOCKERS.md`.
+- Trend source credentials stay server-side in `server/.env`; the frontend only receives Supabase anon config and API base URLs.
