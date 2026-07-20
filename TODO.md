@@ -3,7 +3,7 @@
 ✅ Phase 0 done - Supabase `posts` schema, env placeholders, and quota-aware YouTube client wrapper.
 
 ## Phase 1 - YouTube ingestion
-- [ ] Cron worker: pull `chart=mostPopular` by region/category
+- [x] Cron worker: pull `chart=mostPopular` by region/category
 - [ ] Normalize into common `posts` schema
 - [ ] Dedup by source_url/content hash before insert
 - [ ] Confirm rows landing correctly in Supabase

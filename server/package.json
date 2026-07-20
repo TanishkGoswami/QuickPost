@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "dev": "node --watch src/index.js",
+    "worker:trends:youtube": "node src/workers/trendYoutubeWorker.js"
   },
   "keywords": [
     "social-media",
