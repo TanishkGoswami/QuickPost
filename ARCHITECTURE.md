@@ -22,3 +22,4 @@
 - The API prefers unseen posts but falls back to seen rows when the candidate pool is exhausted, so low-volume ingestion never renders a blank feed.
 - Trend Feed virtualization uses `react-virtuoso` `listClassName`/`itemClassName`; custom grid wrappers must preserve library measurement props.
 - Short feed pages render with native CSS grid; virtualization starts only after the first page is exceeded.
+- YouTube embeds include page origin/referrer policy, and ingestion records `status.embeddable` so blocked videos fall back to thumbnail links.

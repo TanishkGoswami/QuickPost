@@ -41,4 +41,15 @@ describe("trend post normalizer", () => {
   it("rejects malformed YouTube resources", () => {
     expect(() => normalizeYouTubeVideoToPost({})).toThrow("without an id");
   });
+
+  it("does not store iframe HTML for non-embeddable YouTube videos", () => {
+    const post = normalizeYouTubeVideoToPost({
+      id: "locked123",
+      status: { embeddable: false },
+      snippet: { title: "Members only" },
+    });
+
+    expect(post.embed_html).toBeNull();
+    expect(post.thumbnail_url).toBeNull();
+  });
 });

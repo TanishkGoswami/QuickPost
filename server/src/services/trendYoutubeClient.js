@@ -64,11 +64,11 @@ function toPositiveInt(value, fallback, max) {
 function buildMostPopularUrl({ apiKey, regionCode, videoCategoryId, maxResults }) {
   const params = new URLSearchParams({
     key: apiKey,
-    part: "snippet,statistics,contentDetails",
+    part: "snippet,statistics,contentDetails,status",
     chart: "mostPopular",
     regionCode: regionCode || "IN",
     maxResults: String(toPositiveInt(maxResults, 25, 50)),
-    fields: "items(id,snippet(publishedAt,title,description,channelTitle,thumbnails),statistics,contentDetails),nextPageToken",
+    fields: "items(id,snippet(publishedAt,title,description,channelTitle,thumbnails),statistics,contentDetails,status(embeddable)),nextPageToken",
   });
 
   if (videoCategoryId) params.set("videoCategoryId", String(videoCategoryId));

@@ -32,6 +32,8 @@ describe("trend YouTube Data API client", () => {
     expect(result.quota.used).toBe(1);
     expect(calls[0].url.pathname).toBe("/youtube/v3/videos");
     expect(calls[0].url.searchParams.get("chart")).toBe("mostPopular");
+    expect(calls[0].url.searchParams.get("part")).toContain("status");
+    expect(calls[0].url.searchParams.get("fields")).toContain("status(embeddable)");
     expect(calls[0].url.searchParams.get("regionCode")).toBe("US");
     expect(calls[0].url.searchParams.get("videoCategoryId")).toBe("24");
     expect(calls[0].url.searchParams.get("maxResults")).toBe("50");

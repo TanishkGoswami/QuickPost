@@ -44,7 +44,9 @@ function getOfficialEmbedSrc(post) {
             : null;
 
       if (!videoId || !/^[a-zA-Z0-9_-]{6,}$/.test(videoId)) continue;
-      return `https://www.youtube.com/embed/${videoId}`;
+      const embedUrl = new URL(`https://www.youtube.com/embed/${videoId}`);
+      if (window.location?.origin) embedUrl.searchParams.set("origin", window.location.origin);
+      return embedUrl.toString();
     } catch {
       // Keep bad source data out of the DOM and fall through to thumbnail rendering.
     }
@@ -64,6 +66,7 @@ function TrendMedia({ post }) {
           title={post.caption || "YouTube trend video"}
           loading="lazy"
           allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerPolicy="strict-origin-when-cross-origin"
           allowFullScreen
         />
       </div>

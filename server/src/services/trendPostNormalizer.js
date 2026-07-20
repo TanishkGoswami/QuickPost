@@ -33,7 +33,9 @@ export function normalizeYouTubeVideoToPost(video, ingestedAt = new Date()) {
   return {
     source_platform: "youtube",
     source_url: `https://www.youtube.com/watch?v=${video.id}`,
-    embed_html: `<iframe src="https://www.youtube.com/embed/${video.id}" title="YouTube video" loading="lazy" allowfullscreen></iframe>`,
+    embed_html: video.status?.embeddable === false
+      ? null
+      : `<iframe src="https://www.youtube.com/embed/${video.id}" title="YouTube video" loading="lazy" allowfullscreen></iframe>`,
     thumbnail_url: bestThumbnail(video.snippet?.thumbnails),
     caption: youtubeCaption(video.snippet),
     engagement_score: views + likes * 2 + comments * 3,
