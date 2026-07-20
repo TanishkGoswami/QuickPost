@@ -6,7 +6,7 @@
 
 ## Phase 2 - Feed API
 - [x] Cursor-based pagination endpoint (not offset)
-- [ ] Ranking v1: `recency_decay * engagement_velocity`
+- [x] Ranking v1: `recency_decay * engagement_velocity`
 - [ ] Redis cache for hot feed pages
 
 ## Phase 3 - Frontend infinite scroll

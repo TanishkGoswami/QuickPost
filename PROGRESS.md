@@ -7,3 +7,4 @@
 - Completed Phase 1: YouTube `mostPopular` worker pulls by region/category, normalizes into `posts`, and dedupes by source URL/content hash before insert.
 - Confirmed one real row landed in Supabase from an official YouTube pull (`inserted=1`, `quotaUsed=1`).
 - Added protected cursor-based `GET /api/trends/feed` backed by keyset pagination on `ingested_at` and `id`.
+- Added ranking v1 using `recency_decay * engagement_velocity`, returned as `rank_score` with rank cursors.
