@@ -1,9 +1,6 @@
 # Trend Page TODO
 
-## Phase 0 - Setup
-- [x] Supabase schema: `posts` table (id, source_platform, source_url, embed_html, thumbnail_url, caption, engagement_score, niche_tags[], published_at, ingested_at) + `pgvector` enabled
-- [x] Env vars wired (YouTube API key, Supabase keys)
-- [ ] YouTube API client wrapper (quota-aware, 10k units/day)
+✅ Phase 0 done - Supabase `posts` schema, env placeholders, and quota-aware YouTube client wrapper.
 
 ## Phase 1 - YouTube ingestion
 - [ ] Cron worker: pull `chart=mostPopular` by region/category

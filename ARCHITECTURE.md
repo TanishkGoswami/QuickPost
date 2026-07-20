@@ -9,3 +9,4 @@
 - Phase work follows `TODO.md` order.
 - Paid APIs, scraping/ToS risk, Supabase data deletion, or architecture conflicts must stop in `BLOCKERS.md`.
 - Trend source credentials stay server-side in `server/.env`; the frontend only receives Supabase anon config and API base URLs.
+- YouTube ingestion starts from `server/src/services/trendYoutubeClient.js`, using official `videos.list?chart=mostPopular` and a 10,000-unit daily budget guard.

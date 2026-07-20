@@ -1,7 +1,6 @@
 # Trend Page Progress
 
 ## 2026-07-20
-- Seeded the missing AGENTS.md workflow docs so Phase 0 can run in order.
-- Started with the top unchecked task: Supabase `posts` schema plus `pgvector`.
-- Added `202607200002_create_trend_posts.sql` with idempotent table/index/RLS setup; verified with `npm.cmd test -- tests/schemaConsistency.test.js`.
-- Wired env placeholders for Supabase and server-only YouTube ingestion without exposing source API keys to the client.
+- Completed Phase 0: seeded thin workflow docs, added `public.posts` + `pgvector`, and wired server/client env examples.
+- Added quota-aware `listMostPopularYouTubeVideos` for official YouTube Data API `videos.list`; source keys stay server-side.
+- Verified with `npm.cmd test -- tests/schemaConsistency.test.js`, `npm.cmd test -- tests/trendYoutubeClient.test.js`, and `node --check server\src\services\trendYoutubeClient.js`.
