@@ -35,6 +35,7 @@ export class SupermailboxClient {
    * Call this on User Signup or Profile Update.
    */
   async syncUser(user: SupermailboxUser): Promise<{ success: boolean; contactId?: string }> {
+    if (process.env.MAIL_ON !== 'true') return { success: true };
     try {
       const response = await fetch(`${this.baseUrl}/v1/contacts/sync`, {
         method: 'POST',
@@ -60,6 +61,7 @@ export class SupermailboxClient {
    * 2. Dispatch a high-priority transactional email (Payment receipt, OTP, Welcome).
    */
   async sendEmail(request: SendEmailRequest): Promise<{ success: boolean; jobId?: string }> {
+    if (process.env.MAIL_ON !== 'true') return { success: true };
     try {
       const response = await fetch(`${this.baseUrl}/v1/send/transactional`, {
         method: 'POST',

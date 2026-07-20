@@ -26,6 +26,7 @@ export class SupermailboxClient {
    * Call this on User Signup or Profile Update.
    */
   async syncUser(user) {
+    if (process.env.MAIL_ON !== 'true') return { success: true, skipped: true };
     try {
       const response = await fetch(`${this.baseUrl}/v1/contacts/sync`, {
         method: 'POST',
@@ -52,6 +53,7 @@ export class SupermailboxClient {
    * 2. Dispatch a high-priority transactional email (Payment receipt, OTP, Welcome).
    */
   async sendEmail(request) {
+    if (process.env.MAIL_ON !== 'true') return { success: true, skipped: true };
     try {
       const response = await fetch(`${this.baseUrl}/v1/send/transactional`, {
         method: 'POST',
@@ -78,6 +80,7 @@ export class SupermailboxClient {
    * Supports notifyEmail and webhookUrl.
    */
   async sendBroadcast(request) {
+    if (process.env.MAIL_ON !== 'true') return { success: true, skipped: true };
     try {
       const response = await fetch(`${this.baseUrl}/v1/broadcast`, {
         method: 'POST',
