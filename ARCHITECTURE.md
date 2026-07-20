@@ -13,3 +13,4 @@
 - The YouTube cron worker is a separate server process at `server/src/workers/trendYoutubeWorker.js`; the API server does not own ingestion scheduling.
 - `server/src/services/trendPostNormalizer.js` maps platform payloads into `public.posts`; AI-generated niche tags are intentionally empty until Phase 6.
 - `content_hash` is generated server-side from stable normalized post fields and enforced with a partial unique index.
+- Feed API pagination is cursor/keyset based, using `ingested_at desc, id desc`; ranking will replace the primary ordering in Phase 2 task 2.

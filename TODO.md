@@ -5,7 +5,7 @@
 ✅ Phase 1 done - YouTube `mostPopular` worker pulls, normalizes, dedupes, and writes to Supabase.
 
 ## Phase 2 - Feed API
-- [ ] Cursor-based pagination endpoint (not offset)
+- [x] Cursor-based pagination endpoint (not offset)
 - [ ] Ranking v1: `recency_decay * engagement_velocity`
 - [ ] Redis cache for hot feed pages
 
