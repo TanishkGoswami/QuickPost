@@ -93,6 +93,19 @@ describe("trend feed cursor pagination", () => {
     expect(page.items.map((item) => item.id)).toEqual(["2"]);
   });
 
+  it("falls back to seen rows when nothing fresh is available", async () => {
+    const rows = [
+      { id: "3", ingested_at: "2026-07-20T03:00:00Z", published_at: "2026-07-20T03:00:00Z", engagement_score: 30 },
+    ];
+
+    const page = await getTrendFeedPage(
+      { limit: 2, seen: "3" },
+      { supabase: mockSupabase(rows), cache: null, now: new Date("2026-07-20T04:00:00Z") },
+    );
+
+    expect(page.items.map((item) => item.id)).toEqual(["3"]);
+  });
+
   it("serves and writes hot feed pages through cache", async () => {
     const rows = [
       { id: "1", ingested_at: "2026-07-20T01:00:00Z", published_at: "2026-07-20T01:00:00Z", engagement_score: 10 },

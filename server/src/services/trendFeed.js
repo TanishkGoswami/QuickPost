@@ -131,13 +131,14 @@ export async function getTrendFeedPage(params = {}, options = {}) {
   const { data, error } = await query.limit(CANDIDATE_LIMIT);
   if (error) throw error;
 
-  const ranked = applyRankCursor(
-    (data || [])
-      .filter((post) => !seen.has(post.id))
+  const rankPosts = (posts) => applyRankCursor(
+    posts
       .map((post) => ({ ...post, rank_score: scoreTrendPost(post, now) }))
       .sort(compareRankedPosts),
     params.cursor,
   );
+  const unseenRows = (data || []).filter((post) => !seen.has(post.id));
+  const ranked = rankPosts(unseenRows.length ? unseenRows : (data || []));
   const items = ranked.slice(0, limit);
   const page = {
     success: true,

@@ -19,3 +19,4 @@
 - Trend Feed uses `react-virtuoso` grid virtualization in the dashboard route.
 - Seen-post exclusion is browser-scoped per user via localStorage and the feed API `seen` query param; promote to a DB table only when cross-device history is needed.
 - Trend cards render official YouTube iframes from validated embed/source URLs; raw stored embed HTML is never injected into React.
+- The API prefers unseen posts but falls back to seen rows when the candidate pool is exhausted, so low-volume ingestion never renders a blank feed.

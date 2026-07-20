@@ -7,6 +7,7 @@
 ✅ Phase 2 done - Cursor feed API with ranking v1 and optional Redis hot-page cache.
 
 Done Phase 3 - Dashboard Trend Feed page with IntersectionObserver fetch, virtualization, seen-post exclusion, and official embeds.
+- [x] Fix empty-state regression when all currently ingested posts are already marked seen.
 
 ## Phase 4 - Reddit ingestion
 - [ ] OAuth setup, subreddit puller, same normalize/dedup pipeline

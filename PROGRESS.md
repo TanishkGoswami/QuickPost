@@ -12,3 +12,4 @@
 - Added `react-virtuoso` grid virtualization for the Trend Feed card list.
 - Added browser-scoped per-user seen IDs and API exclusion for already-seen trend posts.
 - Rendered official YouTube embeds from sanitized embed/source URLs and completed Phase 3.
+- Fixed the empty feed regression by falling back once all known posts are seen.
