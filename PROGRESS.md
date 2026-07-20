@@ -6,5 +6,5 @@
 - Verified with `npm.cmd test -- tests/schemaConsistency.test.js`, `npm.cmd test -- tests/trendYoutubeClient.test.js`, and `node --check server\src\services\trendYoutubeClient.js`.
 - Completed Phase 1: YouTube `mostPopular` worker pulls by region/category, normalizes into `posts`, and dedupes by source URL/content hash before insert.
 - Confirmed one real row landed in Supabase from an official YouTube pull (`inserted=1`, `quotaUsed=1`).
-- Added protected cursor-based `GET /api/trends/feed` backed by keyset pagination on `ingested_at` and `id`.
-- Added ranking v1 using `recency_decay * engagement_velocity`, returned as `rank_score` with rank cursors.
+- Completed Phase 2: protected `GET /api/trends/feed`, rank cursors, `recency_decay * engagement_velocity`, and optional Redis hot-page cache.
+- Verified with `npm.cmd test -- tests/trendFeed.test.js` and a live Supabase feed read (`items=1`, `hasRankScore=true`).

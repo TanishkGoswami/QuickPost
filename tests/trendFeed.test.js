@@ -71,4 +71,27 @@ describe("trend feed cursor pagination", () => {
 
     expect(secondPage.items[0].id).not.toBe(firstPage.items[0].id);
   });
+
+  it("serves and writes hot feed pages through cache", async () => {
+    const rows = [
+      { id: "1", ingested_at: "2026-07-20T01:00:00Z", published_at: "2026-07-20T01:00:00Z", engagement_score: 10 },
+    ];
+    const writes = [];
+    const cache = {
+      value: null,
+      async get() { return this.value; },
+      async set(key, value, mode, ttl) {
+        writes.push({ key, value, mode, ttl });
+        this.value = value;
+      },
+    };
+
+    const first = await getTrendFeedPage({ limit: 1 }, { supabase: mockSupabase(rows), cache, now: new Date("2026-07-20T04:00:00Z") });
+    const second = await getTrendFeedPage({ limit: 1 }, { supabase: mockSupabase([]), cache, now: new Date("2026-07-20T04:00:00Z") });
+
+    expect(first.cached).toBe(false);
+    expect(second.cached).toBe(true);
+    expect(second.items).toEqual(first.items);
+    expect(writes[0]).toMatchObject({ mode: "EX", ttl: 60 });
+  });
 });

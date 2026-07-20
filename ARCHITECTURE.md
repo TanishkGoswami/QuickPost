@@ -14,3 +14,4 @@
 - `server/src/services/trendPostNormalizer.js` maps platform payloads into `public.posts`; AI-generated niche tags are intentionally empty until Phase 6.
 - `content_hash` is generated server-side from stable normalized post fields and enforced with a partial unique index.
 - Feed API ranks a bounded recent candidate pool with `recency_decay * engagement_velocity` and paginates using `rank_score desc, id desc`.
+- Feed page responses cache in Redis when `REDIS_URL` or `BULLMQ_REDIS_URL` is configured; missing/unavailable cache falls back to Supabase.

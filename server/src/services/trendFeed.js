@@ -1,7 +1,12 @@
+import IORedis from "ioredis";
+
 const DEFAULT_LIMIT = 24;
 const MAX_LIMIT = 50;
 const CANDIDATE_LIMIT = 500;
 const HALF_LIFE_HOURS = 72;
+const CACHE_TTL_SECONDS = Number(process.env.TREND_FEED_CACHE_TTL_SECONDS || 60);
+
+let redisClient;
 
 function toLimit(value) {
   const parsed = Number.parseInt(value, 10);
@@ -31,6 +36,45 @@ async function defaultSupabase() {
   return supabase;
 }
 
+function getRedisUrl() {
+  return process.env.REDIS_URL || process.env.BULLMQ_REDIS_URL || null;
+}
+
+export function getTrendFeedCache() {
+  const url = getRedisUrl();
+  if (!url) return null;
+  if (!redisClient) {
+    redisClient = new IORedis(url, {
+      maxRetriesPerRequest: 1,
+      enableReadyCheck: false,
+      lazyConnect: true,
+    });
+    redisClient.on("error", () => {});
+  }
+  return redisClient;
+}
+
+function cacheKey(params) {
+  return `trend:feed:${params.limit || DEFAULT_LIMIT}:${params.cursor || "first"}`;
+}
+
+async function readCache(cache, key) {
+  if (!cache) return null;
+  try {
+    const cached = await cache.get(key);
+    return cached ? JSON.parse(cached) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeCache(cache, key, value) {
+  if (!cache) return;
+  try {
+    await cache.set(key, JSON.stringify(value), "EX", CACHE_TTL_SECONDS);
+  } catch {}
+}
+
 export function scoreTrendPost(post, now = new Date()) {
   const publishedAt = new Date(post.published_at || post.ingested_at || now);
   const ageHours = Math.max((now - publishedAt) / 36e5, 1);
@@ -57,6 +101,10 @@ export async function getTrendFeedPage(params = {}, options = {}) {
   const limit = toLimit(params.limit);
   const supabase = options.supabase || await defaultSupabase();
   const now = options.now || new Date();
+  const cache = options.cache === undefined ? getTrendFeedCache() : options.cache;
+  const key = cacheKey({ limit, cursor: params.cursor });
+  const cached = await readCache(cache, key);
+  if (cached) return { ...cached, cached: true };
 
   const query = supabase
     .from("posts")
@@ -74,9 +122,12 @@ export async function getTrendFeedPage(params = {}, options = {}) {
     params.cursor,
   );
   const items = ranked.slice(0, limit);
-  return {
+  const page = {
     success: true,
     items,
     nextCursor: ranked.length > limit ? encodeTrendCursor(items[items.length - 1]) : null,
+    cached: false,
   };
+  await writeCache(cache, key, page);
+  return page;
 }

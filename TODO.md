@@ -4,10 +4,7 @@
 
 ✅ Phase 1 done - YouTube `mostPopular` worker pulls, normalizes, dedupes, and writes to Supabase.
 
-## Phase 2 - Feed API
-- [x] Cursor-based pagination endpoint (not offset)
-- [x] Ranking v1: `recency_decay * engagement_velocity`
-- [ ] Redis cache for hot feed pages
+✅ Phase 2 done - Cursor feed API with ranking v1 and optional Redis hot-page cache.
 
 ## Phase 3 - Frontend infinite scroll
 - [ ] Next.js feed page, IntersectionObserver-triggered fetch
