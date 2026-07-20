@@ -7,7 +7,7 @@
 ✅ Phase 2 done - Cursor feed API with ranking v1 and optional Redis hot-page cache.
 
 ## Phase 3 - Frontend infinite scroll
-- [ ] Next.js feed page, IntersectionObserver-triggered fetch
+- [x] Next.js feed page, IntersectionObserver-triggered fetch
 - [ ] List virtualization
 - [ ] Per-user `seen_post_ids` exclusion
 - [ ] Embed rendering (official embeds, no rehosted media)

@@ -23,7 +23,7 @@ import {
   HelpCircle,
   CreditCard,
   BarChart3,
-  Radar,
+  Flame,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
 import logo from "/logo.png";
@@ -718,14 +718,14 @@ function Sidebar() {
               icon: <Video size={16} />,
             },
             {
+              to: "/dashboard/trends",
+              label: "Trend Feed",
+              icon: <Flame size={16} />,
+            },
+            {
               to: "/dashboard/auto-dm",
               label: "GAP AutoDM",
               icon: <MessagesSquare size={16} />,
-            },
-            {
-              to: "/dashboard/trends",
-              label: "All Trends",
-              icon: <Radar size={16} />,
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);

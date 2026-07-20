@@ -8,3 +8,4 @@
 - Confirmed one real row landed in Supabase from an official YouTube pull (`inserted=1`, `quotaUsed=1`).
 - Completed Phase 2: protected `GET /api/trends/feed`, rank cursors, `recency_decay * engagement_velocity`, and optional Redis hot-page cache.
 - Verified with `npm.cmd test -- tests/trendFeed.test.js` and a live Supabase feed read (`items=1`, `hasRankScore=true`).
+- Added the dashboard Trend Feed page with IntersectionObserver-triggered page fetches in the existing Vite React client.
