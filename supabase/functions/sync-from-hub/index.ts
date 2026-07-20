@@ -98,7 +98,7 @@ Deno.serve(async (req: Request) => {
       email,
       plan: storedPlan,
       plan_id: plan_id || null, // Write raw plan_id to DB
-      subscription_status: subscription_status ? String(subscription_status).trim() : null,
+      subscription_status: subscription_status ? String(subscription_status).trim() : (existingSub?.subscription_status || 'active'),
       updated_at: new Date().toISOString(),
       synced_at: new Date().toISOString(),
     };
