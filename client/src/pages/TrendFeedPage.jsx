@@ -353,9 +353,9 @@ export default function TrendFeedPage() {
           className="trend-feed-grid"
           data={items}
           computeItemKey={(_, post) => post.id}
+          listClassName="trend-feed-virtual-list"
+          itemClassName="trend-feed-virtual-item"
           components={{
-            List: React.forwardRef((props, ref) => <div {...props} ref={ref} className="trend-feed-virtual-list" />),
-            Item: (props) => <div {...props} className="trend-feed-virtual-item" />,
             Footer: () => <div ref={sentinelRef} className="trend-feed-sentinel" aria-hidden="true" />,
           }}
           itemContent={(_, post) => <TrendCard post={post} />}

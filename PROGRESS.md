@@ -13,3 +13,4 @@
 - Added browser-scoped per-user seen IDs and API exclusion for already-seen trend posts.
 - Rendered official YouTube embeds from sanitized embed/source URLs and completed Phase 3.
 - Fixed the empty feed regression by falling back once all known posts are seen.
+- Fixed the Trend Feed virtual grid wrapper so Virtuoso keeps its measurement props and visible cards render.

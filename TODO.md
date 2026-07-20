@@ -8,6 +8,7 @@
 
 Done Phase 3 - Dashboard Trend Feed page with IntersectionObserver fetch, virtualization, seen-post exclusion, and official embeds.
 - [x] Fix empty-state regression when all currently ingested posts are already marked seen.
+- [x] Fix virtualized grid rendering so feed items are visible.
 
 ## Phase 4 - Reddit ingestion
 - [ ] OAuth setup, subreddit puller, same normalize/dedup pipeline
