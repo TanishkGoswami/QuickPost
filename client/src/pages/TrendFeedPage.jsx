@@ -229,6 +229,7 @@ export default function TrendFeedPage() {
         .trend-feed-grid {
           height: min(980px, calc(100vh - 210px));
         }
+        .trend-feed-static-grid,
         .trend-feed-virtual-list {
           display: grid;
           grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -348,7 +349,12 @@ export default function TrendFeedPage() {
       {error && <div className="trend-feed-state">{error}</div>}
       {!error && !initialLoaded && <div className="trend-feed-state">Loading trends...</div>}
       {!error && initialLoaded && items.length === 0 && <div className="trend-feed-state">No trend posts yet.</div>}
-      {!error && items.length > 0 && (
+      {!error && items.length > 0 && items.length <= PAGE_SIZE && (
+        <div className="trend-feed-static-grid">
+          {items.map((post) => <TrendCard key={post.id} post={post} />)}
+        </div>
+      )}
+      {!error && items.length > PAGE_SIZE && (
         <VirtuosoGrid
           className="trend-feed-grid"
           data={items}
@@ -361,6 +367,7 @@ export default function TrendFeedPage() {
           itemContent={(_, post) => <TrendCard post={post} />}
         />
       )}
+      <div ref={sentinelRef} className="trend-feed-sentinel" aria-hidden="true" />
       {loading && initialLoaded && <div className="trend-feed-state">Loading more...</div>}
     </section>
   );
