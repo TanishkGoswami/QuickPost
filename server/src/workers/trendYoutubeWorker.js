@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import { pathToFileURL } from "url";
 import { listMostPopularYouTubeVideos } from "../services/trendYoutubeClient.js";
+import { normalizeYouTubeVideosToPosts } from "../services/trendPostNormalizer.js";
 
 const DEFAULT_REGIONS = ["IN"];
 const DEFAULT_CATEGORIES = [null];
@@ -37,7 +38,8 @@ export async function pullYouTubeMostPopularBatch(options = {}) {
   const results = [];
   for (const target of targets) {
     const result = await listMostPopularYouTubeVideos({ ...target, apiKey, fetchImpl });
-    results.push({ target, ...result });
+    const posts = normalizeYouTubeVideosToPosts(result.items);
+    results.push({ target, ...result, posts });
     logger.log("[TREND-YOUTUBE] pulled mostPopular", {
       regionCode: target.regionCode,
       videoCategoryId: target.videoCategoryId || "all",

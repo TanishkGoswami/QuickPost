@@ -36,6 +36,7 @@ describe("trend YouTube worker", () => {
 
     expect(results).toHaveLength(1);
     expect(results[0].items).toEqual([{ id: "one" }]);
+    expect(results[0].posts[0].source_url).toBe("https://www.youtube.com/watch?v=one");
     expect(urls[0].searchParams.get("chart")).toBe("mostPopular");
     expect(urls[0].searchParams.get("regionCode")).toBe("IN");
   });

@@ -11,3 +11,4 @@
 - Trend source credentials stay server-side in `server/.env`; the frontend only receives Supabase anon config and API base URLs.
 - YouTube ingestion starts from `server/src/services/trendYoutubeClient.js`, using official `videos.list?chart=mostPopular` and a 10,000-unit daily budget guard.
 - The YouTube cron worker is a separate server process at `server/src/workers/trendYoutubeWorker.js`; the API server does not own ingestion scheduling.
+- `server/src/services/trendPostNormalizer.js` maps platform payloads into `public.posts`; AI-generated niche tags are intentionally empty until Phase 6.
