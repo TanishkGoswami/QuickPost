@@ -9,6 +9,7 @@ class PinterestOAuth {
     this.clientSecret = process.env.PINTEREST_APP_SECRET;
     this.redirectUri = process.env.PINTEREST_REDIRECT_URI || 'http://localhost:5000/auth/pinterest/callback';
     this.scopes = 'boards:read,pins:read,pins:write,user_accounts:read';
+    this.baseUrl = process.env.PINTEREST_SANDBOX_TOKEN ? 'https://api-sandbox.pinterest.com/v5' : 'https://api.pinterest.com/v5';
   }
 
   /**
@@ -31,7 +32,7 @@ class PinterestOAuth {
    */
   async exchangeCodeForToken(code) {
     try {
-      const response = await axios.post('https://api.pinterest.com/v5/oauth/token', {
+      const response = await axios.post(`${this.baseUrl}/oauth/token`, {
         grant_type: 'authorization_code',
         code: code,
         redirect_uri: this.redirectUri
@@ -77,8 +78,8 @@ class PinterestOAuth {
    */
   async getUserInfo(accessToken) {
     try {
-      console.log('🔍 Testing Pinterest API with token...');
-      const response = await axios.get('https://api.pinterest.com/v5/user_account', {
+      console.log(`🔍 Testing Pinterest API with token at ${this.baseUrl}...`);
+      const response = await axios.get(`${this.baseUrl}/user_account`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         }
@@ -101,7 +102,7 @@ class PinterestOAuth {
    */
   async getBoards(accessToken) {
     try {
-      const response = await axios.get('https://api.pinterest.com/v5/boards', {
+      const response = await axios.get(`${this.baseUrl}/boards`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         }

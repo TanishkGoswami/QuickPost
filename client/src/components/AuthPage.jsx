@@ -81,7 +81,7 @@ export default function AuthPage() {
       <div className="bg-muted/10 relative hidden h-full flex-col border-r p-10 lg:flex">
         <div className="from-background absolute inset-0 z-10 bg-gradient-to-t to-transparent opacity-30" />
         <Link to="/" className="z-20 flex items-center gap-4 no-underline">
-          <img src={logo} alt="QuickPost" className="size-8 object-contain" />
+          <img src={logo} alt="GAP Social-pilot" className="size-8 object-contain" />
 
           <span
             style={{
@@ -103,7 +103,7 @@ export default function AuthPage() {
         <div className="z-20 mt-auto">
           <blockquote className="space-y-4">
             <p className="text-2xl font-medium leading-relaxed text-ink/90">
-              &ldquo;QuickPost has completely transformed how I handle
+              &ldquo;GAP Social-pilot has completely transformed how I handle
               multi-platform content. What used to take hours now takes
               minutes.&rdquo;
             </p>
@@ -143,7 +143,7 @@ export default function AuthPage() {
             <div className="bg-ink p-1.5 rounded-lg shadow-lg">
               <img
                 src={logo}
-                alt="QuickPost"
+                alt="GAP Social-pilot"
                 className="size-5 object-contain"
               />
             </div>

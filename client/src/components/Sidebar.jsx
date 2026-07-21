@@ -323,6 +323,36 @@ function Sidebar() {
     const apiUrl = import.meta.env.VITE_API_URL || "";
     window.location.href = `${apiUrl}/api/auth/googleBusiness?token=${token}`;
   };
+  
+  const handleConnectPinterest = async () => {
+    const token = localStorage.getItem("quickpost_token");
+    if (!token) {
+      alert("Error", "Authentication token missing. Please log in again.", {
+        intent: "danger",
+      });
+      return;
+    }
+    setConnectingPlatform("pinterest");
+    try {
+      const response = await apiClient.post("/api/auth/pinterest/sandbox");
+      if (response.data.success) {
+        await refreshAccounts();
+        alert("Success", "Successfully connected Pinterest Sandbox account!", {
+          intent: "primary",
+        });
+      } else {
+        alert("Error", `Failed to connect: ${response.data.error}`, {
+          intent: "danger",
+        });
+      }
+    } catch (error) {
+      alert("Error", error.response?.data?.error || "Failed to connect Pinterest account.", {
+        intent: "danger",
+      });
+    } finally {
+      setConnectingPlatform(null);
+    }
+  };
   const handleDisconnect = async (platform) => {
     const message = platform === "instagram"
       ? `Are you sure you want to disconnect your ${platform} account? This will stop all scheduled posts and pause any active automations. Your automations will be restored when you reconnect.`
@@ -484,11 +514,7 @@ function Sidebar() {
           alt=""
         />
       ),
-      onConnect: () =>
-        alert("Coming Soon", "Pinterest integration coming soon!", {
-          intent: "warning",
-        }),
-      disabled: true,
+      onConnect: handleConnectPinterest,
     },
     {
       id: "threads",

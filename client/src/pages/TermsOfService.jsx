@@ -114,7 +114,7 @@ export default function TermsOfService() {
                  <div style={{ position: 'relative', zIndex: 1 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--arc)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>Legal Affairs</p>
                   <p style={{ fontSize: 14, fontWeight: 450, color: 'rgba(243,240,238,0.7)', margin: '0 0 20px', lineHeight: 1.5 }}>Need clarification on our terms? Our team is available.</p>
-                  <a href="mailto:0127cs211072@gmail.com" style={{ display: 'block', textAlign: 'center', background: 'var(--canvas)', color: 'var(--ink)', fontWeight: 600, fontSize: 13, padding: '12px', borderRadius: 'var(--r-sm)', textDecoration: 'none', transition: 'opacity 0.2s' }}
+                  <a href="mailto:getaipilot@gmail.com" style={{ display: 'block', textAlign: 'center', background: 'var(--canvas)', color: 'var(--ink)', fontWeight: 600, fontSize: 13, padding: '12px', borderRadius: 'var(--r-sm)', textDecoration: 'none', transition: 'opacity 0.2s' }}
                     onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
                     onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                   >
@@ -205,7 +205,7 @@ export default function TermsOfService() {
                   </div>
                   <h2 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>4. API & Platform Terms</h2>
                 </div>
-                <p style={{ fontSize: 16, color: 'var(--Charcoal)', margin: '0 0 32px' }}>QuickPost integrates with third-party APIs. By using these integrations, you agree to their respective terms:</p>
+                <p style={{ fontSize: 16, color: 'var(--Charcoal)', margin: '0 0 32px' }}>GAP Social-pilot integrates with third-party APIs. By using these integrations, you agree to their respective terms:</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: 24, background: 'rgba(207,69,0,0.04)', borderRadius: 'var(--r-btn)', border: '1px solid rgba(207,69,0,0.15)' }}>
                     <Info size={20} color="var(--signal)" style={{ marginTop: 2, flexShrink: 0 }} />
@@ -265,7 +265,7 @@ export default function TermsOfService() {
                      <p style={{ fontSize: 16, fontWeight: 450, color: 'rgba(243,240,238,0.7)', margin: '0 auto 40px', maxWidth: 500, lineHeight: 1.5 }}>
                        If you have any questions regarding these terms, please reach out to our legal department.
                      </p>
-                     <a href="mailto:0127cs211072@gmail.com" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '16px 40px', background: 'var(--canvas)', color: 'var(--ink)', borderRadius: 'var(--r-btn)', fontSize: 15, fontWeight: 600, textDecoration: 'none', transition: 'opacity 0.2s' }}
+                     <a href="mailto:getaipilot@gmail.com" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '16px 40px', background: 'var(--canvas)', color: 'var(--ink)', borderRadius: 'var(--r-btn)', fontSize: 15, fontWeight: 600, textDecoration: 'none', transition: 'opacity 0.2s' }}
                        onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                      >
