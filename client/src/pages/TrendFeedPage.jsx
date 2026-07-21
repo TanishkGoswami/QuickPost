@@ -1,11 +1,21 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ExternalLink, RefreshCw, Sparkles } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Briefcase, ExternalLink, RefreshCw, Sparkles, SlidersHorizontal } from "lucide-react";
 import { VirtuosoGrid } from "react-virtuoso";
 import { useAuth } from "../context/AuthContext";
 import apiClient from "../utils/apiClient";
 
 const PAGE_SIZE = 18;
 const MAX_SEEN_IDS = 200;
+
+function emptyProfile() {
+  return { work: "", interests: "", goal: "" };
+}
+
+function profileToInterestQuery(profile) {
+  return [profile?.work, profile?.interests, profile?.goal]
+    .filter(Boolean)
+    .join(",");
+}
 
 function getHost(url) {
   try {
@@ -111,11 +121,16 @@ export default function TrendFeedPage() {
   const [loading, setLoading] = useState(false);
   const [initialLoaded, setInitialLoaded] = useState(false);
   const [error, setError] = useState("");
+  const [profile, setProfile] = useState(emptyProfile);
+  const [draftProfile, setDraftProfile] = useState(emptyProfile);
+  const [showProfilePanel, setShowProfilePanel] = useState(false);
   const sentinelRef = useRef(null);
   const cursorRef = useRef(null);
   const loadingRef = useRef(false);
   const seenRef = useRef(new Set());
   const seenStorageKey = `qp_trend_seen_${user?.userId || user?.email || "anon"}`;
+  const profileStorageKey = `qp_trend_profile_${user?.userId || user?.email || "anon"}`;
+  const interestQuery = useMemo(() => profileToInterestQuery(profile), [profile]);
 
   useEffect(() => {
     try {
@@ -124,6 +139,20 @@ export default function TrendFeedPage() {
       seenRef.current = new Set();
     }
   }, [seenStorageKey]);
+
+  useEffect(() => {
+    let saved = null;
+    try {
+      saved = JSON.parse(localStorage.getItem(profileStorageKey) || "null");
+    } catch {
+      saved = null;
+    }
+
+    const nextProfile = saved?.interests ? saved : emptyProfile();
+    setProfile(nextProfile);
+    setDraftProfile(nextProfile);
+    setShowProfilePanel(!saved?.interests);
+  }, [profileStorageKey]);
 
   const rememberSeen = useCallback((posts) => {
     const seen = seenRef.current;
@@ -148,6 +177,7 @@ export default function TrendFeedPage() {
           limit: PAGE_SIZE,
           cursor: nextCursor || undefined,
           seen: Array.from(seenRef.current).join(",") || undefined,
+          interests: interestQuery || undefined,
         },
       });
       const nextItems = data.items || [];
@@ -162,7 +192,20 @@ export default function TrendFeedPage() {
       loadingRef.current = false;
       setLoading(false);
     }
-  }, [rememberSeen]);
+  }, [interestQuery, rememberSeen]);
+
+  const saveProfile = useCallback((event) => {
+    event.preventDefault();
+    const nextProfile = {
+      work: draftProfile.work.trim(),
+      interests: draftProfile.interests.trim(),
+      goal: draftProfile.goal.trim(),
+    };
+    setProfile(nextProfile);
+    localStorage.setItem(profileStorageKey, JSON.stringify(nextProfile));
+    setShowProfilePanel(false);
+    cursorRef.current = null;
+  }, [draftProfile, profileStorageKey]);
 
   useEffect(() => {
     loadPage({ reset: true });
@@ -228,6 +271,39 @@ export default function TrendFeedPage() {
           padding: 0 14px;
           font-weight: 700;
           cursor: pointer;
+        }
+        .trend-feed-actions {
+          display: flex;
+          gap: 10px;
+          align-items: center;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+        .trend-feed-profile-button {
+          width: 38px;
+          height: 38px;
+          border: 1px solid rgba(23, 19, 15, 0.14);
+          border-radius: 8px;
+          background: #fffaf4;
+          color: #17130f;
+          display: inline-grid;
+          place-items: center;
+          cursor: pointer;
+        }
+        .trend-feed-pill-row {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          margin: -10px 0 20px;
+        }
+        .trend-feed-pill {
+          border: 1px solid rgba(166, 64, 0, 0.2);
+          border-radius: 999px;
+          padding: 7px 10px;
+          background: #fffaf4;
+          color: #a64000;
+          font-size: 12px;
+          font-weight: 750;
         }
         .trend-feed-grid {
           height: min(980px, calc(100vh - 210px));
@@ -326,6 +402,73 @@ export default function TrendFeedPage() {
         .trend-feed-sentinel {
           height: 40px;
         }
+        .trend-feed-profile-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 40;
+          display: grid;
+          place-items: center;
+          padding: 18px;
+          background: rgba(23, 19, 15, 0.38);
+        }
+        .trend-feed-profile-panel {
+          width: min(560px, 100%);
+          border: 1px solid rgba(23, 19, 15, 0.12);
+          border-radius: 8px;
+          background: #fffdf9;
+          box-shadow: 0 28px 80px rgba(23, 19, 15, 0.22);
+          padding: 22px;
+        }
+        .trend-feed-profile-panel h2 {
+          margin: 10px 0 6px;
+          font-size: 28px;
+          line-height: 1.05;
+          letter-spacing: 0;
+        }
+        .trend-feed-profile-panel p {
+          margin: 0 0 18px;
+          color: rgba(23, 19, 15, 0.64);
+          line-height: 1.45;
+        }
+        .trend-feed-profile-panel label {
+          display: grid;
+          gap: 7px;
+          margin-bottom: 13px;
+          font-size: 12px;
+          font-weight: 800;
+          text-transform: uppercase;
+          color: rgba(23, 19, 15, 0.62);
+        }
+        .trend-feed-profile-panel input,
+        .trend-feed-profile-panel textarea {
+          width: 100%;
+          border: 1px solid rgba(23, 19, 15, 0.14);
+          border-radius: 8px;
+          background: #f8f3ec;
+          color: #17130f;
+          padding: 12px;
+          font: inherit;
+          outline: none;
+        }
+        .trend-feed-profile-panel textarea {
+          min-height: 84px;
+          resize: vertical;
+        }
+        .trend-feed-profile-panel input:focus,
+        .trend-feed-profile-panel textarea:focus {
+          border-color: #a64000;
+          box-shadow: 0 0 0 3px rgba(166, 64, 0, 0.12);
+        }
+        .trend-feed-profile-submit {
+          width: 100%;
+          height: 42px;
+          border: 0;
+          border-radius: 8px;
+          background: #17130f;
+          color: #fffaf4;
+          font-weight: 800;
+          cursor: pointer;
+        }
         @media (max-width: 720px) {
           .trend-feed-top {
             align-items: stretch;
@@ -335,6 +478,12 @@ export default function TrendFeedPage() {
             justify-content: center;
             width: 100%;
           }
+          .trend-feed-actions {
+            justify-content: stretch;
+          }
+          .trend-feed-profile-button {
+            flex: 0 0 38px;
+          }
         }
       `}</style>
 
@@ -343,11 +492,61 @@ export default function TrendFeedPage() {
           <span className="trend-feed-kicker"><Sparkles size={14} /> Inspiration feed</span>
           <h1>Signals worth remixing today.</h1>
         </div>
-        <button className="trend-feed-refresh" type="button" onClick={() => loadPage({ reset: true })} disabled={loading}>
-          <RefreshCw size={15} />
-          Refresh
-        </button>
+        <div className="trend-feed-actions">
+          <button className="trend-feed-profile-button" type="button" onClick={() => setShowProfilePanel(true)} aria-label="Edit trend interests" title="Edit trend interests">
+            <SlidersHorizontal size={16} />
+          </button>
+          <button className="trend-feed-refresh" type="button" onClick={() => loadPage({ reset: true })} disabled={loading}>
+            <RefreshCw size={15} />
+            Refresh
+          </button>
+        </div>
       </header>
+
+      {interestQuery && (
+        <div className="trend-feed-pill-row" aria-label="Trend personalization">
+          {profile.work && <span className="trend-feed-pill">{profile.work}</span>}
+          {profile.interests.split(",").map((interest) => interest.trim()).filter(Boolean).slice(0, 8).map((interest) => (
+            <span className="trend-feed-pill" key={interest}>{interest}</span>
+          ))}
+        </div>
+      )}
+
+      {showProfilePanel && (
+        <div className="trend-feed-profile-backdrop" role="dialog" aria-modal="true" aria-labelledby="trend-profile-title">
+          <form className="trend-feed-profile-panel" onSubmit={saveProfile}>
+            <span className="trend-feed-kicker"><Briefcase size={14} /> Tune your feed</span>
+            <h2 id="trend-profile-title">Tell us what you create around.</h2>
+            <p>Kaam aur interests save honge, phir feed matching topics ko upar dikhayega.</p>
+            <label>
+              Your work
+              <input
+                value={draftProfile.work}
+                onChange={(event) => setDraftProfile((current) => ({ ...current, work: event.target.value }))}
+                placeholder="Content creator, football page, F1 analyst"
+              />
+            </label>
+            <label>
+              Interests
+              <input
+                value={draftProfile.interests}
+                onChange={(event) => setDraftProfile((current) => ({ ...current, interests: event.target.value }))}
+                placeholder="F1, FIFA, AI tools, fitness"
+                required
+              />
+            </label>
+            <label>
+              Content goal
+              <textarea
+                value={draftProfile.goal}
+                onChange={(event) => setDraftProfile((current) => ({ ...current, goal: event.target.value }))}
+                placeholder="Reels ideas, breaking news, memes, tutorials"
+              />
+            </label>
+            <button className="trend-feed-profile-submit" type="submit">Show my trends</button>
+          </form>
+        </div>
+      )}
 
       {error && <div className="trend-feed-state">{error}</div>}
       {!error && !initialLoaded && <div className="trend-feed-state">Loading trends...</div>}

@@ -18,8 +18,8 @@ Done Phase 5 - Bluesky Jetstream WebSocket consumer filters post creates and wri
 
 ## Phase 6 - Personalization
 - [ ] Claude API call per post: niche + format tagging
-- [ ] Onboarding: user picks niches
-- [ ] Ranking v2: add `niche_match_boost`
+- [x] Onboarding: user picks niches
+- [x] Ranking v2: add `niche_match_boost`
 
 ## Phase 7 - Engagement features
 - [ ] Save/collections (boards)

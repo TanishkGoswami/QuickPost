@@ -18,8 +18,10 @@
 - Frontend trend work lives in the existing Vite React dashboard client; adding a separate Next.js app is deferred unless the product moves off this client shell.
 - Trend Feed uses `react-virtuoso` grid virtualization in the dashboard route.
 - Seen-post exclusion is browser-scoped per user via localStorage and the feed API `seen` query param; promote to a DB table only when cross-device history is needed.
+- Trend preference onboarding is browser-scoped per user via localStorage and the feed API `interests` query param; promote to DB profiles when cross-device personalization is needed.
 - Trend cards render official YouTube iframes from validated embed/source URLs; raw stored embed HTML is never injected into React.
 - The API prefers unseen posts but falls back to seen rows when the candidate pool is exhausted, so low-volume ingestion never renders a blank feed.
+- Interest matching boosts ranked posts that mention selected work/interests/goals, but does not hide the rest of the feed while source volume is still low.
 - Trend Feed virtualization uses `react-virtuoso` `listClassName`/`itemClassName`; custom grid wrappers must preserve library measurement props.
 - Short feed pages render with native CSS grid; virtualization starts only after the first page is exceeded.
 - YouTube embeds include page origin/referrer policy, and ingestion records `status.embeddable` so blocked videos fall back to thumbnail links.

@@ -4,6 +4,7 @@ import {
   encodeTrendCursor,
   getTrendFeedPage,
   parseSeenPostIds,
+  parseTrendInterests,
   scoreTrendPost,
 } from "../server/src/services/trendFeed.js";
 
@@ -45,6 +46,13 @@ describe("trend feed cursor pagination", () => {
     const ids = Array.from({ length: 250 }, (_, index) => `id-${index}`).join(",");
     expect(parseSeenPostIds(ids)).toHaveLength(200);
     expect(parseSeenPostIds(" a, ,b ")).toEqual(["a", "b"]);
+  });
+
+  it("parses safe personalization interests", () => {
+    const topics = Array.from({ length: 20 }, (_, index) => `Topic ${index}`).join(",");
+
+    expect(parseTrendInterests(topics)).toHaveLength(12);
+    expect(parseTrendInterests("F1, FIFA, <script>")).toEqual(["f1", "fifa"]);
   });
 
   it("fetches a bounded candidate pool and returns a rank cursor", async () => {
@@ -91,6 +99,21 @@ describe("trend feed cursor pagination", () => {
     );
 
     expect(page.items.map((item) => item.id)).toEqual(["2"]);
+  });
+
+  it("boosts posts that match selected interests", async () => {
+    const rows = [
+      { id: "generic", caption: "General creator news", ingested_at: "2026-07-20T03:00:00Z", published_at: "2026-07-20T03:00:00Z", engagement_score: 800, niche_tags: [] },
+      { id: "f1", caption: "F1 race weekend strategy", ingested_at: "2026-07-20T02:00:00Z", published_at: "2026-07-20T02:00:00Z", engagement_score: 600, niche_tags: ["formula 1"] },
+    ];
+
+    const page = await getTrendFeedPage(
+      { limit: 2, interests: "f1" },
+      { supabase: mockSupabase(rows), cache: null, now: new Date("2026-07-20T04:00:00Z") },
+    );
+
+    expect(page.items[0].id).toBe("f1");
+    expect(page.items[0].interest_match_count).toBe(1);
   });
 
   it("falls back to seen rows when nothing fresh is available", async () => {

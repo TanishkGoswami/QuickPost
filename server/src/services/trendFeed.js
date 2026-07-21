@@ -58,7 +58,7 @@ export function getTrendFeedCache() {
 function cacheKey(params) {
   const seenHash = crypto
     .createHash("sha1")
-    .update((params.seenIds || []).join(","))
+    .update([(params.seenIds || []).join(","), (params.interests || []).join(",")].join("|"))
     .digest("hex")
     .slice(0, 12);
   return `trend:feed:${params.limit || DEFAULT_LIMIT}:${params.cursor || "first"}:${seenHash}`;
@@ -89,6 +89,26 @@ export function scoreTrendPost(post, now = new Date()) {
   return Number((recencyDecay * engagementVelocity).toFixed(6));
 }
 
+export function parseTrendInterests(value) {
+  return String(value || "")
+    .split(",")
+    .map((interest) => interest.trim().toLowerCase())
+    .filter((interest) => /^[a-z0-9][a-z0-9 _-]{0,38}$/i.test(interest))
+    .slice(0, 12);
+}
+
+function getInterestMatches(post, interests) {
+  if (!interests.length) return 0;
+  const haystack = [
+    post.caption,
+    post.source_platform,
+    post.source_url,
+    ...(Array.isArray(post.niche_tags) ? post.niche_tags : []),
+  ].join(" ").toLowerCase();
+
+  return interests.filter((interest) => haystack.includes(interest)).length;
+}
+
 function compareRankedPosts(a, b) {
   if (b.rank_score !== a.rank_score) return b.rank_score - a.rank_score;
   return String(b.id).localeCompare(String(a.id));
@@ -116,9 +136,10 @@ export async function getTrendFeedPage(params = {}, options = {}) {
   const supabase = options.supabase || await defaultSupabase();
   const now = options.now || new Date();
   const seenIds = parseSeenPostIds(params.seen);
+  const interests = parseTrendInterests(params.interests || params.topics);
   const seen = new Set(seenIds);
   const cache = options.cache === undefined ? getTrendFeedCache() : options.cache;
-  const key = cacheKey({ limit, cursor: params.cursor, seenIds });
+  const key = cacheKey({ limit, cursor: params.cursor, seenIds, interests });
   const cached = await readCache(cache, key);
   if (cached) return { ...cached, cached: true };
 
@@ -133,7 +154,15 @@ export async function getTrendFeedPage(params = {}, options = {}) {
 
   const rankPosts = (posts) => applyRankCursor(
     posts
-      .map((post) => ({ ...post, rank_score: scoreTrendPost(post, now) }))
+      .map((post) => {
+        const matches = getInterestMatches(post, interests);
+        const score = scoreTrendPost(post, now);
+        return {
+          ...post,
+          interest_match_count: matches,
+          rank_score: Number((score * (matches ? 1 + matches * 2 : 1)).toFixed(6)),
+        };
+      })
       .sort(compareRankedPosts),
     params.cursor,
   );

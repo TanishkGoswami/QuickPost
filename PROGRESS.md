@@ -15,6 +15,8 @@
 - Fixed the empty feed regression by falling back once all known posts are seen.
 - Fixed the Trend Feed virtual grid wrapper so Virtuoso keeps its measurement props and visible cards render.
 - Added a native grid path for short feeds while keeping Virtuoso for larger result sets.
+- Added first-visit Trend Feed onboarding for work/interests/goals and localStorage-backed personalization.
+- Added feed API interest parsing plus niche match rank boost, with normal feed fallback when matches are thin.
 - Added YouTube iframe origin/referrer config and started ingesting `status.embeddable` for safe embed fallback.
 - Completed Phase 4 with official Reddit OAuth client-credentials reads, subreddit hot worker, Reddit normalizer, and shared post dedupe insert path.
 - Completed Phase 5 with Bluesky Jetstream WebSocket ingestion, top-level post filtering, normalizer, and shared dedupe insert path.
