@@ -1574,9 +1574,7 @@ function ComposerModal({
           const results = await Promise.all(
             initialMediaUrls.slice(0, 5).map(async (url) => {
               try {
-                // Use our own secure backend proxy
-                const proxiedUrl = `/api/trends/proxy/media?url=${encodeURIComponent(url)}`;
-                const res = await fetch(proxiedUrl);
+                const res = await fetch(url);
                 if (!res.ok) throw new Error("Internal proxy error");
 
                 const blob = await res.blob();

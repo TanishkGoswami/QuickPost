@@ -33,8 +33,6 @@ const Analytics      = lazy(() => import('./components/Analytics'));
 const BroadcastForm  = lazy(() => import('./components/BroadcastForm'));
 const History        = lazy(() => import('./pages/History'));
 const ScheduledQueue = lazy(() => import('./pages/ScheduledQueue'));
-const AllTrendsPage  = lazy(() => import('./pages/trends/AllTrendsPage'));
-const TrendDetailPage = lazy(() => import('./pages/trends/TrendDetailPage'));
 const Onboarding     = lazy(() => import('./components/Onboarding'));
 const BillingPage    = lazy(() => import('./pages/BillingPage'));
 const PaymentSuccessPage = lazy(() => import('./pages/PaymentSuccessPage'));
@@ -42,6 +40,7 @@ const InstagramBots = lazy(() => import('./pages/InstagramBots'));
 const InstagramConnect = lazy(() => import('./pages/InstagramConnect'));
 const InstagramInbox = lazy(() => import('./pages/InstagramInbox'));
 const YouTubeManagerPage = lazy(() => import('./pages/YouTubeManagerPage'));
+const TrendFeedPage = lazy(() => import('./pages/TrendFeedPage'));
 
 // ── AutoDM workspace ──
 const AutoDMLayout             = lazy(() => import('./pages/auto-dm/AutoDMLayout'));
@@ -115,14 +114,13 @@ function AppContent() {
         <Route path="compose"  element={<BroadcastForm />} />
         <Route path="history"  element={<History />} />
         <Route path="queue"    element={<ScheduledQueue />} />
-        <Route path="trends"   element={<AllTrendsPage />} />
-        <Route path="trends/:id" element={<TrendDetailPage />} />
         <Route path="billing"  element={<BillingPage />} />
         <Route path="payment-success" element={<PaymentSuccessPage />} />
         <Route path="instapilot" element={<InstagramBots />} />
         <Route path="instapilot/connect" element={<InstagramConnect />} />
         <Route path="instapilot/inbox" element={<InstagramInbox />} />
         <Route path="youtube" element={<YouTubeManagerPage />} />
+        <Route path="trends" element={<TrendFeedPage />} />
         <Route path="profile"  element={<AutoDMProvider><ProfilePage /></AutoDMProvider>} />
 
         {/* AutoDM workspace — has its own full-screen layout */}

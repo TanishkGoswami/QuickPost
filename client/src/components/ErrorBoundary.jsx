@@ -215,7 +215,6 @@ const Dashboard      = lazy(() => import('./components/Dashboard'));
 const BroadcastForm  = lazy(() => import('./components/BroadcastForm'));
 const History        = lazy(() => import('./pages/History'));
 const ScheduledQueue = lazy(() => import('./pages/ScheduledQueue'));
-const AllTrendsPage  = lazy(() => import('./pages/trends/AllTrendsPage'));
 const Onboarding     = lazy(() => import('./components/Onboarding'));
 
 // ── Page loader ──
@@ -276,7 +275,6 @@ function AppContent() {
         <Route path="compose"  element={<BroadcastForm />} />
         <Route path="history"  element={<History />} />
         <Route path="queue"    element={<ScheduledQueue />} />
-        <Route path="trends"   element={<AllTrendsPage />} />
       </Route>
 
       // 404

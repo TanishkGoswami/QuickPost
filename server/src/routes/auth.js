@@ -508,6 +508,56 @@ router.get("/pinterest/callback", async (req, res) => {
   }
 });
 
+router.post("/pinterest/sandbox", authenticateUser, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const sandboxToken = process.env.PINTEREST_SANDBOX_TOKEN;
+
+    if (!sandboxToken) {
+      return res.status(400).json({
+        success: false,
+        error: "PINTEREST_SANDBOX_TOKEN is not defined in the environment.",
+      });
+    }
+
+    console.log(`\n🔵 [AUTH] Pinterest Sandbox connect for user: ${userId}`);
+
+    // Get user info and boards using the sandbox token
+    const userInfo = await pinterestOAuth.getUserInfo(sandboxToken);
+    const boards = await pinterestOAuth.getBoards(sandboxToken);
+    const defaultBoard = boards[0];
+
+    const tokenData = {
+      accessToken: sandboxToken,
+      refreshToken: null,
+      tokenType: 'bearer',
+      userInfo: {
+        username: userInfo.username,
+        id: userInfo.id || userInfo.username,
+        profileImage: userInfo.profile_image
+      },
+      boardId: defaultBoard?.id || null,
+      boardName: defaultBoard?.name || null
+    };
+
+    // Store tokens
+    await pinterestOAuth.storeTokens(userId, tokenData);
+
+    res.json({
+      success: true,
+      message: "Pinterest Sandbox account connected successfully",
+      username: userInfo.username,
+    });
+  } catch (error) {
+    console.error("❌ Pinterest Sandbox connect error:", error.response?.data || error.message);
+    const apiError = error.response?.data?.message || error.message;
+    res.status(500).json({
+      success: false,
+      error: `Pinterest API Error: ${apiError}. Make sure your Sandbox Token is freshly generated and pasted correctly.`,
+    });
+  }
+});
+
 /* ---------------- BLUESKY ---------------- */
 
 // Bluesky uses a different auth flow - handle and app password

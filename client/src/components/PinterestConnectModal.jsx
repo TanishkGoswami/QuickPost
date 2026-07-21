@@ -117,7 +117,7 @@ export default function PinterestConnectModal({ isOpen, onClose, onSuccess }) {
         {!useManual ? (
           <div className="text-center py-4 animate-in fade-in slide-in-from-bottom-2">
             <p className="text-sm text-gray-600 leading-relaxed mb-6">
-              Use this option if your Pinterest app is already verified. You'll be redirected to Pinterest to securely authorize QuickPost.
+              Use this option if your Pinterest app is already verified. You'll be redirected to Pinterest to securely authorize GAP Social-pilot.
             </p>
           </div>
         ) : (

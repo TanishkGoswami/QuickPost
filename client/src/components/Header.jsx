@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Menu, ArrowLeft, Unplug, LogOut, X, ChevronDown, UserRound } from "lucide-react";
+import { Menu, Unplug, LogOut, X, ChevronDown, UserRound } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,7 +21,7 @@ const PLATFORM_ICONS = {
   googleBusiness: "/icons/google-icon.svg",
 };
 
-function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage, topOffset = 0 }) {
+function Header({ onMenuClick, sidebarOpen, isDesktop, topOffset = 0 }) {
   const { user, logout, connectedAccounts, refreshAccounts } = useAuth();
   const { confirm, alert } = useDialog();
   const navigate = useNavigate();
@@ -153,7 +153,7 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage, topOffset =
         position: "fixed",
         top: topOffset,
         right: 0,
-        left: isDesktop && !isTrendsPage ? 240 : 0,
+        left: isDesktop ? 240 : 0,
         zIndex: 39,
         height: 56,
         background: "rgba(245, 241, 236, 0.94)",
@@ -170,33 +170,8 @@ function Header({ onMenuClick, sidebarOpen, isDesktop, isTrendsPage, topOffset =
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div id="header-left-portal"></div>
-        {/* Back Button on Trends Page */}
-        {isTrendsPage && (
-          <button
-            className="qp-header-icon-button"
-            onClick={() => navigate('/dashboard')}
-            aria-label="Go Back"
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: "var(--r-btn)",
-              border: "1px solid rgba(20,20,19,0.08)",
-              background: "var(--white)",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--ink)",
-              transition: "all 0.2s",
-              boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-            }}
-          >
-            <ArrowLeft size={18} />
-          </button>
-        )}
-
         {/* Mobile menu toggle */}
-        {!isDesktop && !isTrendsPage && (
+        {!isDesktop && (
           <button
             className="qp-header-icon-button"
             onClick={onMenuClick}
