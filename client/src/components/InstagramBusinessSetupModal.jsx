@@ -53,7 +53,7 @@ export default function InstagramBusinessSetupModal({ isOpen, onClose, onProceed
           <div>
             <h3 className="text-sm font-bold text-blue-900">Professional Account Required</h3>
             <p className="text-sm text-blue-800/80 mt-1 leading-relaxed">
-              QuickPost uses Instagram's official API, which requires a <span className="font-semibold">Business</span> or <span className="font-semibold">Creator</span> account. Personal accounts cannot be connected.
+              GAP Social-pilot uses Instagram's official API, which requires a <span className="font-semibold">Business</span> or <span className="font-semibold">Creator</span> account. Personal accounts cannot be connected.
             </p>
           </div>
         </div>
