@@ -196,7 +196,7 @@ function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const selectedDashboardPlatform =
-    location.pathname === "/dashboard"
+    location.pathname.startsWith("/dashboard")
       ? new URLSearchParams(location.search).get("platform")
       : null;
 
@@ -323,8 +323,8 @@ function Sidebar() {
     const apiUrl = import.meta.env.VITE_API_URL || "";
     window.location.href = `${apiUrl}/api/auth/googleBusiness?token=${token}`;
   };
-  
-  const handleConnectPinterest = async () => {
+
+  const handleConnectPinterest = () => {
     const token = localStorage.getItem("quickpost_token");
     if (!token) {
       alert("Error", "Authentication token missing. Please log in again.", {
@@ -332,26 +332,8 @@ function Sidebar() {
       });
       return;
     }
-    setConnectingPlatform("pinterest");
-    try {
-      const response = await apiClient.post("/api/auth/pinterest/sandbox");
-      if (response.data.success) {
-        await refreshAccounts();
-        alert("Success", "Successfully connected Pinterest Sandbox account!", {
-          intent: "primary",
-        });
-      } else {
-        alert("Error", `Failed to connect: ${response.data.error}`, {
-          intent: "danger",
-        });
-      }
-    } catch (error) {
-      alert("Error", error.response?.data?.error || "Failed to connect Pinterest account.", {
-        intent: "danger",
-      });
-    } finally {
-      setConnectingPlatform(null);
-    }
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    window.location.href = `${apiUrl}/api/auth/pinterest?token=${token}`;
   };
   const handleDisconnect = async (platform) => {
     const message = platform === "instagram"
@@ -407,18 +389,32 @@ function Sidebar() {
       onConnect: handleConnectFacebook,
       allowMultiple: true,
     },
-    ...(connectedAccounts.instagramAccounts?.length > 0 
+    ...(connectedAccounts.instagramAccounts?.length > 0
       ? connectedAccounts.instagramAccounts.map(acc => ({
-          id: `instagram:${acc.id}`,
-          name: acc.username || "Instagram",
-          connected: true,
-          icon: acc.profilePicture ? (
-            <img
-              src={acc.profilePicture}
-              style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover" }}
-              alt=""
-            />
-          ) : (
+        id: `instagram:${acc.id}`,
+        name: acc.username || "Instagram",
+        connected: true,
+        icon: acc.profilePicture ? (
+          <img
+            src={acc.profilePicture}
+            style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover" }}
+            alt=""
+          />
+        ) : (
+          <img
+            src="/icons/ig-instagram-icon.svg"
+            style={{ width: 20, height: 20 }}
+            alt=""
+          />
+        ),
+        onConnect: handleConnectInstagram,
+      }))
+      : [
+        {
+          id: "instagram",
+          name: "Instagram",
+          connected: false,
+          icon: (
             <img
               src="/icons/ig-instagram-icon.svg"
               style={{ width: 20, height: 20 }}
@@ -426,38 +422,24 @@ function Sidebar() {
             />
           ),
           onConnect: handleConnectInstagram,
-        }))
-      : [
-          {
-            id: "instagram",
-            name: "Instagram",
-            connected: false,
-            icon: (
-              <img
-                src="/icons/ig-instagram-icon.svg"
-                style={{ width: 20, height: 20 }}
-                alt=""
-              />
-            ),
-            onConnect: handleConnectInstagram,
-          }
-        ]),
+        }
+      ]),
     ...(connectedAccounts.instagramAccounts?.length > 0
       ? [
-          {
-            id: "instagram_connect",
-            name: "Instagram",
-            connected: false,
-            icon: (
-              <img
-                src="/icons/ig-instagram-icon.svg"
-                style={{ width: 20, height: 20 }}
-                alt=""
-              />
-            ),
-            onConnect: handleConnectInstagram,
-          }
-        ]
+        {
+          id: "instagram_connect",
+          name: "Instagram",
+          connected: false,
+          icon: (
+            <img
+              src="/icons/ig-instagram-icon.svg"
+              style={{ width: 20, height: 20 }}
+              alt=""
+            />
+          ),
+          onConnect: handleConnectInstagram,
+        }
+      ]
       : []),
     {
       id: "x",
@@ -732,7 +714,7 @@ function Sidebar() {
               to: "/dashboard/queue",
               label: "Scheduled Queue",
               icon: <CalendarClock size={16} />,
-            },           
+            },
             {
               to: "/dashboard/instapilot",
               label: "GAP InstaPilot",
@@ -1027,7 +1009,7 @@ function Sidebar() {
                     return (
                       (selectedDashboardPlatform === platformId ||
                         selectedDashboardPlatform === dashboardPlatform) &&
-                      location.pathname === "/dashboard"
+                      location.pathname.startsWith("/dashboard/analytics")
                     );
                   });
 
@@ -1040,7 +1022,7 @@ function Sidebar() {
                             ...prev,
                             [platformId]: prev[platformId] === false ? true : false,
                           }));
-                          navigate(`/dashboard?platform=${platformId}`);
+                          navigate(`/dashboard/analytics?platform=${platformId}`);
                         }}
                         className={`qp-sidebar-connected-parent-item ${isAnySelected ? "qp-sidebar-connected-parent-item-active" : ""}`}
                         style={{
@@ -1124,13 +1106,13 @@ function Sidebar() {
                               const dashboardPlatform = target.providerId || target.id;
                               const isSelected =
                                 selectedDashboardPlatform === dashboardPlatform &&
-                                location.pathname === "/dashboard";
+                                location.pathname.startsWith("/dashboard/analytics");
                               return (
                                 <div
                                   key={target.id}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    navigate(`/dashboard?platform=${dashboardPlatform}`);
+                                    navigate(`/dashboard/analytics?platform=${dashboardPlatform}`);
                                   }}
                                   className="qp-sidebar-connected-item group"
                                   style={{
@@ -1280,45 +1262,45 @@ function Sidebar() {
             </button>
             <div className="qp-sidebar-account-panel">
               <div className="qp-sidebar-account-menu">
-            {[
-              { to: "/dashboard/profile", label: "Profile", icon: <UserRound size={15} /> },
-              { to: "/dashboard", label: "Channels", icon: <LayoutGrid size={15} /> },
-              { to: "/dashboard/billing", label: "Plans and Billing", icon: <CreditCard size={15} /> },
-            ].map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="qp-sidebar-account-link"
-              >
-                {item.icon}
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
-              </Link>
-            ))}
-            <a
-              href="mailto:support@gapsocialpilot.com"
-              className="qp-sidebar-account-link"
-            >
-              <HelpCircle size={15} />
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Help & Support</span>
-            </a>
-            {isFree(user?.plan) && (
-              <button
-                type="button"
-                onClick={() => navigate("/dashboard/billing")}
-                className="qp-sidebar-account-upgrade"
-              >
-                <Sparkles size={15} />
-                Upgrade plan
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="qp-sidebar-account-link qp-sidebar-account-logout"
-            >
-              <LogOut size={15} />
-              Log out
-            </button>
+                {[
+                  { to: "/dashboard/profile", label: "Profile", icon: <UserRound size={15} /> },
+                  { to: "/dashboard", label: "Channels", icon: <LayoutGrid size={15} /> },
+                  { to: "/dashboard/billing", label: "Plans and Billing", icon: <CreditCard size={15} /> },
+                ].map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className="qp-sidebar-account-link"
+                  >
+                    {item.icon}
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
+                  </Link>
+                ))}
+                <a
+                  href="mailto:support@gapsocialpilot.com"
+                  className="qp-sidebar-account-link"
+                >
+                  <HelpCircle size={15} />
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Help & Support</span>
+                </a>
+                {isFree(user?.plan) && (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/dashboard/billing")}
+                    className="qp-sidebar-account-upgrade"
+                  >
+                    <Sparkles size={15} />
+                    Upgrade plan
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="qp-sidebar-account-link qp-sidebar-account-logout"
+                >
+                  <LogOut size={15} />
+                  Log out
+                </button>
               </div>
             </div>
           </div>
