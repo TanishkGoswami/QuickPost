@@ -36,7 +36,7 @@ export class SupermailboxClient {
   private baseUrl: string;
   private apiKey: string;
   constructor(apiKey?: string, baseUrl?: string) {
-    this.apiKey = apiKey || process.env.SUPERMAILBOX_API_KEY || 'supermailbox-secret-key-12345';
+    this.apiKey = apiKey || process.env.SUPERMAILBOX_API_KEY || '';
     this.baseUrl = baseUrl || process.env.SUPERMAILBOX_BASE_URL || 'http://localhost:5050';
   }
   /**

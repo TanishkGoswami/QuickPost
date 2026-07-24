@@ -1,9 +1,10 @@
 import express from 'express';
 import axios from 'axios';
+import { authenticateUser } from '../middleware/authenticateUser.js';
 
 const router = express.Router();
 
-router.post('/suggest', async (req, res) => {
+router.post('/suggest', authenticateUser, async (req, res) => {
   try {
     const { text, type } = req.body;
     

@@ -4,8 +4,9 @@ import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
-  CalendarDays,
-  LayoutDashboard,
+  CalendarClock,
+  Gauge,
+  LayoutGrid,
   Workflow,
   Users,
   Instagram,
@@ -14,15 +15,15 @@ import {
   ChevronDown,
   X,
   Plus,
-  Flame,
   Sparkles,
   Lock,
   MessagesSquare,
-  Bot,
-  Youtube,
+  Video,
   LogOut,
   HelpCircle,
   CreditCard,
+  BarChart3,
+  Flame,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
 import logo from "/logo.png";
@@ -719,33 +720,38 @@ function Sidebar() {
           {[
             {
               to: "/dashboard",
+              label: "Dashboard",
+              icon: <Gauge size={16} />,
+            },
+            {
+              to: "/dashboard/analytics",
               label: "All Channels",
-              icon: <LayoutDashboard size={16} />,
+              icon: <BarChart3 size={16} />,
             },
             {
               to: "/dashboard/queue",
               label: "Scheduled Queue",
-              icon: <CalendarDays size={16} />,
+              icon: <CalendarClock size={16} />,
             },           
             {
               to: "/dashboard/instapilot",
               label: "GAP InstaPilot",
-              icon: <Bot size={16} />,
+              icon: <Instagram size={16} />,
             },
             {
               to: "/dashboard/youtube",
               label: "YouTube Studio",
-              icon: <Youtube size={16} />,
+              icon: <Video size={16} />,
+            },
+            {
+              to: "/dashboard/trends",
+              label: "Trend Feed",
+              icon: <Flame size={16} />,
             },
             {
               to: "/dashboard/auto-dm",
               label: "GAP AutoDM",
               icon: <MessagesSquare size={16} />,
-            },
-            {
-              to: "/dashboard/trends",
-              label: "All Trends",
-              icon: <Flame size={16} />,
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);
@@ -1276,7 +1282,7 @@ function Sidebar() {
               <div className="qp-sidebar-account-menu">
             {[
               { to: "/dashboard/profile", label: "Profile", icon: <UserRound size={15} /> },
-              { to: "/dashboard", label: "Channels", icon: <LayoutDashboard size={15} /> },
+              { to: "/dashboard", label: "Channels", icon: <LayoutGrid size={15} /> },
               { to: "/dashboard/billing", label: "Plans and Billing", icon: <CreditCard size={15} /> },
             ].map((item) => (
               <Link

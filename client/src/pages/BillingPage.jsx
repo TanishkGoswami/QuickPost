@@ -12,6 +12,66 @@ function hasPaidPlan(plan) {
   return p !== 'free' && p !== '';
 }
 
+function normalizePlanId(plan) {
+  const p = String(plan || '').toLowerCase().trim();
+  if (['growth', 'sgrowth', 'enterprise', '1999', '2999'].includes(p)) return 'sgrowth';
+  if (['starter', 'slite', 'pro', '999'].includes(p)) return 'slite';
+  return p || 'free';
+}
+
+function normalizeBillingMonths(subscription) {
+  const months = Number(subscription?.interval_months);
+  if ([1, 3, 6, 12].includes(months)) return months;
+  return subscription?.billing_interval === 'year' ? 12 : 1;
+}
+
+function BillingPlanSkeletonCard() {
+  const line = (width, height = 12) => (
+    <span
+      className="billing-plan-skeleton-shimmer"
+      style={{ display: "block", width, height, borderRadius: 999 }}
+    />
+  );
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        borderRadius: 16,
+        border: "1px solid #d3cec6",
+        background: "#ffffff",
+        padding: "32px 24px",
+        minHeight: 520,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+        {line("42%", 28)}
+        {line("96px", 26)}
+      </div>
+      {line("84%")}
+      <div style={{ height: 8 }} />
+      {line("58%")}
+      <div style={{ height: 34 }} />
+      {line("48%", 46)}
+      <div style={{ height: 18 }} />
+      {line("72%")}
+      <div style={{ height: 28 }} />
+      {line("100%", 50)}
+      <div style={{ height: 34 }} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 15 }}>
+        {Array.from({ length: 6 }).map((_, index) => line(index % 2 ? "74%" : "92%"))}
+      </div>
+      <div style={{ marginTop: "auto", borderRadius: 12, background: "#f8f8f8", padding: 20 }}>
+        {line("62%")}
+        <div style={{ height: 14 }} />
+        {line("78%")}
+      </div>
+    </div>
+  );
+}
+
 const PLANS_TEMPLATE = [
   {
     name: 'Free',
@@ -113,6 +173,8 @@ export default function BillingPage({ embedded = false }) {
   const [error, setError] = useState(null);
 
   const currentPlanName = user?.entitlements?.plan?.name || 'Free';
+  const currentPlanId = normalizePlanId(user?.entitlements?.plan?.id || currentPlanName);
+  const currentBillingMonths = normalizeBillingMonths(user?.entitlements?.subscription);
   const isPaid = hasPaidPlan(currentPlanName);
   
   React.useEffect(() => {
@@ -197,8 +259,13 @@ export default function BillingPage({ embedded = false }) {
     return '';
   };
 
+  const visiblePlans = (loading ? PLANS_TEMPLATE : plans).filter((plan) => {
+    if (isPaid && plan.id === 'free') return false;
+    return true;
+  });
+
   const handleUpgrade = async (plan) => {
-    if (currentPlanName === plan.name || plan.id === 'free') {
+    if ((currentPlanId === plan.id && currentBillingMonths === billing) || plan.id === 'free') {
       return;
     }
 
@@ -445,14 +512,25 @@ export default function BillingPage({ embedded = false }) {
           ⚠️ {error}. Paid checkouts are disabled.
         </div>
       )}
-      <div style={{ maxWidth: plans.filter(p => !(isPaid && p.id === 'free')).length === 2 ? 740 : 1150, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 20, alignItems: 'stretch' }}>
-        {plans
-          .filter(plan => {
-            if (isPaid && plan.id === 'free') return false;
-            return true;
-          })
-          .map((plan, i) => {
-            const isCurrentPlan = currentPlanName.toLowerCase() === plan.id.toLowerCase();
+      <style>{`
+        @keyframes billing-plan-skeleton-sweep {
+          0% { background-position: 120% 0; }
+          100% { background-position: -120% 0; }
+        }
+        .billing-plan-skeleton-shimmer {
+          background: linear-gradient(90deg, rgba(20,20,19,0.06) 25%, rgba(20,20,19,0.12) 38%, rgba(20,20,19,0.06) 63%);
+          background-size: 240% 100%;
+          animation: billing-plan-skeleton-sweep 1.15s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .billing-plan-skeleton-shimmer { animation: none; }
+        }
+      `}</style>
+      <div style={{ maxWidth: visiblePlans.length === 2 ? 740 : 1150, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 20, alignItems: 'stretch' }}>
+        {loading ? (
+          visiblePlans.map((plan) => <BillingPlanSkeletonCard key={plan.id} />)
+        ) : visiblePlans.map((plan, i) => {
+            const isCurrentPlan = currentPlanId === plan.id && currentBillingMonths === billing;
             const currentPrice = plan.price?.[billing];
             const basePrice = plan.price?.[1];
             const isCheckoutDisabled = plan.id !== 'free' && (currentPrice === null || currentPrice === undefined);
@@ -479,20 +557,7 @@ export default function BillingPage({ embedded = false }) {
                   <h3 style={{ fontSize: 24, fontWeight: 500, color: "#1a1a1a", margin: 0, letterSpacing: "-0.02em" }}>
                     {plan.name}
                   </h3>
-                  {plan.badge && (
-                    <div style={{
-                      border: "1px solid #1a1a1a",
-                      borderRadius: 16,
-                      padding: "4px 12px",
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: "#1a1a1a",
-                      whiteSpace: "nowrap"
-                    }}>
-                      {plan.badge}
-                    </div>
-                  )}
-                  {isCurrentPlan && !plan.badge && (
+                  {isCurrentPlan ? (
                     <div style={{
                       background: "#059669",
                       borderRadius: 16,
@@ -503,6 +568,18 @@ export default function BillingPage({ embedded = false }) {
                       whiteSpace: "nowrap"
                     }}>
                       Current Plan
+                    </div>
+                  ) : plan.badge && (
+                    <div style={{
+                      border: "1px solid #1a1a1a",
+                      borderRadius: 16,
+                      padding: "4px 12px",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#1a1a1a",
+                      whiteSpace: "nowrap"
+                    }}>
+                      {plan.badge}
                     </div>
                   )}
                 </div>

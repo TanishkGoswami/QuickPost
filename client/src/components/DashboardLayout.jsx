@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Outlet, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, Navigate, useNavigate } from "react-router-dom";
 import { CircleDollarSign, X } from "lucide-react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
@@ -163,11 +163,8 @@ const DashboardLayout = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const [hideUpgradeBanner, setHideUpgradeBanner] = useState(false);
-  const location = useLocation();
   const navigate = useNavigate();
-  const isTrendsPage = location.pathname.includes('/dashboard/trends');
-  const isAutoDMWorkspace = location.pathname.startsWith('/dashboard/auto-dm');
-  const showDashboardChrome = !isTrendsPage;
+  const showDashboardChrome = true;
   const showUpgradeBanner = showDashboardChrome && !hideUpgradeBanner && isFreePlan(user);
   const bannerHeight = showUpgradeBanner ? 52 : 0;
 
@@ -277,7 +274,6 @@ const DashboardLayout = () => {
           onMenuClick={() => setSidebarOpen((o) => !o)}
           sidebarOpen={sidebarOpen}
           isDesktop={isDesktop}
-          isTrendsPage={isTrendsPage}
           topOffset={bannerHeight}
         />
 

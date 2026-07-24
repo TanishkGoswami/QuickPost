@@ -56,7 +56,7 @@ export const PLANS = Object.freeze({
   sgrowth: Object.freeze({
     id: 'sgrowth',
     name: 'Growth',
-    prices: Object.freeze({ month: 2999, year: 29988 }),
+    prices: Object.freeze({ month: 1999, year: 19188 }),
     features: Object.freeze({
       publishing: true,
       scheduling: true,
@@ -79,6 +79,13 @@ export const PLANS = Object.freeze({
   }),
 });
 
+export function normalizePlanId(planId) {
+  const id = String(planId || '').toLowerCase().trim();
+  if (['starter', 'slite', 'pro', '999'].includes(id)) return 'slite';
+  if (['growth', 'sgrowth', 'enterprise', '1999', '2999'].includes(id)) return 'sgrowth';
+  return id || 'free';
+}
+
 export function getPlan(planId) {
-  return PLANS[String(planId || '').toLowerCase()] || PLANS.free;
+  return PLANS[normalizePlanId(planId)] || PLANS.free;
 }
