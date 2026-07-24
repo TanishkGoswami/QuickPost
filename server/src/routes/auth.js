@@ -494,8 +494,18 @@ router.get("/pinterest/callback", async (req, res) => {
     return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
 
   const parsed = decodeState(state);
-  if (!parsed?.userId)
+
+  // Strict State & Nonce Validation
+  const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+  if (
+    !parsed?.userId ||
+    parsed.provider !== "pinterest" ||
+    !parsed.ts ||
+    Date.now() - parsed.ts > FIFTEEN_MINUTES_MS
+  ) {
+    console.error("❌ [PINTEREST-OAUTH] State validation failed (expired state, invalid provider, or user mismatch)");
     return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
+  }
 
   try {
     const tokenData = await pinterestOAuth.exchangeCodeForToken(code);
@@ -503,58 +513,8 @@ router.get("/pinterest/callback", async (req, res) => {
 
     res.redirect(`${CLIENT_URL}/dashboard?success=pinterest_connected`);
   } catch (err) {
-    console.error("Pinterest callback error:", err);
+    console.error("❌ [PINTEREST-OAUTH] Callback error:", err.message || err);
     res.redirect(`${CLIENT_URL}/dashboard?error=pinterest_connection_failed`);
-  }
-});
-
-router.post("/pinterest/sandbox", authenticateUser, async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const sandboxToken = process.env.PINTEREST_SANDBOX_TOKEN;
-
-    if (!sandboxToken) {
-      return res.status(400).json({
-        success: false,
-        error: "PINTEREST_SANDBOX_TOKEN is not defined in the environment.",
-      });
-    }
-
-    console.log(`\n🔵 [AUTH] Pinterest Sandbox connect for user: ${userId}`);
-
-    // Get user info and boards using the sandbox token
-    const userInfo = await pinterestOAuth.getUserInfo(sandboxToken);
-    const boards = await pinterestOAuth.getBoards(sandboxToken);
-    const defaultBoard = boards[0];
-
-    const tokenData = {
-      accessToken: sandboxToken,
-      refreshToken: null,
-      tokenType: 'bearer',
-      userInfo: {
-        username: userInfo.username,
-        id: userInfo.id || userInfo.username,
-        profileImage: userInfo.profile_image
-      },
-      boardId: defaultBoard?.id || null,
-      boardName: defaultBoard?.name || null
-    };
-
-    // Store tokens
-    await pinterestOAuth.storeTokens(userId, tokenData);
-
-    res.json({
-      success: true,
-      message: "Pinterest Sandbox account connected successfully",
-      username: userInfo.username,
-    });
-  } catch (error) {
-    console.error("❌ Pinterest Sandbox connect error:", error.response?.data || error.message);
-    const apiError = error.response?.data?.message || error.message;
-    res.status(500).json({
-      success: false,
-      error: `Pinterest API Error: ${apiError}. Make sure your Sandbox Token is freshly generated and pasted correctly.`,
-    });
   }
 });
 
@@ -1052,6 +1012,14 @@ router.post("/linkedin/connect", authenticateUser, async (req, res) => {
 // Pinterest manual connection with access token
 router.post("/pinterest/connect", authenticateUser, async (req, res) => {
   try {
+    const isManualAllowed = process.env.NODE_ENV !== 'production' || process.env.ALLOW_MANUAL_PINTEREST_TOKEN === 'true';
+    if (!isManualAllowed) {
+      return res.status(403).json({
+        success: false,
+        error: "Manual token connection is disabled in production. Please use official Pinterest OAuth.",
+      });
+    }
+
     const { accessToken, boardId } = req.body;
     const userId = req.user.userId;
 
@@ -1264,7 +1232,7 @@ router.delete("/disconnect/:provider", authenticateUser, async (req, res) => {
       }
       const { data: igData, error: igError } = await igQuery.select();
       console.log(`[DISCONNECT] igData=${JSON.stringify(igData)} error=${JSON.stringify(igError)}`);
-      
+
       if (igError) throw igError;
 
       const disconnectedBusinessIds = (igData || [])
@@ -1300,7 +1268,7 @@ router.delete("/disconnect/:provider", authenticateUser, async (req, res) => {
           console.log(`[DISCONNECT] Paused automations for account(s): ${disconnectedIds.join(", ")}`);
         }
       }
-      
+
       if (accountId) {
         return res.json({
           success: true,
