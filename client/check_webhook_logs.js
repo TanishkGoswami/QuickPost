@@ -2,14 +2,20 @@ import { createClient } from '@supabase/supabase-js';
 
 const dbs = [
   {
-    name: 'Hub Database (uklxlappjcuvdqjvecfh)',
-    url: 'https://uklxlappjcuvdqjvecfh.supabase.co',
-    anon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVrbHhsYXBwamN1dmRxanZlY2ZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxNDcwODMsImV4cCI6MjA4MzcyMzA4M30.v-TvyQrYpttcmCnzT9MkUlBgGXXU3lspZCxCYm-Oil4'
+    name: 'Hub Database',
+    url: process.env.HUB_SUPABASE_URL,
+    anon: process.env.HUB_SUPABASE_ANON_KEY
   }
 ];
 
 async function checkDBs() {
   for (const db of dbs) {
+    if (!db.url || !db.anon) {
+      console.error('Set HUB_SUPABASE_URL and HUB_SUPABASE_ANON_KEY before running this script.');
+      process.exitCode = 1;
+      return;
+    }
+
     console.log(`\n=== Checking ${db.name} ===`);
     try {
       const client = createClient(db.url, db.anon);
