@@ -2,8 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { autodmSupabase, startAutoDMInstagramOAuth } from '../../services/autodm/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
-import { Loader2, CheckCircle, Shield, Users, Instagram, Send } from 'lucide-react';
+import { Loader2, CheckCircle2, Lock, ArrowRight, Instagram } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+
+import FacebookSetupModal from '../../components/FacebookSetupModal';
+import LinkedInConnectModal from '../../components/LinkedInConnectModal';
+import MastodonConnectModal from '../../components/MastodonConnectModal';
+import BlueskyConnectModal from '../../components/BlueskyConnectModal';
+import PinterestConnectModal from '../../components/PinterestConnectModal';
 
 export default function ConnectInstagramPage() {
   const navigate = useNavigate();
@@ -15,6 +22,13 @@ export default function ConnectInstagramPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [checkingAccounts, setCheckingAccounts] = useState(true);
+
+  // Modal States
+  const [showFacebookModal, setShowFacebookModal] = useState(false);
+  const [showLinkedInModal, setShowLinkedInModal] = useState(false);
+  const [showMastodonModal, setShowMastodonModal] = useState(false);
+  const [showBlueskyModal, setShowBlueskyModal] = useState(false);
+  const [showPinterestModal, setShowPinterestModal] = useState(false);
 
   const loadAccounts = async () => {
     if (!user?.userId) return;
@@ -55,9 +69,9 @@ export default function ConnectInstagramPage() {
     }
   }, [location.search]);
 
-  const handleConnect = async () => {
+  const handleConnectInstagram = async () => {
     if (instagramAccounts.length > 0) {
-      toast.error('Instagram already connected. Disconnect first to connect a different account.');
+      toast.error('Instagram already connected. Disconnect first.');
       return;
     }
 
@@ -101,157 +115,277 @@ export default function ConnectInstagramPage() {
     }
   };
 
+  const handleRedirectConnect = (endpoint) => {
+    const token = localStorage.getItem("quickpost_token");
+    if (!token) {
+      toast.error("Authentication token missing. Please log in again.");
+      return;
+    }
+    const apiUrl = import.meta.env.VITE_API_URL || "";
+    window.location.href = `${apiUrl}/api/auth/${endpoint}?token=${token}`;
+  };
+
+  const socialPlatforms = [
+    { id: 'facebook', name: 'Facebook', description: 'Pages & Groups', icon: '/icons/facebook-round-color-icon.svg', onConnect: () => setShowFacebookModal(true) },
+    { id: 'linkedin', name: 'LinkedIn', description: 'Profiles & Pages', icon: '/icons/linkedin-icon.svg', onConnect: () => setShowLinkedInModal(true) },
+    { id: 'youtube', name: 'YouTube', description: 'Shorts & Videos', icon: '/icons/youtube-color-icon.svg', onConnect: () => handleRedirectConnect('youtube') },
+    { id: 'threads', name: 'Threads', description: 'Text & Media', icon: '/icons/threads-icon.svg', onConnect: () => handleRedirectConnect('threads') },
+    { id: 'bluesky', name: 'Bluesky', description: 'AT Protocol', icon: '/icons/bluesky-circle-color-icon.svg', onConnect: () => setShowBlueskyModal(true) },
+  ];
+
+  const comingSoonPlatforms = [
+    { id: 'x', name: 'X (Twitter)', description: 'Posts & Threads', icon: '/icons/x-social-media-round-icon.svg' },
+    { id: 'pinterest', name: 'Pinterest', description: 'Boards & Pins', icon: '/icons/pinterest-round-color-icon.svg' },
+    { id: 'reddit', name: 'Reddit', description: 'Subreddit Posting', icon: '/icons/reddit-icon.svg' },
+    { id: 'whatsapp', name: 'WhatsApp', description: 'Business API', icon: '/icons/wa-whatsapp-icon.svg' },
+    { id: 'telegram', name: 'Telegram', description: 'Bot API', icon: '/icons/telegram-icon.svg' },
+  ];
+
+  const isInstagramConnected = instagramAccounts.length > 0;
+
   return (
-    <div style={{
-      minHeight: '100vh',
+    <main style={{ 
+      minHeight: '100vh', 
+      background: 'var(--canvas, #FAF9F6)', 
+      color: 'var(--ink, #141413)', 
+      fontFamily: 'var(--font-body, Inter, sans-serif)',
       display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: '#f7f7f7',
-      padding: 20,
-      color: '#1a1a1a',
-      fontFamily: 'var(--font, Inter, sans-serif)'
+      flexDirection: 'column',
+      padding: '48px 32px 80px',
+      overflowX: 'hidden'
     }}>
-      <div style={{ width: '100%', maxWidth: 440 }}>
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 16 }}>
-            <div style={{
-              width: 44,
-              height: 40,
-              background: '#6366f1',
-              color: 'white',
-              borderRadius: 8,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Send size={20} />
-            </div>
-            <span style={{ fontSize: 24, fontWeight: 700, color: '#111827' }}>GAP AutoDM</span>
-          </div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#111827', margin: '0 0 6px' }}>Connect Instagram Account</h1>
-          <p style={{ fontSize: 14, color: '#6b7280', margin: 0 }}>Link your professional account to start automations.</p>
-        </div>
-
-        {/* Trust Card */}
-        <div style={{
-          background: 'white',
-          borderRadius: 16,
-          padding: 24,
-          border: '1px solid #e5e7eb',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-          marginBottom: 24
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#6366f1', fontWeight: 600, fontSize: 15, marginBottom: 12 }}>
-            <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Shield size={15} />
-            </div>
-            <span>Meta-Verified Business Partner</span>
-          </div>
-          <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 16px', lineHeight: 1.5 }}>
-            We only use official Instagram APIs. Your Instagram account is secure, and you stay in full control.
+      
+      <div style={{ width: '100%', maxWidth: '760px', margin: '0 auto' }}>
+        
+        {/* Page Header */}
+        <header style={{ marginBottom: '56px', maxWidth: '640px' }}>
+          <h1 style={{ fontSize: '44px', fontWeight: '700', letterSpacing: '-0.03em', margin: '0 0 16px', lineHeight: '1.1' }}>
+            Channels & Integrations
+          </h1>
+          <p style={{ color: 'var(--slate, #64645F)', fontSize: '17px', margin: 0, lineHeight: '1.5' }}>
+            Manage your connected social accounts and messaging platforms. Authorize GAP to post on your behalf and automate direct messages.
           </p>
+        </header>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151' }}>
-              <CheckCircle size={14} color="#22c55e" />
-              <span>Official Meta OAuth login</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151' }}>
-              <CheckCircle size={14} color="#22c55e" />
-              <span>Safe and Secure</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151' }}>
-              <CheckCircle size={14} color="#22c55e" />
-              <span>Used by 1000+ creators</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Connect Action */}
         {checkingAccounts ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0' }}>
-            <Loader2 style={{ animation: 'spin 1s linear infinite' }} color="#6366f1" size={24} />
-          </div>
-        ) : instagramAccounts.length > 0 ? (
-          <div style={{
-            background: 'white',
-            borderRadius: 16,
-            padding: 24,
-            border: '1px solid #e5e7eb',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
-              <div>
-                <p style={{ fontSize: 14, fontWeight: 600, color: '#111827', margin: '0 0 2px' }}>Instagram connected</p>
-                <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>
-                  Connected as @{activeInstagramAccount?.username || instagramAccounts[0]?.username}
-                </p>
-              </div>
-              <button 
-                onClick={() => navigate('/dashboard/auto-dm')} 
-                style={{
-                  padding: '8px 16px', borderRadius: 8, border: 'none',
-                  background: '#6366f1', color: 'white', fontSize: 13,
-                  fontWeight: 600, cursor: 'pointer'
-                }}
-              >
-                Go to Dashboard
-              </button>
-            </div>
-            <button
-              onClick={handleDisconnect}
-              disabled={isDisconnecting}
-              style={{
-                width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #fecaca',
-                background: '#fef2f2', color: '#dc2626', fontSize: 13,
-                fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', gap: 6
-              }}
-            >
-              {isDisconnecting && <Loader2 style={{ animation: 'spin 1s linear infinite' }} size={14} />}
-              Disconnect Instagram
-            </button>
-            <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 12, textAlign: 'center' }}>
-              To connect a different Instagram account, disconnect this one first.
-            </p>
+          <div style={{ display: 'flex', padding: '60px 0', color: 'var(--slate)' }}>
+            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }}>
+              <Loader2 size={24} />
+            </motion.div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <button
-              onClick={handleConnect}
-              disabled={isLoading}
-              style={{
-                width: '100%', padding: '14px', borderRadius: 12, border: 'none',
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white',
-                fontSize: 16, fontWeight: 600, cursor: isLoading ? 'not-allowed' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                boxShadow: '0 4px 12px rgba(99,102,241,0.2)',
-                opacity: isLoading ? 0.7 : 1
-              }}
-            >
-              {isLoading ? (
-                <Loader2 style={{ animation: 'spin 1s linear infinite' }} size={18} />
-              ) : (
-                <Instagram size={18} />
-              )}
-              Connect Instagram Account
-            </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '56px' }}>
+            
+            {/* Featured Section: AutoDM (Instagram) */}
+            <section>
+              <h2 style={{ fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--slate)', margin: '0 0 16px' }}>
+                Primary AutoDM Channel
+              </h2>
+              
+              <div style={{
+                background: '#fff',
+                borderRadius: '16px',
+                border: '1px solid rgba(20,20,19,0.08)',
+                display: 'grid',
+                gridTemplateColumns: 'minmax(300px, 1.2fr) 1fr',
+                overflow: 'hidden',
+                boxShadow: '0 4px 24px -12px rgba(20,20,19,0.04)'
+              }}>
+                {/* Left Side: Connection Details */}
+                <div style={{ padding: '40px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '24px' }}>
+                    <div style={{ 
+                      width: '48px', height: '48px', borderRadius: '12px', 
+                      background: 'var(--canvas, #FAF9F6)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: '1px solid rgba(20,20,19,0.06)'
+                    }}>
+                      <img src="/icons/ig-instagram-icon.svg" alt="Instagram" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
+                    </div>
+                    <div>
+                      <h3 style={{ margin: '0 0 2px', fontSize: '18px', fontWeight: '600' }}>Instagram</h3>
+                      <p style={{ margin: 0, color: 'var(--slate)', fontSize: '14px' }}>Official Meta Graph API</p>
+                    </div>
+                  </div>
 
-            <div style={{ padding: 16, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 12 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: '#374151', margin: '0 0 4px' }}>
-                Supports Business & Creator Accounts
-              </p>
-              <p style={{ fontSize: 11, color: '#6b7280', margin: 0, lineHeight: 1.5 }}>
-                Log in directly with Instagram to connect your Business or Creator account.
-              </p>
-            </div>
+                  <p style={{ color: 'var(--slate)', fontSize: '14px', lineHeight: '1.5', marginBottom: '32px', maxWidth: '380px' }}>
+                    Connect your professional Instagram account to enable automated DM replies, lead capture flows, and story mentions tracking.
+                  </p>
+
+                  {isInstagramConnected ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <button 
+                        onClick={() => navigate('/dashboard/auto-dm')}
+                        style={{ 
+                          background: 'var(--ink, #141413)', color: '#fff', border: 'none', borderRadius: '8px', 
+                          padding: '10px 20px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', 
+                          display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.15s' 
+                        }}
+                        onMouseOver={e => e.currentTarget.style.background = '#333'}
+                        onMouseOut={e => e.currentTarget.style.background = 'var(--ink)'}
+                      >
+                        Configure AutoDM <ArrowRight size={16} />
+                      </button>
+                      <button 
+                        onClick={handleDisconnect} disabled={isDisconnecting}
+                        style={{ 
+                          background: 'transparent', color: 'var(--slate)', border: '1px solid rgba(20,20,19,0.1)', 
+                          borderRadius: '8px', padding: '9px 16px', fontSize: '14px', fontWeight: '500', 
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s' 
+                        }}
+                        onMouseOver={e => { e.currentTarget.style.color = '#b62216'; e.currentTarget.style.borderColor = '#b62216'; }}
+                        onMouseOut={e => { e.currentTarget.style.color = 'var(--slate)'; e.currentTarget.style.borderColor = 'rgba(20,20,19,0.1)'; }}
+                      >
+                        {isDisconnecting ? <Loader2 size={16} className="spin" style={{ animation: 'spin 1s linear infinite' }} /> : 'Disconnect'}
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={handleConnectInstagram} disabled={isLoading}
+                      style={{ 
+                        background: 'var(--ink, #141413)', color: '#fff', border: 'none', borderRadius: '8px', 
+                        padding: '10px 24px', fontSize: '14px', fontWeight: '500', cursor: 'pointer', 
+                        display: 'flex', alignItems: 'center', gap: '8px', transition: 'background 0.15s' 
+                      }}
+                      onMouseOver={e => e.currentTarget.style.background = '#333'}
+                      onMouseOut={e => e.currentTarget.style.background = 'var(--ink)'}
+                    >
+                      {isLoading ? <Loader2 size={16} className="spin" style={{ animation: 'spin 1s linear infinite' }} /> : 'Connect Instagram'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Right Side: Status/Graphic Panel */}
+                <div style={{ 
+                  background: 'var(--canvas, #FAF9F6)', 
+                  borderLeft: '1px solid rgba(20,20,19,0.06)',
+                  display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center',
+                  padding: '40px', position: 'relative', overflow: 'hidden'
+                }}>
+                  {/* Subtle background decoration */}
+                  <div style={{ position: 'absolute', inset: 0, opacity: 0.4, backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(20,20,19,0.04) 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+                  
+                  {isInstagramConnected ? (
+                    <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
+                      <div style={{ 
+                        width: '64px', height: '64px', borderRadius: '50%', background: '#fff', 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+                        boxShadow: '0 8px 32px -8px rgba(18,130,59,0.25)', border: '4px solid #fff'
+                      }}>
+                        <CheckCircle2 size={32} color="#12823b" />
+                      </div>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#12823b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>Active Connection</div>
+                      <div style={{ fontSize: '15px', color: 'var(--ink)', fontWeight: '500' }}>@{activeInstagramAccount?.username || instagramAccounts[0]?.username}</div>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center', position: 'relative', zIndex: 1, opacity: 0.6 }}>
+                      <div style={{ 
+                        width: '64px', height: '64px', borderRadius: '50%', background: '#fff', 
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+                        border: '1px solid rgba(20,20,19,0.1)'
+                      }}>
+                        <Instagram size={28} color="var(--slate)" />
+                      </div>
+                      <div style={{ fontSize: '14px', color: 'var(--slate)', fontWeight: '500' }}>Awaiting Connection</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* List Section: Social Networks */}
+            <section>
+              <h2 style={{ fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--slate)', margin: '0 0 16px' }}>
+                Social Media Channels
+              </h2>
+              
+              <div style={{ 
+                background: '#fff', borderRadius: '12px', border: '1px solid rgba(20,20,19,0.08)',
+                overflow: 'hidden'
+              }}>
+                {socialPlatforms.map((platform, index) => (
+                  <div key={platform.id} style={{ 
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
+                    padding: '16px 24px',
+                    borderBottom: index !== socialPlatforms.length - 1 ? '1px solid rgba(20,20,19,0.06)' : 'none',
+                    transition: 'background 0.15s',
+                    cursor: 'default'
+                  }}
+                  onMouseOver={e => e.currentTarget.style.background = 'rgba(20,20,19,0.02)'}
+                  onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img src={platform.icon} alt={platform.name} style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '15px', fontWeight: '500', color: 'var(--ink)' }}>{platform.name}</div>
+                        <div style={{ fontSize: '13px', color: 'var(--slate)' }}>{platform.description}</div>
+                      </div>
+                    </div>
+                    
+                    <button 
+                      onClick={platform.onConnect}
+                      style={{ 
+                        background: '#fff', color: 'var(--ink)', border: '1px solid rgba(20,20,19,0.12)', 
+                        borderRadius: '6px', padding: '6px 16px', fontSize: '13px', fontWeight: '500', 
+                        cursor: 'pointer', transition: 'all 0.15s' 
+                      }}
+                      onMouseOver={e => { e.currentTarget.style.background = 'var(--canvas)'; e.currentTarget.style.borderColor = 'rgba(20,20,19,0.2)'; }}
+                      onMouseOut={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = 'rgba(20,20,19,0.12)'; }}
+                    >
+                      Connect
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* List Section: Coming Soon */}
+            <section>
+              <h2 style={{ fontSize: '13px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--slate)', margin: '0 0 16px' }}>
+                Upcoming Integrations
+              </h2>
+              
+              <div style={{ 
+                background: '#fff', borderRadius: '12px', border: '1px solid rgba(20,20,19,0.08)',
+                overflow: 'hidden'
+              }}>
+                {comingSoonPlatforms.map((platform, index) => (
+                  <div key={platform.id} style={{ 
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
+                    padding: '16px 24px',
+                    borderBottom: index !== comingSoonPlatforms.length - 1 ? '1px solid rgba(20,20,19,0.06)' : 'none',
+                    opacity: 0.6
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', filter: 'grayscale(1)' }}>
+                        <img src={platform.icon} alt={platform.name} style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '15px', fontWeight: '500', color: 'var(--ink)' }}>{platform.name}</div>
+                        <div style={{ fontSize: '13px', color: 'var(--slate)' }}>{platform.description}</div>
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--slate)', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', padding: '6px 12px', background: 'var(--canvas)', borderRadius: '6px' }}>
+                      <Lock size={14} /> Soon
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
           </div>
         )}
-
-        <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
       </div>
-    </div>
+
+      {/* Render Modals */}
+      <FacebookSetupModal isOpen={showFacebookModal} onClose={() => setShowFacebookModal(false)} />
+      <LinkedInConnectModal isOpen={showLinkedInModal} onClose={() => setShowLinkedInModal(false)} />
+      <MastodonConnectModal isOpen={showMastodonModal} onClose={() => setShowMastodonModal(false)} />
+      <BlueskyConnectModal isOpen={showBlueskyModal} onClose={() => setShowBlueskyModal(false)} />
+      <PinterestConnectModal isOpen={showPinterestModal} onClose={() => setShowPinterestModal(false)} />
+    </main>
   );
 }

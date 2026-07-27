@@ -129,6 +129,21 @@ export async function getEntitlements(userId, email = null, token = null) {
   const subscription = selectBestSubscription(subscriptions);
   const plan = getPlan(subscription?.plan_id || 'free');
 
+  let latestActivation = null;
+  if (subscription?.source === 'standalone') {
+    const { data, error: activationError } = await supabase
+      .from('subscription_payment_activations')
+      .select('interval_months')
+      .eq('user_id', userId)
+      .order('activated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (activationError && activationError.code !== '42P01') {
+      throw new Error(`Failed to load subscription activation: ${activationError.message}`);
+    }
+    latestActivation = data;
+  }
+
   const { data: usage, error: usageError } = await supabase
     .from('entitlement_usage')
     .select('metric,used,period_start,period_end')
@@ -141,10 +156,15 @@ export async function getEntitlements(userId, email = null, token = null) {
 
   return {
     plan: { id: plan.id, name: plan.name },
-    subscription: subscription || {
+    subscription: subscription ? {
+      ...subscription,
+      interval_months: latestActivation?.interval_months
+        || (subscription.billing_interval === 'year' ? 12 : 1),
+    } : {
       source: 'standalone',
       status: 'active',
       billing_interval: null,
+      interval_months: null,
       current_period_end: null,
       cancel_at_period_end: false,
     },

@@ -7,6 +7,60 @@ import { supabase } from "../../../lib/supabase";
 
 const API_URL = import.meta.env.VITE_API_URL || import.meta.env.VITE_DEV_API_URL || 'http://localhost:5000';
 
+function PricingSkeletonCard({ tone = 'light' }) {
+  const line = (width, height = 12) => (
+    <span
+      className="pricing-skeleton-shimmer"
+      style={{
+        display: "block",
+        width,
+        height,
+        borderRadius: 999,
+      }}
+    />
+  );
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        borderRadius: 12,
+        border: "1px solid #e5e5e5",
+        background: tone === "soft" ? "#efebe5" : "#ffffff",
+        padding: "32px 24px",
+        minHeight: 640,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+        {line("38%", 26)}
+        {line("88px", 24)}
+      </div>
+      {line("82%")}
+      <div style={{ height: 8 }} />
+      {line("56%")}
+      <div style={{ height: 34 }} />
+      {line("44%", 52)}
+      <div style={{ height: 18 }} />
+      {line("68%")}
+      <div style={{ height: 26 }} />
+      {line("100%", 46)}
+      <div style={{ height: 34 }} />
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {Array.from({ length: 7 }).map((_, index) => line(index % 3 === 0 ? "92%" : index % 3 === 1 ? "78%" : "64%"))}
+      </div>
+      <div style={{ marginTop: "auto", borderRadius: 12, background: "rgba(239,235,229,0.55)", padding: 20 }}>
+        {line("58%")}
+        <div style={{ height: 14 }} />
+        {line("72%")}
+        <div style={{ height: 20 }} />
+        {line("86%")}
+      </div>
+    </div>
+  );
+}
+
 const PLANS_TEMPLATE = [
   {
     name: 'Free',
@@ -309,6 +363,21 @@ export default function Pricing({ hideHeader = false }) {
           </div>
         )}
 
+        <style>{`
+          @keyframes pricing-skeleton-sweep {
+            0% { background-position: 120% 0; }
+            100% { background-position: -120% 0; }
+          }
+          .pricing-skeleton-shimmer {
+            background: linear-gradient(90deg, rgba(20,20,19,0.06) 25%, rgba(20,20,19,0.12) 38%, rgba(20,20,19,0.06) 63%);
+            background-size: 240% 100%;
+            animation: pricing-skeleton-sweep 1.15s ease-in-out infinite;
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .pricing-skeleton-shimmer { animation: none; }
+          }
+        `}</style>
+
         {/* Cards */}
         <div style={{
           display: 'grid',
@@ -318,7 +387,11 @@ export default function Pricing({ hideHeader = false }) {
           maxWidth: 1150,
           margin: '0 auto',
         }}>
-          {plans.map((plan, i) => {
+          {loading ? (
+            PLANS_TEMPLATE.map((plan) => (
+              <PricingSkeletonCard key={plan.id} tone={plan.id === "free" ? "soft" : "light"} />
+            ))
+          ) : plans.map((plan, i) => {
             const currentPrice = plan.price?.[billing];
             const basePrice = plan.price?.[1];
             const isCheckoutDisabled = plan.id !== 'free' && (currentPrice === null || currentPrice === undefined);
