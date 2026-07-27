@@ -82,7 +82,7 @@ export default function PrivacyPolicy() {
           
           {/* Sidebar */}
           <aside className="hidden lg:block w-full max-w-[300px] shrink-0">
-            <div style={{ position: 'sticky', top: 100, display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div className="custom-scrollbar" style={{ position: 'sticky', top: 100, display: 'flex', flexDirection: 'column', gap: 24, maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
               <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: 'var(--slate)', textDecoration: 'none', transition: 'color 0.15s' }}
                 onMouseEnter={e => e.currentTarget.style.color = 'var(--ink)'}
                 onMouseLeave={e => e.currentTarget.style.color = 'var(--slate)'}>
