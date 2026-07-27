@@ -20,14 +20,14 @@ import {
 } from 'lucide-react';
 
 const SECTIONS = [
-  { id: 'introduction', title: '1. Introduction', icon: <Shield size={16} strokeWidth={2.5} /> },
+  { id: 'introduction', title: '1. Scope & Introduction', icon: <Shield size={16} strokeWidth={2.5} /> },
   { id: 'collection', title: '2. Information Collection', icon: <Eye size={16} strokeWidth={2.5} /> },
-  { id: 'usage', title: '3. Data Usage', icon: <FileText size={16} strokeWidth={2.5} /> },
+  { id: 'usage', title: '3. Data Usage & AI Rules', icon: <FileText size={16} strokeWidth={2.5} /> },
   { id: 'platforms', title: '4. Platform Specifics', icon: <Share2 size={16} strokeWidth={2.5} /> },
-  { id: 'deletion', title: '5. Data Deletion', icon: <Trash2 size={16} strokeWidth={2.5} /> },
-  { id: 'retention', title: '6. Retention & Sharing', icon: <FileText size={16} strokeWidth={2.5} /> },
-  { id: 'security', title: '7. Data Security', icon: <Lock size={16} strokeWidth={2.5} /> },
-  { id: 'rights', title: '8. Your Rights', icon: <UserCheck size={16} strokeWidth={2.5} /> },
+  { id: 'deletion', title: '5. Meta Data Deletion', icon: <Trash2 size={16} strokeWidth={2.5} /> },
+  { id: 'retention', title: '6. Sharing & Processors', icon: <FileText size={16} strokeWidth={2.5} /> },
+  { id: 'security', title: '7. Security & Retention', icon: <Lock size={16} strokeWidth={2.5} /> },
+  { id: 'rights', title: '8. Your Rights (DPDPA)', icon: <UserCheck size={16} strokeWidth={2.5} /> },
   { id: 'updates', title: '9. Policy Updates', icon: <RefreshCw size={16} strokeWidth={2.5} /> },
   { id: 'contact', title: '10. Contact Us', icon: <Mail size={16} strokeWidth={2.5} /> },
 ];
@@ -144,13 +144,13 @@ export default function PrivacyPolicy() {
                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
                   <img src={logo} alt="GAP Social-pilot" style={{ width: 48, height: 48, objectFit: 'contain' }} />
                   <div style={{ padding: '6px 12px', background: 'rgba(20,20,19,0.06)', borderRadius: 'var(--r-pill)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink)' }}>
-                    Privacy First
+                    DPDPA Compliant
                   </div>
                </div>
                <h1 style={{ fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: '0 0 24px', lineHeight: 1.1 }}>Privacy Policy</h1>
                <p style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--slate)', margin: 0, fontWeight: 500 }}>
                  <RefreshCw size={14} />
-                 Last updated: <span style={{ color: 'var(--ink)', fontWeight: 700 }}>December 29, 2025</span>
+                 Last updated: <span style={{ color: 'var(--ink)', fontWeight: 700 }}>July 27, 2026</span>
                </p>
             </header>
 
@@ -161,10 +161,11 @@ export default function PrivacyPolicy() {
                   <div style={{ width: 40, height: 40, background: 'var(--ink)', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--canvas)' }}>
                     <Shield size={20} />
                   </div>
-                  <h2 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>1. Introduction</h2>
+                  <h2 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>1. Scope & Introduction</h2>
                 </div>
                 <div style={{ color: 'var(--Charcoal)', fontSize: 16, lineHeight: 1.6, fontWeight: 450, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <p style={{ margin: 0 }}>Welcome to <strong style={{ fontWeight: 600 }}>GAP Social-pilot</strong>. We are a social publishing tool that allows you to connect your social media accounts and broadcast content. We are committed to protecting your personal information and your right to privacy.</p>
+                  <p style={{ margin: 0 }}>Welcome to <strong style={{ fontWeight: 600 }}>GAP-socialpilot</strong>. We are a social publishing and automation tool that allows you to connect your social media profiles, manage incoming feeds, create automations, and schedule posts. We are committed to protecting your personal information and your right to privacy.</p>
+                  <p style={{ margin: 0 }}>GAP-socialpilot is owned by <strong style={{ fontWeight: 600 }}>GetAIPilot</strong>.</p>
                   <p style={{ margin: 0 }}><strong>Age Restriction & Regional Scope (India Only):</strong> GAP Social-pilot is operated exclusively for users in India. Individuals under the age of 18 are prohibited from using our services. Our data processing is designed in compliance with the Digital Personal Data Protection Act of India (DPDPA), 2023.</p>
                   <p style={{ margin: 0 }}>When you visit our website and use our services, you trust us with your personal information. This privacy policy describes what information we collect, how we use it, and what rights you have in relation to it.</p>
                 </div>
@@ -179,11 +180,13 @@ export default function PrivacyPolicy() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
                   {[
-                    { title: 'Account Identity', desc: 'We store your Email, Name, and unique User ID provided by authentication services for account management.' },
-                    { title: 'OAuth Tokens', desc: 'Secure access and refresh tokens for connected social platforms (e.g. Facebook Page Access Tokens, Instagram Profile info) to allow automated posting.' },
-                    { title: 'Content Data', desc: 'Captions, images, videos, and page IDs required to facilitate broadcasting to your selected social channels.' },
-                    { title: 'Diagnostics & Traffic Data', desc: 'Error logs, IP addresses, browser types, device attributes, and visit frequencies collected to diagnose errors and enhance user experience.' },
-                    { title: 'Cookies & Tracking', desc: 'Necessary, performance, and functionality cookies used to manage active user sessions, retain user configurations, and prevent security fraud.' }
+                    { title: 'Account Identity', desc: 'We store your email address, name, profile picture when provided, account status, subscription status, and unique user ID for workspace operations.' },
+                    { title: 'OAuth Access Tokens', desc: 'We store access tokens, Page tokens, refresh tokens, token expiry dates, granted scopes, connected account IDs, Page IDs, and Instagram Business account IDs needed to operate the integrations you connect.' },
+                    { title: 'Social Profile & Page Data', desc: 'When authorized, we read connected Page, Instagram Business, Threads, and channel profile details such as name, username, avatar, account ID, Page list, linked Instagram account, and basic engagement or insight data.' },
+                    { title: 'Content Data', desc: 'We process captions, media assets, hashtags, links, selected platforms, scheduling timelines, publish results, post IDs, permalinks, comment triggers, inbox messages, and automation rules required to deliver the service.' },
+                    { title: 'Customer & Lead Data', desc: 'If you use AutoDM or inbox features, we may process public comments, direct message conversations, lead details you choose to capture, saved products, orders, and knowledge-base content uploaded by you.' },
+                    { title: 'Diagnostics & Traffic', desc: 'Error logs, IP addresses, browser types, device versions, request IDs, timestamps, and API response diagnostics may be collected to maintain stability, security, and abuse prevention.' },
+                    { title: 'Cookies & Tracking', desc: 'Necessary, performance, and functionality cookies are used to manage secure sessions, retain user preferences, detect fraud, and keep you signed in.' }
                   ].map((item, i) => (
                     <div key={i} style={{ padding: 24, background: 'var(--canvas)', border: '1px solid rgba(20,20,19,0.08)', borderRadius: 'var(--r-btn)', transition: 'all 0.2s' }}
                       onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(20,20,19,0.2)'}
@@ -204,15 +207,18 @@ export default function PrivacyPolicy() {
                   <div style={{ width: 40, height: 40, background: 'var(--ink)', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--canvas)' }}>
                     <FileText size={20} />
                   </div>
-                  <h2 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>3. Data Usage</h2>
+                  <h2 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>3. Data Usage & AI Rules</h2>
                 </div>
-                <p style={{ fontSize: 16, color: 'var(--Charcoal)', margin: '0 0 32px' }}>We utilize the collected information strictly for service operations:</p>
+                <p style={{ fontSize: 16, color: 'var(--Charcoal)', margin: '0 0 32px' }}>We process your personal information strictly under contract performance and consent:</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {[
-                    'Authenticating your sessions and maintaining account security.',
-                    'Posting media and text content to third-party social APIs.',
-                    'Monitoring post performance and broadcasting status.',
-                    'Responding to support queries and technical issues.'
+                    'Authenticating your sessions and maintaining workspace account security.',
+                    'Connecting social accounts through OAuth and showing the accounts, Pages, and channels you authorized.',
+                    'Posting scheduled text, image, video, Reel, Story, and carousel content to third-party social APIs at your direction.',
+                    'Managing comments, inbox conversations, AutoDM triggers, manual replies, and automation status for accounts you connect.',
+                    'Monitoring post performance metrics and compiling engagement diagnostics where the relevant platform permission is granted.',
+                    'Sending transactional emails, billing notices, and customer support messages related to your account.',
+                    'Responding to customer support tickets, debugging failed API requests, enforcing usage limits, and preventing fraud or abuse.'
                   ].map((item, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: 20, background: 'var(--canvas)', borderRadius: 'var(--r-btn)', border: '1px solid rgba(20,20,19,0.08)' }}>
                       <div style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--ink)', color: 'var(--canvas)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0, marginTop: 2 }}>
@@ -224,10 +230,10 @@ export default function PrivacyPolicy() {
                 </div>
 
                 <div style={{ marginTop: 32, padding: 32, border: '1px solid rgba(20,20,19,0.1)', background: 'var(--canvas)', borderRadius: 'var(--r-hero)' }}>
-                  <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--ink)', margin: '0 0 16px' }}>AI & Automated Decision-Making</h3>
+                  <h3 style={{ fontSize: 18, fontWeight: 600, color: 'var(--ink)', margin: '0 0 16px' }}>Artificial Intelligence & NLP Triggers</h3>
                   <div style={{ fontSize: 15, color: 'var(--ink)', lineHeight: 1.6, fontWeight: 500, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <p style={{ margin: 0 }}>GAP Social-pilot utilizes automated natural language processing (NLP) and fuzzy matching to match incoming comment strings on connected platforms with specified keyword triggers (supporting Hinglish, Hindi, and English dialects) to route direct message replies. This automation serves to instantly deliver requested information to your audience.</p>
-                    <p style={{ margin: 0 }}><strong>Safeguards & Control:</strong> You maintain absolute control over these automation parameters and may pause, edit, or delete trigger keywords at any time. We routinely audit our trigger systems for accuracy and fairness. No data retrieved via Meta or Google APIs is used to train, refine, or improve generalized AI/ML models.</p>
+                    <p style={{ margin: 0 }}>GAP Social-pilot uses automated Natural Language Processing (NLP), keyword matching, and user-configured response rules to read authorized public comments and route direct message replies. Users control trigger lists, message copy, paused states, and connected accounts.</p>
+                    <p style={{ margin: 0 }}><strong>Strict Lock:</strong> No data retrieved via Meta APIs, Google API Services, or connected social accounts is sold or used to train, refine, or improve generalized AI/ML models.</p>
                   </div>
                 </div>
               </section>
@@ -237,7 +243,7 @@ export default function PrivacyPolicy() {
                   <div style={{ width: 40, height: 40, background: 'var(--ink)', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--canvas)' }}>
                     <Share2 size={20} />
                   </div>
-                  <h2 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>4. Platform Specifics & Data Disclosures</h2>
+                  <h2 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>4. Platform Specifics</h2>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -261,14 +267,15 @@ export default function PrivacyPolicy() {
                       <Facebook size={16} /> Meta Platforms (Facebook, Instagram & Threads)
                     </div>
                     <div style={{ fontSize: 15, color: 'var(--ink)', lineHeight: 1.6, fontWeight: 500, margin: 0, position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      <p style={{ margin: 0 }}>We strictly comply with the Meta Platform Terms and Developer Policies. When you authorize GAP Social-pilot using Meta Login, we request and retrieve the following types of information via the official Facebook and Instagram Graph APIs:</p>
+                      <p style={{ margin: 0 }}>We comply strictly with Meta Platform Terms and Developer Policies. Access is restricted to permissions explicitly granted, including <code>public_profile</code>, <code>pages_show_list</code>, <code>pages_read_engagement</code>, <code>pages_manage_metadata</code>, <code>pages_manage_posts</code>, <code>pages_messaging</code>, <code>instagram_basic</code>, <code>instagram_content_publish</code>, <code>instagram_manage_messages</code>, <code>instagram_manage_comments</code>, <code>instagram_manage_insights</code>, <code>threads_basic</code>, and <code>threads_content_publish</code>, depending on which features you connect. We use these permissions to list authorized Pages and Instagram Business accounts, publish posts/Reels/Stories, manage comments and inbox conversations, read insights, and publish Threads content at your direction.</p>
                       <ul style={{ margin: '0 0 0 20px', padding: 0, listStyleType: 'disc', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        <li><strong>Profile Identity Data:</strong> User ID, page/profile names, handles, and profile picture URLs.</li>
-                        <li><strong>Secure Access Credentials:</strong> OAuth Page/User Access Tokens to perform actions on your behalf.</li>
-                        <li><strong>Content Publishing Metadata:</strong> Media files (images, videos), descriptions, and scheduled post timings.</li>
-                        <li><strong>Engagement & Messages Data:</strong> Direct message payloads, comment text, message/comment IDs, and sender names to power your automated comment-to-DM triggers and unified inbox sequences.</li>
+                        <li><strong>Profile Identity Data:</strong> Facebook user ID and name, page/profile names, handles, and profile picture URLs.</li>
+                        <li><strong>Secure Access Credentials:</strong> OAuth Page/User Access Tokens, connected Page IDs, and linked Instagram Business account IDs to perform actions on your behalf.</li>
+                        <li><strong>Content Publishing Metadata:</strong> Media files or media URLs, descriptions, captions, post IDs, permalinks, media IDs, and scheduled post timings.</li>
+                        <li><strong>Engagement, Comments & Messages Data:</strong> Direct message payloads, conversation IDs, comment text, message/comment IDs, sender IDs/names, and insights returned by the permissions you approved.</li>
                       </ul>
-                      <p style={{ margin: 0 }}><strong>Usage & Sharing Constraint:</strong> All Meta data is processed solely to execute user-requested scheduling, publishing, and automated DM/comment replies. We do not share, sell, lease, or use Meta user data for third-party advertising, profiling, or target marketing.</p>
+                      <p style={{ margin: 0 }}><strong>Usage & Sharing Constraint:</strong> All Meta data is processed solely to execute user-requested scheduling, publishing, analytics, account selection, and automated DM/comment replies. All Meta data remains isolated to your private workspace. We do not share, sell, lease, or use Meta user data for third-party advertising, profiling, target marketing, or generalized AI/ML model training.</p>
+                      <p style={{ margin: 0 }}>We do not request access to personal Facebook messages, friends lists, advertising data, or unrelated profile fields.</p>
                     </div>
                   </div>
 
@@ -291,7 +298,7 @@ export default function PrivacyPolicy() {
                   <div style={{ width: 40, height: 40, background: 'var(--signal)', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
                     <Trash2 size={20} />
                   </div>
-                  <h2 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>5. Data Deletion Instructions</h2>
+                  <h2 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>5. Meta Data Deletion</h2>
                 </div>
                 <div style={{ padding: 40, background: 'var(--ink)', borderRadius: 'var(--r-hero)', color: 'var(--canvas)', position: 'relative', overflow: 'hidden' }}>
                   <svg aria-hidden="true" style={{ position: 'absolute', right: -50, bottom: -50, opacity: 0.3, pointerEvents: 'none' }} width="300" height="300" viewBox="0 0 200 200">
@@ -301,14 +308,14 @@ export default function PrivacyPolicy() {
                   <div style={{ position: 'relative', zIndex: 1 }}>
                     <p style={{ fontSize: 20, fontWeight: 600, margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
                       <AlertCircle color="var(--signal)" />
-                      Data Deletion & Permission Revocation Flow
+                      User Data Deletion & Revocation (Meta Compliant)
                     </p>
                     <p style={{ fontSize: 15, fontWeight: 450, color: 'rgba(243,240,238,0.7)', lineHeight: 1.6, margin: '0 0 32px' }}>
-                      You have full rights to request the deletion of your personal data or revoke GAP Social-pilot's permissions at any time. Below are the steps to execute this:
+                      This page serves as our public User Data Deletion Instructions URL for Meta App Review. To request deletion of your personal data associated with GAP-socialpilot or revoke connected platform access, choose one of the official methods below:
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                       <div style={{ padding: 24, background: 'rgba(243,240,238,0.05)', border: '1px solid rgba(243,240,238,0.1)', borderRadius: 'var(--r-btn)' }}>
-                        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--arc)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px' }}>1. Revoking Permissions Natively on Facebook / Instagram</p>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--arc)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px' }}>Method A: Native Access Revocation (Facebook & Instagram)</p>
                         <ol style={{ fontSize: 14, fontWeight: 500, margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 6, listStyleType: 'decimal' }}>
                           <li>Go to your personal Facebook profile's <strong>Settings & Privacy &gt; Settings</strong>.</li>
                           <li>On the left-hand navigation panel, click on <strong>Apps and Websites</strong>.</li>
@@ -318,13 +325,21 @@ export default function PrivacyPolicy() {
                         </ol>
                       </div>
                       <div style={{ padding: 24, background: 'rgba(243,240,238,0.05)', border: '1px solid rgba(243,240,238,0.1)', borderRadius: 'var(--r-btn)' }}>
-                        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--arc)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px' }}>2. Requesting Full Account & Data Purge</p>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--arc)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px' }}>Method B: In-App Disconnect</p>
                         <p style={{ fontSize: 14, fontWeight: 500, margin: 0, lineHeight: 1.6 }}>
-                          If you want us to permanently wipe all stored records (including OAuth access tokens, page associations, messaging logs, posts, and media caches) from our systems:
-                          <br /><br />
-                          Email us at <a href="mailto:getaipilot@gmail.com" style={{ color: 'var(--arc)', textDecoration: 'underline' }}>getaipilot@gmail.com</a> with your request. 
-                          <br /><br />
-                          <strong>Processing Policy:</strong> Upon receiving your request, we will verify ownership, immediately cease all active data collections, permanently purge the associated records from our servers and backups within 30 days, and email you a confirmation of complete data deletion.
+                          From the GAP dashboard, open connected platforms and click <strong>Disconnect</strong> for Facebook, Instagram, or Threads. This removes stored social tokens for the selected channel and pauses related publishing or automation features.
+                        </p>
+                      </div>
+                      <div style={{ padding: 24, background: 'rgba(243,240,238,0.05)', border: '1px solid rgba(243,240,238,0.1)', borderRadius: 'var(--r-btn)' }}>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--arc)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px' }}>Method C: Permanent Database Record Purge</p>
+                        <p style={{ fontSize: 14, fontWeight: 500, margin: 0, lineHeight: 1.6 }}>
+                          To permanently delete stored profile logs, workspace records, OAuth credentials, access tokens, scheduled content, publish history, AutoDM records, comment/message logs, leads, and support records associated with your account, send an email to <a href="mailto:getaipilot@gmail.com" style={{ color: 'var(--arc)', textDecoration: 'underline' }}>getaipilot@gmail.com</a> with the subject <strong>Data Deletion Request</strong>. We will verify account ownership, confirm receipt, and process the request within <strong>30 days</strong>, unless a longer retention period is required by law, tax, fraud-prevention, dispute-resolution, or security obligations.
+                        </p>
+                      </div>
+                      <div style={{ padding: 24, background: 'rgba(243,240,238,0.05)', border: '1px solid rgba(243,240,238,0.1)', borderRadius: 'var(--r-btn)' }}>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--arc)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 12px' }}>Deletion Status</p>
+                        <p style={{ fontSize: 14, fontWeight: 500, margin: 0, lineHeight: 1.6 }}>
+                          After deletion is complete, we will send a confirmation email. Deleted production records may remain in encrypted backups for a limited backup-retention period and are not restored except for disaster recovery, legal compliance, or security investigation needs.
                         </p>
                       </div>
                     </div>
@@ -337,14 +352,25 @@ export default function PrivacyPolicy() {
                   <div style={{ width: 40, height: 40, background: 'var(--ink)', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--canvas)' }}>
                     <FileText size={20} />
                   </div>
-                  <h2 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>6. Retention & Sharing</h2>
+                  <h2 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>6. Sharing & Processors</h2>
                 </div>
-                <div style={{ padding: 32, background: 'var(--canvas)', border: '1px solid rgba(20,20,19,0.08)', borderRadius: 'var(--r-hero)' }}>
-                  <p style={{ fontSize: 16, fontWeight: 500, color: 'var(--ink)', lineHeight: 1.6, margin: '0 0 16px' }}>
-                    <strong style={{ fontWeight: 700 }}>Data Retention:</strong> We keep your personal information and OAuth tokens only for as long as your account is active and you are using our services. Once you delete your account or disconnect a platform, the associated data is permanently deleted from our servers.
-                  </p>
-                  <p style={{ fontSize: 16, fontWeight: 500, color: 'var(--ink)', lineHeight: 1.6, margin: 0 }}>
-                    <strong style={{ fontWeight: 700 }}>Third-Party Sharing:</strong> We do not sell, rent, or trade your personal information. We only share data with third-party social platforms (like Meta, Google, Pinterest) strictly to provide the publishing services you request. No Facebook or Instagram user data is used for generalized marketing or sold to data brokers.
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
+                  {[
+                    { title: 'No Sale of Personal Data', desc: 'We do not sell, rent, broker, or trade personal information, Meta Platform Data, inbox data, comments, lead data, or OAuth tokens.' },
+                    { title: 'Limited Service Providers', desc: 'We use trusted infrastructure and service providers only where needed for hosting, database storage, authentication, file/media storage, email delivery, payments, monitoring, and customer support.' },
+                    { title: 'Platform API Delivery', desc: 'We send content, media URLs, captions, messages, and account identifiers to Meta, Google, Pinterest, Bluesky, LinkedIn, X, Reddit, Mastodon, or other connected platforms only when you request or configure that action.' },
+                    { title: 'Legal and Safety Requests', desc: 'We may disclose limited information if required by law, court order, regulatory request, or to investigate security incidents, fraud, abuse, or violations of our terms.' }
+                  ].map((item) => (
+                    <div key={item.title} style={{ padding: 24, background: 'var(--canvas)', border: '1px solid rgba(20,20,19,0.08)', borderRadius: 'var(--r-btn)' }}>
+                      <h3 style={{ fontSize: 15, fontWeight: 650, color: 'var(--ink)', margin: '0 0 10px' }}>{item.title}</h3>
+                      <p style={{ fontSize: 14, color: 'var(--slate)', lineHeight: 1.5, margin: 0, fontWeight: 450 }}>{item.desc}</p>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginTop: 20, padding: 24, background: 'var(--canvas)', border: '1px solid rgba(20,20,19,0.08)', borderRadius: 'var(--r-btn)' }}>
+                  <h4 style={{ fontSize: 15, fontWeight: 650, color: 'var(--ink)', margin: '0 0 8px' }}>Meta Platform Data Commitment</h4>
+                  <p style={{ fontSize: 14, color: 'var(--slate)', lineHeight: 1.5, margin: 0, fontWeight: 450 }}>
+                    Data received from Meta products is used only to provide user-authorized publishing, messaging, analytics, account selection, and automation features. We do not transfer Meta Platform Data to advertisers, data brokers, or unrelated third parties, and we require any service provider that processes it for us to protect it at least as carefully as described in this policy.
                   </p>
                 </div>
               </section>
@@ -354,11 +380,11 @@ export default function PrivacyPolicy() {
                   <div style={{ width: 40, height: 40, background: 'var(--ink)', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--canvas)' }}>
                     <Lock size={20} />
                   </div>
-                  <h2 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>7. Data Security</h2>
+                  <h2 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>7. Security & Retention</h2>
                 </div>
                 <div style={{ padding: 32, border: '2px dashed rgba(20,20,19,0.15)', borderRadius: 'var(--r-hero)' }}>
                   <p style={{ fontSize: 16, fontWeight: 500, color: 'var(--ink)', lineHeight: 1.6, margin: 0 }}>
-                    We implement industry-standard security measures, including <strong style={{ fontWeight: 700 }}>AES-256 encryption</strong> for all OAuth tokens and secure HTTPS communication for all data transfers. Access to our internal database is strictly limited and audited.
+                    We protect authorization keys, access tokens, refresh tokens, and customer data using access controls, least-privilege internal handling, HTTPS in transit, encrypted database/storage infrastructure where available, credential rotation practices, audit logging, and separation between customer workspaces. Data is retained only while needed to provide the service, maintain account history, troubleshoot failures, comply with legal obligations, resolve disputes, and enforce our agreements. Disconnected channels have their active tokens removed or invalidated. Complete production database purges are executed within 30 days of verified deletion request, subject to legally required retention and backup windows.
                   </p>
                 </div>
               </section>
@@ -368,10 +394,10 @@ export default function PrivacyPolicy() {
                   <div style={{ width: 40, height: 40, background: 'var(--ink)', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--canvas)' }}>
                     <UserCheck size={20} />
                   </div>
-                  <h2 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>8. Your Rights</h2>
+                  <h2 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>8. Your Rights (DPDPA)</h2>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
-                  {['Access Info', 'Correct Errors', 'Request Deletion', 'Data Portability', 'Withdraw Consent', 'Opt-out of AI Profiling'].map(r => (
+                  {['Access Info', 'Correct Errors', 'Request Deletion', 'Withdraw Consent', 'Grievance Redressal', 'Nominate Representative'].map(r => (
                     <div key={r} style={{ padding: '10px 20px', background: 'var(--canvas)', border: '1px solid rgba(20,20,19,0.1)', borderRadius: 'var(--r-pill)', fontSize: 13, fontWeight: 600, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
                       <CheckCircle2 size={14} color="var(--arc)" strokeWidth={3} />
                       {r}
@@ -379,9 +405,9 @@ export default function PrivacyPolicy() {
                   ))}
                 </div>
                 <div style={{ padding: 24, background: 'var(--canvas)', border: '1px solid rgba(20,20,19,0.08)', borderRadius: 'var(--r-btn)' }}>
-                  <h4 style={{ fontSize: 15, fontWeight: 650, color: 'var(--ink)', margin: '0 0 8px' }}>Opt-Out Preference Signals (Universal Signals)</h4>
+                  <h4 style={{ fontSize: 15, fontWeight: 650, color: 'var(--ink)', margin: '0 0 8px' }}>Digital Personal Data Protection Act (DPDPA) Compliance</h4>
                   <p style={{ fontSize: 14, color: 'var(--slate)', lineHeight: 1.5, margin: 0, fontWeight: 450 }}>
-                    We recognize and honor Opt-Out Preference Signals, such as Global Privacy Control (GPC), from browsers or devices that transmit them. If detected, GPC signals will automatically opt you out of any non-essential cookies and tracking activities.
+                    As a user in India, you hold the right to obtain a summary of your data being processed, seek correction or erasure, withdraw consent for optional processing, nominate a third party to act on your behalf, and seek grievance redressal for any concerns. You may also object to non-essential communications and request export of key account information where technically feasible. Please submit any requests to our Grievance Officer at the support email below.
                   </p>
                 </div>
                 <div style={{ marginTop: 24, padding: 24, background: 'rgba(255, 86, 0, 0.05)', border: '1px solid rgba(255, 86, 0, 0.1)', borderRadius: 'var(--r-btn)' }}>
@@ -415,8 +441,12 @@ export default function PrivacyPolicy() {
                   
                   <div style={{ position: 'relative', zIndex: 1 }}>
                     <h2 style={{ fontSize: 'clamp(32px, 5vw, 44px)', fontWeight: 500, letterSpacing: '-0.02em', margin: '0 0 24px' }}>Have more questions?</h2>
-                    <p style={{ fontSize: 16, fontWeight: 450, color: 'rgba(243,240,238,0.7)', margin: '0 auto 40px', maxWidth: 500, lineHeight: 1.5 }}>
-                      Our team is here to help you understand how we protect your data. Reach out to us anytime.
+                    <p style={{ fontSize: 16, fontWeight: 450, color: 'rgba(243,240,238,0.7)', margin: '0 auto 12px', maxWidth: 500, lineHeight: 1.5 }}>
+                      GAP-socialpilot is owned by GetAIPilot.<br />
+                      Contact Email: <strong>getaipilot@gmail.com</strong>
+                    </p>
+                    <p style={{ fontSize: 14, color: 'rgba(243,240,238,0.5)', margin: '0 auto 40px', maxWidth: 500, lineHeight: 1.5 }}>
+                      Address: Plot no 25 - C, Indrapuri C sector Off J K Road, Bhopal, Kotra, Madhya Pradesh 462022, India
                     </p>
                     <a href="mailto:getaipilot@gmail.com" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '16px 40px', background: 'var(--canvas)', color: 'var(--ink)', borderRadius: 'var(--r-btn)', fontSize: 15, fontWeight: 600, textDecoration: 'none', transition: 'opacity 0.2s' }}
                       onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
