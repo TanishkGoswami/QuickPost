@@ -65,6 +65,7 @@ export class SupermailboxClient {
           to: request.to,
           templateKey: request.templateKey,
           idempotencyKey: request.idempotencyKey || `tx_${Date.now()}_${Math.random()}`,
+          productCode: request.productCode || 'socialpilot',
           variables: request.variables || {}
         })
       });
