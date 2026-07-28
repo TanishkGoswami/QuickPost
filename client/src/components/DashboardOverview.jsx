@@ -180,6 +180,7 @@ export default function DashboardOverview() {
   const [data, setData] = useState(emptyOverview);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [hoveredSegment, setHoveredSegment] = useState(null);
 
   const fetchOverview = async () => {
     setLoading(true);
@@ -210,9 +211,15 @@ export default function DashboardOverview() {
         { autoAlpha: 1, y: 0, duration: 0.42, ease: "power3.out", stagger: 0.045 },
       );
       gsap.fromTo(
-        ".dash-bar-segment",
-        { scaleY: 0, transformOrigin: "bottom" },
-        { scaleY: 1, duration: 0.52, ease: "power3.out", stagger: 0.012, delay: 0.08 },
+        ".dash-donut-slice",
+        { strokeDasharray: "0 251.2" },
+        {
+          strokeDasharray: (i, target) => target.getAttribute("data-dasharray"),
+          duration: 0.85,
+          ease: "power3.out",
+          stagger: 0.12,
+          delay: 0.1,
+        }
       );
     }, shellRef);
 
@@ -226,6 +233,11 @@ export default function DashboardOverview() {
   const nextAction = getNextAction(data);
   const NextActionIcon = nextAction.icon;
   const maxTrend = Math.max(1, ...((data.publishingTrend || []).map((day) => day.sent + day.scheduled + day.failed)));
+  const trendData = data.publishingTrend || [];
+  const totalSent = useMemo(() => trendData.reduce((acc, curr) => acc + (curr.sent || 0), 0), [trendData]);
+  const totalScheduled = useMemo(() => trendData.reduce((acc, curr) => acc + (curr.scheduled || 0), 0), [trendData]);
+  const totalFailed = useMemo(() => trendData.reduce((acc, curr) => acc + (curr.failed || 0), 0), [trendData]);
+  const totalPostsCount = totalSent + totalScheduled + totalFailed;
   const selectedGrowthAccount = useMemo(() => {
     if (instagramAccountId === "all") return null;
     return (growth.accounts || []).find((account) => account.id === instagramAccountId) || null;
@@ -355,7 +367,7 @@ export default function DashboardOverview() {
 
       <section className="dash-grid growth-grid dash-animate">
         <article className="dash-card dash-growth">
-          <div className="dash-section-title">
+          <div className="dash-section-title -mb-4">
             <div>
               <span>Instagram growth</span>
               <h2>Account momentum</h2>
@@ -410,28 +422,162 @@ export default function DashboardOverview() {
             </div>
             <p>{formatDelta(ops.totalPostsDelta)} vs previous period</p>
           </div>
-          <div className="dash-chart" aria-label="Publishing trend">
-            {(data.publishingTrend || []).map((day) => {
-              const total = day.sent + day.scheduled + day.failed;
-              const sentHeight = total ? (day.sent / total) * 100 : 0;
-              const scheduledHeight = total ? (day.scheduled / total) * 100 : 0;
-              const failedHeight = total ? (day.failed / total) * 100 : 0;
-              return (
-                <div className="dash-bar-wrap" key={day.date} title={`${day.date}: ${total} posts`}>
-                  <div style={{ height: `${Math.max(8, (total / maxTrend) * 100)}%` }} className="dash-bar-stack">
-                    {day.failed ? <span className="dash-bar-segment failed" style={{ height: `${failedHeight}%` }} /> : null}
-                    {day.scheduled ? <span className="dash-bar-segment scheduled" style={{ height: `${scheduledHeight}%` }} /> : null}
-                    {day.sent ? <span className="dash-bar-segment sent" style={{ height: `${sentHeight}%` }} /> : null}
-                    {!total ? <span className="dash-bar-segment empty" /> : null}
-                  </div>
+          <div className="dash-chart-donut-container" aria-label="Publishing trend">
+            {totalPostsCount === 0 ? (
+              <div className="dash-chart-donut-visual">
+                <svg width="140" height="140" viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)" }}>
+                  <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f2eee8" strokeWidth="12" />
+                </svg>
+                <div className="dash-donut-center">
+                  <strong>0</strong>
+                  <span>posts</span>
                 </div>
-              );
-            })}
+              </div>
+            ) : (
+              <div className="dash-chart-donut-visual">
+                <svg width="140" height="140" viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)" }}>
+                  {totalSent > 0 && (
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="transparent"
+                      stroke="var(--ink, #111111)"
+                      strokeWidth={hoveredSegment === "sent" ? "15" : "12"}
+                      strokeDasharray="0 251.2"
+                      data-dasharray={`${(totalSent / totalPostsCount) * 251.2} 251.2`}
+                      strokeDashoffset="0"
+                      className="dash-donut-slice sent"
+                      onMouseEnter={() => setHoveredSegment("sent")}
+                      onMouseLeave={() => setHoveredSegment(null)}
+                      style={{ transformOrigin: "50px 50px", transition: "stroke-width 200ms ease, opacity 200ms ease" }}
+                    />
+                  )}
+                  {totalScheduled > 0 && (
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="transparent"
+                      stroke="#d97706"
+                      strokeWidth={hoveredSegment === "scheduled" ? "15" : "12"}
+                      strokeDasharray="0 251.2"
+                      data-dasharray={`${(totalScheduled / totalPostsCount) * 251.2} 251.2`}
+                      strokeDashoffset={`-${(totalSent / totalPostsCount) * 251.2}`}
+                      className="dash-donut-slice scheduled"
+                      onMouseEnter={() => setHoveredSegment("scheduled")}
+                      onMouseLeave={() => setHoveredSegment(null)}
+                      style={{ transformOrigin: "50px 50px", transition: "stroke-width 200ms ease, opacity 200ms ease" }}
+                    />
+                  )}
+                  {totalFailed > 0 && (
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="transparent"
+                      stroke="#ef4444"
+                      strokeWidth={hoveredSegment === "failed" ? "15" : "12"}
+                      strokeDasharray="0 251.2"
+                      data-dasharray={`${(totalFailed / totalPostsCount) * 251.2} 251.2`}
+                      strokeDashoffset={`-${((totalSent + totalScheduled) / totalPostsCount) * 251.2}`}
+                      className="dash-donut-slice failed"
+                      onMouseEnter={() => setHoveredSegment("failed")}
+                      onMouseLeave={() => setHoveredSegment(null)}
+                      style={{ transformOrigin: "50px 50px", transition: "stroke-width 200ms ease, opacity 200ms ease" }}
+                    />
+                  )}
+                </svg>
+                <div className="dash-donut-center">
+                  <strong>{totalPostsCount}</strong>
+                  <span>posts</span>
+                </div>
+              </div>
+            )}
+
+            <div className="dash-chart-donut-details">
+              <div
+                className="dash-donut-row"
+                onMouseEnter={() => setHoveredSegment("sent")}
+                onMouseLeave={() => setHoveredSegment(null)}
+              >
+                <div className="dash-donut-label">
+                  <span className="dot sent" />
+                  <span>Sent</span>
+                </div>
+                <div className="dash-donut-stats">
+                  <strong>{totalSent}</strong>
+                  <span>({totalPostsCount ? Math.round((totalSent / totalPostsCount) * 100) : 0}%)</span>
+                </div>
+              </div>
+              <div
+                className="dash-donut-row"
+                onMouseEnter={() => setHoveredSegment("scheduled")}
+                onMouseLeave={() => setHoveredSegment(null)}
+              >
+                <div className="dash-donut-label">
+                  <span className="dot scheduled" />
+                  <span>Scheduled</span>
+                </div>
+                <div className="dash-donut-stats">
+                  <strong>{totalScheduled}</strong>
+                  <span>({totalPostsCount ? Math.round((totalScheduled / totalPostsCount) * 100) : 0}%)</span>
+                </div>
+              </div>
+              <div
+                className="dash-donut-row"
+                onMouseEnter={() => setHoveredSegment("failed")}
+                onMouseLeave={() => setHoveredSegment(null)}
+              >
+                <div className="dash-donut-label">
+                  <span className="dot failed" />
+                  <span>Failed</span>
+                </div>
+                <div className="dash-donut-stats">
+                  <strong style={{ color: totalFailed > 0 ? "#ef4444" : "inherit" }}>{totalFailed}</strong>
+                  <span>({totalPostsCount ? Math.round((totalFailed / totalPostsCount) * 100) : 0}%)</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="dash-chart-legend" aria-hidden="true">
-            <span><i className="sent" />Sent</span>
-            <span><i className="scheduled" />Scheduled</span>
-            <span><i className="failed" />Failed</span>
+
+          <div className={`dash-donut-hover-info ${hoveredSegment ? `is-${hoveredSegment}` : ""}`}>
+            {hoveredSegment === "sent" && (
+              <div className="hover-detail-content sent animate-fade-in">
+                <div className="hover-detail-head">
+                  <span className="dot sent" />
+                  <strong>Sent successfully</strong>
+                </div>
+                <p>{totalSent} posts were successfully broadcast to your connected channels during this period.</p>
+              </div>
+            )}
+            {hoveredSegment === "scheduled" && (
+              <div className="hover-detail-content scheduled animate-fade-in">
+                <div className="hover-detail-head">
+                  <span className="dot scheduled" />
+                  <strong>Scheduled queue</strong>
+                </div>
+                <p>{totalScheduled} posts are currently queued and waiting to be published automatically.</p>
+              </div>
+            )}
+            {hoveredSegment === "failed" && (
+              <div className="hover-detail-content failed animate-fade-in">
+                <div className="hover-detail-head">
+                  <span className="dot failed" />
+                  <strong>Failed delivery</strong>
+                </div>
+                <p>{totalFailed} posts encountered errors. Check your publishing history to review logs.</p>
+              </div>
+            )}
+            {!hoveredSegment && (
+              <div className="hover-detail-content default animate-fade-in">
+                <div className="hover-detail-head">
+                  <span className="dot info" />
+                  <strong>Publishing overview</strong>
+                </div>
+                <p>Hover over any chart segment to view breakdown details and delivery health advice.</p>
+              </div>
+            )}
           </div>
         </article>
 
@@ -709,6 +855,18 @@ function DashboardStyles() {
 
       .primary-grid {
         grid-template-columns: 1.25fr 1fr 1fr 1fr;
+        align-items: stretch;
+      }
+
+      .primary-grid .dash-card {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: 16px 16px 14px;
+      }
+
+      .primary-grid .dash-metric strong {
+        margin-top: 6px;
       }
 
       .growth-grid {
@@ -717,6 +875,20 @@ function DashboardStyles() {
 
       .ops-grid {
         grid-template-columns: 1.2fr 1fr 1fr;
+        align-items: stretch;
+      }
+
+      .ops-grid .dash-card {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+
+      .ops-grid .dash-card .dash-list,
+      .ops-grid .dash-card .dash-empty {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
       }
 
       .media-grid {
@@ -773,10 +945,15 @@ function DashboardStyles() {
       }
 
       .dash-next p {
-        margin: 10px 0 18px;
+        margin: 4px 0 8px;
         max-width: 58ch;
-        font-size: 14px;
-        line-height: 1.5;
+        font-size: 13px;
+        line-height: 1.35;
+      }
+
+      .dash-next .dash-link-btn {
+        margin-top: auto;
+        align-self: flex-start;
       }
 
       .dash-link-btn,
@@ -897,89 +1074,200 @@ function DashboardStyles() {
         line-height: 1.4;
       }
 
-      .dash-chart {
+      .dash-chart-donut-container {
         display: flex;
-        align-items: flex-end;
-        gap: 4px;
-        height: 150px;
+        align-items: center;
+        gap: 24px;
+        min-height: 150px;
         margin-top: 24px;
         padding-top: 16px;
         border-top: 1px solid var(--dust, #d3cec6);
         width: 100%;
-        overflow: hidden;
       }
 
-      .dash-bar-wrap {
-        flex: 1 1 0;
-        min-width: 1px;
-        height: 100%;
+      .dash-chart-donut-visual {
+        position: relative;
         display: flex;
-        align-items: flex-end;
-        border-radius: 6px;
-        background: #f2eee8;
-        overflow: hidden;
+        align-items: center;
+        justify-content: center;
+        width: 140px;
+        height: 140px;
+        flex-shrink: 0;
       }
 
-      .dash-bar-stack {
-        width: 100%;
-        min-height: 8px;
+      .dash-donut-slice {
+        transition: stroke-width 200ms ease, opacity 200ms ease;
+        cursor: pointer;
+      }
+
+      .dash-donut-slice:hover {
+        stroke-width: 15;
+        opacity: 0.9;
+      }
+
+      .dash-donut-center {
+        position: absolute;
         display: flex;
-        flex-direction: column-reverse;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        pointer-events: none;
       }
 
-      .dash-bar-wrap span {
-        width: 100%;
-        display: block;
-        min-height: 2px;
-        transition: opacity 200ms ease;
+      .dash-donut-center strong {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--ink, #111111);
+        line-height: 1.1;
+        letter-spacing: -0.02em;
       }
 
-      .dash-bar-segment.sent {
-        background: var(--ink, #111111);
-      }
-
-      .dash-bar-segment.scheduled {
-        background: #d97706;
-      }
-
-      .dash-bar-segment.failed {
-        background: #ef4444;
-      }
-
-      .dash-bar-segment.empty {
-        height: 100%;
-        background: #dfd8cf;
-      }
-      
-      .dash-bar-wrap:hover span {
-        opacity: 0.8;
-      }
-
-      .dash-chart-legend {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-top: 12px;
+      .dash-donut-center span {
+        font-size: 11px;
         color: var(--slate, #626260);
-        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
         font-weight: 600;
+        margin-top: 2px;
       }
 
-      .dash-chart-legend span {
-        display: inline-flex;
+      .dash-chart-donut-details {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex-grow: 1;
+      }
+
+      .dash-donut-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 6px 8px;
+        margin: 0 -8px;
+        border-radius: 6px;
+        transition: background 150ms ease;
+        cursor: pointer;
+      }
+
+      .dash-donut-row:hover {
+        background: rgba(20, 20, 19, 0.04);
+      }
+
+      .dash-donut-hover-info {
+        margin-top: 16px;
+        min-height: 74px;
+        border: 1px solid rgba(20, 20, 19, 0.08);
+        border-radius: 8px;
+        background: #faf8f5;
+        padding: 10px 14px;
+        display: flex;
+        align-items: center;
+        transition: background 200ms ease, border-color 200ms ease;
+      }
+
+      .dash-donut-hover-info.is-sent {
+        background: rgba(17, 17, 17, 0.02);
+        border-color: rgba(17, 17, 17, 0.12);
+      }
+
+      .dash-donut-hover-info.is-scheduled {
+        background: rgba(217, 119, 6, 0.02);
+        border-color: rgba(217, 119, 6, 0.15);
+      }
+
+      .dash-donut-hover-info.is-failed {
+        background: rgba(239, 68, 68, 0.02);
+        border-color: rgba(239, 68, 68, 0.15);
+      }
+
+      .hover-detail-content {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .hover-detail-head {
+        display: flex;
         align-items: center;
         gap: 6px;
       }
 
-      .dash-chart-legend i {
+      .hover-detail-head strong {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--ink, #111111);
+      }
+
+      .hover-detail-content p {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.4;
+        color: var(--slate, #626260);
+      }
+
+      .hover-detail-head .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+      }
+
+      .hover-detail-head .dot.sent { background: var(--ink, #111111); }
+      .hover-detail-head .dot.scheduled { background: #d97706; }
+      .hover-detail-head .dot.failed { background: #ef4444; }
+      .hover-detail-head .dot.info { background: #3b82f6; }
+
+      @keyframes slide-up-fade {
+        from {
+          opacity: 0;
+          transform: translateY(3px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .animate-fade-in {
+        animation: slide-up-fade 200ms ease forwards;
+      }
+
+      .dash-donut-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--slate, #626260);
+      }
+
+      .dash-donut-label .dot {
         width: 8px;
         height: 8px;
         border-radius: 50%;
       }
 
-      .dash-chart-legend i.sent { background: var(--ink, #111111); }
-      .dash-chart-legend i.scheduled { background: #d97706; }
-      .dash-chart-legend i.failed { background: #ef4444; }
+      .dash-donut-label .dot.sent { background: var(--ink, #111111); }
+      .dash-donut-label .dot.scheduled { background: #d97706; }
+      .dash-donut-label .dot.failed { background: #ef4444; }
+
+      .dash-donut-stats {
+        display: flex;
+        align-items: baseline;
+        gap: 4px;
+        font-size: 13px;
+      }
+
+      .dash-donut-stats strong {
+        font-weight: 600;
+        color: var(--ink, #111111);
+      }
+
+      .dash-donut-stats span {
+        color: var(--slate, #626260);
+        font-size: 11px;
+      }
 
       .dash-list,
       .dash-media-list {
