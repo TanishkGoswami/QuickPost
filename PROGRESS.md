@@ -19,4 +19,8 @@
 - Added feed API interest parsing plus niche match rank boost, with normal feed fallback when matches are thin.
 - Added YouTube iframe origin/referrer config and started ingesting `status.embeddable` for safe embed fallback.
 - Completed Phase 4 with official Reddit OAuth client-credentials reads, subreddit hot worker, Reddit normalizer, and shared post dedupe insert path.
-- Completed Phase 5 with Bluesky Jetstream WebSocket ingestion, top-level post filtering, normalizer, and shared dedupe insert path.
+
+## 2026-07-27
+- Fixed sticky sidebar positioning on legal pages (`PrivacyPolicy.jsx`, `TermsOfService.jsx`).
+- Replaced `overflow-x: hidden` with `overflow-x: clip` on `html, body` in `index.css` to restore viewport sticky scroll context.
+- Added viewport max-height and custom internal scrolling to legal sidebars for responsive display.
