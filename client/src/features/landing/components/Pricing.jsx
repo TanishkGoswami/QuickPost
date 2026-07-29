@@ -73,7 +73,7 @@ const PLANS_TEMPLATE = [
       '10 scheduled posts per channel',
       '1 active trigger word',
       '50 automated replies / month',
-      'QuickPost Branding Watermark',
+      'GAP Social-pilot Branding Watermark',
     ],
     excludedFeatures: [
       'Unlimited monthly posts',

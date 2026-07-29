@@ -36,14 +36,15 @@ export class SupermailboxClient {
   private baseUrl: string;
   private apiKey: string;
   constructor(apiKey?: string, baseUrl?: string) {
-    this.apiKey = apiKey || process.env.SUPERMAILBOX_API_KEY || 'supermailbox-secret-key-12345';
+    this.apiKey = apiKey || process.env.SUPERMAILBOX_API_KEY || '';
     this.baseUrl = baseUrl || process.env.SUPERMAILBOX_BASE_URL || 'http://localhost:5050';
   }
   /**
    * 1. Synchronize user profile with SupermailBox central contact repository.
    * Call this on User Signup or Profile Update.
    */
-  async syncUser(user: SupermailboxUser): Promise<{ success: boolean; contactId?: string }> {
+  async syncUser(user: SupermailboxUser): Promise<{ success: boolean; contactId?: string; skipped?: boolean }> {
+    if (process.env.MAIL_ON !== 'true') return { success: true, skipped: true };
     try {
       const response = await fetch(`${this.baseUrl}/v1/contacts/sync`, {
         method: 'POST',
@@ -68,7 +69,8 @@ export class SupermailboxClient {
   /**
    * 2. Dispatch a high-priority transactional email (Payment receipt, OTP, Welcome).
    */
-  async sendEmail(request: SendEmailRequest): Promise<{ success: boolean; jobId?: string }> {
+  async sendEmail(request: SendEmailRequest): Promise<{ success: boolean; jobId?: string; skipped?: boolean }> {
+    if (process.env.MAIL_ON !== 'true') return { success: true, skipped: true };
     try {
       const response = await fetch(`${this.baseUrl}/v1/send/transactional`, {
         method: 'POST',
@@ -80,6 +82,7 @@ export class SupermailboxClient {
           to: request.to,
           templateKey: request.templateKey,
           idempotencyKey: request.idempotencyKey || `tx_${Date.now()}_${Math.random()}`,
+          productCode: request.productCode || 'socialpilot',
           variables: request.variables || {}
         })
       });
@@ -92,7 +95,8 @@ export class SupermailboxClient {
   /**
    * 3. Launch a bulk/marketing email broadcast with explicit confirmation support.
    */
-  async sendBroadcast(request: SendBroadcastRequest): Promise<{ success: boolean; campaignId?: string; queuedCount?: number }> {
+  async sendBroadcast(request: SendBroadcastRequest): Promise<{ success: boolean; campaignId?: string; queuedCount?: number; skipped?: boolean }> {
+    if (process.env.MAIL_ON !== 'true') return { success: true, skipped: true };
     try {
       const response = await fetch(`${this.baseUrl}/v1/broadcast`, {
         method: 'POST',

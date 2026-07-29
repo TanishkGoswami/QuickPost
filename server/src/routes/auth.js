@@ -15,6 +15,7 @@ import threadsOAuth from "../services/threadsOAuth.js";
 import xOAuth from "../services/xOAuth.js";
 import redditOAuth from "../services/redditOAuth.js";
 import { startAutoDMInstagramOAuth } from "../services/autodm.js";
+import { supermailbox } from "../services/supermailbox.js";
 
 import supabase, {
   createOrUpdateUser,
@@ -25,6 +26,40 @@ import {
   authenticateUser,
   generateToken,
 } from "../middleware/authenticateUser.js";
+
+async function notifyAccountConnected(userId, platformName, accountUsername) {
+  try {
+    const { data: user } = await supabase
+      .from("users")
+      .select("email, name")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (user?.email) {
+      const platformDisplay = accountUsername
+        ? `${platformName} (@${accountUsername})`
+        : platformName;
+
+      supermailbox
+        .sendEmail({
+          to: user.email,
+          templateKey: "account_connected",
+          variables: {
+            platform: platformDisplay,
+            name: user.name || user.email.split("@")[0],
+          },
+        })
+        .catch((err) =>
+          console.warn(
+            "[SupermailBox SDK] Account connected email failed:",
+            err?.message,
+          ),
+        );
+    }
+  } catch (err) {
+    console.warn("⚠️ [AUTH] notifyAccountConnected error:", err?.message);
+  }
+}
 
 const router = express.Router();
 const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
@@ -163,6 +198,11 @@ router.get("/google/callback", async (req, res) => {
         decodedState.userId,
       );
       await googleOAuth.storeTokens(decodedState.userId, tokenData);
+      notifyAccountConnected(
+        decodedState.userId,
+        "YouTube",
+        tokenData.userInfo?.username || tokenData.userInfo?.name,
+      );
       return res.redirect(`${CLIENT_URL}/dashboard?success=youtube`);
     }
 
@@ -252,6 +292,11 @@ router.get("/googleBusiness/callback", async (req, res) => {
         decodedState.userId,
       );
       await googleBusinessOAuth.storeTokens(decodedState.userId, tokenData);
+      notifyAccountConnected(
+        decodedState.userId,
+        "Google Business",
+        tokenData.userInfo?.name,
+      );
       return res.redirect(`${CLIENT_URL}/dashboard?success=googleBusiness_connected`);
     }
 
@@ -335,6 +380,7 @@ router.get("/instagram/callback", async (req, res) => {
       accountId: tokenData.instagramBusinessId,
     });
     await instagramOAuth.storeTokens(parsed.userId, tokenData);
+    notifyAccountConnected(parsed.userId, "Instagram", tokenData.username);
 
     res.redirect(`${CLIENT_URL}/dashboard?success=instagram_connected`);
   } catch (err) {
@@ -428,6 +474,11 @@ router.get("/facebook/callback", async (req, res) => {
       accountId: page?.pageId || tokenData.pageId,
     });
     await facebookOAuth.storeTokens(parsed.userId, tokenData);
+    notifyAccountConnected(
+      parsed.userId,
+      "Facebook",
+      page?.pageName || tokenData.pageName,
+    );
 
     res.redirect(`${CLIENT_URL}/dashboard?success=facebook_connected`);
   } catch (err) {
@@ -494,16 +545,27 @@ router.get("/pinterest/callback", async (req, res) => {
     return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
 
   const parsed = decodeState(state);
-  if (!parsed?.userId)
+
+  // Strict State & Nonce Validation
+  const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+  if (
+    !parsed?.userId ||
+    parsed.provider !== "pinterest" ||
+    !parsed.ts ||
+    Date.now() - parsed.ts > FIFTEEN_MINUTES_MS
+  ) {
+    console.error("❌ [PINTEREST-OAUTH] State validation failed (expired state, invalid provider, or user mismatch)");
     return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
+  }
 
   try {
     const tokenData = await pinterestOAuth.exchangeCodeForToken(code);
     await pinterestOAuth.storeTokens(parsed.userId, tokenData);
+    notifyAccountConnected(parsed.userId, "Pinterest", tokenData.username);
 
     res.redirect(`${CLIENT_URL}/dashboard?success=pinterest_connected`);
   } catch (err) {
-    console.error("Pinterest callback error:", err);
+    console.error("❌ [PINTEREST-OAUTH] Callback error:", err.message || err);
     res.redirect(`${CLIENT_URL}/dashboard?error=pinterest_connection_failed`);
   }
 });
@@ -619,6 +681,7 @@ router.get("/linkedin/callback", async (req, res) => {
   try {
     const tokenData = await linkedinOAuth.exchangeCodeForToken(code);
     await linkedinOAuth.storeTokens(parsed.userId, tokenData);
+    notifyAccountConnected(parsed.userId, "LinkedIn", tokenData.name);
 
     res.redirect(`${CLIENT_URL}/dashboard?success=linkedin_connected`);
   } catch (err) {
@@ -695,6 +758,7 @@ router.get("/mastodon/callback", async (req, res) => {
       parsed.instanceUrl,
       tokenData,
     );
+    notifyAccountConnected(parsed.userId, "Mastodon", tokenData.username);
 
     res.redirect(`${CLIENT_URL}/dashboard?success=mastodon_connected`);
   } catch (err) {
@@ -767,6 +831,7 @@ router.get("/threads/callback", async (req, res) => {
       accountId: tokenData.threadsUserId,
     });
     await threadsOAuth.storeTokens(parsed.userId, tokenData);
+    notifyAccountConnected(parsed.userId, "Threads", tokenData.username);
 
     console.log(
       `✅ [AUTH] Threads connected successfully for user ${parsed.userId}`,
@@ -873,6 +938,7 @@ router.get("/x/callback", async (req, res) => {
     );
     console.log(" - Token exchange success!");
     await xOAuth.storeTokens(parsed.userId, tokenData);
+    notifyAccountConnected(parsed.userId, "X (Twitter)", tokenData.username);
 
     console.log(`✅ [AUTH] X connected successfully for user ${parsed.userId}`);
     res.redirect(`${CLIENT_URL}/dashboard?success=x_connected`);
@@ -1002,6 +1068,14 @@ router.post("/linkedin/connect", authenticateUser, async (req, res) => {
 // Pinterest manual connection with access token
 router.post("/pinterest/connect", authenticateUser, async (req, res) => {
   try {
+    const isManualAllowed = process.env.NODE_ENV !== 'production' || process.env.ALLOW_MANUAL_PINTEREST_TOKEN === 'true';
+    if (!isManualAllowed) {
+      return res.status(403).json({
+        success: false,
+        error: "Manual token connection is disabled in production. Please use official Pinterest OAuth.",
+      });
+    }
+
     const { accessToken, boardId } = req.body;
     const userId = req.user.userId;
 
@@ -1214,7 +1288,7 @@ router.delete("/disconnect/:provider", authenticateUser, async (req, res) => {
       }
       const { data: igData, error: igError } = await igQuery.select();
       console.log(`[DISCONNECT] igData=${JSON.stringify(igData)} error=${JSON.stringify(igError)}`);
-      
+
       if (igError) throw igError;
 
       const disconnectedBusinessIds = (igData || [])
@@ -1250,7 +1324,7 @@ router.delete("/disconnect/:provider", authenticateUser, async (req, res) => {
           console.log(`[DISCONNECT] Paused automations for account(s): ${disconnectedIds.join(", ")}`);
         }
       }
-      
+
       if (accountId) {
         return res.json({
           success: true,

@@ -9,8 +9,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const isDev = mode === 'development';
   const apiTarget = isDev
-    ? (env.VITE_DEV_API_URL || 'http://localhost:5000')
-    : (env.VITE_API_URL || 'http://localhost:5000');
+    ? (env.VITE_DEV_API_URL || 'http://127.0.0.1:5000')
+    : (env.VITE_API_URL || 'http://127.0.0.1:5000');
 
   return {
     plugins: [react()],
@@ -39,6 +39,27 @@ export default defineConfig(({ mode }) => {
     build: {
       sourcemap: isDev,
       chunkSizeWarningLimit: 400,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'react-vendor': ['react', 'react-dom', 'scheduler'],
+            'motion-vendor': ['framer-motion', 'gsap'],
+            'supabase-vendor': ['@supabase/supabase-js'],
+            'icons-vendor': ['lucide-react', 'react-icons'],
+            'radix-vendor': [
+              '@radix-ui/react-avatar',
+              '@radix-ui/react-dialog',
+              '@radix-ui/react-dropdown-menu',
+              '@radix-ui/react-label',
+              '@radix-ui/react-select',
+              '@radix-ui/react-separator',
+              '@radix-ui/react-slot',
+              '@radix-ui/react-switch',
+              '@radix-ui/react-tabs',
+            ],
+          },
+        },
+      },
     },
 
     optimizeDeps: {

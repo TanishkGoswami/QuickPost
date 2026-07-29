@@ -455,7 +455,7 @@ const LinkedInOverlay = ({ format, caption, children, isFull, platformUsername, 
         </div>
         <div className="flex-1">
           <p className="text-[11px] font-bold text-black">{platformUsername || user?.name || 'Your Name'}</p>
-          <p className="text-[9px] text-gray-500">QuickPost User</p>
+          <p className="text-[9px] text-gray-500">GAP Social-pilot User</p>
           <p className="text-[9px] text-gray-400">{metrics.timestamp} • 🌐</p>
         </div>
         <MoreHorizontal className="w-4 h-4 text-gray-400" />
@@ -719,7 +719,7 @@ const RedditOverlay = ({ format, caption, children, isFull, platformUsername, me
       <div className="p-3 flex items-center gap-2">
         <div className="w-6 h-6 rounded-full bg-[#ff4500] flex items-center justify-center text-white text-[10px] font-bold">r/</div>
         <div className="flex items-center gap-1">
-          <span className="text-[12px] font-bold text-black">r/quickpost</span>
+          <span className="text-[12px] font-bold text-black">r/gapsocialpilot</span>
           <span className="text-[10px] text-gray-500">• Posted by u/{platformUsername || user?.name?.toLowerCase().replace(/\s+/g, '') || 'user'}</span>
         </div>
       </div>

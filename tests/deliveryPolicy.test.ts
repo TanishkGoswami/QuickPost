@@ -50,7 +50,7 @@ describe('Auto-DM delivery policy', () => {
       ],
       true,
     );
-    expect(actions[0].text).toContain('SocialPilot');
+    expect(actions[0].text).toContain('@Getaipilot');
     expect(actions[1].text).toBe('Second');
   });
 

@@ -1667,13 +1667,16 @@ export async function getAutomationAnalytics(user, automationId) {
     throw new Error('Automation not found');
   }
 
-  // Fetch account status to filter out stale connection errors
+  // Fetch account status to filter out stale connection errors and self-comments
   const { data: account } = await autoDMSupabase
     .from('instagram_accounts')
-    .select('is_connected')
+    .select('is_connected, instagram_user_id, instagram_business_account_id, page_id, username')
     .eq('id', automation.instagram_account_id)
     .maybeSingle();
   const isConnected = account?.is_connected !== false;
+
+  const accountGraphIds = new Set(getInstagramAccountGraphIds(account || {}));
+  const accountUsername = (account?.username || '').toLowerCase().trim();
 
   const [
     { data: messageRows },
@@ -1694,7 +1697,7 @@ export async function getAutomationAnalytics(user, automationId) {
     automation.media_id
       ? autoDMSupabase
           .from('webhook_logs')
-          .select('payload, processing_error, message_text, created_at')
+          .select('payload, sender_id, ig_id, processing_error, message_text, created_at')
           .eq('event_type', 'comments')
           .order('created_at', { ascending: false })
           .limit(300)
@@ -1717,6 +1720,19 @@ export async function getAutomationAnalytics(user, automationId) {
   const recentErrors = [];
   for (const row of webhookRows || []) {
     if (row.payload?.value?.media?.id === automation.media_id) {
+      const value = row.payload?.value || {};
+      const senderId = String(row.sender_id || value?.from?.id || '').trim();
+      const senderUsername = String(value?.from?.username || value?.from?.name || '').toLowerCase().trim();
+      const igId = String(row.ig_id || value?.instagram_business_account_id || '').trim();
+
+      // Skip self-comments / automated replies posted by the page itself
+      if (
+        (senderId && (accountGraphIds.has(senderId) || senderId === igId)) ||
+        (accountUsername && senderUsername === accountUsername)
+      ) {
+        continue;
+      }
+
       webhookCommentCount += 1;
       const legacyCrash = typeof row.message_text === 'string' && row.message_text.startsWith('CRASH:')
         ? row.message_text.replace(/^CRASH:\s*/, '')
@@ -1779,6 +1795,93 @@ export async function getAutomationAnalytics(user, automationId) {
     postCaption: automation.media_caption ?? null,
     postPermalink: automation.media_permalink ?? null,
     insightsSyncedAt: automation.media_insights_synced_at ?? null,
+  };
+}
+
+export async function listAutomationComments(user, automationId, { limit = 100 } = {}) {
+  const autoDMSupabase = getAutoDMSupabaseAdmin();
+  const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 200);
+
+  const { data: automation, error: automationError } = await autoDMSupabase
+    .from('automations')
+    .select('*')
+    .eq('id', automationId)
+    .maybeSingle();
+
+  if (automationError) throw new Error(`Failed to verify automation: ${automationError.message}`);
+  if (!(await isAutomationAccessible(autoDMSupabase, user, automation))) {
+    throw new Error('Automation not found');
+  }
+
+  const accountGraphIds = new Set();
+  let accountUsername = '';
+  if (automation?.instagram_account_id) {
+    const { data: account, error: accountError } = await autoDMSupabase
+      .from('instagram_accounts')
+      .select('instagram_user_id, instagram_business_account_id, page_id, username')
+      .eq('id', automation.instagram_account_id)
+      .maybeSingle();
+
+    if (accountError) {
+      throw new Error(`Failed loading Instagram account: ${accountError.message}`);
+    }
+
+    accountUsername = (account?.username || '').toLowerCase().trim();
+    for (const id of getInstagramAccountGraphIds(account || {})) {
+      accountGraphIds.add(String(id));
+    }
+  }
+
+  const { data: rows, error } = await autoDMSupabase
+    .from('webhook_logs')
+    .select('id, ig_id, sender_id, message_text, processed, processing_error, event_id, payload, created_at')
+    .eq('event_type', 'comments')
+    .order('created_at', { ascending: false })
+    .limit(500);
+
+  if (error) throw new Error(`Failed to load comments: ${error.message}`);
+
+  const comments = [];
+  for (const row of rows || []) {
+    const value = row.payload?.value || {};
+    const mediaId = String(value?.media?.id || '').trim();
+    const igId = String(row.ig_id || value?.instagram_business_account_id || '').trim();
+
+    if (automation.media_id && mediaId !== String(automation.media_id)) continue;
+    if (!automation.media_id && accountGraphIds.size > 0 && !accountGraphIds.has(igId)) continue;
+
+    const senderId = String(row.sender_id || value?.from?.id || '').trim();
+    const senderUsername = String(value?.from?.username || value?.from?.name || '').toLowerCase().trim();
+
+    // Skip self-comments / automated replies posted by the account itself
+    if (
+      (senderId && (accountGraphIds.has(senderId) || senderId === igId)) ||
+      (accountUsername && senderUsername === accountUsername)
+    ) {
+      continue;
+    }
+
+    comments.push({
+      id: row.id,
+      eventId: row.event_id || value?.id || null,
+      mediaId: mediaId || null,
+      senderId: row.sender_id || value?.from?.id || null,
+      username: value?.from?.username || value?.from?.name || null,
+      text: row.message_text || value?.text || '',
+      createdAt: row.created_at,
+      processed: Boolean(row.processed),
+      processingError: row.processing_error || null,
+      permalink: value?.permalink || null,
+    });
+
+    if (comments.length >= safeLimit) break;
+  }
+
+  return {
+    automationId,
+    mediaId: automation.media_id || null,
+    comments,
+    totalVisible: comments.length,
   };
 }
 

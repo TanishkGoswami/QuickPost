@@ -24,6 +24,8 @@ interface InstagramProfile {
   account_type?: string | null;
 }
 
+const DEFAULT_FRONTEND_URL = 'https://social.getaipilot.in';
+
 const fromBase64Url = (input: string): string => {
   const normalized = input.replace(/-/g, '+').replace(/_/g, '/');
   const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
@@ -114,7 +116,7 @@ const getInstagramOAuthCallbackUrl = (): string => {
 
 const getFallbackFrontendUrl = (): string => {
   const frontendUrl = Deno.env.get('FRONTEND_URL') || Deno.env.get('SITE_URL');
-  return frontendUrl?.trim() || 'http://localhost:5173';
+  return frontendUrl?.trim() || DEFAULT_FRONTEND_URL;
 };
 
 const buildFallbackInstagramProfile = (userId: string): InstagramProfile => ({
@@ -329,7 +331,21 @@ Deno.serve(async (request: Request) => {
       error: error instanceof Error ? error.message : String(error),
     });
 
-    const frontendUrl = Deno.env.get('FRONTEND_URL')?.trim() || 'http://localhost:5173';
+    let frontendUrl = getFallbackFrontendUrl();
+    const rawState = new URL(request.url).searchParams.get('state');
+
+    if (rawState) {
+      try {
+        const statePayload = await verifyState(rawState);
+        frontendUrl = statePayload.redirect || frontendUrl;
+      } catch (stateError) {
+        logError('OAuth callback error redirect state unavailable', {
+          requestId,
+          error: stateError instanceof Error ? stateError.message : String(stateError),
+        });
+      }
+    }
+
     return redirectWithError(
       frontendUrl,
       error instanceof Error ? error.message : 'Unable to connect Instagram'

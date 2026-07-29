@@ -26,8 +26,15 @@ export const applyDeliveryBranding = <T extends BrandableAction>(
   if (!isFreePlan) return cleaned;
 
   const firstTextIndex = cleaned.findIndex((action) => action.type === "text");
-  
-  // Send the watermark as a separate message action
+  if (firstTextIndex !== -1) {
+    return cleaned.map((action, index) =>
+      index === firstTextIndex
+        ? { ...action, text: `${action.text || ""}${SOCIALPILOT_WATERMARK}` }
+        : action,
+    ) as T[];
+  }
+
+  // No text action exists, so send the watermark as its own text message.
   return [
     ...cleaned,
     { type: "text", text: SOCIALPILOT_WATERMARK.trim() } as T,

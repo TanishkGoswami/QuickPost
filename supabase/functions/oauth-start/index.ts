@@ -25,6 +25,8 @@ const getFrontendUrlFromEnv = (): string | null => {
   return frontendUrl?.trim() || null;
 };
 
+const DEFAULT_FRONTEND_URL = 'https://social.getaipilot.in';
+
 const normalizeFrontendUrl = (value: string | null | undefined): string | null => {
   if (!value?.trim()) return null;
 
@@ -109,7 +111,7 @@ Deno.serve(async (request: Request) => {
     const frontendUrl =
       normalizeFrontendUrl(bodyFrontendUrl) ||
       normalizeFrontendUrl(getFrontendUrlFromEnv()) ||
-      'http://localhost:5173';
+      DEFAULT_FRONTEND_URL;
 
     const statePayload = {
       uid: user.id,

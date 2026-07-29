@@ -11,7 +11,7 @@ import broadcastsRouter from './routes/broadcasts.js';
 import dashboardRouter from './routes/dashboard.js';
 import onboardingRouter from './routes/onboarding.js';
 import jobsRouter from './routes/jobs.js';
-import trendsRouter from './routes/trends.js';
+import trendFeedRouter from './routes/trendFeed.js';
 import aiRouter from './routes/ai.js';
 import instapilotRouter from './routes/instapilot.js';
 import autodmRouter from './routes/autodm.js';
@@ -81,7 +81,7 @@ app.use('/api', broadcastsRouter);
 app.use('/api', dashboardRouter);
 app.use('/api', onboardingRouter);
 app.use('/api', jobsRouter);
-app.use('/api', trendsRouter);
+app.use('/api', trendFeedRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/instapilot', instapilotRouter);
 app.use('/api/autodm', autodmRouter);
@@ -160,7 +160,7 @@ const server = app.listen(PORT, () => {
   console.log(`📁 Uploads directory: ${path.join(__dirname, '../uploads')}`);
   
   // Initialize Post Scheduler
-  initScheduler();
+initScheduler();
 
   console.log(`\n✨ Ready to broadcast!\n`);
 });

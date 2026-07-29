@@ -1,23 +1,58 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  AlertCircle,
+  ArrowUpRight,
   BarChart3,
   CheckCircle2,
   Clock,
   Copy,
   Edit3,
+  ExternalLink,
+  Instagram,
   Loader2,
   MessageCircle,
   MoreHorizontal,
   Plus,
   RefreshCw,
   Send,
+  Shield,
+  Sparkles,
   Trash2,
+  UserCheck,
+  UserPlus,
   Users,
+  UserX,
   X,
 } from 'lucide-react';
 import { useAutoDM } from '../../context/AutoDMContext';
 import AutoDMAccountSwitcher from './AutoDMAccountSwitcher';
+
+const AVATAR_GRADIENTS = [
+  'linear-gradient(135deg, #833ab4 0%, #fd1d1d 50%, #fcb045 100%)',
+  'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+  'linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%)',
+  'linear-gradient(135deg, #ec4899 0%, #f43f5e 100%)',
+  'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+  'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+];
+
+function getAvatarStyle(identifier) {
+  if (!identifier) return { background: AVATAR_GRADIENTS[0] };
+  let hash = 0;
+  for (let i = 0; i < identifier.length; i++) {
+    hash = identifier.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % AVATAR_GRADIENTS.length;
+  return { background: AVATAR_GRADIENTS[index] };
+}
+
+function getAvatarInitial(comment) {
+  const name = comment.username || comment.senderId || '';
+  const cleaned = name.replace(/^[_.\-\s]+/, '');
+  const char = (cleaned || name || '?').charAt(0).toUpperCase();
+  return char || '?';
+}
 
 function formatRelativeTime(value) {
   if (!value) return 'Never';
@@ -31,6 +66,18 @@ function formatRelativeTime(value) {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days} day${days === 1 ? '' : 's'} ago`;
+}
+
+function formatCommentTime(value) {
+  if (!value) return 'Unknown time';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Unknown time';
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 function triggerLabel(value) {
@@ -118,7 +165,7 @@ function ActionMenu({ automation, onEdit, onData, onDuplicate, onDelete }) {
   );
 }
 
-function AnalyticsModal({ automation, analytics, loading, onClose, onSync, onEdit }) {
+function AnalyticsModal({ automation, analytics, loading, commentRows, commentsLoading, commentsError, onClose, onSync, onEdit }) {
   const comments = analytics?.comments ?? statValue(automation, ['comments', 'comments_count', 'total_comments']);
   const sent =
     analytics?.dmsSent ??
@@ -133,6 +180,16 @@ function AnalyticsModal({ automation, analytics, loading, onClose, onSync, onEdi
   const lastUsed = analytics?.lastUsedAt || automation.last_used_at || automation.updated_at || automation.created_at;
   const recentErrors = Array.isArray(analytics?.recentErrors) ? analytics.recentErrors : [];
   const hasIssues = recentErrors.length > 0 || (analytics?.failed || 0) > 0;
+  const rawComments = Array.isArray(commentRows) ? commentRows : [];
+  const activeAccountUsername = (automation?.account_username || '').toLowerCase().replace(/^@/, '').trim();
+  const visibleComments = rawComments.filter((comment) => {
+    const username = (comment.username || '').toLowerCase().replace(/^@/, '').trim();
+    if (activeAccountUsername && username === activeAccountUsername) return false;
+    if (comment.text && (comment.text.includes('Sent it to your DM') || comment.text.includes('Tap SETUP to continue'))) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <div className="modal-overlay autodm-analytics-overlay" onClick={onClose}>
@@ -203,9 +260,14 @@ function AnalyticsModal({ automation, analytics, loading, onClose, onSync, onEdi
               <div className="autodm-analytics-split">
                 <section className="autodm-panel">
                   <div className="autodm-panel-head">
-                    <div>
-                      <h3>Delivery Health</h3>
-                      <p>Message delivery and follow-up session status.</p>
+                    <div className="autodm-panel-title-group">
+                      <div className="autodm-icon-badge autodm-icon-badge-purple">
+                        <BarChart3 size={16} />
+                      </div>
+                      <div>
+                        <h3>Delivery Health</h3>
+                        <p>Message delivery and follow-up session status.</p>
+                      </div>
                     </div>
                     <span className={`autodm-health ${hasIssues ? 'warn' : ''}`}>
                       {hasIssues ? 'Needs attention' : 'Healthy'}
@@ -242,26 +304,47 @@ function AnalyticsModal({ automation, analytics, loading, onClose, onSync, onEdi
                     <div className="autodm-good-box">No recent processing errors found for this automation.</div>
                   )}
 
-                  {/* Follow Gate Stats */}
-                  <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #eaeaea' }}>
-                    <div className="autodm-panel-head" style={{ marginBottom: '12px' }}>
-                      <div>
-                        <h3 style={{ fontSize: '14px', margin: '0 0 4px', color: '#111' }}>Follow Gate Stats</h3>
-                        <p style={{ margin: 0, fontSize: '12px', color: '#666' }}>Follower interactions for this automation.</p>
+                  <div className="autodm-follow-gate-section">
+                    <div className="autodm-panel-head" style={{ marginBottom: 0 }}>
+                      <div className="autodm-panel-title-group">
+                        <div className="autodm-icon-badge autodm-icon-badge-emerald">
+                          <Shield size={16} />
+                        </div>
+                        <div>
+                          <h3>Follow Gate Stats</h3>
+                          <p>Follower interactions for this automation.</p>
+                        </div>
                       </div>
                     </div>
-                    <div className="autodm-metrics-row">
-                      <div className="autodm-metric-line">
-                        <p>Followers Commented</p>
-                        <strong>{analytics?.followersCommented || 0}</strong>
+                    <div className="autodm-follow-gate-grid">
+                      <div className="autodm-gate-card">
+                        <div className="autodm-gate-card-icon icon-emerald">
+                          <UserCheck size={16} />
+                        </div>
+                        <div className="autodm-gate-card-content">
+                          <span className="autodm-gate-val">{analytics?.followersCommented || 0}</span>
+                          <span className="autodm-gate-label">Followers Commented</span>
+                        </div>
                       </div>
-                      <div className="autodm-metric-line">
-                        <p>Non-Followers Blocked</p>
-                        <strong>{analytics?.followGateBlockedCount || 0}</strong>
+                      <div className="autodm-gate-card">
+                        <div className="autodm-gate-card-icon icon-amber">
+                          <UserX size={16} />
+                        </div>
+                        <div className="autodm-gate-card-content">
+                          <span className="autodm-gate-val">{analytics?.followGateBlockedCount || 0}</span>
+                          <span className="autodm-gate-label">Non-Followers Blocked</span>
+                        </div>
                       </div>
-                      <div className="autodm-metric-line">
-                        <p>New Followers</p>
-                        <strong>{analytics?.followerGrowth > 0 ? '+' + analytics.followerGrowth : (analytics?.followerGrowth || 0)}</strong>
+                      <div className="autodm-gate-card">
+                        <div className="autodm-gate-card-icon icon-indigo">
+                          <UserPlus size={16} />
+                        </div>
+                        <div className="autodm-gate-card-content">
+                          <span className="autodm-gate-val">
+                            {analytics?.followerGrowth > 0 ? '+' + analytics.followerGrowth : (analytics?.followerGrowth || 0)}
+                          </span>
+                          <span className="autodm-gate-label">New Followers</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -269,28 +352,192 @@ function AnalyticsModal({ automation, analytics, loading, onClose, onSync, onEdi
 
                 <section className="autodm-panel">
                   <div className="autodm-panel-head">
-                    <div>
-                      <h3>Post Snapshot</h3>
-                      <p>Caption, link, and synced post metrics.</p>
+                    <div className="autodm-panel-title-group">
+                      <div className="autodm-icon-badge autodm-icon-badge-ig">
+                        <Instagram size={16} />
+                      </div>
+                      <div>
+                        <h3>Post Snapshot</h3>
+                        <p>Caption, link, and synced post metrics.</p>
+                      </div>
                     </div>
-                    <button type="button" className="btn-ghost" onClick={() => navigator.clipboard?.writeText(automation.media_permalink || '')}>
-                      <Copy size={14} />
-                      Copy
-                    </button>
+                    {automation.media_permalink ? (
+                      <button 
+                        type="button" 
+                        className="btn-ghost" 
+                        style={{ padding: '4px 8px', fontSize: '12px' }}
+                        onClick={() => window.open(automation.media_permalink, '_blank', 'noopener,noreferrer')}
+                      >
+                        <ExternalLink size={13} />
+                        View
+                      </button>
+                    ) : (
+                      <button 
+                        type="button" 
+                        className="btn-ghost" 
+                        style={{ padding: '4px 8px', fontSize: '12px' }}
+                        onClick={() => navigator.clipboard?.writeText(automation.media_id || '')}
+                      >
+                        <Copy size={13} />
+                        Copy
+                      </button>
+                    )}
                   </div>
-                  <div className="autodm-post-snapshot">
-                    <AutomationThumb automation={automation} />
-                    <div>
-                      <strong>{automation.media_id || automation.post_id || 'Not synced'}</strong>
-                      <p>Sync Meta data to refresh post and follower metrics.</p>
-                    </div>
-                  </div>
-                  <div className="autodm-caption-box">
-                    <p>Caption</p>
-                    <strong className="autodm-caption-text">{automation.media_caption || 'No caption saved yet. Click Sync Meta Data to fetch it.'}</strong>
+
+                  <div className="autodm-post-card-container">
+                    {automation.media_thumbnail || automation.media_url ? (
+                      <div className="autodm-post-card-preview">
+                        <div className="autodm-post-media-wrap">
+                          <img src={automation.media_thumbnail || automation.media_url} alt="Post media" referrerPolicy="no-referrer" />
+                          <span className="autodm-media-type-badge">{triggerLabel(automation.trigger_type)}</span>
+                        </div>
+                        <div className="autodm-post-media-meta">
+                          <div className="autodm-media-id-tag">
+                            <span>Media ID: </span><code>{automation.media_id || automation.post_id || 'Synced'}</code>
+                          </div>
+                          <p className="autodm-post-caption-preview">
+                            {automation.media_caption || 'No caption fetched yet. Click Sync Meta Data to fetch latest post details.'}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="autodm-post-mock-card">
+                        <div className="autodm-mock-header">
+                          <div className="autodm-mock-avatar">
+                            <Instagram size={15} />
+                          </div>
+                          <div className="autodm-mock-meta">
+                            <strong>{automation.name || 'Instagram Post'}</strong>
+                            <span>{triggerLabel(automation.trigger_type)}</span>
+                          </div>
+                          <span className="autodm-synced-badge">
+                            {automation.media_id ? 'Synced' : 'Pending Sync'}
+                          </span>
+                        </div>
+                        <div className="autodm-mock-gradient-banner">
+                          <div className="autodm-mock-banner-content">
+                            <Instagram size={26} />
+                            <p>Target Instagram Media</p>
+                            <span className="autodm-mock-id">
+                              {automation.media_id ? `ID: ${automation.media_id}` : 'Click Sync Meta Data to fetch live post graphic'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="autodm-mock-caption">
+                          <span className="autodm-caption-label">CAPTION</span>
+                          <p>{automation.media_caption || 'No caption synced yet. Use Sync Meta Data button to fetch caption & thumbnail.'}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </section>
               </div>
+
+              <section className="autodm-panel autodm-comments-panel">
+                <div className="autodm-panel-head">
+                  <div className="autodm-panel-title-group">
+                    <div className="autodm-icon-badge autodm-icon-badge-ig">
+                      <MessageCircle size={16} />
+                    </div>
+                    <div>
+                      <h3>Post Comments</h3>
+                      <p>Latest Instagram comment events received for this automation.</p>
+                    </div>
+                  </div>
+                  <span className="badge badge-indigo">{visibleComments.length} received</span>
+                </div>
+
+                {commentsLoading ? (
+                  <div className="autodm-empty compact">
+                    <Loader2 className="is-spinning" size={24} />
+                    <p>Loading comments</p>
+                  </div>
+                ) : commentsError ? (
+                  <div className="autodm-issue-list">
+                    <p>{commentsError}</p>
+                  </div>
+                ) : visibleComments.length === 0 ? (
+                  <div className="autodm-good-box">
+                    No comment events found yet. Add a test comment on the selected Instagram post, then reopen Data.
+                  </div>
+                ) : (
+                  <div className="autodm-comment-list">
+                    {visibleComments.map((comment) => {
+                      const initial = getAvatarInitial(comment);
+                      const avatarStyle = getAvatarStyle(comment.username || comment.senderId);
+                      const username = comment.username ? `@${comment.username}` : `IG user ${comment.senderId || ''}`;
+                      const isProcessed = Boolean(comment.processed);
+                      const hasError = Boolean(comment.processingError);
+
+                      return (
+                        <article key={comment.id || comment.eventId || Math.random()} className="autodm-comment-card">
+                          <div className="autodm-comment-header">
+                            <div className="autodm-comment-user-info">
+                              <div className="autodm-avatar-wrapper" style={avatarStyle}>
+                                <span>{initial}</span>
+                                <span className="autodm-avatar-ig-badge">
+                                  <Instagram size={9} />
+                                </span>
+                              </div>
+                              <div className="autodm-user-details">
+                                <div className="autodm-user-title-row">
+                                  <strong className="autodm-username">{username}</strong>
+                                  <span className="autodm-time-pill">
+                                    <Clock size={11} />
+                                    {formatCommentTime(comment.createdAt)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="autodm-comment-badges">
+                              {isProcessed ? (
+                                <span className="autodm-status-tag status-success">
+                                  <CheckCircle2 size={12} />
+                                  <span>Processed</span>
+                                </span>
+                              ) : (
+                                <span className="autodm-status-tag status-pending">
+                                  <Clock size={12} />
+                                  <span>Pending</span>
+                                </span>
+                              )}
+                              {hasError && (
+                                <span className="autodm-status-tag status-error">
+                                  <AlertCircle size={12} />
+                                  <span>{comment.processingError.replace(/_/g, ' ')}</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="autodm-comment-body">
+                            <div className="autodm-speech-bubble">
+                              <p>{comment.text || 'Comment text unavailable'}</p>
+                            </div>
+                          </div>
+
+                          <div className="autodm-comment-footer">
+                            <div className="autodm-footer-meta">
+                              {comment.mediaId && (
+                                <span className="autodm-meta-pill">
+                                  <ExternalLink size={11} />
+                                  Media #{comment.mediaId}
+                                </span>
+                              )}
+                              {isProcessed && (
+                                <span className="autodm-meta-pill highlight">
+                                  <Send size={11} />
+                                  Auto-DM Delivered
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
             </>
           )}
         </div>
@@ -320,12 +567,16 @@ export default function AutoDMAutomationsPage() {
     deleteAutomation,
     createAutomation,
     fetchAnalytics,
+    fetchAutomationComments,
     syncInsights,
   } = useAutoDM();
   const [openMenuId, setOpenMenuId] = useState(null);
   const [selectedAutomation, setSelectedAutomation] = useState(null);
   const [analytics, setAnalytics] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsError, setCommentsError] = useState('');
 
   useEffect(() => {
     loadAutomations();
@@ -336,15 +587,35 @@ export default function AutoDMAutomationsPage() {
   const openAnalytics = async (automation) => {
     setSelectedAutomation(automation);
     setAnalytics(null);
+    setComments([]);
+    setCommentsError('');
     setAnalyticsLoading(true);
+    setCommentsLoading(true);
     try {
-      const data = await fetchAnalytics(automation.id);
-      setAnalytics(data || {});
+      const [analyticsResult, commentsResult] = await Promise.allSettled([
+        fetchAnalytics(automation.id),
+        fetchAutomationComments(automation.id),
+      ]);
+
+      if (analyticsResult.status === 'fulfilled') {
+        setAnalytics(analyticsResult.value || {});
+      } else {
+        console.error('[AutoDM] Analytics load error:', analyticsResult.reason);
+        setAnalytics({});
+      }
+
+      if (commentsResult.status === 'fulfilled') {
+        setComments(commentsResult.value || []);
+      } else {
+        console.error('[AutoDM] Comments load error:', commentsResult.reason);
+        const error = commentsResult.reason;
+        setCommentsError(error.response?.data?.error || error.message || 'Failed to load comments');
+      }
     } catch (error) {
-      console.error('[AutoDM] Analytics load error:', error);
-      setAnalytics({});
+      console.error('[AutoDM] Automation data load error:', error);
     } finally {
       setAnalyticsLoading(false);
+      setCommentsLoading(false);
     }
   };
 
@@ -395,15 +666,22 @@ export default function AutoDMAutomationsPage() {
   const syncSelected = async () => {
     if (!selectedAutomation) return;
     setAnalyticsLoading(true);
+    setCommentsLoading(true);
     try {
       await syncInsights(selectedAutomation.id);
-      const data = await fetchAnalytics(selectedAutomation.id);
+      const [data, commentRows] = await Promise.all([
+        fetchAnalytics(selectedAutomation.id),
+        fetchAutomationComments(selectedAutomation.id),
+      ]);
       setAnalytics(data || {});
+      setComments(commentRows || []);
+      setCommentsError('');
       await loadAutomations();
     } catch (error) {
       console.error('[AutoDM] Sync insights error:', error);
     } finally {
       setAnalyticsLoading(false);
+      setCommentsLoading(false);
     }
   };
 
@@ -509,9 +787,14 @@ export default function AutoDMAutomationsPage() {
           automation={selectedAutomation}
           analytics={analytics}
           loading={analyticsLoading}
+          commentRows={comments}
+          commentsLoading={commentsLoading}
+          commentsError={commentsError}
           onClose={() => {
             setSelectedAutomation(null);
             setAnalytics(null);
+            setComments([]);
+            setCommentsError('');
           }}
           onSync={syncSelected}
           onEdit={() => navigate(`/dashboard/auto-dm/automations/${selectedAutomation.id}`)}

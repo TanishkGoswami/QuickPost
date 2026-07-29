@@ -536,14 +536,32 @@ async function processBroadcastJob({
 
   for (const account of resolveSocialPublishChannels("pinterest", channels, tokens.pinterestAccounts || [])) {
     const resolvedCaption = resolveMentions(platData?.pinterest?.title || caption, 'pinterest', account);
+    const targetAccountId = account.accountId || account.account_id || account.id;
     platformPromises.push(
-      postToPinterest(
-        primaryMediaUrl,
-        resolvedCaption,
-        account,
-        platData?.pinterest?.link,
-        platData?.pinterest?.boardId || account.boardId,
-      ).then((r) => onChannelComplete(account.channel, r)),
+      (async () => {
+        try {
+          const validTokenInfo = await pinterestOAuth.getValidAccessToken(req.user.userId, targetAccountId);
+          const activeAccount = {
+            ...account,
+            accessToken: validTokenInfo.accessToken,
+            boardId: platData?.pinterest?.boardId || validTokenInfo.boardId || account.boardId
+          };
+          const result = await postToPinterest(
+            primaryMediaUrl,
+            resolvedCaption,
+            activeAccount,
+            platData?.pinterest?.link,
+            activeAccount.boardId,
+            broadcastId || null
+          );
+          onChannelComplete(account.channel, result);
+          return result;
+        } catch (err) {
+          const errRes = { success: false, platform: 'Pinterest', error: err.message };
+          onChannelComplete(account.channel, errRes);
+          return errRes;
+        }
+      })()
     );
   }
 

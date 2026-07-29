@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import apiClient from '../utils/apiClient';
 
-// QuickPost billing is independent from Hub product names.
+// GAP Social-pilot billing is independent from Hub product names.
 function hasPaidPlan(plan) {
   if (!plan) return false;
   const p = plan.toLowerCase();
@@ -84,7 +84,7 @@ const PLANS_TEMPLATE = [
       '10 scheduled posts per channel',
       '1 active trigger word',
       '50 automated replies / month',
-      'QuickPost Branding Watermark',
+      'GAP Social-pilot Branding Watermark',
     ],
     excludedFeatures: [
       'Unlimited monthly posts',
@@ -354,7 +354,7 @@ export default function BillingPage({ embedded = false }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', marginBottom: 18, flexWrap: 'wrap' }}>
           <div>
             <h2 style={{ fontSize: 22, fontWeight: 500, margin: '0 0 6px' }}>Invoices</h2>
-            <p style={{ fontSize: 14, color: 'var(--slate)', margin: 0 }}>Paid QuickPost billing records and receipt downloads.</p>
+            <p style={{ fontSize: 14, color: 'var(--slate)', margin: 0 }}>Paid GAP Social-pilot billing records and receipt downloads.</p>
           </div>
         </div>
 
