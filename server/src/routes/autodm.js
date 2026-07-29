@@ -18,6 +18,7 @@ import {
   listMessagesForContact,
   getDailyMetrics,
   getAutomationAnalytics,
+  listAutomationComments,
   syncAutomationInsights,
 } from '../services/autodm.js';
 import { requireFeature, requireResourceCapacity } from '../middleware/entitlements.js';
@@ -320,6 +321,18 @@ router.get('/automations/:id/analytics', authenticateUser, async (req, res) => {
   } catch (error) {
     console.error('[AUTODM] Analytics error:', error);
     res.status(500).json({ success: false, error: error.message || 'Failed to load analytics' });
+  }
+});
+
+router.get('/automations/:id/comments', authenticateUser, async (req, res) => {
+  try {
+    const result = await listAutomationComments(req.user, req.params.id, {
+      limit: req.query.limit,
+    });
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error('[AUTODM] Comments error:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to load comments' });
   }
 });
 
