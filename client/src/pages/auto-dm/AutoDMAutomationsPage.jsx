@@ -609,7 +609,12 @@ export default function AutoDMAutomationsPage() {
       } else {
         console.error('[AutoDM] Comments load error:', commentsResult.reason);
         const error = commentsResult.reason;
-        setCommentsError(error.response?.data?.error || error.message || 'Failed to load comments');
+        if (error?.response?.status === 404) {
+          setComments([]);
+          setCommentsError('');
+        } else {
+          setCommentsError(error.response?.data?.error || error.message || 'Failed to load comments');
+        }
       }
     } catch (error) {
       console.error('[AutoDM] Automation data load error:', error);
@@ -669,12 +674,16 @@ export default function AutoDMAutomationsPage() {
     setCommentsLoading(true);
     try {
       await syncInsights(selectedAutomation.id);
-      const [data, commentRows] = await Promise.all([
+      const [analyticsRes, commentsRes] = await Promise.allSettled([
         fetchAnalytics(selectedAutomation.id),
         fetchAutomationComments(selectedAutomation.id),
       ]);
-      setAnalytics(data || {});
-      setComments(commentRows || []);
+      if (analyticsRes.status === 'fulfilled') {
+        setAnalytics(analyticsRes.value || {});
+      }
+      if (commentsRes.status === 'fulfilled') {
+        setComments(commentsRes.value || []);
+      }
       setCommentsError('');
       await loadAutomations();
     } catch (error) {
