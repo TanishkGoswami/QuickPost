@@ -79,7 +79,7 @@ export default function PrivacyPolicy() {
 
       <main style={{ flexGrow: 1, padding: '48px 24px', maxWidth: 1280, margin: '0 auto', width: '100%' }}>
         <div className="flex flex-col lg:flex-row gap-12">
-          
+
           {/* Sidebar */}
           <aside className="hidden lg:block w-full max-w-[300px] shrink-0">
             <div className="custom-scrollbar" style={{ position: 'sticky', top: 100, display: 'flex', flexDirection: 'column', gap: 24, maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
@@ -116,7 +116,7 @@ export default function PrivacyPolicy() {
 
               <div style={{ padding: 24, background: 'var(--ink)', borderRadius: 'var(--r-btn)', color: 'var(--canvas)', position: 'relative', overflow: 'hidden' }}>
                 <svg aria-hidden="true" style={{ position: 'absolute', top: 0, right: 0, width: '100%', height: '100%', pointerEvents: 'none', opacity: 0.2 }} viewBox="0 0 200 200" preserveAspectRatio="none">
-                   <path d="M 100 -50 Q 200 50 250 150" stroke="#FF5600" strokeWidth="2" fill="none" />
+                  <path d="M 100 -50 Q 200 50 250 150" stroke="#FF5600" strokeWidth="2" fill="none" />
                 </svg>
                 <div style={{ position: 'relative', zIndex: 1 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--arc)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>Support</p>
@@ -134,24 +134,24 @@ export default function PrivacyPolicy() {
 
           {/* Content */}
           <article style={{ flex: 1, background: 'var(--canvas-lifted)', border: '1px solid rgba(20,20,19,0.08)', borderRadius: 'var(--r-hero)', padding: 'clamp(32px, 5vw, 64px)', position: 'relative', overflow: 'hidden' }}>
-            
+
             {/* Watermark Logo Ghost */}
             <div style={{ position: 'absolute', top: -40, right: -40, opacity: 0.03, pointerEvents: 'none' }}>
               <Shield size={400} strokeWidth={1} />
             </div>
 
             <header style={{ marginBottom: 64, paddingBottom: 48, borderBottom: '1px solid rgba(20,20,19,0.08)', position: 'relative', zIndex: 1 }}>
-               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-                  <img src={logo} alt="GAP Social-pilot" style={{ width: 48, height: 48, objectFit: 'contain' }} />
-                  <div style={{ padding: '6px 12px', background: 'rgba(20,20,19,0.06)', borderRadius: 'var(--r-pill)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink)' }}>
-                    DPDPA Compliant
-                  </div>
-               </div>
-               <h1 style={{ fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: '0 0 24px', lineHeight: 1.1 }}>Privacy Policy</h1>
-               <p style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--slate)', margin: 0, fontWeight: 500 }}>
-                 <RefreshCw size={14} />
-                 Last updated: <span style={{ color: 'var(--ink)', fontWeight: 700 }}>July 27, 2026</span>
-               </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+                <img src={logo} alt="GAP Social-pilot" style={{ width: 48, height: 48, objectFit: 'contain' }} />
+                <div style={{ padding: '6px 12px', background: 'rgba(20,20,19,0.06)', borderRadius: 'var(--r-pill)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink)' }}>
+                  DPDPA Compliant
+                </div>
+              </div>
+              <h1 style={{ fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: '0 0 24px', lineHeight: 1.1 }}>Privacy Policy</h1>
+              <p style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--slate)', margin: 0, fontWeight: 500 }}>
+                <RefreshCw size={14} />
+                Last updated: <span style={{ color: 'var(--ink)', fontWeight: 700 }}>July 27, 2026</span>
+              </p>
             </header>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 64, position: 'relative', zIndex: 1 }}>
@@ -193,8 +193,8 @@ export default function PrivacyPolicy() {
                       onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(20,20,19,0.08)'}
                     >
                       <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--ink)', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                         <CheckCircle2 size={16} color="var(--arc)" strokeWidth={3} />
-                         {item.title}
+                        <CheckCircle2 size={16} color="var(--arc)" strokeWidth={3} />
+                        {item.title}
                       </h3>
                       <p style={{ fontSize: 14, color: 'var(--slate)', lineHeight: 1.5, margin: 0, fontWeight: 450 }}>{item.desc}</p>
                     </div>
@@ -304,7 +304,7 @@ export default function PrivacyPolicy() {
                   <svg aria-hidden="true" style={{ position: 'absolute', right: -50, bottom: -50, opacity: 0.3, pointerEvents: 'none' }} width="300" height="300" viewBox="0 0 200 200">
                     <circle cx="100" cy="100" r="90" stroke="var(--signal)" strokeWidth="2" fill="none" strokeDasharray="10 10" />
                   </svg>
-                  
+
                   <div style={{ position: 'relative', zIndex: 1 }}>
                     <p style={{ fontSize: 20, fontWeight: 600, margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
                       <AlertCircle color="var(--signal)" />
@@ -420,10 +420,10 @@ export default function PrivacyPolicy() {
 
               <section id="updates" style={{ scrollMarginTop: 120 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-                   <div style={{ width: 40, height: 40, background: 'var(--ink)', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--canvas)' }}>
-                     <RefreshCw size={20} />
-                   </div>
-                   <h2 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>9. Policy Updates</h2>
+                  <div style={{ width: 40, height: 40, background: 'var(--ink)', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--canvas)' }}>
+                    <RefreshCw size={20} />
+                  </div>
+                  <h2 style={{ fontSize: 28, fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', margin: 0 }}>9. Policy Updates</h2>
                 </div>
                 <div style={{ padding: 32, background: 'var(--canvas)', border: '1px solid rgba(20,20,19,0.08)', borderRadius: 'var(--r-hero)' }}>
                   <p style={{ fontSize: 16, fontWeight: 500, color: 'var(--ink)', lineHeight: 1.6, margin: 0 }}>
@@ -432,13 +432,13 @@ export default function PrivacyPolicy() {
                 </div>
               </section>
 
-               <section id="contact" style={{ scrollMarginTop: 120, paddingTop: 48, borderTop: '1px solid rgba(20,20,19,0.08)' }}>
+              <section id="contact" style={{ scrollMarginTop: 120, paddingTop: 48, borderTop: '1px solid rgba(20,20,19,0.08)' }}>
                 <div style={{ background: 'var(--ink)', borderRadius: 'var(--r-hero)', padding: 64, textAlign: 'center', color: 'var(--canvas)', position: 'relative', overflow: 'hidden' }}>
-                   {/* Orbital Arc Background */}
+                  {/* Orbital Arc Background */}
                   <svg aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', opacity: 0.4 }} viewBox="0 0 1000 400" preserveAspectRatio="none">
                     <path d="M -50 320 Q 250 60 600 280 Q 800 400 1100 150" stroke="#FF5600" strokeWidth="1.5" fill="none" />
                   </svg>
-                  
+
                   <div style={{ position: 'relative', zIndex: 1 }}>
                     <h2 style={{ fontSize: 'clamp(32px, 5vw, 44px)', fontWeight: 500, letterSpacing: '-0.02em', margin: '0 0 24px' }}>Have more questions?</h2>
                     <p style={{ fontSize: 16, fontWeight: 450, color: 'rgba(243,240,238,0.7)', margin: '0 auto 12px', maxWidth: 500, lineHeight: 1.5 }}>
