@@ -7,7 +7,6 @@ const GRAPH_VERSION = 'v21.0';
 const FACEBOOK_TOKEN_REFRESH_BUFFER_MS = 7 * 24 * 60 * 60 * 1000;
 const DIRECT_IG_TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
-// ✅ Add instagram_content_publish (required for posting)
 const INSTAGRAM_SCOPES = [
   'public_profile',
   'pages_show_list',
