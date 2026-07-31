@@ -20,6 +20,7 @@ class FacebookOAuth {
   constructor() {
     this.appId = process.env.FACEBOOK_APP_ID || process.env.INSTAGRAM_APP_ID;
     this.appSecret = process.env.FACEBOOK_APP_SECRET || process.env.INSTAGRAM_APP_SECRET;
+    this.loginConfigId = process.env.FACEBOOK_LOGIN_CONFIG_ID;
     this.redirectUri =
       process.env.FACEBOOK_REDIRECT_URI ||
       'http://localhost:5000/api/auth/facebook/callback';
@@ -54,12 +55,18 @@ class FacebookOAuth {
     const params = new URLSearchParams({
       client_id: this.appId,
       redirect_uri: this.redirectUri,
-      scope: FACEBOOK_SCOPES.join(','),
       response_type: 'code',
       auth_type: 'rerequest',
-      prompt: 'consent',
       state
     });
+
+    if (this.loginConfigId) {
+      params.set('config_id', this.loginConfigId);
+      params.set('override_default_response_type', 'true');
+    } else {
+      params.set('scope', FACEBOOK_SCOPES.join(','));
+      params.set('prompt', 'consent');
+    }
 
     return `https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth?${params.toString()}`;
   }
@@ -171,19 +178,18 @@ class FacebookOAuth {
         const pagesRes = await axios.get(
           `https://graph.facebook.com/${GRAPH_VERSION}/me/accounts`,
           {
-            params: { access_token: longUserToken, fields: 'id,name,access_token,picture' }
+            params: { access_token: longUserToken, fields: 'id,name,access_token,picture', limit: 100 }
           }
         );
         pages = pagesRes.data?.data || [];
       } catch (e) {}
 
-      if (!pages.length) {
-        console.log('⚠️ FB: /me/accounts empty, using debug_token fallback...');
+      const pageIds = this.extractPageIdsFromDebug(dbg.rawDebug);
+      console.log('FB: Page IDs from granular scopes:', pageIds);
+      const foundPageIds = new Set(pages.map((page) => String(page.id)));
 
-        const pageIds = this.extractPageIdsFromDebug(dbg.rawDebug);
-        console.log('📌 FB: Page IDs from granular scopes:', pageIds);
-
-        for (const pid of pageIds) {
+      for (const pid of pageIds) {
+        if (!foundPageIds.has(String(pid))) {
           const pageDetails = await axios.get(
             `https://graph.facebook.com/${GRAPH_VERSION}/${pid}`,
             {
@@ -191,6 +197,7 @@ class FacebookOAuth {
             }
           );
           pages.push(pageDetails.data);
+          foundPageIds.add(String(pid));
         }
       }
 
