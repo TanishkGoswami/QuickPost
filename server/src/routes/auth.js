@@ -1230,6 +1230,24 @@ router.get("/pending-selection/:id", authenticateUser, async (req, res) => {
     return res.status(403).json({ success: false, error: "Selection does not belong to this user." });
   }
   console.log(`🔵 FB: pending page selection fetched: ${req.params.id}`);
+
+  const { data: existingRows, error: existingError } = await supabase
+    .from("social_tokens")
+    .select("account_id,page_id")
+    .eq("user_id", req.user.userId)
+    .eq("provider", pending.provider);
+
+  if (existingError) {
+    return res.status(500).json({ success: false, error: existingError.message });
+  }
+
+  const connectedIds = new Set(
+    (existingRows || [])
+      .flatMap((row) => [row.account_id, row.page_id])
+      .filter(Boolean)
+      .map(String),
+  );
+
   res.json({
     success: true,
     provider: pending.provider,
@@ -1237,6 +1255,7 @@ router.get("/pending-selection/:id", authenticateUser, async (req, res) => {
       id: page.pageId,
       name: page.userInfo?.pageName,
       picture: page.userInfo?.picture?.data?.url || page.userInfo?.picture?.url || null,
+      alreadyConnected: connectedIds.has(String(page.pageId)),
     })),
   });
 });

@@ -3,9 +3,10 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Check, Loader2 } from "lucide-react";
 import apiClient from "../../utils/apiClient";
 import { useAuth } from "../../context/AuthContext";
+import { countConnectedTargets } from "../../utils/connectedAccounts";
 
 export default function SelectAccountsPage() {
-  const { connectedAccounts, user } = useAuth();
+  const { connectedAccounts, refreshAccounts, user } = useAuth();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const provider = params.get("provider") || "platform";
@@ -16,23 +17,7 @@ export default function SelectAccountsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const connectedCount = useMemo(() => {
-    const targets = new Set();
-    Object.entries(connectedAccounts || {}).forEach(([key, value]) => {
-      if (key.endsWith("Accounts")) {
-        (Array.isArray(value) ? value : []).forEach((account) => {
-          targets.add(`${key}:${account.account_id || account.accountId || account.pageId || account.id}`);
-        });
-      } else if (
-        value?.connected &&
-        key !== "instagram" &&
-        !connectedAccounts?.[`${key}Accounts`]?.length
-      ) {
-        targets.add(`${key}:${value.account_id || value.accountId || value.page_id || value.pageId || key}`);
-      }
-    });
-    return targets.size;
-  }, [connectedAccounts]);
+  const connectedCount = useMemo(() => countConnectedTargets(connectedAccounts), [connectedAccounts]);
   const accountLimit = user?.entitlements?.limits?.social_accounts || Infinity;
   const availableSlots = Math.max(0, accountLimit - connectedCount);
 
@@ -46,20 +31,38 @@ export default function SelectAccountsPage() {
       .get(`/api/auth/pending-selection/${pending}`)
       .then((res) => {
         const rows = res.data.accounts || [];
+        const existing = rows.filter((account) => account.alreadyConnected);
+        const newAccounts = rows.filter((account) => !account.alreadyConnected);
         setAccounts(rows);
-        setSelected(new Set(rows.slice(0, availableSlots).map((account) => String(account.id))));
+        setSelected(new Set([
+          ...existing.map((account) => String(account.id)),
+          ...newAccounts.slice(0, availableSlots).map((account) => String(account.id)),
+        ]));
       })
       .catch((err) => setError(err.response?.data?.error || err.message || "Selection expired."))
       .finally(() => setLoading(false));
   }, [availableSlots, pending]);
 
-  const allSelected = useMemo(
-    () => accounts.length > 0 && selected.size === accounts.length,
-    [accounts.length, selected.size],
+  const selectedNewCount = useMemo(
+    () => accounts.filter((account) => selected.has(String(account.id)) && !account.alreadyConnected).length,
+    [accounts, selected],
   );
-  const exceedsLimit = connectedCount + selected.size > accountLimit;
+  const selectableAccounts = useMemo(
+    () => [
+      ...accounts.filter((account) => account.alreadyConnected),
+      ...accounts.filter((account) => !account.alreadyConnected).slice(0, availableSlots),
+    ],
+    [accounts, availableSlots],
+  );
+  const allSelected = useMemo(
+    () => selectableAccounts.length > 0 && selectableAccounts.every((account) => selected.has(String(account.id))),
+    [selectableAccounts, selected],
+  );
+  const exceedsLimit = connectedCount + selectedNewCount > accountLimit;
 
   const toggle = (id) => {
+    const account = accounts.find((row) => String(row.id) === String(id));
+    if (account?.alreadyConnected) return;
     const next = new Set(selected);
     const key = String(id);
     if (next.has(key)) next.delete(key);
@@ -74,6 +77,7 @@ export default function SelectAccountsPage() {
       await apiClient.post(`/api/auth/pending-selection/${pending}`, {
         selectedIds: [...selected],
       });
+      await refreshAccounts();
       navigate(`/dashboard?success=${provider}_connected`, { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || err.message || "Failed to save accounts.");
@@ -107,7 +111,7 @@ export default function SelectAccountsPage() {
             <div className="mt-6 flex justify-end">
               <button
                 type="button"
-                onClick={() => setSelected(allSelected ? new Set() : new Set(accounts.slice(0, availableSlots).map((a) => String(a.id))))}
+                onClick={() => setSelected(allSelected ? new Set(accounts.filter((a) => a.alreadyConnected).map((a) => String(a.id))) : new Set(selectableAccounts.map((a) => String(a.id))))}
                 className="rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold"
                 disabled={availableSlots === 0}
               >
@@ -117,14 +121,18 @@ export default function SelectAccountsPage() {
             <div className="mt-4 grid gap-3">
               {accounts.map((account) => {
                 const checked = selected.has(String(account.id));
+                const alreadyConnected = Boolean(account.alreadyConnected);
                 return (
                   <button
                     key={account.id}
                     type="button"
                     onClick={() => toggle(account.id)}
                     className={`flex items-center gap-3 rounded-lg border p-4 text-left transition ${
-                      checked ? "border-black bg-white shadow-sm" : "border-black/10 bg-white/70"
+                      alreadyConnected
+                        ? "border-green-200 bg-green-50"
+                        : checked ? "border-black bg-white shadow-sm" : "border-black/10 bg-white/70"
                     }`}
+                    aria-pressed={checked}
                   >
                     {account.picture ? (
                       <img src={account.picture} alt="" className="h-10 w-10 rounded-full object-cover" />
@@ -132,6 +140,11 @@ export default function SelectAccountsPage() {
                       <div className="h-10 w-10 rounded-full bg-black/10" />
                     )}
                     <span className="min-w-0 flex-1 truncate font-semibold">{account.name || account.id}</span>
+                    {alreadyConnected ? (
+                      <span className="rounded-full border border-green-200 bg-white px-2 py-1 text-xs font-semibold text-green-700">
+                        Already connected
+                      </span>
+                    ) : null}
                     {checked ? <Check className="h-5 w-5" /> : null}
                   </button>
                 );

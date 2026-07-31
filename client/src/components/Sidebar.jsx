@@ -35,24 +35,13 @@ import MastodonConnectModal from "./MastodonConnectModal";
 import FacebookSetupModal from "./FacebookSetupModal";
 import apiClient from "../utils/apiClient";
 import { startAutoDMInstagramOAuth } from "../services/autodm/supabaseClient";
+import { countConnectedTargets } from "../utils/connectedAccounts";
 
 // Helper to determine if the user is on the free plan
 function isFree(plan) {
   if (!plan) return true;
   return plan.toLowerCase() === 'free';
 }
-
-const countConnectedTargets = (accounts = {}) => {
-  const arrayCount = Object.keys(accounts)
-    .filter((key) => key.endsWith("Accounts"))
-    .reduce((sum, key) => sum + (Array.isArray(accounts[key]) ? accounts[key].length : 0), 0);
-
-  const singleCount = Object.entries(accounts).filter(
-    ([key, value]) => !key.endsWith("Accounts") && value?.connected && !(accounts[`${key}Accounts`]?.length > 0),
-  ).length;
-
-  return arrayCount + singleCount;
-};
 
 const platformDetails = {
   facebook: {
