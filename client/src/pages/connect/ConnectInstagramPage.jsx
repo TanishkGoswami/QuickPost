@@ -92,6 +92,17 @@ export default function ConnectInstagramPage() {
     }
   };
 
+  const handleConnectFacebook = () => {
+    const token = localStorage.getItem('quickpost_token');
+    if (!token) {
+      toast.error('Please sign in again');
+      return;
+    }
+    setShowFacebookModal(false);
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    window.location.href = `${apiUrl}/api/auth/facebook?token=${token}`;
+  };
+
   const handleDisconnect = async () => {
     const accountId = activeInstagramAccount?.id || instagramAccounts[0]?.id;
     if (!accountId) return;
@@ -381,7 +392,11 @@ export default function ConnectInstagramPage() {
       </div>
 
       {/* Render Modals */}
-      <FacebookSetupModal isOpen={showFacebookModal} onClose={() => setShowFacebookModal(false)} />
+      <FacebookSetupModal
+        isOpen={showFacebookModal}
+        onClose={() => setShowFacebookModal(false)}
+        onProceed={handleConnectFacebook}
+      />
       <LinkedInConnectModal isOpen={showLinkedInModal} onClose={() => setShowLinkedInModal(false)} />
       <MastodonConnectModal isOpen={showMastodonModal} onClose={() => setShowMastodonModal(false)} />
       <BlueskyConnectModal isOpen={showBlueskyModal} onClose={() => setShowBlueskyModal(false)} />

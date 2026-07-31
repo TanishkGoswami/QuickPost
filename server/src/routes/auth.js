@@ -73,6 +73,14 @@ function decodeState(state) {
   }
 }
 
+function dashboardRedirect(params) {
+  const url = new URL("/dashboard", CLIENT_URL);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) url.searchParams.set(key, value);
+  });
+  return url.toString();
+}
+
 function requireJwtSecret() {
   if (!process.env.JWT_SECRET) {
     console.error("❌ JWT_SECRET missing in env");
@@ -81,21 +89,32 @@ function requireJwtSecret() {
 requireJwtSecret();
 
 async function getConnectedTargetCount(userId) {
-  const [{ count: socialCount, error: socialError }, { count: instagramCount, error: instagramError }] = await Promise.all([
+  const [{ data: socialRows, error: socialError }, { data: instagramRows, error: instagramError }] = await Promise.all([
     supabase
       .from("social_tokens")
-      .select("id", { count: "exact", head: true })
+      .select("provider, account_id, page_id, instagram_business_id, username")
       .eq("user_id", userId)
       .neq("provider", "instagram"),
     supabase
       .from("instagram_accounts")
-      .select("id", { count: "exact", head: true })
+      .select("instagram_business_account_id")
       .eq("user_id", userId)
       .eq("is_connected", true),
   ]);
   if (socialError) throw socialError;
   if (instagramError) throw instagramError;
-  return (socialCount || 0) + (instagramCount || 0);
+
+  const targets = new Set();
+  for (const row of socialRows || []) {
+    targets.add([
+      row.provider,
+      row.account_id || row.page_id || row.instagram_business_id || row.username,
+    ].filter(Boolean).join(":"));
+  }
+  for (const row of instagramRows || []) {
+    targets.add(`instagram:${row.instagram_business_account_id}`);
+  }
+  return targets.size;
 }
 
 async function assertCanConnectTarget({ user, provider, accountId }) {
@@ -433,12 +452,15 @@ router.get("/facebook", async (req, res) => {
     return res.redirect(authUrl);
   } catch (error) {
     console.error("Facebook init error:", error);
-    res.redirect(`${CLIENT_URL}/dashboard?error=facebook_oauth_failed`);
+    res.redirect(dashboardRedirect({
+      error: "facebook_oauth_failed",
+      message: error.message,
+    }));
   }
 });
 
 router.get("/facebook/callback", async (req, res) => {
-  const { code, error, state } = req.query;
+  const { code, error, error_description: errorDescription, error_reason: errorReason, state } = req.query;
 
   console.log("\n🔵 Facebook OAuth Callback Received");
   console.log("Query params:", {
@@ -447,7 +469,12 @@ router.get("/facebook/callback", async (req, res) => {
     state: state ? "present" : "missing",
   });
 
-  if (error) return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied`);
+  if (error) {
+    return res.redirect(dashboardRedirect({
+      error: "facebook_access_denied",
+      message: errorDescription || errorReason || error,
+    }));
+  }
   if (!code || !state)
     return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
 
@@ -465,6 +492,7 @@ router.get("/facebook/callback", async (req, res) => {
         tokenData,
         expiresAt: Date.now() + 10 * 60 * 1000,
       });
+      console.log(`🔵 FB: pending page selection created (${tokenData.pages.length} pages): ${pendingId}`);
       return res.redirect(`${CLIENT_URL}/connect/select?provider=facebook&pending=${pendingId}`);
     }
     const page = tokenData.pages?.[0];
@@ -483,7 +511,10 @@ router.get("/facebook/callback", async (req, res) => {
     res.redirect(`${CLIENT_URL}/dashboard?success=facebook_connected`);
   } catch (err) {
     console.error("❌ FB callback error:", err.message);
-    res.redirect(`${CLIENT_URL}/dashboard?error=facebook_connection_failed`);
+    res.redirect(dashboardRedirect({
+      error: "facebook_connection_failed",
+      message: err.message,
+    }));
   }
 });
 
@@ -1198,6 +1229,25 @@ router.get("/pending-selection/:id", authenticateUser, async (req, res) => {
   if (pending.userId !== req.user.userId) {
     return res.status(403).json({ success: false, error: "Selection does not belong to this user." });
   }
+  console.log(`🔵 FB: pending page selection fetched: ${req.params.id}`);
+
+  const { data: existingRows, error: existingError } = await supabase
+    .from("social_tokens")
+    .select("account_id,page_id")
+    .eq("user_id", req.user.userId)
+    .eq("provider", pending.provider);
+
+  if (existingError) {
+    return res.status(500).json({ success: false, error: existingError.message });
+  }
+
+  const connectedIds = new Set(
+    (existingRows || [])
+      .flatMap((row) => [row.account_id, row.page_id])
+      .filter(Boolean)
+      .map(String),
+  );
+
   res.json({
     success: true,
     provider: pending.provider,
@@ -1205,6 +1255,7 @@ router.get("/pending-selection/:id", authenticateUser, async (req, res) => {
       id: page.pageId,
       name: page.userInfo?.pageName,
       picture: page.userInfo?.picture?.data?.url || page.userInfo?.picture?.url || null,
+      alreadyConnected: connectedIds.has(String(page.pageId)),
     })),
   });
 });
@@ -1233,6 +1284,7 @@ router.post("/pending-selection/:id", authenticateUser, async (req, res) => {
     }
     await facebookOAuth.storeTokens(req.user.userId, { ...pending.tokenData, pages });
     pendingOAuthSelections.delete(req.params.id);
+    console.log(`✅ FB: saved selected pages: ${pages.map((page) => page.pageId).join(", ")}`);
     res.json({ success: true });
   } catch (error) {
     res.status(error.code === "PLAN_LIMIT_REACHED" ? 403 : 500).json({
