@@ -452,31 +452,15 @@ router.get("/facebook/callback", async (req, res) => {
 
   try {
     const tokenData = await facebookOAuth.exchangeCodeForToken(code);
-    if (tokenData.pages?.length > 1) {
-      const pendingId = crypto.randomUUID();
-      pendingOAuthSelections.set(pendingId, {
-        provider: "facebook",
-        userId: parsed.userId,
-        tokenData,
-        expiresAt: Date.now() + 10 * 60 * 1000,
-      });
-      console.log(`🔵 FB: pending page selection created (${tokenData.pages.length} pages): ${pendingId}`);
-      return res.redirect(`${CLIENT_URL}/connect/select?provider=facebook&pending=${pendingId}`);
-    }
-    const page = tokenData.pages?.[0];
-    await assertCanConnectTarget({
-      user: { userId: parsed.userId },
+    const pendingId = crypto.randomUUID();
+    pendingOAuthSelections.set(pendingId, {
       provider: "facebook",
-      accountId: page?.pageId || tokenData.pageId,
+      userId: parsed.userId,
+      tokenData,
+      expiresAt: Date.now() + 10 * 60 * 1000,
     });
-    await facebookOAuth.storeTokens(parsed.userId, tokenData);
-    notifyAccountConnected(
-      parsed.userId,
-      "Facebook",
-      page?.pageName || tokenData.pageName,
-    );
-
-    res.redirect(`${CLIENT_URL}/dashboard?success=facebook_connected`);
+    console.log(`FB: pending page selection created (${tokenData.pages?.length || 0} pages): ${pendingId}`);
+    return res.redirect(`${CLIENT_URL}/connect/select?provider=facebook&pending=${pendingId}`);
   } catch (err) {
     console.error("❌ FB callback error:", err.message);
     res.redirect(dashboardRedirect({
@@ -1197,18 +1181,25 @@ router.get("/pending-selection/:id", authenticateUser, async (req, res) => {
   if (pending.userId !== req.user.userId) {
     return res.status(403).json({ success: false, error: "Selection does not belong to this user." });
   }
-  console.log(`🔵 FB: pending page selection fetched: ${req.params.id}`);
+  console.log(`FB: pending page selection fetched: ${req.params.id}`);
 
+  const userIds = [...new Set([req.user.userId, req.user.authUserId].filter(Boolean))];
   const { data: existingRows, error: existingError } = await supabase
     .from("social_tokens")
     .select("account_id,page_id")
-    .eq("user_id", req.user.userId)
+    .in("user_id", userIds)
     .eq("provider", pending.provider);
 
   if (existingError) {
     return res.status(500).json({ success: false, error: existingError.message });
   }
 
+  const entitlements = await getEntitlements(req.user.authUserId || req.user.userId, req.user.email, req.token);
+  const accountLimit = entitlements.limits.social_accounts;
+  const connectedCount = await getConnectedTargetCount(req.user.userId);
+  const availableSlots = Number.isFinite(accountLimit)
+    ? Math.max(0, accountLimit - connectedCount)
+    : Number.MAX_SAFE_INTEGER;
   const connectedIds = new Set(
     (existingRows || [])
       .flatMap((row) => [row.account_id, row.page_id])
@@ -1219,6 +1210,9 @@ router.get("/pending-selection/:id", authenticateUser, async (req, res) => {
   res.json({
     success: true,
     provider: pending.provider,
+    accountLimit,
+    connectedCount,
+    availableSlots,
     accounts: (pending.tokenData.pages || []).map((page) => ({
       id: page.pageId,
       name: page.userInfo?.pageName,
@@ -1243,7 +1237,34 @@ router.post("/pending-selection/:id", authenticateUser, async (req, res) => {
     if (!pages.length) {
       return res.status(400).json({ success: false, error: "Select at least one account." });
     }
-    for (const page of pages) {
+
+    const { data: existingRows, error: existingError } = await supabase
+      .from("social_tokens")
+      .select("account_id,page_id")
+      .eq("user_id", req.user.userId)
+      .eq("provider", "facebook");
+    if (existingError) throw existingError;
+
+    const connectedIds = new Set(
+      (existingRows || [])
+        .flatMap((row) => [row.account_id, row.page_id])
+        .filter(Boolean)
+        .map(String),
+    );
+    const newPages = pages.filter((page) => !connectedIds.has(String(page.pageId)));
+    const entitlements = await getEntitlements(req.user.authUserId || req.user.userId, req.user.email, req.token);
+    const accountLimit = entitlements.limits.social_accounts;
+
+    if (Number.isFinite(accountLimit)) {
+      const used = await getConnectedTargetCount(req.user.userId);
+      if (used + newPages.length > accountLimit) {
+        const error = new Error(`Your plan allows ${accountLimit} connected social account${accountLimit === 1 ? "" : "s"}. Deselect accounts or upgrade to connect more.`);
+        error.code = "PLAN_LIMIT_REACHED";
+        throw error;
+      }
+    }
+
+    for (const page of newPages) {
       await assertCanConnectTarget({
         user: req.user,
         provider: "facebook",
@@ -1252,7 +1273,7 @@ router.post("/pending-selection/:id", authenticateUser, async (req, res) => {
     }
     await facebookOAuth.storeTokens(req.user.userId, { ...pending.tokenData, pages });
     pendingOAuthSelections.delete(req.params.id);
-    console.log(`✅ FB: saved selected pages: ${pages.map((page) => page.pageId).join(", ")}`);
+    console.log(`FB: saved selected pages: ${pages.map((page) => page.pageId).join(", ")}`);
     res.json({ success: true });
   } catch (error) {
     res.status(error.code === "PLAN_LIMIT_REACHED" ? 403 : 500).json({

@@ -25,6 +25,7 @@ if errorlevel 1 (
     echo IG_APP_ID=your-instagram-app-id >> .env
     echo IG_APP_SECRET=your-instagram-app-secret >> .env
     echo IG_OAUTH_CALLBACK_URL=https://your-project.supabase.co/functions/v1/oauth-callback >> .env
+    echo FACEBOOK_LOGIN_CONFIG_ID=your-facebook-login-for-business-config-id >> .env
 )
 
 echo ✓ Environment variables updated!

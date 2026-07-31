@@ -16,9 +16,11 @@ export default function SelectAccountsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [serverLimits, setServerLimits] = useState(null);
 
-  const connectedCount = useMemo(() => countConnectedTargets(connectedAccounts), [connectedAccounts]);
-  const accountLimit = user?.entitlements?.limits?.social_accounts || Infinity;
+  const connectedCount = serverLimits?.connectedCount ?? countConnectedTargets(connectedAccounts);
+  const accountLimit = serverLimits?.accountLimit ?? user?.entitlements?.limits?.social_accounts ?? Infinity;
   const availableSlots = Math.max(0, accountLimit - connectedCount);
 
   useEffect(() => {
@@ -31,17 +33,29 @@ export default function SelectAccountsPage() {
       .get(`/api/auth/pending-selection/${pending}`)
       .then((res) => {
         const rows = res.data.accounts || [];
+        const slots = res.data.availableSlots ?? availableSlots;
         const existing = rows.filter((account) => account.alreadyConnected);
         const newAccounts = rows.filter((account) => !account.alreadyConnected);
+        setServerLimits({
+          accountLimit: res.data.accountLimit ?? Infinity,
+          connectedCount: res.data.connectedCount ?? 0,
+        });
         setAccounts(rows);
+        if (provider === "facebook" && rows.length < 2) {
+          setNotice(
+            "Meta returned only one Facebook Page. To add another Page, reconnect Facebook and choose Edit settings in the Meta dialog, then enable the missing Page.",
+          );
+        } else {
+          setNotice("");
+        }
         setSelected(new Set([
           ...existing.map((account) => String(account.id)),
-          ...newAccounts.slice(0, availableSlots).map((account) => String(account.id)),
+          ...newAccounts.slice(0, slots).map((account) => String(account.id)),
         ]));
       })
       .catch((err) => setError(err.response?.data?.error || err.message || "Selection expired."))
       .finally(() => setLoading(false));
-  }, [availableSlots, pending]);
+  }, [pending]);
 
   const selectedNewCount = useMemo(
     () => accounts.filter((account) => selected.has(String(account.id)) && !account.alreadyConnected).length,
@@ -119,6 +133,11 @@ export default function SelectAccountsPage() {
               </button>
             </div>
             <div className="mt-4 grid gap-3">
+              {notice ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                  {notice}
+                </div>
+              ) : null}
               {accounts.map((account) => {
                 const checked = selected.has(String(account.id));
                 const alreadyConnected = Boolean(account.alreadyConnected);
@@ -143,6 +162,10 @@ export default function SelectAccountsPage() {
                     {alreadyConnected ? (
                       <span className="rounded-full border border-green-200 bg-white px-2 py-1 text-xs font-semibold text-green-700">
                         Already connected
+                      </span>
+                    ) : checked ? (
+                      <span className="rounded-full border border-black/10 bg-black px-2 py-1 text-xs font-semibold text-white">
+                        Selected
                       </span>
                     ) : null}
                     {checked ? <Check className="h-5 w-5" /> : null}
