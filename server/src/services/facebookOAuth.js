@@ -25,6 +25,21 @@ class FacebookOAuth {
       'http://localhost:5000/api/auth/facebook/callback';
   }
 
+  assertConfigured({ requireSecret = false } = {}) {
+    const missing = [];
+    if (!this.appId) missing.push('FACEBOOK_APP_ID');
+    if (requireSecret && !this.appSecret) missing.push('FACEBOOK_APP_SECRET');
+    if (!this.redirectUri) missing.push('FACEBOOK_REDIRECT_URI');
+    if (missing.length) {
+      throw new Error(`Facebook OAuth is not configured. Missing: ${missing.join(', ')}`);
+    }
+    try {
+      new URL(this.redirectUri);
+    } catch {
+      throw new Error('FACEBOOK_REDIRECT_URI must be an absolute URL that matches Meta App settings.');
+    }
+  }
+
   makeState(userId) {
     return base64urlEncode({
       userId,
@@ -35,6 +50,7 @@ class FacebookOAuth {
   }
 
   getAuthorizationUrl(state) {
+    this.assertConfigured();
     const params = new URLSearchParams({
       client_id: this.appId,
       redirect_uri: this.redirectUri,
@@ -86,6 +102,7 @@ class FacebookOAuth {
 
   async exchangeCodeForToken(code) {
     try {
+      this.assertConfigured({ requireSecret: true });
       console.log('\n🔵 FB: Starting token exchange...');
 
       const shortRes = await axios.get(

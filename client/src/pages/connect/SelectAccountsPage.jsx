@@ -16,6 +16,26 @@ export default function SelectAccountsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const connectedCount = useMemo(() => {
+    const targets = new Set();
+    Object.entries(connectedAccounts || {}).forEach(([key, value]) => {
+      if (key.endsWith("Accounts")) {
+        (Array.isArray(value) ? value : []).forEach((account) => {
+          targets.add(`${key}:${account.account_id || account.accountId || account.pageId || account.id}`);
+        });
+      } else if (
+        value?.connected &&
+        key !== "instagram" &&
+        !connectedAccounts?.[`${key}Accounts`]?.length
+      ) {
+        targets.add(`${key}:${value.account_id || value.accountId || value.page_id || value.pageId || key}`);
+      }
+    });
+    return targets.size;
+  }, [connectedAccounts]);
+  const accountLimit = user?.entitlements?.limits?.social_accounts || Infinity;
+  const availableSlots = Math.max(0, accountLimit - connectedCount);
+
   useEffect(() => {
     if (!pending) {
       setError("Missing selection token.");
@@ -27,25 +47,16 @@ export default function SelectAccountsPage() {
       .then((res) => {
         const rows = res.data.accounts || [];
         setAccounts(rows);
-        setSelected(new Set(rows.map((account) => String(account.id))));
+        setSelected(new Set(rows.slice(0, availableSlots).map((account) => String(account.id))));
       })
       .catch((err) => setError(err.response?.data?.error || err.message || "Selection expired."))
       .finally(() => setLoading(false));
-  }, [pending]);
+  }, [availableSlots, pending]);
 
   const allSelected = useMemo(
     () => accounts.length > 0 && selected.size === accounts.length,
     [accounts.length, selected.size],
   );
-  const connectedCount = useMemo(() => {
-    const keys = Object.keys(connectedAccounts || {}).filter((key) => key.endsWith("Accounts"));
-    const arrayCount = keys.reduce((sum, key) => sum + ((connectedAccounts?.[key] || []).length), 0);
-    const singleCount = Object.entries(connectedAccounts || {})
-      .filter(([key, value]) => !key.endsWith("Accounts") && key !== "instagram" && value?.connected)
-      .length;
-    return arrayCount + singleCount;
-  }, [connectedAccounts]);
-  const accountLimit = user?.entitlements?.limits?.social_accounts || Infinity;
   const exceedsLimit = connectedCount + selected.size > accountLimit;
 
   const toggle = (id) => {
@@ -96,8 +107,9 @@ export default function SelectAccountsPage() {
             <div className="mt-6 flex justify-end">
               <button
                 type="button"
-                onClick={() => setSelected(allSelected ? new Set() : new Set(accounts.map((a) => String(a.id))))}
+                onClick={() => setSelected(allSelected ? new Set() : new Set(accounts.slice(0, availableSlots).map((a) => String(a.id))))}
                 className="rounded-full border border-black/10 bg-white px-4 py-2 text-sm font-semibold"
+                disabled={availableSlots === 0}
               >
                 {allSelected ? "Deselect all" : "Select all"}
               </button>
@@ -137,6 +149,11 @@ export default function SelectAccountsPage() {
             {exceedsLimit ? (
               <p className="mt-3 text-sm text-red-700">
                 Your plan allows {accountLimit} connected account{accountLimit === 1 ? "" : "s"}. Deselect accounts or upgrade.
+              </p>
+            ) : null}
+            {availableSlots === 0 ? (
+              <p className="mt-3 text-sm text-red-700">
+                Your plan already has {connectedCount} connected account{connectedCount === 1 ? "" : "s"}. Disconnect one account or upgrade to connect Facebook.
               </p>
             ) : null}
           </>

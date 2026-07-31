@@ -423,7 +423,8 @@ export default function ConnectedPlatformsPanel({
           onProceed={() => {
             setShowFacebookModal(false);
             const token = localStorage.getItem("quickpost_token");
-            if (token) window.location.href = `/api/auth/facebook?token=${token}`;
+            const apiUrl = import.meta.env.VITE_API_URL || "";
+            if (token) window.location.href = `${apiUrl}/api/auth/facebook?token=${token}`;
           }}
         />
       )}
