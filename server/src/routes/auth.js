@@ -4,7 +4,6 @@ import crypto from "crypto";
 
 import googleOAuth from "../services/googleOAuth.js";
 import googleBusinessOAuth from "../services/googleBusinessOAuth.js";
-import instagramOAuth from "../services/instagramOAuth.js";
 import pinterestOAuth from "../services/pinterestOAuth.js";
 import facebookOAuth from "../services/facebookOAuth.js";
 import blueskyAuth from "../services/blueskyAuth.js";
@@ -374,43 +373,12 @@ router.get("/instagram", async (req, res) => {
 });
 
 router.get("/instagram/callback", async (req, res) => {
-  const { code, error, state } = req.query;
-
-  console.log("\n🔵 Instagram OAuth Callback Received");
-  console.log("Query params:", {
-    code: code ? "present" : "missing",
-    error,
-    state: state ? "present" : "missing",
-  });
-
-  if (error) return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied`);
-  if (!code || !state)
-    return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
-
-  const parsed = decodeState(state);
-  if (!parsed?.userId)
-    return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
-
-  try {
-    const tokenData = await instagramOAuth.exchangeCodeForToken(code);
-    await assertCanConnectTarget({
-      user: { userId: parsed.userId },
-      provider: "instagram",
-      accountId: tokenData.instagramBusinessId,
-    });
-    await instagramOAuth.storeTokens(parsed.userId, tokenData);
-    notifyAccountConnected(parsed.userId, "Instagram", tokenData.username);
-
-    res.redirect(`${CLIENT_URL}/dashboard?success=instagram_connected`);
-  } catch (err) {
-    console.error("❌ IG callback error:", err.message);
-    const message = encodeURIComponent(
-      err?.message || "Failed to connect Instagram account",
-    );
-    res.redirect(
-      `${CLIENT_URL}/dashboard?error=instagram_connection_failed&message=${message}`,
-    );
-  }
+  const message = encodeURIComponent(
+    "This legacy Instagram callback is disabled. Use Instagram Login for Business.",
+  );
+  return res.redirect(
+    `${CLIENT_URL}/dashboard?error=legacy_instagram_callback_disabled&message=${message}`,
+  );
 });
 
 /* ---------------- FACEBOOK ---------------- */
