@@ -255,6 +255,19 @@ function Sidebar() {
     }
     setShowFacebookModal(true);
   };
+  const canConnectNewPlatform = async (platformId) => {
+    const limit = user?.entitlements?.limits?.social_accounts ?? Infinity;
+    const platformAccounts = connectedAccounts?.[`${platformId}Accounts`] || [];
+    const alreadyConnected = Boolean(connectedAccounts?.[platformId]?.connected || platformAccounts.length);
+    if (alreadyConnected || countConnectedTargets(connectedAccounts) < limit) return true;
+
+    await alert(
+      "Upgrade Required",
+      `You have reached your limit of ${limit} social account${limit === 1 ? "" : "s"} on the ${user?.entitlements?.plan?.name || "Free"} plan. Please upgrade to connect more channels.`,
+      { intent: "warning" },
+    );
+    return false;
+  };
   const handleConnectThreads = () => {
     const token = localStorage.getItem("quickpost_token");
     if (!token) {
@@ -263,8 +276,11 @@ function Sidebar() {
       });
       return;
     }
-    const apiUrl = import.meta.env.VITE_API_URL || "";
-    window.location.href = `${apiUrl}/api/auth/threads?token=${token}`;
+    canConnectNewPlatform("threads").then((allowed) => {
+      if (!allowed) return;
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      window.location.href = `${apiUrl}/api/auth/threads?token=${token}`;
+    });
   };
   const handleConnectX = () => {
     const token = localStorage.getItem("quickpost_token");
@@ -274,9 +290,12 @@ function Sidebar() {
       });
       return;
     }
-    const apiUrl = import.meta.env.VITE_API_URL || "";
-    setConnectingPlatform("x");
-    window.location.href = `${apiUrl}/api/auth/x?token=${token}`;
+    canConnectNewPlatform("x").then((allowed) => {
+      if (!allowed) return;
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      setConnectingPlatform("x");
+      window.location.href = `${apiUrl}/api/auth/x?token=${token}`;
+    });
   };
   const handleConnectReddit = () => {
     const token = localStorage.getItem("quickpost_token");
