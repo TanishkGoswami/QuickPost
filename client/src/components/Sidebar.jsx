@@ -1013,7 +1013,7 @@ function Sidebar() {
 
                   // Check if any target in this platform is selected
                   const isAnySelected = targets.some((target) => {
-                    const dashboardPlatform = target.providerId || target.id;
+                    const dashboardPlatform = target.id;
                     return (
                       (selectedDashboardPlatform === platformId ||
                         selectedDashboardPlatform === dashboardPlatform) &&
@@ -1111,7 +1111,7 @@ function Sidebar() {
                             className="qp-sidebar-connected-children"
                           >
                             {targets.map((target) => {
-                              const dashboardPlatform = target.providerId || target.id;
+                              const dashboardPlatform = target.id;
                               const isSelected =
                                 selectedDashboardPlatform === dashboardPlatform &&
                                 location.pathname.startsWith("/dashboard/analytics");

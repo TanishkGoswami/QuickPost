@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import Masonry from "react-masonry-css";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -26,6 +26,7 @@ import {
   X,
   Lock,
   ShieldCheck,
+  Link2Off,
 } from "lucide-react";
 import apiClient from "../utils/apiClient";
 import ComposerModal from "./ComposerModal";
@@ -1483,6 +1484,8 @@ function Dashboard() {
   const [viewMode, setViewMode] = useState("list");
   const [selectedPost, setSelectedPost] = useState(null);
   const [queueCount, setQueueCount] = useState(0);
+  const [disconnectConfirmOpen, setDisconnectConfirmOpen] = useState(false);
+  const [isDisconnectingAccount, setIsDisconnectingAccount] = useState(false);
 
   const BATCH_SIZE = 20;
   const [displayCount, setDisplayCount] = useState(BATCH_SIZE);
@@ -1646,6 +1649,29 @@ function Dashboard() {
   const toggleExpand = (id) =>
     setExpandedId((prev) => (prev === id ? null : id));
 
+  const handleDisconnectSelectedAccount = async () => {
+    if (!selectedAccountInfo) return;
+    setIsDisconnectingAccount(true);
+    try {
+      const { provider, accountId } = selectedAccountInfo;
+      const response = await apiClient.delete(
+        `/api/auth/disconnect/${provider}?accountId=${accountId}`
+      );
+      if (response.data.success) {
+        await refreshAccounts();
+        setDisconnectConfirmOpen(false);
+        navigate("/dashboard");
+      } else {
+        alert(`Failed to disconnect: ${response.data.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Failed to disconnect account:", error);
+      alert("Failed to disconnect account. Please try again.");
+    } finally {
+      setIsDisconnectingAccount(false);
+    }
+  };
+
   const selectedPlatform = searchParams.get("platform") || "all";
 
   const filtered = useMemo(() => broadcasts.filter((b) => {
@@ -1664,6 +1690,67 @@ function Dashboard() {
     () => getPlatformName(selectedPlatform, connectedAccounts),
     [selectedPlatform, connectedAccounts],
   );
+
+  const selectedAccountInfo = useMemo(() => {
+    if (selectedPlatform === "all") return null;
+
+    const multiAccountProviders = [
+      "facebook",
+      "youtube",
+      "linkedin",
+      "threads",
+      "mastodon",
+      "bluesky",
+      "reddit",
+      "x",
+      "pinterest",
+      "googleBusiness",
+    ];
+
+    const connectedRows = [
+      ...(connectedAccounts?.instagramAccounts || []).map((account) => ({
+        id: `instagram:${account.id}`,
+        provider: "instagram",
+        accountId: account.id,
+        label: "Instagram",
+        username: account.username,
+        profilePicture: account.profilePicture,
+      })),
+      ...multiAccountProviders.flatMap((provider) =>
+        (connectedAccounts?.[`${provider}Accounts`] || []).map((account) => ({
+          id: `${provider}:${account.id}`,
+          provider,
+          accountId: account.id,
+          label: provider.charAt(0).toUpperCase() + provider.slice(1),
+          username: account.username || account.name || account.channelTitle || account.title,
+          profilePicture: account.profilePicture || account.avatarUrl || account.avatar,
+        })),
+      ),
+      ...Object.entries(connectedAccounts || {})
+        .filter(([id, data]) =>
+          id !== "instagram" &&
+          id !== "instagramAccounts" &&
+          !id.endsWith("Accounts") &&
+          !multiAccountProviders.includes(id) &&
+          data?.connected
+        )
+        .map(([id, data]) => ({
+          id,
+          provider: id,
+          accountId: null,
+          label: id.charAt(0).toUpperCase() + id.slice(1),
+          username: data.username || data.name || data.title,
+          profilePicture: data.profilePicture || data.avatarUrl || data.avatar,
+        })),
+    ];
+
+    let match = connectedRows.find(r => r.id === selectedPlatform);
+    if (!match) {
+      const baseId = selectedPlatform.split(":")[0];
+      match = connectedRows.find(r => r.provider === baseId);
+    }
+    return match;
+  }, [selectedPlatform, connectedAccounts]);
 
   const displayedItems = useMemo(
     () => filtered.slice(0, displayCount),
@@ -1856,51 +1943,221 @@ function Dashboard() {
             </h1>
 
           </div>
+        </div>
+        <AnimatePresence>
           {selectedPlatform !== "all" && (
-            <div
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="analytics-platform-hero"
               style={{
-                padding: "4px 10px",
-                background: "var(--canvas)",
-              borderRadius: css.r_btn,
+                minHeight: 0,
                 display: "flex",
                 alignItems: "center",
-                gap: 6,
-                border: "1px solid rgba(20,20,19,0.08)",
+                justifyContent: "center",
+                gap: "18px",
+                flexWrap: "wrap",
               }}
             >
-              <span style={{ fontSize: 11, fontWeight: 700, color: css.ink }}>
-                {selectedPlatformName}
-              </span>
-              <button
-                onClick={() => navigate("/dashboard")}
+              <div
                 style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 0,
+                  background: "rgba(255, 255, 255, 0.45)",
+                  backdropFilter: "blur(20px) saturate(140%)",
+                  WebkitBackdropFilter: "blur(20px) saturate(140%)",
+                  borderRadius: "16px",
+                  border: "1px solid rgba(255, 255, 255, 0.5)",
+                  padding: "10px 40px 10px 16px",
                   display: "flex",
+                  alignItems: "center",
+                  boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.6)",
+                  width: "280px",
+                  position: "relative",
+                  overflow: "hidden",
                 }}
               >
-                <X size={12} />
-              </button>
-            </div>
+                <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
+                  <AnimatePresence mode="popLayout">
+                    <motion.div
+                      key={selectedPlatform}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        width: "100%",
+                      }}
+                    >
+                      {/* Profile Image or platform logo */}
+                      <div style={{ position: "relative", flexShrink: 0 }}>
+                        {selectedAccountInfo?.profilePicture ? (
+                          <div style={{ position: "relative", width: 40, height: 40 }}>
+                            <img
+                              src={selectedAccountInfo.profilePicture}
+                              alt={selectedAccountInfo.username || "Profile"}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                                border: "2px solid #ffffff",
+                                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                              }}
+                            />
+                            <div
+                              style={{
+                                position: "absolute",
+                                bottom: -2,
+                                right: -2,
+                                background: "#ffffff",
+                                borderRadius: "50%",
+                                padding: 2,
+                                boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              {getPlatformIcon(selectedPlatform, 12)}
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: "10px",
+                              background: "rgba(255, 255, 255, 0.75)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                              overflow: "hidden",
+                            }}
+                          >
+                            {PLATFORM_HERO_LOGOS[selectedPlatform.split(":")[0]] ? (
+                              <img
+                                src={PLATFORM_HERO_LOGOS[selectedPlatform.split(":")[0]]}
+                                alt={selectedPlatformName}
+                                style={{
+                                  width: 28,
+                                  height: 28,
+                                  objectFit: "contain",
+                                }}
+                              />
+                            ) : (
+                              getPlatformIcon(selectedPlatform, 20)
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Account details */}
+                      <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
+                        <span
+                          style={{
+                            fontSize: "9px",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.06em",
+                            color: css.slate,
+                            fontWeight: 700,
+                            marginBottom: 1,
+                          }}
+                        >
+                          {selectedAccountInfo?.label || selectedPlatformName.split(" ")[0]} Active
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "13px",
+                            fontWeight: 750,
+                            color: css.ink,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            lineHeight: 1.25,
+                          }}
+                        >
+                          {selectedAccountInfo?.username ? `@${selectedAccountInfo.username}` : selectedPlatformName}
+                        </span>
+                      </div>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+
+                {/* Red Disconnect button */}
+                <button
+                  onClick={() => setDisconnectConfirmOpen(true)}
+                  style={{
+                    position: "absolute",
+                    right: 14,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "rgba(239, 68, 68, 0.08)",
+                    border: "none",
+                    borderRadius: "50%",
+                    width: 24,
+                    height: 24,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    color: "#ef4444",
+                    padding: 0,
+                    transition: "all 0.2s",
+                    zIndex: 10,
+                  }}
+                  title="Disconnect Account"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)";
+                    e.currentTarget.style.transform = "translateY(-50%) scale(1.05)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "rgba(239, 68, 68, 0.08)";
+                    e.currentTarget.style.transform = "translateY(-50%) scale(1)";
+                  }}
+                >
+                  <Link2Off size={12} />
+                </button>
+              </div>
+
+              {/* Voxel platform logo container */}
+              <div
+                style={{
+                  flexShrink: 0,
+                  position: "relative",
+                  width: "clamp(128px, 14vw, 184px)",
+                  height: "clamp(92px, 10vw, 128px)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <AnimatePresence mode="popLayout">
+                  {PLATFORM_HERO_LOGOS[selectedPlatform.split(":")[0]] && (
+                    <motion.img
+                      key={selectedPlatform.split(":")[0]}
+                      src={PLATFORM_HERO_LOGOS[selectedPlatform.split(":")[0]]}
+                      alt={selectedPlatformName}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1], delay: 0.04 }}
+                      style={{
+                        position: "absolute",
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "contain",
+                      }}
+                    />
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
           )}
-        </div>
-        {selectedPlatform !== "all" && (
-          <div
-            className="analytics-platform-hero"
-            style={{
-              flex: "0 1 280px",
-              minHeight: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              overflow: "hidden",
-            }}
-          >
-            <PlatformHeroLogo platformId={selectedPlatform} label={selectedPlatformName} />
-          </div>
-        )}
+        </AnimatePresence>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button
             onClick={() => setComposerOpen(true)}
@@ -2449,6 +2706,260 @@ function Dashboard() {
               }
             }}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Disconnect Confirmation Modal */}
+      <AnimatePresence>
+        {disconnectConfirmOpen && selectedAccountInfo && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 9999,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 20,
+            }}
+          >
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !isDisconnectingAccount && setDisconnectConfirmOpen(false)}
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "rgba(20, 20, 19, 0.4)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+              }}
+            />
+
+            {/* Modal Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.98 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                position: "relative",
+                background: "#ffffff",
+                borderRadius: "24px",
+                padding: "28px 28px 24px",
+                width: "100%",
+                maxWidth: "420px",
+                boxShadow: "0 20px 50px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.8)",
+                border: "1px solid rgba(20, 20, 19, 0.08)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "20px",
+                zIndex: 10,
+              }}
+            >
+              <div>
+                <h3
+                  style={{
+                    fontSize: "20px",
+                    fontWeight: 750,
+                    color: css.ink,
+                    margin: "0 0 8px",
+                    letterSpacing: "-0.015em",
+                  }}
+                >
+                  Disconnect Account
+                </h3>
+                <p
+                  style={{
+                    fontSize: "14px",
+                    color: css.slate,
+                    lineHeight: 1.5,
+                    margin: 0,
+                  }}
+                >
+                  Are you sure you want to disconnect this account? This will stop all scheduled posts and automated replies for this page.
+                </p>
+              </div>
+
+              {/* Account Card Preview inside modal */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  padding: "12px",
+                  background: css.canvas,
+                  borderRadius: "16px",
+                  border: `1px solid ${css.hairline}`,
+                }}
+              >
+                <div
+                  style={{
+                    background: "#ffffff",
+                    borderRadius: "16px",
+                    border: "1px solid rgba(255, 255, 255, 0.5)",
+                    padding: "10px 16px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.02), inset 0 1px 0 rgba(255, 255, 255, 0.6)",
+                    width: "280px",
+                  }}
+                >
+                  <div style={{ position: "relative", flexShrink: 0 }}>
+                    {selectedAccountInfo.profilePicture ? (
+                      <div style={{ position: "relative", width: 40, height: 40 }}>
+                        <img
+                          src={selectedAccountInfo.profilePicture}
+                          alt={selectedAccountInfo.username || "Profile"}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            borderRadius: "50%",
+                            objectFit: "cover",
+                            border: "2px solid #ffffff",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                          }}
+                        />
+                        <div
+                          style={{
+                            position: "absolute",
+                            bottom: -2,
+                            right: -2,
+                            background: "#ffffff",
+                            borderRadius: "50%",
+                            padding: 2,
+                            boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          {getPlatformIcon(selectedPlatform, 12)}
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: "10px",
+                          background: "rgba(255, 255, 255, 0.75)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {PLATFORM_HERO_LOGOS[selectedPlatform.split(":")[0]] ? (
+                          <img
+                            src={PLATFORM_HERO_LOGOS[selectedPlatform.split(":")[0]]}
+                            alt={selectedPlatformName}
+                            style={{
+                              width: 28,
+                              height: 28,
+                              objectFit: "contain",
+                            }}
+                          />
+                        ) : (
+                          getPlatformIcon(selectedPlatform, 20)
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
+                    <span
+                      style={{
+                        fontSize: "9px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.06em",
+                        color: css.slate,
+                        fontWeight: 700,
+                        marginBottom: 1,
+                      }}
+                    >
+                      {selectedAccountInfo.label || selectedPlatformName.split(" ")[0]} Active
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "13px",
+                        fontWeight: 750,
+                        color: css.ink,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        lineHeight: 1.25,
+                      }}
+                    >
+                      {selectedAccountInfo.username ? `@${selectedAccountInfo.username}` : selectedPlatformName}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+                <button
+                  type="button"
+                  disabled={isDisconnectingAccount}
+                  onClick={() => setDisconnectConfirmOpen(false)}
+                  style={{
+                    flex: 1,
+                    padding: "12px 18px",
+                    borderRadius: "12px",
+                    border: `1px solid ${css.hairline}`,
+                    background: "#ffffff",
+                    color: css.slate,
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#fcfbfa";
+                    e.currentTarget.style.color = css.ink;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#ffffff";
+                    e.currentTarget.style.color = css.slate;
+                  }}
+                >
+                  Keep Connected
+                </button>
+                <button
+                  type="button"
+                  disabled={isDisconnectingAccount}
+                  onClick={handleDisconnectSelectedAccount}
+                  style={{
+                    flex: 1,
+                    padding: "12px 18px",
+                    borderRadius: "12px",
+                    border: "none",
+                    background: "#ef4444",
+                    color: "#ffffff",
+                    fontSize: "14px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    transition: "all 0.15s",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "#dc2626";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "#ef4444";
+                  }}
+                >
+                  {isDisconnectingAccount ? "Disconnecting..." : "Disconnect"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
