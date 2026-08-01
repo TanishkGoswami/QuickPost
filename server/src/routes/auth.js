@@ -119,7 +119,17 @@ async function getConnectedTargetCount(userId) {
 async function assertCanConnectTarget({ user, provider, accountId }) {
   const userId = user.userId;
   const entitlementUserId = user.authUserId || userId;
-  const entitlements = await getEntitlements(entitlementUserId, user.email, user.token);
+  let email = user.email;
+  if (!email) {
+    const { data, error } = await supabase
+      .from("users")
+      .select("email")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error) throw error;
+    email = data?.email || null;
+  }
+  const entitlements = await getEntitlements(entitlementUserId, email, user.token);
   const limit = entitlements.limits.social_accounts;
 
   if (!Number.isFinite(limit)) return;
@@ -786,7 +796,10 @@ router.get("/threads", async (req, res) => {
       );
     }
 
-    const state = threadsOAuth.makeState(userId);
+    const state = threadsOAuth.makeState({
+      userId,
+      authUserId: jwt.decode(String(token))?.sub,
+    });
     const authUrl = threadsOAuth.getAuthorizationUrl(state);
     return res.redirect(authUrl);
   } catch (error) {
@@ -809,7 +822,7 @@ router.get("/threads/callback", async (req, res) => {
   try {
     const tokenData = await threadsOAuth.exchangeCodeForToken(code);
     await assertCanConnectTarget({
-      user: { userId: parsed.userId },
+      user: { userId: parsed.userId, authUserId: parsed.authUserId },
       provider: "threads",
       accountId: tokenData.threadsUserId,
     });
