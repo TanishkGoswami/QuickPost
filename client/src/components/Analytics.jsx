@@ -223,7 +223,7 @@ function buildPlatforms(post) {
   if (instagramChannels.some(c => c.startsWith('instagram:'))) {
     instagramChannels = instagramChannels.filter(c => c !== 'instagram');
   }
-  
+
   if (instagramChannels.length === 0 && (post.instagram_success || post.instagram_error)) {
     instagramChannels = ['instagram'];
   }
@@ -847,17 +847,17 @@ function PinterestCard({ post, onOpen, formatDate }) {
                     background: post.status === 'processing'
                       ? "#eab308"
                       : isScheduled
-                      ? "#f97316"
-                      : allSuccess
-                        ? "#22c55e"
-                        : "#ef4444",
+                        ? "#f97316"
+                        : allSuccess
+                          ? "#22c55e"
+                          : "#ef4444",
                     boxShadow: post.status === 'processing'
                       ? "0 0 6px rgba(234,179,8,0.7)"
                       : isScheduled
-                      ? "0 0 6px rgba(249,115,22,0.7)"
-                      : allSuccess
-                        ? "0 0 6px rgba(34,197,94,0.7)"
-                        : "0 0 6px rgba(239,68,68,0.7)",
+                        ? "0 0 6px rgba(249,115,22,0.7)"
+                        : allSuccess
+                          ? "0 0 6px rgba(34,197,94,0.7)"
+                          : "0 0 6px rgba(239,68,68,0.7)",
                   }}
                 />
                 <span
@@ -1520,19 +1520,19 @@ function Dashboard() {
     const params = new URLSearchParams(window.location.search);
     const oauthError = params.get("error");
     const oauthMessage = params.get("message") || params.get("details");
-    
+
     const verifyPayment = async () => {
       const paymentLinkStatus = params.get("razorpay_payment_link_status");
       const paymentLinkId = params.get("razorpay_payment_link_id");
-      
+
       if (params.get("payment") === "success" && paymentLinkId) {
         try {
           const { data, error } = await supabase.functions.invoke('verify-subscription', {
             body: { razorpayPaymentLinkId: paymentLinkId }
           });
-          
+
           if (error) throw error;
-          
+
           if (data.success) {
             if (data.status === "paid") {
               await supabase.auth.refreshSession();
@@ -1568,11 +1568,11 @@ function Dashboard() {
       refreshAccounts();
       window.history.replaceState({}, "", "/dashboard");
     }
-    
+
     apiClient
       .get("/api/broadcasts/stats")
       .then((r) => setQueueCount(r.data.pending || 0))
-      .catch(() => {});
+      .catch(() => { });
   }, [refreshAccounts]);
 
   useEffect(() => {
@@ -1908,7 +1908,7 @@ function Dashboard() {
         style={{
           background: css.lifted,
           borderBottom: `1px solid ${css.hairline}`,
-          padding: "clamp(24px, 4vw, 40px) clamp(18px, 3vw, 32px)",
+          padding: "clamp(22px, 2.5vw, 26px) clamp(18px, 3vw, 32px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -2128,8 +2128,8 @@ function Dashboard() {
                 style={{
                   flexShrink: 0,
                   position: "relative",
-                  width: "clamp(128px, 14vw, 184px)",
-                  height: "clamp(92px, 10vw, 128px)",
+                  width: "clamp(100px, 12vw, 148px)",
+                  height: "clamp(70px, 8.5vw, 104px)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -2292,7 +2292,7 @@ function Dashboard() {
                 style={{
                   width: 1,
                   height: 16,
-                background: css.hairline,
+                  background: css.hairline,
                   flexShrink: 0,
                 }}
               />
@@ -2414,8 +2414,8 @@ function Dashboard() {
             ))}
           </Masonry>
         ) : (activeTab === "sent" ||
-            activeTab === "queue" ||
-            activeTab === "history") &&
+          activeTab === "queue" ||
+          activeTab === "history") &&
           filtered.length > 0 ? (
           <>
             {viewMode === "grid" ? (
@@ -2499,7 +2499,7 @@ function Dashboard() {
             {/* ── Infinite scroll sentinel + skeletons ── */}
             <div ref={loadMoreRef} style={{ marginTop: 8 }} />
 
-            
+
             {isLoadingMore && viewMode === "list" && (
               <div
                 style={{
@@ -2625,7 +2625,7 @@ function Dashboard() {
             </div>
             <h3
               style={{
-              fontSize: 28,
+                fontSize: 28,
                 fontWeight: 500,
                 color: css.ink,
                 margin: "0 0 10px",
