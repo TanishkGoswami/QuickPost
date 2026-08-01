@@ -164,6 +164,13 @@ export function AutoDMProvider({ children }) {
     return res.data.analytics;
   }, []);
 
+  const fetchAutomationComments = useCallback(async (automationId, limit = 100) => {
+    const res = await apiClient.get(`/api/autodm/automations/${automationId}/comments`, {
+      params: { limit },
+    });
+    return res.data.comments || [];
+  }, []);
+
   const syncInsights = useCallback(async (automationId) => {
     const res = await apiClient.post(`/api/autodm/automations/${automationId}/sync-insights`);
     return res.data.automation;
@@ -247,6 +254,7 @@ export function AutoDMProvider({ children }) {
         deleteAutomation,
         getAutomation,
         fetchAnalytics,
+        fetchAutomationComments,
         syncInsights,
         fetchMessagesForContact,
         fetchDailyMetrics,

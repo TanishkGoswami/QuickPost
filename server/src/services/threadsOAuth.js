@@ -29,9 +29,11 @@ class ThreadsOAuth {
       'http://localhost:5000/api/auth/threads/callback').trim();
   }
 
-  makeState(userId) {
+  makeState(user) {
+    const payload = typeof user === 'string' ? { userId: user } : user;
     return base64urlEncode({
-      userId,
+      userId: payload.userId,
+      authUserId: payload.authUserId,
       provider: 'threads',
       nonce: crypto.randomUUID(),
       ts: Date.now()

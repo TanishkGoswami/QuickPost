@@ -76,7 +76,9 @@ const PageLoader = () => (
 );
 
 function AppContent() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) return <PageLoader />;
 
   return (
     <Routes>

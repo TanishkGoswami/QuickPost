@@ -153,13 +153,30 @@ export async function importConnectedInstagram(user) {
     profile.picture?.data?.url ||
     profile.picture ||
     null;
-  // Preserve existing webhook_status and token if account already exists
+  // Preserve existing webhook_status and token if account already exists.
   const { data: existingAccount } = await supabase
     .from('instagram_accounts')
-    .select('webhook_status, access_token_encrypted')
+    .select('id, webhook_status, webhook_instagram_user_id, access_token_encrypted')
     .eq('user_id', user.userId)
     .eq('instagram_business_account_id', socialToken.instagram_business_id)
     .maybeSingle();
+
+  const { data: duplicateAccount, error: duplicateError } = await supabase
+    .from('instagram_accounts')
+    .select('id, user_id, instagram_username')
+    .eq('instagram_business_account_id', socialToken.instagram_business_id)
+    .eq('is_connected', true)
+    .neq('user_id', user.userId)
+    .limit(1)
+    .maybeSingle();
+  if (duplicateError) throw duplicateError;
+  if (duplicateAccount) {
+    const err = new Error(
+      `This Instagram account is already connected to another workspace. Disconnect @${duplicateAccount.instagram_username || 'this account'} there before importing it here.`
+    );
+    err.status = 409;
+    throw err;
+  }
 
   let tokenEncrypted = existingAccount?.access_token_encrypted;
   if (tokenEncrypted) {
@@ -187,6 +204,7 @@ export async function importConnectedInstagram(user) {
     token_expires_at: socialToken.token_expiry || null,
     permissions,
     webhook_status: existingAccount?.webhook_status || 'configure_in_meta',
+    webhook_instagram_user_id: existingAccount?.webhook_instagram_user_id || null,
     token_status: 'active',
     is_connected: true,
     updated_at: new Date().toISOString(),
@@ -233,6 +251,23 @@ async function getOwnedAccount(userId, accountId) {
 
 async function getPageTokenForAccount(account) {
   return decryptToken(account.access_token_encrypted).pageAccessToken;
+}
+
+async function clearAndAssignWebhookRecipient(account, recipientId) {
+  await supabase
+    .from('instagram_accounts')
+    .update({ webhook_instagram_user_id: null, updated_at: new Date().toISOString() })
+    .eq('webhook_instagram_user_id', recipientId)
+    .neq('id', account.id);
+
+  const { data, error } = await supabase
+    .from('instagram_accounts')
+    .update({ webhook_instagram_user_id: recipientId, updated_at: new Date().toISOString() })
+    .eq('id', account.id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
 }
 
 export async function disconnectAccount(userId, accountId) {
@@ -714,20 +749,7 @@ async function findAccountByRecipient(recipientId) {
             console.log(
               `[INSTAPILOT] Self-healing mapped webhook recipient ${recipientId} to account ${account.instagram_username}`
             );
-            // First clear this webhook ID on other accounts to avoid unique constraint violations
-            await supabase
-              .from('instagram_accounts')
-              .update({ webhook_instagram_user_id: null })
-              .eq('webhook_instagram_user_id', recipientId);
-
-            // Update matched account
-            await supabase
-              .from('instagram_accounts')
-              .update({ webhook_instagram_user_id: recipientId, updated_at: new Date().toISOString() })
-              .eq('id', account.id);
-
-            account.webhook_instagram_user_id = recipientId;
-            return account;
+            return clearAndAssignWebhookRecipient(account, recipientId);
           }
         }
       } catch (e) {
@@ -795,6 +817,36 @@ async function upsertConversation(account, bot, senderId) {
   return data;
 }
 
+async function findExistingInboundMessage({ accountId, senderId, recipientId, text, metaMessageId }) {
+  if (metaMessageId) {
+    const { data, error } = await supabase
+      .from('instagram_messages')
+      .select('id')
+      .eq('instagram_account_id', accountId)
+      .eq('direction', 'inbound')
+      .eq('raw_payload->message->>mid', metaMessageId)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (data) return data;
+  }
+
+  const recentWindow = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from('instagram_messages')
+    .select('id')
+    .eq('instagram_account_id', accountId)
+    .eq('direction', 'inbound')
+    .eq('sender_id', senderId)
+    .eq('recipient_id', recipientId)
+    .eq('message_text', text)
+    .gte('created_at', recentWindow)
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
 async function fetchInstagramScopedUserProfile(account, senderId) {
   const accessToken = await getPageTokenForAccount(account);
   const { data } = await axios.get(`https://graph.instagram.com/${GRAPH_VERSION}/${senderId}`, {
@@ -804,6 +856,59 @@ async function fetchInstagramScopedUserProfile(account, senderId) {
     },
   });
   return data || null;
+}
+
+function conversationNeedsProfileRefresh(conversation) {
+  return (
+    !conversation.instagram_username ||
+    !conversation.profile_pic_url ||
+    typeof conversation.is_user_follow_business !== 'boolean' ||
+    typeof conversation.is_business_follow_user !== 'boolean'
+  );
+}
+
+async function refreshConversationProfile(conversation) {
+  if (!conversationNeedsProfileRefresh(conversation)) return conversation;
+
+  try {
+    const account = await getOwnedAccount(conversation.user_id, conversation.instagram_account_id);
+    const profile = await fetchInstagramScopedUserProfile(account, conversation.instagram_user_id);
+    if (!profile) return conversation;
+
+    const updates = {
+      instagram_username: profile.username || conversation.instagram_username || null,
+      instagram_name: profile.name || conversation.instagram_name || null,
+      profile_pic_url: profile.profile_pic || conversation.profile_pic_url || null,
+      follower_count: Number.isFinite(profile.follower_count)
+        ? profile.follower_count
+        : conversation.follower_count || null,
+      is_user_follow_business:
+        typeof profile.is_user_follow_business === 'boolean'
+          ? profile.is_user_follow_business
+          : conversation.is_user_follow_business,
+      is_business_follow_user:
+        typeof profile.is_business_follow_user === 'boolean'
+          ? profile.is_business_follow_user
+          : conversation.is_business_follow_user,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from('instagram_conversations')
+      .update(updates)
+      .eq('id', conversation.id)
+      .eq('user_id', conversation.user_id)
+      .select('*, instagram_bots(bot_name), instagram_messages(message_text,direction,created_at), instagram_leads(*)')
+      .single();
+    if (error) throw error;
+    return data || { ...conversation, ...updates };
+  } catch (error) {
+    console.warn(
+      `[INSTAPILOT] Could not refresh profile for conversation ${conversation.id}:`,
+      error.response?.data || error.message
+    );
+    return conversation;
+  }
 }
 
 export async function processInstagramWebhook(payload) {
@@ -826,6 +931,18 @@ async function handleInboundMessage({ senderId, recipientId, messaging }) {
   const bot = await findActiveBotForAccount(account.id);
   const conversation = await upsertConversation(account, bot, senderId);
   const text = messaging.message.text;
+  const metaMessageId = messaging.message.mid || null;
+
+  const existingInbound = await findExistingInboundMessage({
+    accountId: account.id,
+    senderId,
+    recipientId,
+    text,
+    metaMessageId,
+  });
+  if (existingInbound) {
+    return { skipped: true, reason: 'duplicate_inbound_message', messageId: existingInbound.id };
+  }
 
   const { error: inboundError } = await supabase.from('instagram_messages').insert({
     user_id: account.user_id,
@@ -974,17 +1091,20 @@ export async function listConversations(userId) {
     .order('last_message_at', { ascending: false })
     .limit(50);
   if (error) throw error;
-  return data || [];
+  return Promise.all((data || []).map(refreshConversationProfile));
 }
 
 export async function getConversation(userId, conversationId) {
-  const { data: conversation, error } = await supabase
+  let { data: conversation, error } = await supabase
     .from('instagram_conversations')
     .select('*, instagram_leads(*)')
     .eq('user_id', userId)
     .eq('id', conversationId)
     .maybeSingle();
   if (error) throw error;
+  if (conversation) {
+    conversation = await refreshConversationProfile(conversation);
+  }
   const { data: messages, error: messagesError } = await supabase
     .from('instagram_messages')
     .select('*')

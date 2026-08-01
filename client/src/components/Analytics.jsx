@@ -64,6 +64,16 @@ const PLATFORM_COLORS = {
   "google-business": "#4285F4",
 };
 
+const PLATFORM_HERO_LOGOS = {
+  instagram: "/assets/voxel-instagram-logo.png",
+  facebook: "/assets/voxel-facebook-logo.png",
+  linkedin: "/assets/voxel-linkedin-logo.png",
+  youtube: "/assets/voxel-youtube-logo.png",
+  threads: "/assets/voxel-thread-logo.png",
+  bluesky: "/assets/voxel-bludesky-logo.png",
+  mastodon: "/assets/voxel-mastdon-logo.png",
+};
+
 const DASHBOARD_MASONRY_COLS = {
   default: 4,
   1500: 4,
@@ -79,8 +89,8 @@ const SKELETON_HEIGHTS = [
 const LOAD_MORE_SKELETON_HEIGHTS = [260, 190, 315, 225, 285, 205, 335, 240];
 
 /* ── Platform helpers ── */
-function getPlatformIcon(id) {
-  const s = { width: 14, height: 14, objectFit: "contain" };
+function getPlatformIcon(id, size = 14) {
+  const s = { width: size, height: size, objectFit: "contain", display: "block" };
   const baseId = id.split(':')[0];
   switch (baseId) {
     case "facebook":
@@ -135,6 +145,56 @@ function getPlatformIcon(id) {
     default:
       return <Share2 size={14} />;
   }
+}
+
+function getPlatformName(id, connectedAccounts) {
+  const baseId = id.split(":")[0];
+  if (baseId === "instagram") {
+    if (id.includes(":")) {
+      const igId = id.split(":")[1];
+      const acc = connectedAccounts?.instagramAccounts?.find((a) => a.id === igId);
+      return acc?.username ? `Instagram (@${acc.username})` : "Instagram Account";
+    }
+    return "Instagram";
+  }
+  if (baseId === "google-business") return "Google Business";
+  if (baseId === "x") return "X";
+  return baseId.charAt(0).toUpperCase() + baseId.slice(1);
+}
+
+function PlatformHeroLogo({ platformId, label }) {
+  const baseId = platformId.split(":")[0];
+  const logo = PLATFORM_HERO_LOGOS[baseId];
+
+  if (logo) {
+    return (
+      <img
+        src={logo}
+        alt={`${label} logo`}
+        style={{
+          width: "clamp(128px, 14vw, 184px)",
+          height: "auto",
+          maxHeight: "clamp(92px, 10vw, 128px)",
+          objectFit: "contain",
+          display: "block",
+        }}
+      />
+    );
+  }
+
+  return (
+    <div
+      aria-label={`${label} logo`}
+      style={{
+        width: "clamp(96px, 10vw, 132px)",
+        height: "clamp(96px, 10vw, 132px)",
+        display: "grid",
+        placeItems: "center",
+      }}
+    >
+      {getPlatformIcon(baseId, 86)}
+    </div>
+  );
 }
 
 function getPostPreviewRatio(post) {
@@ -421,7 +481,7 @@ function PlatformBadge({ platform }) {
         transition: "all 0.2s",
       }}
     >
-      {getPlatformIcon(platform.id)}
+      {getPlatformIcon(platform.id, 18)}
       <span style={{ opacity: 0.8 }}>{platform.name}</span>
       <div
         style={{
@@ -755,7 +815,7 @@ function PinterestCard({ post, onOpen, formatDate }) {
                       <img
                         src={`/icons/${ICON_MAP[p.id.split(':')[0]]}`}
                         alt={p.name}
-                        style={{ width: 13, height: 13, objectFit: "contain" }}
+                        style={{ width: 19, height: 19, objectFit: "contain", display: "block" }}
                       />
                     ) : (
                       <Share2 size={9} style={{ color: "#fff" }} />
@@ -1066,14 +1126,14 @@ function ListRow({ post, expanded, onToggle, connectedAccounts }) {
                 width: 34,
                 height: 34,
                 borderRadius: 8,
-                background: "#f3eee8",
-                border: `1px solid ${css.hairline}`,
+                background: "transparent",
+                border: 0,
                 display: "grid",
                 placeItems: "center",
                 flexShrink: 0,
               }}
             >
-              {primaryPlatform ? getPlatformIcon(primaryPlatform.id) : <Share2 size={14} />}
+              {primaryPlatform ? getPlatformIcon(primaryPlatform.id, 30) : <Share2 size={30} />}
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ fontSize: 13, fontWeight: 750, color: css.ink }}>
@@ -1600,6 +1660,10 @@ function Dashboard() {
     });
     return matchesSearch && matchesPlatform;
   }), [broadcasts, searchTerm, selectedPlatform]);
+  const selectedPlatformName = useMemo(
+    () => getPlatformName(selectedPlatform, connectedAccounts),
+    [selectedPlatform, connectedAccounts],
+  );
 
   const displayedItems = useMemo(
     () => filtered.slice(0, displayCount),
@@ -1722,6 +1786,12 @@ function Dashboard() {
           .timeline-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
         }
         @media (max-width: 620px) {
+          .analytics-platform-hero {
+            order: 3;
+            width: 100%;
+            justify-content: flex-start !important;
+            min-height: 0 !important;
+          }
           .timeline-group {
             display: block;
             margin-bottom: 18px;
@@ -1799,19 +1869,7 @@ function Dashboard() {
               }}
             >
               <span style={{ fontSize: 11, fontWeight: 700, color: css.ink }}>
-                {(() => {
-                  if (selectedPlatform.startsWith("instagram:")) {
-                    const igId = selectedPlatform.split(":")[1];
-                    const acc = connectedAccounts?.instagramAccounts?.find((a) => a.id === igId);
-                    if (acc && acc.username) return `Instagram (@${acc.username})`;
-                    return "Instagram Account";
-                  }
-                  if (selectedPlatform === "instagram") return "Instagram";
-                  return (
-                    selectedPlatform.charAt(0).toUpperCase() +
-                    selectedPlatform.slice(1)
-                  );
-                })()}
+                {selectedPlatformName}
               </span>
               <button
                 onClick={() => navigate("/dashboard")}
@@ -1828,6 +1886,21 @@ function Dashboard() {
             </div>
           )}
         </div>
+        {selectedPlatform !== "all" && (
+          <div
+            className="analytics-platform-hero"
+            style={{
+              flex: "0 1 280px",
+              minHeight: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+            }}
+          >
+            <PlatformHeroLogo platformId={selectedPlatform} label={selectedPlatformName} />
+          </div>
+        )}
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <button
             onClick={() => setComposerOpen(true)}
