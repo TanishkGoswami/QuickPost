@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar,
@@ -157,10 +158,17 @@ function QueueThumb({ post }) {
 }
 
 // ─── Queue Card ───────────────────────────────────────────────────────────────
-function QueueCard({ post, onCancel, onRetry, onRefresh }) {
+function QueueCard({ post, onCancel, onRetry, onRefresh, autoEditId }) {
   const { confirm, alert } = useDialog();
-  const [expanded, setExpanded] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [expanded, setExpanded] = useState(post.id === autoEditId);
+  const [editing, setEditing] = useState(post.id === autoEditId);
+
+  useEffect(() => {
+    if (post.id === autoEditId) {
+      setExpanded(true);
+      setEditing(true);
+    }
+  }, [autoEditId, post.id]);
   const [newCaption, setNewCaption] = useState(post.caption || "");
   const [newTime, setNewTime] = useState(
     post.scheduled_for
@@ -463,6 +471,8 @@ function groupByDate(posts) {
 
 // ─── Main ScheduledQueue Page ─────────────────────────────────────────────────
 export default function ScheduledQueue() {
+  const [searchParams] = useSearchParams();
+  const autoEditId = searchParams.get("edit");
   const { connectedAccounts } = useAuth();
   const [posts, setPosts] = useState([]);
   const [stats, setStats] = useState({ pending: 0 });
@@ -827,6 +837,7 @@ export default function ScheduledQueue() {
                         <QueueCard
                           key={post.id}
                           post={post}
+                          autoEditId={autoEditId}
                           onCancel={handleCancel}
                           onRetry={handleRetry}
                           onRefresh={() => fetchQueue(true)}
