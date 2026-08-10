@@ -551,8 +551,8 @@ export default function CalendarView({
           <button
             onClick={() => handleModeChange("month")}
             className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${calendarMode === "month"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-800"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
               }`}
           >
             Month
@@ -560,8 +560,8 @@ export default function CalendarView({
           <button
             onClick={() => handleModeChange("week")}
             className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${calendarMode === "week"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-800"
+              ? "bg-white text-gray-900 shadow-sm"
+              : "text-gray-500 hover:text-gray-800"
               }`}
           >
             Week
@@ -586,8 +586,8 @@ export default function CalendarView({
                   key={d.toISOString()}
                   onClick={() => setActiveMobileDate(d)}
                   className={`flex flex-col items-center py-2 rounded-xl transition-all relative ${isSelected
-                      ? "bg-[#111111] text-white shadow-sm font-extrabold"
-                      : "text-gray-600 hover:bg-gray-50/50 active:bg-gray-100/50"
+                    ? "bg-[#111111] text-white shadow-sm font-extrabold"
+                    : "text-gray-600 hover:bg-gray-50/50 active:bg-gray-100/50"
                     }`}
                 >
                   <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">
@@ -662,7 +662,7 @@ export default function CalendarView({
           </div>
         </div>
       ) : (
-        <div className="overflow-hidden relative w-full flex-1 min-h-[360px]">
+        <div className="overflow-hidden relative w-full flex-1 min-h-[520px]">
           <AnimatePresence initial={false} custom={slideDirection} mode="wait">
             <motion.div
               key={currentDate.toISOString() + calendarMode}
@@ -728,7 +728,7 @@ export default function CalendarView({
                       onDragEnter={(e) => handleDragEnter(e, dateStr)}
                       onDrop={(e) => handleDrop(e, date)}
                       onClick={() => onAddPost(date)}
-                      className={`p-0.5 sm:p-1 flex flex-col justify-between group transition-all relative border-t border-l border-[#ebe7e1]/60 ${calendarMode === "week" ? "min-h-[180px] h-full" : "min-h-[32px] sm:min-h-[36px]"
+                      className={`p-2 flex flex-col justify-between group transition-all relative border-t border-l border-[#ebe7e1]/60 ${calendarMode === "week" ? "min-h-[420px] h-full" : "min-h-[110px] sm:min-h-[120px]"
                         } ${cellBackground} ${isOver ? "bg-[#eff6ff] ring-2 ring-[#bfdbfe]/50 border-blue-400 border-dashed z-10" : ""
                         }`}
                     >
@@ -736,10 +736,10 @@ export default function CalendarView({
                       <div className="flex items-center justify-between mb-1">
                         <span
                           className={`text-[11px] font-extrabold w-5 h-5 flex items-center justify-center rounded-full ${isToday
-                              ? "bg-green-500 text-white shadow-sm shadow-green-200"
-                              : isCurrentMonth
-                                ? "text-gray-900"
-                                : "text-gray-300"
+                            ? "bg-green-500 text-white shadow-sm shadow-green-200"
+                            : isCurrentMonth
+                              ? "text-gray-900"
+                              : "text-gray-300"
                             }`}
                         >
                           {date.getDate()}
@@ -785,10 +785,10 @@ export default function CalendarView({
                             exit={{ opacity: 0, scale: 0.95, y: 5 }}
                             onClick={(e) => e.stopPropagation()}
                             className={`absolute ${date.getDay() === 0
-                                ? "left-1"
-                                : date.getDay() === 6
-                                  ? "right-1"
-                                  : "left-1/2 -translate-x-1/2"
+                              ? "left-1"
+                              : date.getDay() === 6
+                                ? "right-1"
+                                : "left-1/2 -translate-x-1/2"
                               } -top-6 w-[260px] z-[45] bg-white shadow-2xl border border-gray-200/90 rounded-2xl p-4 flex flex-col gap-3 max-h-[300px] overflow-y-auto cursor-default select-none [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-gray-200 hover:[&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent`}
                           >
                             <div className="flex items-center justify-between border-b border-gray-100 pb-2.5 shrink-0">
