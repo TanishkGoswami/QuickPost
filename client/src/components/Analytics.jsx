@@ -27,6 +27,7 @@ import {
   Lock,
   ShieldCheck,
   Link2Off,
+  Edit3,
 } from "lucide-react";
 import apiClient from "../utils/apiClient";
 import ComposerModal from "./ComposerModal";
@@ -217,90 +218,70 @@ function getPostPreviewRatio(post) {
 }
 
 function buildPlatforms(post) {
-  let instagramChannels = post.selected_channels && Array.isArray(post.selected_channels)
-    ? Array.from(new Set(post.selected_channels.filter(c => c === 'instagram' || c.startsWith('instagram:'))))
-    : [];
+  const selectedChannels = Array.isArray(post.selected_channels) ? post.selected_channels : [];
+  const isScheduled = post.status === 'scheduled';
+
+  const platformMeta = [
+    { id: "linkedin", name: "LinkedIn", success: isScheduled ? false : post.linkedin_success, error: isScheduled ? null : post.linkedin_error, url: post.linkedin_url },
+    { id: "youtube", name: "YouTube", success: isScheduled ? false : post.youtube_success, error: isScheduled ? null : post.youtube_error, url: post.youtube_shorts_url || post.youtube_url },
+    { id: "facebook", name: "Facebook", success: isScheduled ? false : post.facebook_success, error: isScheduled ? null : post.facebook_error, url: post.facebook_url },
+    { id: "mastodon", name: "Mastodon", success: isScheduled ? false : post.mastodon_success, error: isScheduled ? null : post.mastodon_error, url: post.mastodon_url },
+    { id: "bluesky", name: "Bluesky", success: isScheduled ? false : post.bluesky_success, error: isScheduled ? null : post.bluesky_error, url: post.bluesky_url },
+    { id: "pinterest", name: "Pinterest", success: isScheduled ? false : post.pinterest_success, error: isScheduled ? null : post.pinterest_error, url: post.pinterest_url },
+    { id: "threads", name: "Threads", success: isScheduled ? false : post.threads_success, error: isScheduled ? null : post.threads_error, url: post.threads_url },
+    { id: "x", name: "X", success: isScheduled ? false : post.x_success, error: isScheduled ? null : post.x_error, url: post.x_url },
+    { id: "reddit", name: "Reddit", success: isScheduled ? false : post.reddit_success, error: isScheduled ? null : post.reddit_error, url: post.reddit_url },
+  ];
+
+  const results = [];
+
+  // Instagram channels (generic + account specific)
+  let instagramChannels = selectedChannels.filter(c => c === 'instagram' || c.startsWith('instagram:'));
   if (instagramChannels.some(c => c.startsWith('instagram:'))) {
     instagramChannels = instagramChannels.filter(c => c !== 'instagram');
   }
-
   if (instagramChannels.length === 0 && (post.instagram_success || post.instagram_error)) {
     instagramChannels = ['instagram'];
   }
-
-  return [
-    {
-      id: "linkedin",
-      name: "LinkedIn",
-      success: post.linkedin_success,
-      error: post.linkedin_error,
-      url: post.linkedin_url,
-    },
-    {
-      id: "youtube",
-      name: "YouTube",
-      success: post.youtube_success,
-      error: post.youtube_error,
-      url: post.youtube_shorts_url || post.youtube_url,
-    },
-    ...instagramChannels.map(igId => ({
+  instagramChannels.forEach(igId => {
+    results.push({
       id: igId,
       name: "Instagram",
-      success: post.instagram_success,
-      error: post.instagram_error,
+      success: isScheduled ? false : post.instagram_success,
+      error: isScheduled ? null : post.instagram_error,
       url: post.instagram_url,
-    })),
-    {
-      id: "facebook",
-      name: "Facebook",
-      success: post.facebook_success,
-      error: post.facebook_error,
-      url: post.facebook_url,
-    },
+    });
+  });
 
-    {
-      id: "mastodon",
-      name: "Mastodon",
-      success: post.mastodon_success,
-      error: post.mastodon_error,
-      url: post.mastodon_url,
-    },
-    {
-      id: "bluesky",
-      name: "Bluesky",
-      success: post.bluesky_success,
-      error: post.bluesky_error,
-      url: post.bluesky_url,
-    },
-    {
-      id: "pinterest",
-      name: "Pinterest",
-      success: post.pinterest_success,
-      error: post.pinterest_error,
-      url: post.pinterest_url,
-    },
-    {
-      id: "threads",
-      name: "Threads",
-      success: post.threads_success,
-      error: post.threads_error,
-      url: post.threads_url,
-    },
-    {
-      id: "x",
-      name: "X",
-      success: post.x_success,
-      error: post.x_error,
-      url: post.x_url,
-    },
-    {
-      id: "reddit",
-      name: "Reddit",
-      success: post.reddit_success,
-      error: post.reddit_error,
-      url: post.reddit_url,
-    },
-  ].filter((p) => p.success || (p.error && p.error !== "Not selected"));
+  // Standard platforms (matching generic ID or specific sub-channel IDs)
+  platformMeta.forEach(pm => {
+    let subChannels = selectedChannels.filter(c => c === pm.id || c.startsWith(`${pm.id}:`));
+    if (subChannels.some(c => c.startsWith(`${pm.id}:`))) {
+      // Prefer specific account channel over generic platform name
+      subChannels = subChannels.filter(c => c !== pm.id);
+    }
+    if (subChannels.length > 0) {
+      subChannels.forEach(scId => {
+        results.push({
+          id: scId,
+          name: pm.name,
+          success: pm.success,
+          error: pm.error,
+          url: pm.url,
+        });
+      });
+    } else if (pm.success || (pm.error && pm.error !== "Not selected")) {
+      results.push(pm);
+    }
+  });
+
+  // Unique by channel ID to prevent double badges
+  const seenIds = new Set();
+  return results.filter(item => {
+    if (seenIds.has(item.id)) return false;
+    seenIds.add(item.id);
+    return true;
+  });
 }
 
 /* ── Media thumbnail ── */
@@ -1033,7 +1014,10 @@ function PinterestCard({ post, onOpen, formatDate }) {
 
 /* ── List row ── */
 function getPostDateValue(post) {
-  return post.status === "scheduled" ? post.scheduled_for : post.posted_at;
+  if (post.status === "scheduled") {
+    return post.scheduled_for || post.created_at || post.posted_at || new Date().toISOString();
+  }
+  return post.posted_at || post.scheduled_for || post.created_at || new Date().toISOString();
 }
 
 function formatTimelineDay(dateString) {
@@ -1075,7 +1059,8 @@ function resolvePlatformLabel(platform, connectedAccounts) {
   return handle ? `${platform.name} @${handle}` : platform.name;
 }
 
-function ListRow({ post, expanded, onToggle, connectedAccounts }) {
+function ListRow({ post, expanded, onToggle, connectedAccounts, onEdit, selectedPlatform }) {
+  const navigate = useNavigate();
   const platforms = buildPlatforms(post);
   const isScheduled = post.status === "scheduled";
   const primaryPlatform = platforms.find((p) => p.success) || platforms[0];
@@ -1105,10 +1090,10 @@ function ListRow({ post, expanded, onToggle, connectedAccounts }) {
       <div
         className="timeline-card-main"
         style={{
-          padding: "16px 18px",
+          padding: "12px 14px",
           display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) 240px",
-          gap: 22,
+          gridTemplateColumns: "minmax(0, 1fr) 160px",
+          gap: 14,
           cursor: "pointer",
         }}
         onClick={onToggle}
@@ -1119,14 +1104,14 @@ function ListRow({ post, expanded, onToggle, connectedAccounts }) {
               display: "flex",
               alignItems: "center",
               gap: 8,
-              marginBottom: 18,
+              marginBottom: 8,
             }}
           >
             <div
               style={{
-                width: 34,
-                height: 34,
-                borderRadius: 8,
+                width: 26,
+                height: 26,
+                borderRadius: 6,
                 background: "transparent",
                 border: 0,
                 display: "grid",
@@ -1134,14 +1119,11 @@ function ListRow({ post, expanded, onToggle, connectedAccounts }) {
                 flexShrink: 0,
               }}
             >
-              {primaryPlatform ? getPlatformIcon(primaryPlatform.id, 30) : <Share2 size={30} />}
+              {primaryPlatform ? getPlatformIcon(primaryPlatform.id, 22) : <Share2 size={22} />}
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 750, color: css.ink }}>
+              <div style={{ fontSize: 13, fontWeight: 750, color: css.ink, lineHeight: 1.2 }}>
                 {primaryPlatform ? resolvePlatformLabel(primaryPlatform, connectedAccounts) : "Social post"}
-              </div>
-              <div style={{ fontSize: 11, color: css.slate }}>
-                {isScheduled ? "Scheduled" : "Published"} via {primaryPlatform?.name || "channel"}
               </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1164,11 +1146,11 @@ function ListRow({ post, expanded, onToggle, connectedAccounts }) {
           </div>
           <p
             style={{
-              fontSize: 15,
+              fontSize: 13,
               fontWeight: 500,
               color: css.ink,
               margin: 0,
-              lineHeight: 1.5,
+              lineHeight: 1.4,
               whiteSpace: "pre-wrap",
               maxWidth: 680,
             }}
@@ -1179,32 +1161,20 @@ function ListRow({ post, expanded, onToggle, connectedAccounts }) {
               </span>
             )}
           </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 14 }}>
-            {platforms.slice(0, 5).map((p) => (
-              <PlatformBadge key={p.id} platform={p} />
-            ))}
-            {platforms.length > 5 && (
-              <div
-                style={{
-                  padding: "4px 10px",
-                  borderRadius: css.r_pill,
-                  background: "rgba(20,20,19,0.04)",
-                  color: css.slate,
-                  fontSize: 10,
-                  fontWeight: 700,
-                }}
-              >
-                +{platforms.length - 5}
-              </div>
-            )}
-          </div>
+          {selectedPlatform === "all" && platforms.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+              {platforms.slice(0, 5).map((p) => (
+                <PlatformBadge key={p.id} platform={p} />
+              ))}
+            </div>
+          )}
         </div>
         <MediaThumb
           post={post}
           className="timeline-thumb"
           style={{
             width: "100%",
-            height: 132,
+            height: 96,
             borderRadius: 7,
             flexShrink: 0,
             border: `1px solid ${css.hairline}`,
@@ -1212,44 +1182,55 @@ function ListRow({ post, expanded, onToggle, connectedAccounts }) {
         />
       </div>
 
-      {metrics.length > 0 && (
-        <div
-          className="timeline-metrics"
-          style={{
-            borderTop: `1px solid ${css.hairline}`,
-            display: "grid",
-            gridTemplateColumns: `repeat(${Math.min(metrics.length, 6)}, minmax(0, 1fr))`,
-            padding: "12px 18px",
-            gap: 8,
-          }}
-        >
-          {metrics.map((metric) => (
-            <div key={metric.label} style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 650, color: css.slate }}>
-                {metric.label}
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 750, color: css.ink, marginTop: 3 }}>
-                {metric.value}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
       <div
         style={{
           borderTop: `1px solid ${css.hairline}`,
-          padding: "12px 18px",
+          padding: "8px 14px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           gap: 12,
+          background: "rgba(20,20,19,0.01)"
         }}
       >
-        <span style={{ fontSize: 13, color: css.ink }}>
-          {isScheduled ? "Scheduled for" : "Published via"} {primaryPlatform?.name || "channel"}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          {metrics.map((metric) => (
+            <div key={metric.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: css.slate }}>{metric.label}:</span>
+              <span style={{ fontSize: 12, fontWeight: 750, color: css.ink }}>{metric.value}</span>
+            </div>
+          ))}
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {isScheduled && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onEdit) {
+                  onEdit(post);
+                } else {
+                  navigate("/dashboard/queue");
+                }
+              }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 14px",
+                borderRadius: 7,
+                border: `1px solid ${css.hairline}`,
+                color: css.ink,
+                fontSize: 13,
+                fontWeight: 700,
+                background: css.white,
+                cursor: "pointer",
+                transition: "all 0.2s",
+              }}
+            >
+              <Edit3 size={14} style={{ color: css.arc }} /> Edit
+            </button>
+          )}
           {liveUrl && (
             <a
               href={liveUrl}
@@ -1347,8 +1328,8 @@ function ListRow({ post, expanded, onToggle, connectedAccounts }) {
                     <div style={{ fontSize: 13, fontWeight: 700, color: css.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {resolvePlatformLabel(p, connectedAccounts)}
                     </div>
-                    <div style={{ fontSize: 11, fontWeight: 650, color: p.success ? "#15803d" : "#b91c1c" }}>
-                      {p.success ? "Success" : p.error || "Failed"}
+                    <div style={{ fontSize: 11, fontWeight: 650, color: p.success ? "#15803d" : isScheduled ? css.slate : "#b91c1c" }}>
+                      {p.success ? "Success" : isScheduled ? "Scheduled" : (p.error || "Failed")}
                     </div>
                   </div>
                 </div>
@@ -1384,6 +1365,19 @@ function ListRow({ post, expanded, onToggle, connectedAccounts }) {
                       <Clock size={12} /> Pending Sync
                     </div>
                   )
+                ) : isScheduled ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 11,
+                      color: css.arc,
+                      fontWeight: 600,
+                    }}
+                  >
+                    <Clock size={12} /> Scheduled
+                  </div>
                 ) : (
                   <span
                     style={{
@@ -1492,27 +1486,48 @@ function Dashboard() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const loadMoreRef = useRef(null);
 
+  const selectedPlatform = searchParams.get("platform") || "all";
+
+  const filtered = useMemo(() => broadcasts.filter((b) => {
+    if (activeTab === "queue" && b.status === "sent") return false;
+    if (activeTab === "sent" && b.status !== "sent") return false;
+    const matchesSearch = (b.caption || "")
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    if (selectedPlatform === "all") return matchesSearch;
+
+    const isSpecificAccount = selectedPlatform.includes(":");
+    const baseSelected = selectedPlatform.split(":")[0];
+
+    let matchesPlatform = buildPlatforms(b).some((p) => {
+      if (p.id === selectedPlatform) return true;
+      if (p.id.split(":")[0] === baseSelected) return true;
+      return false;
+    }) || (Array.isArray(b.selected_channels) && b.selected_channels.some(c => {
+      if (c === selectedPlatform) return true;
+      if (c.split(":")[0] === baseSelected) return true;
+      return false;
+    }));
+
+    return matchesSearch && matchesPlatform;
+  }), [broadcasts, searchTerm, selectedPlatform, activeTab]);
+
   const tabs = [
     {
       id: "sent",
       label: "Sent",
-      count: activeTab === "sent" ? broadcasts.length : 0,
+      count: activeTab === "sent" ? filtered.length : 0,
     },
     {
       id: "queue",
       label: "Queue",
-      count:
-        activeTab === "queue"
-          ? broadcasts.length
-          : activeTab === "sent"
-            ? queueCount
-            : 0,
+      count: activeTab === "queue" ? filtered.length : 0,
     },
     { id: "drafts", label: "Drafts", count: 0 },
     {
       id: "history",
       label: "History",
-      count: activeTab === "history" ? broadcasts.length : 0,
+      count: activeTab === "history" ? filtered.length : 0,
     },
   ];
 
@@ -1589,7 +1604,7 @@ function Dashboard() {
       if (!silent) setLoading(true);
       let params = {};
       if (activeTab === "sent") params.status = "sent";
-      else if (activeTab === "queue") params.status = "scheduled";
+      // Note: activeTab === "queue" fetches all broadcasts for client-side filtering of non-sent or scheduled posts
 
       const [resBroadcasts, resJobs] = await Promise.all([
         apiClient.get("/api/broadcasts", { params }),
@@ -1671,21 +1686,6 @@ function Dashboard() {
       setIsDisconnectingAccount(false);
     }
   };
-
-  const selectedPlatform = searchParams.get("platform") || "all";
-
-  const filtered = useMemo(() => broadcasts.filter((b) => {
-    const matchesSearch = (b.caption || "")
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    if (selectedPlatform === "all") return matchesSearch;
-    const matchesPlatform = buildPlatforms(b).some((p) => {
-      if (p.id === selectedPlatform) return true;
-      if (selectedPlatform === "instagram" && p.id.startsWith("instagram")) return true;
-      return false;
-    });
-    return matchesSearch && matchesPlatform;
-  }), [broadcasts, searchTerm, selectedPlatform]);
   const selectedPlatformName = useMemo(
     () => getPlatformName(selectedPlatform, connectedAccounts),
     [selectedPlatform, connectedAccounts],
@@ -2199,10 +2199,6 @@ function Dashboard() {
             <button
               key={tab.id}
               onClick={() => {
-                if (tab.id === "queue" && activeTab !== "queue") {
-                  navigate("/dashboard/queue");
-                  return;
-                }
                 setActiveTab(tab.id);
               }}
               style={{
@@ -2487,6 +2483,10 @@ function Dashboard() {
                               toggleExpand(post.id);
                             }}
                             connectedAccounts={connectedAccounts}
+                            selectedPlatform={selectedPlatform}
+                            onEdit={(p) => {
+                              navigate(`/dashboard/queue?edit=${p.id}`);
+                            }}
                           />
                         </div>
                       </div>
