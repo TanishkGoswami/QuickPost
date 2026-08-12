@@ -31,7 +31,29 @@ const HUB_PLAN_DURATION = {
   'all_in_one_bundle_half_yearly': 'six_months'
 };
 
+const entitlementsCache = new Map();
+const ENTITLEMENTS_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes TTL
+
+export function clearEntitlementsCache(userId) {
+  if (userId) {
+    entitlementsCache.delete(userId);
+  } else {
+    entitlementsCache.clear();
+  }
+}
+
 export async function getEntitlements(userId, email = null, token = null) {
+  // Check cache first (strictly user-scoped with expiration-aware TTL)
+  try {
+    const cached = entitlementsCache.get(userId);
+    const ttl = cached?._ttl ?? ENTITLEMENTS_CACHE_TTL_MS;
+    if (cached && (Date.now() - cached._cachedAt < ttl)) {
+      return cached.data;
+    }
+  } catch (_cacheErr) {
+    // Failure safety: cache error falls back directly to database execution
+  }
+
   const { data: subscriptionsData, error } = await supabase
     .from('app_subscriptions')
     .select('plan_id,source,status,billing_interval,current_period_start,current_period_end,trial_ends_at,cancel_at_period_end,grace_period_ends_at')
@@ -154,7 +176,7 @@ export async function getEntitlements(userId, email = null, token = null) {
     throw new Error(`Failed to load usage: ${usageError.message}`);
   }
 
-  return {
+  const computed = {
     plan: { id: plan.id, name: plan.name },
     subscription: subscription ? {
       ...subscription,
@@ -172,6 +194,21 @@ export async function getEntitlements(userId, email = null, token = null) {
     limits: plan.limits,
     usage: Object.fromEntries((usage || []).map((row) => [row.metric, row])),
   };
+
+  try {
+    // Calculate exact milliseconds remaining until subscription or trial expiration
+    const expiryTimestamp = subscription?.current_period_end || subscription?.trial_ends_at || subscription?.grace_period_ends_at;
+    const msUntilExpiry = expiryTimestamp ? Date.parse(expiryTimestamp) - Date.now() : ENTITLEMENTS_CACHE_TTL_MS;
+    
+    // Clamp TTL: Never cache beyond the exact second of subscription expiration
+    const effectiveTTL = Math.max(0, Math.min(ENTITLEMENTS_CACHE_TTL_MS, msUntilExpiry));
+
+    if (effectiveTTL > 0) {
+      entitlementsCache.set(userId, { data: computed, _cachedAt: Date.now(), _ttl: effectiveTTL });
+    }
+  } catch (_err) { }
+
+  return computed;
 }
 
 export async function consumeUsage(userId, metric, amount = 1, cadence = 'month') {
@@ -193,6 +230,10 @@ export async function consumeUsage(userId, metric, amount = 1, cadence = 'month'
 
   if (error) throw new Error(`Failed to reserve usage: ${error.message}`);
   const result = data?.[0] || { allowed: false, used: 0, limit_value: limit };
+
+  // Invalidate user cache on usage mutation so subsequent reads get fresh usage counts
+  clearEntitlementsCache(userId);
+
   return { ...result, entitlements };
 }
 
