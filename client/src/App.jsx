@@ -41,6 +41,7 @@ const InstagramConnect = lazy(() => import('./pages/InstagramConnect'));
 const InstagramInbox = lazy(() => import('./pages/InstagramInbox'));
 const YouTubeManagerPage = lazy(() => import('./pages/YouTubeManagerPage'));
 const TrendFeedPage = lazy(() => import('./pages/TrendFeedPage'));
+const SocialInboxPage = lazy(() => import('./pages/SocialInboxPage'));
 
 // ── AutoDM workspace ──
 const AutoDMLayout             = lazy(() => import('./pages/auto-dm/AutoDMLayout'));
@@ -123,6 +124,7 @@ function AppContent() {
         <Route path="instapilot/inbox" element={<InstagramInbox />} />
         <Route path="youtube" element={<YouTubeManagerPage />} />
         <Route path="trends" element={<TrendFeedPage />} />
+        <Route path="inbox" element={<SocialInboxPage />} />
         <Route path="profile"  element={<AutoDMProvider><ProfilePage /></AutoDMProvider>} />
 
         {/* AutoDM workspace — has its own full-screen layout */}
