@@ -643,25 +643,34 @@ async function retrieveKnowledge(botId, question) {
 
 export async function generateReply({ bot, messageText, conversation = null }) {
   const chunks = await retrieveKnowledge(bot.id, messageText);
-  if (!chunks.length) {
-    return { text: bot.fallback_message || DEFAULT_REPLY, confidence: 0.25, handoff: true };
+  // Fall back to top knowledge chunks if keyword score is 0
+  let effectiveChunks = chunks;
+  if (!effectiveChunks.length || !effectiveChunks.some((c) => c.score > 0)) {
+    const { data: allChunks } = await supabase
+      .from('knowledge_chunks')
+      .select('chunk_text, metadata')
+      .eq('bot_id', bot.id)
+      .limit(5);
+    if (allChunks?.length) effectiveChunks = allChunks;
   }
 
   if (!process.env.OPENAI_API_KEY) {
+    const defaultText = effectiveChunks[0]?.chunk_text || bot.fallback_message || DEFAULT_REPLY;
     return {
-      text: `${chunks[0].chunk_text.slice(0, 420)}${chunks[0].chunk_text.length > 420 ? '...' : ''}`,
+      text: `${defaultText.slice(0, 420)}${defaultText.length > 420 ? '...' : ''}`,
       confidence: 0.55,
-      handoff: true,
+      handoff: false,
     };
   }
 
   const prompt = [
-    `You reply as ${bot.business_name}, never as ChatGPT.`,
-    `Tone: ${bot.tone}. Language: ${bot.language}. Goal: ${bot.bot_goal}.`,
-    'Use only the knowledge base excerpts. Keep Instagram DM replies short and natural.',
-    'If the answer is not present, say the team will help or ask one clarifying question.',
-    'Never invent prices, policies, discounts, timelines, or guarantees.',
-    'Do not request sensitive information unless configured lead fields require it.',
+    `You are the official Instagram DM AI assistant for ${bot.business_name}.`,
+    `Tone: ${bot.tone || 'friendly and professional'}. Language: ${bot.language || 'English'}. Goal: ${bot.bot_goal || 'Assist customers and answer questions'}.`,
+    'Rules:',
+    '1. For greetings (e.g. "hello", "hi", "hey", "hello baba tillu"), reply warmly and ask how you can assist them.',
+    '2. Use the Knowledge Base to answer business questions.',
+    '3. Never invent prices, policies, discounts, or guarantees not listed in the Knowledge Base.',
+    '4. Keep Instagram DM replies concise, natural, and mobile-friendly.',
   ].join('\n');
 
   const { data } = await axios.post(
@@ -673,15 +682,14 @@ export async function generateReply({ bot, messageText, conversation = null }) {
         { role: 'system', content: prompt },
         {
           role: 'user',
-          content: `Knowledge:\n${chunks.map((c, i) => `[${i + 1}] ${c.chunk_text}`).join('\n\n')}\n\nUser: ${messageText}`,
+          content: `Knowledge Base:\n${effectiveChunks.map((c, i) => `[${i + 1}] ${c.chunk_text}`).join('\n\n')}\n\nCustomer Message: ${messageText}`,
         },
       ],
     },
     { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` } }
   );
   const text = data.choices?.[0]?.message?.content?.trim() || bot.fallback_message || DEFAULT_REPLY;
-  const confidence = chunks[0]?.score > 0 ? 0.82 : 0.58;
-  return { text, confidence, handoff: confidence < Number(bot.confidence_threshold || 0.68) };
+  return { text, confidence: 0.85, handoff: false };
 }
 
 export async function testReply(userId, botId, messageText) {

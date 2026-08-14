@@ -160,9 +160,9 @@ const server = app.listen(PORT, () => {
   console.log(`\n🚀 Server running on http://localhost:${PORT}`);
   console.log(`🌐 Client URL: ${CLIENT_URL}`);
   console.log(`📁 Uploads directory: ${path.join(__dirname, '../uploads')}`);
-  
+
   // Initialize Post Scheduler
-initScheduler();
+  initScheduler();
 
   console.log(`\n✨ Ready to broadcast!\n`);
 });
