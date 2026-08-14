@@ -643,25 +643,35 @@ async function retrieveKnowledge(botId, question) {
 
 export async function generateReply({ bot, messageText, conversation = null }) {
   const chunks = await retrieveKnowledge(bot.id, messageText);
-  if (!chunks.length) {
-    return { text: bot.fallback_message || DEFAULT_REPLY, confidence: 0.25, handoff: true };
+  // Fall back to top knowledge chunks if keyword score is 0
+  let effectiveChunks = chunks;
+  if (!effectiveChunks.length || !effectiveChunks.some((c) => c.score > 0)) {
+    const { data: allChunks } = await supabase
+      .from('knowledge_chunks')
+      .select('chunk_text, metadata')
+      .eq('bot_id', bot.id)
+      .limit(5);
+    if (allChunks?.length) effectiveChunks = allChunks;
   }
 
   if (!process.env.OPENAI_API_KEY) {
+    const defaultText = effectiveChunks[0]?.chunk_text || bot.fallback_message || DEFAULT_REPLY;
     return {
-      text: `${chunks[0].chunk_text.slice(0, 420)}${chunks[0].chunk_text.length > 420 ? '...' : ''}`,
+      text: `${defaultText.slice(0, 420)}${defaultText.length > 420 ? '...' : ''}`,
       confidence: 0.55,
-      handoff: true,
+      handoff: false,
     };
   }
 
   const prompt = [
-    `You reply as ${bot.business_name}, never as ChatGPT.`,
-    `Tone: ${bot.tone}. Language: ${bot.language}. Goal: ${bot.bot_goal}.`,
-    'Use only the knowledge base excerpts. Keep Instagram DM replies short and natural.',
-    'If the answer is not present, say the team will help or ask one clarifying question.',
-    'Never invent prices, policies, discounts, timelines, or guarantees.',
-    'Do not request sensitive information unless configured lead fields require it.',
+    `You are the official Instagram DM AI assistant for ${bot.business_name}.`,
+    `Tone: ${bot.tone || 'friendly and professional'}. Language: ${bot.language || 'English'}. Goal: ${bot.bot_goal || 'Assist customers, answer questions, and collect contact details'}.`,
+    'Rules:',
+    '1. For greetings (e.g. "hello", "hi", "hey"), reply warmly and ask how you can assist them with our services.',
+    '2. Use the Knowledge Base to answer business questions accurately.',
+    '3. When the customer asks about pricing, booking a demo, or getting started, politely ask for their name, phone number, or email address so our team can assist them.',
+    '4. Never invent prices, policies, discounts, or guarantees not listed in the Knowledge Base.',
+    '5. Keep Instagram DM replies concise, natural, friendly, and mobile-friendly.',
   ].join('\n');
 
   const { data } = await axios.post(
@@ -673,15 +683,14 @@ export async function generateReply({ bot, messageText, conversation = null }) {
         { role: 'system', content: prompt },
         {
           role: 'user',
-          content: `Knowledge:\n${chunks.map((c, i) => `[${i + 1}] ${c.chunk_text}`).join('\n\n')}\n\nUser: ${messageText}`,
+          content: `Knowledge Base:\n${effectiveChunks.map((c, i) => `[${i + 1}] ${c.chunk_text}`).join('\n\n')}\n\nCustomer Message: ${messageText}`,
         },
       ],
     },
     { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` } }
   );
   const text = data.choices?.[0]?.message?.content?.trim() || bot.fallback_message || DEFAULT_REPLY;
-  const confidence = chunks[0]?.score > 0 ? 0.82 : 0.58;
-  return { text, confidence, handoff: confidence < Number(bot.confidence_threshold || 0.68) };
+  return { text, confidence: 0.85, handoff: false };
 }
 
 export async function testReply(userId, botId, messageText) {
@@ -913,6 +922,46 @@ export async function processInstagramWebhook(payload) {
   return events.filter(Boolean);
 }
 
+export function extractLeadDataFromText(text) {
+  if (!text || typeof text !== 'string') return {};
+  const extracted = {};
+
+  // 1. Phone extraction
+  const phoneMatch = text.match(/(?:\+?\d{1,3}[\s-]?)?\(?\d{3,5}\)?[\s-]?\d{3,5}[\s-]?\d{3,5}/);
+  if (phoneMatch) {
+    const cleaned = phoneMatch[0].replace(/[^\d+]/g, '');
+    if (cleaned.length >= 10 && cleaned.length <= 15) {
+      extracted.phone = cleaned;
+    }
+  }
+
+  // 2. Email extraction
+  const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+  if (emailMatch) {
+    extracted.email = emailMatch[0].toLowerCase();
+  }
+
+  // 3. Name extraction ("My name is John", "Name: Alex", "I am Priyansh")
+  const nameMatch = text.match(/(?:my name is|i am|name[:\s]+)\s*([a-zA-Z\s]{2,30})/i);
+  if (nameMatch && nameMatch[1]) {
+    const name = nameMatch[1].trim();
+    if (name && !['here', 'the', 'a', 'not', 'user'].includes(name.toLowerCase())) {
+      extracted.name = name;
+    }
+  }
+
+  // 4. City extraction ("I live in Bhopal", "City: Mumbai", "from Delhi")
+  const cityMatch = text.match(/(?:i live in|from|city[:\s]+)\s*([a-zA-Z\s]{2,20})/i);
+  if (cityMatch && cityMatch[1]) {
+    const city = cityMatch[1].trim();
+    if (city && !['here', 'the', 'a', 'india'].includes(city.toLowerCase())) {
+      extracted.city = city;
+    }
+  }
+
+  return extracted;
+}
+
 async function handleInboundMessage({ senderId, recipientId, messaging }) {
   const account = await findAccountByRecipient(recipientId);
   if (!account) return { skipped: true, reason: 'account_not_found' };
@@ -920,6 +969,36 @@ async function handleInboundMessage({ senderId, recipientId, messaging }) {
   const conversation = await upsertConversation(account, bot, senderId);
   const text = messaging.message.text;
   const metaMessageId = messaging.message.mid || null;
+
+  // Extract and save lead details (Phone, Email, Name, City) automatically
+  const extractedLead = extractLeadDataFromText(text);
+  if (Object.keys(extractedLead).length > 0) {
+    const mergedLeadData = {
+      ...(conversation.lead_data || {}),
+      ...extractedLead,
+    };
+    conversation.lead_data = mergedLeadData;
+
+    await supabase
+      .from('instagram_conversations')
+      .update({ lead_data: mergedLeadData, updated_at: new Date().toISOString() })
+      .eq('id', conversation.id);
+
+    await supabase.from('instagram_leads').upsert(
+      {
+        user_id: account.user_id,
+        bot_id: bot?.id || null,
+        conversation_id: conversation.id,
+        name: mergedLeadData.name || conversation.instagram_name || null,
+        phone: mergedLeadData.phone || null,
+        email: mergedLeadData.email || null,
+        city: mergedLeadData.city || null,
+        status: 'captured',
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'conversation_id' }
+    );
+  }
 
   const existingInbound = await findExistingInboundMessage({
     accountId: account.id,

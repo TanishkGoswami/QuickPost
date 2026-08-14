@@ -61,7 +61,7 @@ export default function InstagramInbox() {
         <div className="grid gap-5 xl:grid-cols-[320px_1fr_280px]">
           <InboxConversationList conversations={conversations} selectedId={selectedId} onSelect={setSelectedId} />
           <ConversationThread conversationId={selectedId} refreshKey={refreshKey} onChanged={refresh} />
-          <LeadPanel lead={selected?.instagram_leads?.[0]} />
+          <LeadPanel lead={selected?.instagram_leads?.[0] || selected?.lead_data} />
         </div>
       </div>
     </div>
