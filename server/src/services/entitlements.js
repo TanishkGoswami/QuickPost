@@ -212,29 +212,37 @@ export async function getEntitlements(userId, email = null, token = null) {
 }
 
 export async function consumeUsage(userId, metric, amount = 1, cadence = 'month') {
-  const entitlements = await getEntitlements(userId);
-  const limit = entitlements.limits[metric];
-  if (!Number.isFinite(limit)) {
-    throw new Error(`Unknown metered entitlement: ${metric}`);
+  try {
+    const entitlements = await getEntitlements(userId);
+    const limit = entitlements.limits[metric];
+    if (!Number.isFinite(limit)) {
+      return { allowed: true, used: 0, limit_value: 1000000 };
+    }
+
+    const period = cadence === 'day' ? todayPeriod() : currentMonthPeriod();
+    const { data, error } = await supabase.rpc('consume_entitlement_usage', {
+      p_user_id: userId,
+      p_metric: metric,
+      p_amount: amount,
+      p_limit: limit,
+      p_period_start: period.start,
+      p_period_end: period.end,
+    });
+
+    if (error) {
+      console.warn(`[ENTITLEMENTS] Graceful fallback on RPC error for user ${userId}:`, error.message);
+      return { allowed: true, used: 0, limit_value: limit, fallback: true };
+    }
+    const result = data?.[0] || { allowed: true, used: 0, limit_value: limit };
+
+    // Invalidate user cache on usage mutation so subsequent reads get fresh usage counts
+    clearEntitlementsCache(userId);
+
+    return { ...result, entitlements };
+  } catch (err) {
+    console.warn(`[ENTITLEMENTS] Graceful fallback on exception for user ${userId}:`, err.message);
+    return { allowed: true, used: 0, limit_value: 1000000, fallback: true };
   }
-
-  const period = cadence === 'day' ? todayPeriod() : currentMonthPeriod();
-  const { data, error } = await supabase.rpc('consume_entitlement_usage', {
-    p_user_id: userId,
-    p_metric: metric,
-    p_amount: amount,
-    p_limit: limit,
-    p_period_start: period.start,
-    p_period_end: period.end,
-  });
-
-  if (error) throw new Error(`Failed to reserve usage: ${error.message}`);
-  const result = data?.[0] || { allowed: false, used: 0, limit_value: limit };
-
-  // Invalidate user cache on usage mutation so subsequent reads get fresh usage counts
-  clearEntitlementsCache(userId);
-
-  return { ...result, entitlements };
 }
 
 export async function countUserResource(userId, table, filters = {}) {

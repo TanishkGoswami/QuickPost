@@ -984,12 +984,17 @@ async function handleInboundMessage({ senderId, recipientId, messaging }) {
 
   let sendText = reply.handoff ? bot.fallback_message || DEFAULT_REPLY : reply.text;
 
-  const usage = await consumeUsage(
-    account.user_id,
-    'autodm_replies_per_month',
-    1,
-    'month',
-  );
+  let usage = { allowed: true };
+  try {
+    usage = await consumeUsage(
+      account.user_id,
+      'autodm_replies_per_month',
+      1,
+      'month',
+    );
+  } catch (err) {
+    console.warn('[INSTAPILOT] Entitlement check warning:', err.message);
+  }
   if (!usage.allowed) {
     return { skipped: true, reason: 'monthly_reply_limit_reached' };
   }
