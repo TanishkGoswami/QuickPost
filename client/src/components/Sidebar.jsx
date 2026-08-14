@@ -639,14 +639,18 @@ function Sidebar() {
         width: 240,
         height: "100%",
         background: "var(--canvas)",
-        borderRight: "1px solid rgba(20,20,19,0.06)",
+        borderRight: "1px solid #d3cec6",
       }}
     >
       {/* ── Brand ── */}
       <div
         style={{
-          padding: "20px 20px 16px",
-          borderBottom: "1px solid rgba(20,20,19,0.08)",
+          height: 64,
+          boxSizing: "border-box",
+          padding: "0 20px",
+          display: "flex",
+          alignItems: "center",
+          borderBottom: "1px solid #d3cec6",
         }}
       >
         <Link
@@ -739,9 +743,14 @@ function Sidebar() {
               icon: <Flame size={16} />,
             },
             {
+              to: "/dashboard/inbox",
+              label: "Social Inbox",
+              icon: <MessagesSquare size={16} />,
+            },
+            {
               to: "/dashboard/auto-dm",
               label: "GAP AutoDM",
-              icon: <MessagesSquare size={16} />,
+              icon: <Workflow size={16} />,
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);

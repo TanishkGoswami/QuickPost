@@ -85,7 +85,7 @@ function DashboardShellSkeleton({ isDesktop }) {
       <section style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         <header
           style={{
-            height: 56,
+            height: 64,
             flexShrink: 0,
             borderBottom: "1px solid var(--dust, #d3cec6)",
             background: "var(--canvas, #f5f1ec)",
