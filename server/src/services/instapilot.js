@@ -831,20 +831,8 @@ async function findExistingInboundMessage({ accountId, senderId, recipientId, te
     if (data) return data;
   }
 
-  const recentWindow = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-  const { data, error } = await supabase
-    .from('instagram_messages')
-    .select('id')
-    .eq('instagram_account_id', accountId)
-    .eq('direction', 'inbound')
-    .eq('sender_id', senderId)
-    .eq('recipient_id', recipientId)
-    .eq('message_text', text)
-    .gte('created_at', recentWindow)
-    .limit(1)
-    .maybeSingle();
-  if (error) throw error;
-  return data || null;
+  // Do not deduplicate by message text so users typing "Hello" or "Hi" multiple times get replies.
+  return null;
 }
 
 async function fetchInstagramScopedUserProfile(account, senderId) {
@@ -993,8 +981,9 @@ async function handleInboundMessage({ senderId, recipientId, messaging }) {
       'month',
     );
   } catch (err) {
-    console.warn('[INSTAPILOT] Entitlement check warning:', err.message);
+    console.warn('[INSTAPILOT] Entitlement check warning, proceeding with reply:', err.message);
   }
+
   if (!usage.allowed) {
     return { skipped: true, reason: 'monthly_reply_limit_reached' };
   }
@@ -1002,24 +991,8 @@ async function handleInboundMessage({ senderId, recipientId, messaging }) {
   const watermark = '_⚡ Automation is powered by @Getaipilot_';
 
   // Send main message
-  await sendInstagramMessage({ account, recipientId: senderId, text: sendText, messagingType: 'RESPONSE' });
-  await supabase.from('instagram_messages').insert({
-    user_id: account.user_id,
-    bot_id: bot.id,
-    instagram_account_id: account.id,
-    conversation_id: conversation.id,
-    sender_id: recipientId,
-    recipient_id: senderId,
-    message_text: sendText,
-    direction: 'outbound',
-    ai_generated: true,
-    confidence_score: reply.confidence,
-    status: 'sent',
-  });
-
-  // Send watermark as separate message if free plan
-  if (isFreePlan) {
-    await sendInstagramMessage({ account, recipientId: senderId, text: watermark, messagingType: 'RESPONSE' });
+  try {
+    await sendInstagramMessage({ account, recipientId: senderId, text: sendText, messagingType: 'RESPONSE' });
     await supabase.from('instagram_messages').insert({
       user_id: account.user_id,
       bot_id: bot.id,
@@ -1027,13 +1000,39 @@ async function handleInboundMessage({ senderId, recipientId, messaging }) {
       conversation_id: conversation.id,
       sender_id: recipientId,
       recipient_id: senderId,
-      message_text: watermark,
+      message_text: sendText,
       direction: 'outbound',
       ai_generated: true,
       confidence_score: reply.confidence,
       status: 'sent',
     });
+
+    // Send watermark as separate message if free plan
+    if (isFreePlan) {
+      try {
+        await sendInstagramMessage({ account, recipientId: senderId, text: watermark, messagingType: 'RESPONSE' });
+        await supabase.from('instagram_messages').insert({
+          user_id: account.user_id,
+          bot_id: bot.id,
+          instagram_account_id: account.id,
+          conversation_id: conversation.id,
+          sender_id: recipientId,
+          recipient_id: senderId,
+          message_text: watermark,
+          direction: 'outbound',
+          ai_generated: true,
+          confidence_score: reply.confidence,
+          status: 'sent',
+        });
+      } catch (watermarkError) {
+        console.warn('[INSTAPILOT] Failed to send watermark message:', watermarkError.message);
+      }
+    }
+  } catch (sendErr) {
+    console.error('❌ [INSTAPILOT] Failed to send Instagram DM reply:', sendErr.response?.data || sendErr.message);
+    return { skipped: true, reason: 'send_message_failed', error: sendErr.response?.data?.error?.message || sendErr.message };
   }
+
   await supabase
     .from('instagram_bots')
     .update({ replies_sent_today: quotaBot.repliesSentToday + 1 })

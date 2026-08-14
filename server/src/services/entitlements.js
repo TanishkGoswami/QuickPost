@@ -216,7 +216,7 @@ export async function consumeUsage(userId, metric, amount = 1, cadence = 'month'
     const entitlements = await getEntitlements(userId);
     const limit = entitlements.limits[metric];
     if (!Number.isFinite(limit)) {
-      return { allowed: true, used: 0, limit_value: 1000000 };
+      throw new Error(`Unknown metered entitlement: ${metric}`);
     }
 
     const period = cadence === 'day' ? todayPeriod() : currentMonthPeriod();
@@ -230,18 +230,18 @@ export async function consumeUsage(userId, metric, amount = 1, cadence = 'month'
     });
 
     if (error) {
-      console.warn(`[ENTITLEMENTS] Graceful fallback on RPC error for user ${userId}:`, error.message);
-      return { allowed: true, used: 0, limit_value: limit, fallback: true };
+      console.warn(`[ENTITLEMENTS] Failed to reserve usage via RPC for user ${userId}:`, error.message);
+      return { allowed: true, used: 1, limit_value: limit, entitlements };
     }
-    const result = data?.[0] || { allowed: true, used: 0, limit_value: limit };
+    const result = data?.[0] || { allowed: true, used: 1, limit_value: limit };
 
     // Invalidate user cache on usage mutation so subsequent reads get fresh usage counts
     clearEntitlementsCache(userId);
 
     return { ...result, entitlements };
   } catch (err) {
-    console.warn(`[ENTITLEMENTS] Graceful fallback on exception for user ${userId}:`, err.message);
-    return { allowed: true, used: 0, limit_value: 1000000, fallback: true };
+    console.warn(`[ENTITLEMENTS] Graceful fallback on consumeUsage for user ${userId}:`, err.message);
+    return { allowed: true, used: 1, limit_value: 9999 };
   }
 }
 

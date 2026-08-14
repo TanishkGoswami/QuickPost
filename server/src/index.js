@@ -1,4 +1,4 @@
-import express from 'express';
+import express from 'express'; // Server reloaded - fixed text deduplication bug
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
