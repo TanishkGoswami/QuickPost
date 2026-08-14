@@ -18,6 +18,7 @@ import {
   getDeliveryPlan,
   stripBrandingWatermark,
 } from "./deliveryPolicy.ts";
+import { syncSocialContactToEcosystemSoon } from "./ecosystemContactSync.ts";
 
 interface AutomationRecord {
   id: string;
@@ -1930,6 +1931,17 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
           });
         } else {
           contactId = newContact.id;
+          syncSocialContactToEcosystemSoon({
+            supabase,
+            contactId,
+            userId: automationOwnerUserId,
+            instagramAccountId: selectedAccount.id,
+            instagramUserId: payload.senderId,
+            username,
+            fullName: contactProfileFields.full_name,
+            profilePictureUrl: contactProfileFields.profile_picture_url,
+            requestId: payload.requestId,
+          });
           logInfo("New contact created", {
             requestId: payload.requestId,
             contactId,
@@ -1962,6 +1974,17 @@ export const processAutomationEvent = async (payload: AutomationInput) => {
             code: updateError.code,
           });
         } else {
+          syncSocialContactToEcosystemSoon({
+            supabase,
+            contactId,
+            userId: automationOwnerUserId,
+            instagramAccountId: selectedAccount.id,
+            instagramUserId: payload.senderId,
+            username: updatedUsername,
+            fullName: contactProfileFields.full_name,
+            profilePictureUrl: contactProfileFields.profile_picture_url,
+            requestId: payload.requestId,
+          });
           logInfo("Existing contact updated", {
             requestId: payload.requestId,
             contactId,
