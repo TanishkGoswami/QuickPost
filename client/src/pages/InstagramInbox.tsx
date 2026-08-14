@@ -45,7 +45,7 @@ export default function InstagramInbox() {
           </div>
           <div className="flex gap-2">
             <Button variant="outline" asChild className="gap-2">
-              <Link to="/dashboard/instapilot">
+              <Link to="/dashboard/instapilot?mode=builder">
                 <ArrowLeft className="h-4 w-4" />
                 Builder
               </Link>
