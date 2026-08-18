@@ -4,8 +4,9 @@ import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
-  CalendarDays,
-  LayoutDashboard,
+  CalendarClock,
+  Gauge,
+  LayoutGrid,
   Workflow,
   Users,
   Instagram,
@@ -14,15 +15,15 @@ import {
   ChevronDown,
   X,
   Plus,
-  Flame,
   Sparkles,
   Lock,
   MessagesSquare,
-  Bot,
-  Youtube,
+  Video,
   LogOut,
   HelpCircle,
   CreditCard,
+  BarChart3,
+  Flame,
 } from "lucide-react";
 import { useDialog } from "../context/DialogContext";
 import logo from "/logo.png";
@@ -34,24 +35,13 @@ import MastodonConnectModal from "./MastodonConnectModal";
 import FacebookSetupModal from "./FacebookSetupModal";
 import apiClient from "../utils/apiClient";
 import { startAutoDMInstagramOAuth } from "../services/autodm/supabaseClient";
+import { countConnectedTargets } from "../utils/connectedAccounts";
 
 // Helper to determine if the user is on the free plan
 function isFree(plan) {
   if (!plan) return true;
   return plan.toLowerCase() === 'free';
 }
-
-const countConnectedTargets = (accounts = {}) => {
-  const arrayCount = Object.keys(accounts)
-    .filter((key) => key.endsWith("Accounts"))
-    .reduce((sum, key) => sum + (Array.isArray(accounts[key]) ? accounts[key].length : 0), 0);
-
-  const singleCount = Object.entries(accounts).filter(
-    ([key, value]) => !key.endsWith("Accounts") && value?.connected && !(accounts[`${key}Accounts`]?.length > 0),
-  ).length;
-
-  return arrayCount + singleCount;
-};
 
 const platformDetails = {
   facebook: {
@@ -195,7 +185,7 @@ function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const selectedDashboardPlatform =
-    location.pathname === "/dashboard"
+    location.pathname.startsWith("/dashboard")
       ? new URLSearchParams(location.search).get("platform")
       : null;
 
@@ -265,6 +255,19 @@ function Sidebar() {
     }
     setShowFacebookModal(true);
   };
+  const canConnectNewPlatform = async (platformId) => {
+    const limit = user?.entitlements?.limits?.social_accounts ?? Infinity;
+    const platformAccounts = connectedAccounts?.[`${platformId}Accounts`] || [];
+    const alreadyConnected = Boolean(connectedAccounts?.[platformId]?.connected || platformAccounts.length);
+    if (alreadyConnected || countConnectedTargets(connectedAccounts) < limit) return true;
+
+    await alert(
+      "Upgrade Required",
+      `You have reached your limit of ${limit} social account${limit === 1 ? "" : "s"} on the ${user?.entitlements?.plan?.name || "Free"} plan. Please upgrade to connect more channels.`,
+      { intent: "warning" },
+    );
+    return false;
+  };
   const handleConnectThreads = () => {
     const token = localStorage.getItem("quickpost_token");
     if (!token) {
@@ -273,8 +276,11 @@ function Sidebar() {
       });
       return;
     }
-    const apiUrl = import.meta.env.VITE_API_URL || "";
-    window.location.href = `${apiUrl}/api/auth/threads?token=${token}`;
+    canConnectNewPlatform("threads").then((allowed) => {
+      if (!allowed) return;
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      window.location.href = `${apiUrl}/api/auth/threads?token=${token}`;
+    });
   };
   const handleConnectX = () => {
     const token = localStorage.getItem("quickpost_token");
@@ -284,9 +290,12 @@ function Sidebar() {
       });
       return;
     }
-    const apiUrl = import.meta.env.VITE_API_URL || "";
-    setConnectingPlatform("x");
-    window.location.href = `${apiUrl}/api/auth/x?token=${token}`;
+    canConnectNewPlatform("x").then((allowed) => {
+      if (!allowed) return;
+      const apiUrl = import.meta.env.VITE_API_URL || "";
+      setConnectingPlatform("x");
+      window.location.href = `${apiUrl}/api/auth/x?token=${token}`;
+    });
   };
   const handleConnectReddit = () => {
     const token = localStorage.getItem("quickpost_token");
@@ -321,6 +330,18 @@ function Sidebar() {
     }
     const apiUrl = import.meta.env.VITE_API_URL || "";
     window.location.href = `${apiUrl}/api/auth/googleBusiness?token=${token}`;
+  };
+
+  const handleConnectPinterest = () => {
+    const token = localStorage.getItem("quickpost_token");
+    if (!token) {
+      alert("Error", "Authentication token missing. Please log in again.", {
+        intent: "danger",
+      });
+      return;
+    }
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    window.location.href = `${apiUrl}/api/auth/pinterest?token=${token}`;
   };
   const handleDisconnect = async (platform) => {
     const message = platform === "instagram"
@@ -376,18 +397,32 @@ function Sidebar() {
       onConnect: handleConnectFacebook,
       allowMultiple: true,
     },
-    ...(connectedAccounts.instagramAccounts?.length > 0 
+    ...(connectedAccounts.instagramAccounts?.length > 0
       ? connectedAccounts.instagramAccounts.map(acc => ({
-          id: `instagram:${acc.id}`,
-          name: acc.username || "Instagram",
-          connected: true,
-          icon: acc.profilePicture ? (
-            <img
-              src={acc.profilePicture}
-              style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover" }}
-              alt=""
-            />
-          ) : (
+        id: `instagram:${acc.id}`,
+        name: acc.username || "Instagram",
+        connected: true,
+        icon: acc.profilePicture ? (
+          <img
+            src={acc.profilePicture}
+            style={{ width: 20, height: 20, borderRadius: "50%", objectFit: "cover" }}
+            alt=""
+          />
+        ) : (
+          <img
+            src="/icons/ig-instagram-icon.svg"
+            style={{ width: 20, height: 20 }}
+            alt=""
+          />
+        ),
+        onConnect: handleConnectInstagram,
+      }))
+      : [
+        {
+          id: "instagram",
+          name: "Instagram",
+          connected: false,
+          icon: (
             <img
               src="/icons/ig-instagram-icon.svg"
               style={{ width: 20, height: 20 }}
@@ -395,38 +430,24 @@ function Sidebar() {
             />
           ),
           onConnect: handleConnectInstagram,
-        }))
-      : [
-          {
-            id: "instagram",
-            name: "Instagram",
-            connected: false,
-            icon: (
-              <img
-                src="/icons/ig-instagram-icon.svg"
-                style={{ width: 20, height: 20 }}
-                alt=""
-              />
-            ),
-            onConnect: handleConnectInstagram,
-          }
-        ]),
+        }
+      ]),
     ...(connectedAccounts.instagramAccounts?.length > 0
       ? [
-          {
-            id: "instagram_connect",
-            name: "Instagram",
-            connected: false,
-            icon: (
-              <img
-                src="/icons/ig-instagram-icon.svg"
-                style={{ width: 20, height: 20 }}
-                alt=""
-              />
-            ),
-            onConnect: handleConnectInstagram,
-          }
-        ]
+        {
+          id: "instagram_connect",
+          name: "Instagram",
+          connected: false,
+          icon: (
+            <img
+              src="/icons/ig-instagram-icon.svg"
+              style={{ width: 20, height: 20 }}
+              alt=""
+            />
+          ),
+          onConnect: handleConnectInstagram,
+        }
+      ]
       : []),
     {
       id: "x",
@@ -483,11 +504,7 @@ function Sidebar() {
           alt=""
         />
       ),
-      onConnect: () =>
-        alert("Coming Soon", "Pinterest integration coming soon!", {
-          intent: "warning",
-        }),
-      disabled: true,
+      onConnect: handleConnectPinterest,
     },
     {
       id: "threads",
@@ -622,14 +639,18 @@ function Sidebar() {
         width: 240,
         height: "100%",
         background: "var(--canvas)",
-        borderRight: "1px solid rgba(20,20,19,0.06)",
+        borderRight: "1px solid #d3cec6",
       }}
     >
       {/* ── Brand ── */}
       <div
         style={{
-          padding: "20px 20px 16px",
-          borderBottom: "1px solid rgba(20,20,19,0.08)",
+          height: 64,
+          boxSizing: "border-box",
+          padding: "0 20px",
+          display: "flex",
+          alignItems: "center",
+          borderBottom: "1px solid #d3cec6",
         }}
       >
         <Link
@@ -693,33 +714,43 @@ function Sidebar() {
           {[
             {
               to: "/dashboard",
+              label: "Dashboard",
+              icon: <Gauge size={16} />,
+            },
+            {
+              to: "/dashboard/analytics",
               label: "All Channels",
-              icon: <LayoutDashboard size={16} />,
+              icon: <BarChart3 size={16} />,
             },
             {
               to: "/dashboard/queue",
               label: "Scheduled Queue",
-              icon: <CalendarDays size={16} />,
-            },           
+              icon: <CalendarClock size={16} />,
+            },
             {
               to: "/dashboard/instapilot",
               label: "GAP InstaPilot",
-              icon: <Bot size={16} />,
+              icon: <Instagram size={16} />,
             },
             {
               to: "/dashboard/youtube",
               label: "YouTube Studio",
-              icon: <Youtube size={16} />,
+              icon: <Video size={16} />,
+            },
+            {
+              to: "/dashboard/trends",
+              label: "Trend Feed",
+              icon: <Flame size={16} />,
+            },
+            {
+              to: "/dashboard/inbox",
+              label: "Social Inbox",
+              icon: <MessagesSquare size={16} />,
             },
             {
               to: "/dashboard/auto-dm",
               label: "GAP AutoDM",
-              icon: <MessagesSquare size={16} />,
-            },
-            {
-              to: "/dashboard/trends",
-              label: "All Trends",
-              icon: <Flame size={16} />,
+              icon: <Workflow size={16} />,
             },
           ].map(({ to, label, icon }) => {
             const active = isActive(to);
@@ -991,11 +1022,11 @@ function Sidebar() {
 
                   // Check if any target in this platform is selected
                   const isAnySelected = targets.some((target) => {
-                    const dashboardPlatform = target.providerId || target.id;
+                    const dashboardPlatform = target.id;
                     return (
                       (selectedDashboardPlatform === platformId ||
                         selectedDashboardPlatform === dashboardPlatform) &&
-                      location.pathname === "/dashboard"
+                      location.pathname.startsWith("/dashboard/analytics")
                     );
                   });
 
@@ -1008,7 +1039,7 @@ function Sidebar() {
                             ...prev,
                             [platformId]: prev[platformId] === false ? true : false,
                           }));
-                          navigate(`/dashboard?platform=${platformId}`);
+                          navigate(`/dashboard/analytics?platform=${platformId}`);
                         }}
                         className={`qp-sidebar-connected-parent-item ${isAnySelected ? "qp-sidebar-connected-parent-item-active" : ""}`}
                         style={{
@@ -1089,16 +1120,16 @@ function Sidebar() {
                             className="qp-sidebar-connected-children"
                           >
                             {targets.map((target) => {
-                              const dashboardPlatform = target.providerId || target.id;
+                              const dashboardPlatform = target.id;
                               const isSelected =
                                 selectedDashboardPlatform === dashboardPlatform &&
-                                location.pathname === "/dashboard";
+                                location.pathname.startsWith("/dashboard/analytics");
                               return (
                                 <div
                                   key={target.id}
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    navigate(`/dashboard?platform=${dashboardPlatform}`);
+                                    navigate(`/dashboard/analytics?platform=${dashboardPlatform}`);
                                   }}
                                   className="qp-sidebar-connected-item group"
                                   style={{
@@ -1248,45 +1279,45 @@ function Sidebar() {
             </button>
             <div className="qp-sidebar-account-panel">
               <div className="qp-sidebar-account-menu">
-            {[
-              { to: "/dashboard/profile", label: "Profile", icon: <UserRound size={15} /> },
-              { to: "/dashboard", label: "Channels", icon: <LayoutDashboard size={15} /> },
-              { to: "/dashboard/billing", label: "Plans and Billing", icon: <CreditCard size={15} /> },
-            ].map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className="qp-sidebar-account-link"
-              >
-                {item.icon}
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
-              </Link>
-            ))}
-            <a
-              href="mailto:support@gapsocialpilot.com"
-              className="qp-sidebar-account-link"
-            >
-              <HelpCircle size={15} />
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Help & Support</span>
-            </a>
-            {isFree(user?.plan) && (
-              <button
-                type="button"
-                onClick={() => navigate("/dashboard/billing")}
-                className="qp-sidebar-account-upgrade"
-              >
-                <Sparkles size={15} />
-                Upgrade plan
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="qp-sidebar-account-link qp-sidebar-account-logout"
-            >
-              <LogOut size={15} />
-              Log out
-            </button>
+                {[
+                  { to: "/dashboard/profile", label: "Profile", icon: <UserRound size={15} /> },
+                  { to: "/dashboard", label: "Channels", icon: <LayoutGrid size={15} /> },
+                  { to: "/dashboard/billing", label: "Plans and Billing", icon: <CreditCard size={15} /> },
+                ].map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className="qp-sidebar-account-link"
+                  >
+                    {item.icon}
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
+                  </Link>
+                ))}
+                <a
+                  href="mailto:support@gapsocialpilot.com"
+                  className="qp-sidebar-account-link"
+                >
+                  <HelpCircle size={15} />
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Help & Support</span>
+                </a>
+                {isFree(user?.plan) && (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/dashboard/billing")}
+                    className="qp-sidebar-account-upgrade"
+                  >
+                    <Sparkles size={15} />
+                    Upgrade plan
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="qp-sidebar-account-link qp-sidebar-account-logout"
+                >
+                  <LogOut size={15} />
+                  Log out
+                </button>
               </div>
             </div>
           </div>

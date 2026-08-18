@@ -1,4 +1,4 @@
-import express from 'express'; // trigger restart
+import express from 'express'; // Server reloaded - fixed text deduplication bug
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -8,14 +8,16 @@ import broadcastRouter from './routes/broadcast.js';
 import authRouter from './routes/auth.js';
 import ssoRouter from './routes/sso.js';
 import broadcastsRouter from './routes/broadcasts.js';
+import dashboardRouter from './routes/dashboard.js';
 import onboardingRouter from './routes/onboarding.js';
 import jobsRouter from './routes/jobs.js';
-import trendsRouter from './routes/trends.js';
+import trendFeedRouter from './routes/trendFeed.js';
 import aiRouter from './routes/ai.js';
 import instapilotRouter from './routes/instapilot.js';
 import autodmRouter from './routes/autodm.js';
 import billingRouter from './routes/billing.js';
 import youtubeRouter from './routes/youtube.js';
+import inboxRouter from './routes/inbox.js';
 import { initScheduler } from './services/scheduler.js';
 import supabase from './services/supabase.js';
 import { processInstagramWebhook } from './services/instapilot.js';
@@ -77,14 +79,16 @@ app.use('/api/auth', authRouter);
 app.use('/api/auth', ssoRouter);
 app.use('/api', broadcastRouter);
 app.use('/api', broadcastsRouter);
+app.use('/api', dashboardRouter);
 app.use('/api', onboardingRouter);
 app.use('/api', jobsRouter);
-app.use('/api', trendsRouter);
+app.use('/api', trendFeedRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/instapilot', instapilotRouter);
 app.use('/api/autodm', autodmRouter);
 app.use('/api/billing', billingRouter);
 app.use('/api/youtube', youtubeRouter);
+app.use('/api', inboxRouter);
 
 // Global SSE clients list for Realtime Frontend Updates
 const sseClients = [];
@@ -156,7 +160,7 @@ const server = app.listen(PORT, () => {
   console.log(`\n🚀 Server running on http://localhost:${PORT}`);
   console.log(`🌐 Client URL: ${CLIENT_URL}`);
   console.log(`📁 Uploads directory: ${path.join(__dirname, '../uploads')}`);
-  
+
   // Initialize Post Scheduler
   initScheduler();
 

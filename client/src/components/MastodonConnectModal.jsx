@@ -127,7 +127,7 @@ export default function MastodonConnectModal({ isOpen, onClose }) {
           <div className="space-y-1 mt-0.5">
             <h4 className="font-semibold text-gray-900 text-xs uppercase tracking-wider">Secure Connection</h4>
             <p className="text-xs text-gray-600 leading-relaxed">
-              By connecting, you'll be redirected to your instance to securely authorize QuickPost to post on your behalf.
+              By connecting, you'll be redirected to your instance to securely authorize GAP Social-pilot to post on your behalf.
             </p>
           </div>
         </div>

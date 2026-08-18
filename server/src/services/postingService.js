@@ -3,6 +3,7 @@ import { getTokensForUser } from './supabase.js';
 import { postToInstagram, postImageToInstagram, postCarouselToInstagram, postStoryToInstagram } from './instagram.js';
 import { postToYouTube, setVideoThumbnail } from './youtube.js';
 import { postToPinterest } from './pinterest.js';
+import pinterestOAuth from './pinterestOAuth.js';
 import { postFacebookReel, postFacebookStory, postToFacebook, postVideoToFacebook } from './facebook.js';
 import { postToBluesky } from './bluesky.js';
 import { postToLinkedIn } from './linkedin.js';
@@ -60,9 +61,25 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
 
     for (const account of resolveSocialPublishChannels('pinterest', channels, tokens.pinterestAccounts || [])) {
       const resolvedCaption = resolveMentions(platData?.pinterest?.title || caption, 'pinterest', account);
+      const targetAccountId = account.accountId || account.account_id || account.id;
       platformPromises.push(
-        postToPinterest(primaryMediaUrl, resolvedCaption, account, platData?.pinterest?.link, platData?.pinterest?.boardId || account.boardId)
-          .then(result => ({ platform: account.channel, result }))
+        (async () => {
+          try {
+            const validTokenInfo = await pinterestOAuth.getValidAccessToken(user.userId, targetAccountId);
+            const activeAccount = {
+              ...account,
+              accessToken: validTokenInfo.accessToken,
+              boardId: platData?.pinterest?.boardId || validTokenInfo.boardId || account.boardId
+            };
+            const result = await postToPinterest(primaryMediaUrl, resolvedCaption, activeAccount, platData?.pinterest?.link, activeAccount.boardId, options?.broadcastId || null);
+            return { platform: account.channel, result };
+          } catch (err) {
+            return {
+              platform: account.channel,
+              result: { success: false, platform: 'Pinterest', error: err.message }
+            };
+          }
+        })()
       );
     }
     
@@ -177,13 +194,14 @@ export async function executeBroadcast(broadcastId, userId, caption, mediaUrls, 
             } catch (tokenErr) {
               console.warn(`⚠️ [postingService] Could not refresh YouTube token: ${tokenErr.message}. Using stored token.`);
             }
-            const isShort = (platformData?.youtube?.type === "short");
-            const visibility = platformData?.youtube?.visibility || "public";
-            const description = platformData?.youtube?.description || "";
+            const isShort = (platData?.youtube?.type === "short");
+            const visibility = platData?.youtube?.visibility || "public";
+            const description = platData?.youtube?.description || "";
             return postToYouTube(primaryVideoPath, resolveMentions(caption, 'youtube', ytTokens), ytTokens, null, visibility, isShort, description)
               .then(async result => {
-                if (result.success && result.mediaId && coverImagePath && fs.existsSync(coverImagePath)) {
-                  await setVideoThumbnail(result.mediaId, coverImagePath, ytTokens);
+                const vId = result.videoId || result.mediaId;
+                if (result.success && vId && coverImagePath && fs.existsSync(coverImagePath)) {
+                  await setVideoThumbnail(vId, coverImagePath, ytTokens);
                 }
                 return {
                   platform: account.channel,

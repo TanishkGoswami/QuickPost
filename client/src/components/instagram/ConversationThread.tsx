@@ -17,7 +17,11 @@ export default function ConversationThread({ conversationId, refreshKey, onChang
     if (!conversationId) return;
     setLoading(true);
     try {
-      setThread(await fetchConversationThread(conversationId));
+      const nextThread = await fetchConversationThread(conversationId);
+      setThread(nextThread);
+      if (nextThread?.conversation?.profile_pic_url || nextThread?.conversation?.is_user_follow_business !== undefined) {
+        onChanged();
+      }
     } catch (err: any) {
       toast.error(err.response?.data?.error || err.message || "Failed to load thread");
     } finally {

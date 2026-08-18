@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar,
@@ -17,11 +18,15 @@ import {
   RefreshCw,
   Zap,
   CalendarClock,
+  LayoutGrid,
+  List
 } from "lucide-react";
 import apiClient from "../utils/apiClient";
 import ComposerModal from "../components/ComposerModal";
+import CalendarView from "../components/CalendarView";
 import { Skeleton } from "boneyard-js/react";
 import { useDialog } from "../context/DialogContext";
+import { useAuth } from "../context/AuthContext";
 
 // ─── Platform icon helper ────────────────────────────────────────────────────
 function getPlatformIcon(id) {
@@ -153,10 +158,17 @@ function QueueThumb({ post }) {
 }
 
 // ─── Queue Card ───────────────────────────────────────────────────────────────
-function QueueCard({ post, onCancel, onRetry, onRefresh }) {
+function QueueCard({ post, onCancel, onRetry, onRefresh, autoEditId }) {
   const { confirm, alert } = useDialog();
-  const [expanded, setExpanded] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const [expanded, setExpanded] = useState(post.id === autoEditId);
+  const [editing, setEditing] = useState(post.id === autoEditId);
+
+  useEffect(() => {
+    if (post.id === autoEditId) {
+      setExpanded(true);
+      setEditing(true);
+    }
+  }, [autoEditId, post.id]);
   const [newCaption, setNewCaption] = useState(post.caption || "");
   const [newTime, setNewTime] = useState(
     post.scheduled_for
@@ -459,12 +471,28 @@ function groupByDate(posts) {
 
 // ─── Main ScheduledQueue Page ─────────────────────────────────────────────────
 export default function ScheduledQueue() {
+  const [searchParams] = useSearchParams();
+  const autoEditId = searchParams.get("edit");
+  const { connectedAccounts } = useAuth();
   const [posts, setPosts] = useState([]);
   const [stats, setStats] = useState({ pending: 0 });
   const [loading, setLoading] = useState(true);
   const [composerOpen, setComposerOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
   const [refreshing, setRefreshing] = useState(false);
+
+  // Persistent toggle state
+  const [viewMode, setViewMode] = useState(() => {
+    return localStorage.getItem("quickpost_queue_view") || "list";
+  });
+  const [prefillDate, setPrefillDate] = useState("");
+  const [prefillCaption, setPrefillCaption] = useState("");
+  const [prefillMediaUrls, setPrefillMediaUrls] = useState([]);
+
+  const handleViewChange = (mode) => {
+    setViewMode(mode);
+    localStorage.setItem("quickpost_queue_view", mode);
+  };
 
   const fetchQueue = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -502,6 +530,7 @@ export default function ScheduledQueue() {
   const FILTERS = [
     { id: "all", label: "All" },
     { id: "scheduled", label: "Scheduled" },
+    { id: "sent", label: "Published" },
     { id: "failed", label: "Failed" },
     { id: "cancelled", label: "Cancelled" },
   ];
@@ -519,28 +548,12 @@ export default function ScheduledQueue() {
       <div
         style={{
           background: "#ffffff",
-          borderBottom: "1px solid #d3cec6",
-          padding: "clamp(24px, 4vw, 30px) clamp(18px, 3vw, 32px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 16,
+          borderBottom: "1px solid #ebe7e1",
+          padding: "clamp(20px, 3vw, 24px) clamp(18px, 3vw, 32px)",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 16,
-            flex: 1,
-            minWidth: 200,
-          }}
-        >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="eyebrow" style={{ marginBottom: 2 }}>
-              Overview
-            </div>
             <h1
               style={{
                 fontSize: "clamp(36px, 5vw, 56px)",
@@ -554,98 +567,84 @@ export default function ScheduledQueue() {
             >
               Scheduled Queue
             </h1>
-            <p className="text-xs text-gray-400 mt-1.5">
-              {stats.pending} pending · auto-refreshes every 30s
+            <p className="text-xs text-gray-500 font-medium mt-1.5 max-w-md">
+              Manage and track upcoming social broadcasts across all connected channels.
             </p>
           </div>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button
-            onClick={() => fetchQueue(true)}
-            disabled={refreshing}
-            style={{
-              padding: 8,
-              borderRadius: "8px",
-              border: "1px solid #d3cec6",
-              background: "#ffffff",
-              color: "#626260",
-              cursor: "pointer",
-              transition: "all 0.2s",
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.color = "#111111";
-              e.currentTarget.style.background = "#ebe7e1";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.color = "#626260";
-              e.currentTarget.style.background = "#ffffff";
-            }}
-            className="disabled:opacity-50"
-            title="Refresh"
-          >
-            <RefreshCw
-              className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
-            />
-          </button>
-          <button
-            onClick={() => setComposerOpen(true)}
-            className="btn-ink"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              fontSize: 14,
-              padding: "10px 20px",
-              borderRadius: "8px",
-            }}
-          >
-            <Plus size={16} />
-            <span className="hidden sm:inline">Schedule Post</span>
-            <span className="sm:hidden">Schedule</span>
-          </button>
-        </div>
-      </div>
 
-      {/* ── Stats strip ── */}
-      <div
-        style={{
-          background: "#ffffff",
-          borderBottom: "1px solid #ebe7e1",
-          padding: "16px clamp(18px, 3vw, 32px)",
-        }}
-      >
-        <div className="flex items-center gap-6">
-          {[
-            {
-              label: "Scheduled",
-              count: posts.filter((p) => p.status === "scheduled").length,
-              color: "text-blue-600",
-            },
-            {
-              label: "Processing",
-              count: posts.filter((p) => p.status === "processing").length,
-              color: "text-amber-600",
-            },
-            {
-              label: "Failed",
-              count: posts.filter((p) => p.status === "failed").length,
-              color: "text-red-600",
-            },
-            {
-              label: "Cancelled",
-              count: posts.filter((p) => p.status === "cancelled").length,
-              color: "text-gray-400",
-            },
-          ].map(({ label, count, color }) => (
-            <div key={label} className="flex items-center gap-1.5">
-              <span className={`text-sm font-bold ${color}`}>{count}</span>
-              <span className="text-xs text-gray-400">{label}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {/* Segmented View Toggle */}
+            <div className="flex items-center bg-gray-100/80 p-0.5 rounded-lg border border-gray-200/70">
+              <button
+                onClick={() => handleViewChange("grid")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${viewMode === "grid"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-800"
+                  }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                Grid
+              </button>
+              <button
+                onClick={() => handleViewChange("list")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${viewMode === "list"
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-800"
+                  }`}
+              >
+                <List className="w-3.5 h-3.5" />
+                List
+              </button>
             </div>
-          ))}
+
+            <button
+              onClick={() => fetchQueue(true)}
+              disabled={refreshing}
+              style={{
+                padding: 8,
+                borderRadius: "8px",
+                border: "1px solid #d3cec6",
+                background: "#ffffff",
+                color: "#626260",
+                cursor: "pointer",
+                transition: "all 0.2s",
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.color = "#111111";
+                e.currentTarget.style.background = "#ebe7e1";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.color = "#626260";
+                e.currentTarget.style.background = "#ffffff";
+              }}
+              className="disabled:opacity-50"
+              title="Refresh"
+            >
+              <RefreshCw
+                className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
+              />
+            </button>
+            <button
+              onClick={() => setComposerOpen(true)}
+              className="btn-ink"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 14,
+                padding: "9px 18px",
+                borderRadius: "8px",
+              }}
+            >
+              <Plus size={16} />
+              <span className="hidden sm:inline">Schedule Post</span>
+              <span className="sm:hidden">Schedule</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* ── Filter tabs ── */}
+      {/* ── Filter tabs with seamless count indicators ── */}
       <div
         style={{
           background: "#ffffff",
@@ -654,28 +653,61 @@ export default function ScheduledQueue() {
         }}
       >
         <div className="flex items-center gap-6">
-          {FILTERS.map((f) => (
+          {[
+            { id: "all", label: "All", count: posts.length },
+            {
+              id: "scheduled",
+              label: "Scheduled",
+              count: posts.filter((p) => p.status === "scheduled").length,
+            },
+            {
+              id: "sent",
+              label: "Published",
+              count: posts.filter((p) => p.status === "sent").length,
+            },
+            {
+              id: "failed",
+              label: "Failed",
+              count: posts.filter((p) => p.status === "failed").length,
+              hasWarning: posts.filter((p) => p.status === "failed").length > 0,
+            },
+            {
+              id: "cancelled",
+              label: "Cancelled",
+              count: posts.filter((p) => p.status === "cancelled").length,
+            },
+          ].map((f) => (
             <button
               key={f.id}
               onClick={() => setActiveFilter(f.id)}
+              className="flex items-center gap-2 transition-colors"
               style={{
-                padding: "14px 0",
-                fontSize: 11,
-                fontWeight: 700,
-                textTransform: "none",
-                letterSpacing: 0,
+                padding: "13px 0",
+                fontSize: 13,
+                fontWeight: activeFilter === f.id ? 600 : 500,
                 color: activeFilter === f.id ? "#111111" : "#626260",
                 border: "none",
                 background: "transparent",
                 cursor: "pointer",
-                borderBottom: `2.5px solid ${activeFilter === f.id ? "#111111" : "transparent"}`,
+                borderBottom: `2px solid ${activeFilter === f.id ? "#111111" : "transparent"}`,
                 marginBottom: -1,
-                transition: "all 0.2s",
                 whiteSpace: "nowrap",
                 flexShrink: 0,
               }}
             >
-              {f.label}
+              <span>{f.label}</span>
+              <span
+                className={`text-xs px-1.5 py-0.5 rounded-full font-medium transition-colors ${activeFilter === f.id
+                    ? f.hasWarning
+                      ? "bg-red-100 text-red-700"
+                      : "bg-gray-900 text-white"
+                    : f.hasWarning
+                      ? "bg-red-50 text-red-600"
+                      : "bg-gray-100 text-gray-500"
+                  }`}
+              >
+                {f.count}
+              </span>
             </button>
           ))}
         </div>
@@ -713,7 +745,24 @@ export default function ScheduledQueue() {
             </div>
           }
         >
-          {filtered.length === 0 ? (
+          {viewMode === "grid" ? (
+            <CalendarView
+              posts={filtered}
+              connectedAccounts={connectedAccounts}
+              onRefresh={(silent) => fetchQueue(silent)}
+              onCancel={handleCancel}
+              onAddPost={(date, options = {}) => {
+                const y = date.getFullYear();
+                const m = String(date.getMonth() + 1).padStart(2, "0");
+                const d = String(date.getDate()).padStart(2, "0");
+                const localDateStr = `${y}-${m}-${d}`;
+                setPrefillDate(`${localDateStr}T09:00`);
+                if (options.caption) setPrefillCaption(options.caption);
+                if (options.mediaUrls) setPrefillMediaUrls(options.mediaUrls);
+                setComposerOpen(true);
+              }}
+            />
+          ) : filtered.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -765,6 +814,7 @@ export default function ScheduledQueue() {
                         <QueueCard
                           key={post.id}
                           post={post}
+                          autoEditId={autoEditId}
                           onCancel={handleCancel}
                           onRetry={handleRetry}
                           onRefresh={() => fetchQueue(true)}
@@ -781,9 +831,20 @@ export default function ScheduledQueue() {
 
       <ComposerModal
         isOpen={composerOpen}
-        onClose={() => setComposerOpen(false)}
+        initialScheduledAt={prefillDate}
+        initialCaption={prefillCaption}
+        initialMediaUrls={prefillMediaUrls}
+        onClose={() => {
+          setComposerOpen(false);
+          setPrefillDate("");
+          setPrefillCaption("");
+          setPrefillMediaUrls([]);
+        }}
         onPostCreated={() => {
           setComposerOpen(false);
+          setPrefillDate("");
+          setPrefillCaption("");
+          setPrefillMediaUrls([]);
           fetchQueue(true);
         }}
       />

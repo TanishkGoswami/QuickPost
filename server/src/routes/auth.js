@@ -4,7 +4,6 @@ import crypto from "crypto";
 
 import googleOAuth from "../services/googleOAuth.js";
 import googleBusinessOAuth from "../services/googleBusinessOAuth.js";
-import instagramOAuth from "../services/instagramOAuth.js";
 import pinterestOAuth from "../services/pinterestOAuth.js";
 import facebookOAuth from "../services/facebookOAuth.js";
 import blueskyAuth from "../services/blueskyAuth.js";
@@ -15,6 +14,7 @@ import threadsOAuth from "../services/threadsOAuth.js";
 import xOAuth from "../services/xOAuth.js";
 import redditOAuth from "../services/redditOAuth.js";
 import { startAutoDMInstagramOAuth } from "../services/autodm.js";
+import { supermailbox } from "../services/supermailbox.js";
 
 import supabase, {
   createOrUpdateUser,
@@ -25,6 +25,40 @@ import {
   authenticateUser,
   generateToken,
 } from "../middleware/authenticateUser.js";
+
+async function notifyAccountConnected(userId, platformName, accountUsername) {
+  try {
+    const { data: user } = await supabase
+      .from("users")
+      .select("email, name")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (user?.email) {
+      const platformDisplay = accountUsername
+        ? `${platformName} (@${accountUsername})`
+        : platformName;
+
+      supermailbox
+        .sendEmail({
+          to: user.email,
+          templateKey: "account_connected",
+          variables: {
+            platform: platformDisplay,
+            name: user.name || user.email.split("@")[0],
+          },
+        })
+        .catch((err) =>
+          console.warn(
+            "[SupermailBox SDK] Account connected email failed:",
+            err?.message,
+          ),
+        );
+    }
+  } catch (err) {
+    console.warn("⚠️ [AUTH] notifyAccountConnected error:", err?.message);
+  }
+}
 
 const router = express.Router();
 const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
@@ -38,6 +72,14 @@ function decodeState(state) {
   }
 }
 
+function dashboardRedirect(params) {
+  const url = new URL("/dashboard", CLIENT_URL);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) url.searchParams.set(key, value);
+  });
+  return url.toString();
+}
+
 function requireJwtSecret() {
   if (!process.env.JWT_SECRET) {
     console.error("❌ JWT_SECRET missing in env");
@@ -46,27 +88,48 @@ function requireJwtSecret() {
 requireJwtSecret();
 
 async function getConnectedTargetCount(userId) {
-  const [{ count: socialCount, error: socialError }, { count: instagramCount, error: instagramError }] = await Promise.all([
+  const [{ data: socialRows, error: socialError }, { data: instagramRows, error: instagramError }] = await Promise.all([
     supabase
       .from("social_tokens")
-      .select("id", { count: "exact", head: true })
+      .select("provider, account_id, page_id, instagram_business_id, username")
       .eq("user_id", userId)
       .neq("provider", "instagram"),
     supabase
       .from("instagram_accounts")
-      .select("id", { count: "exact", head: true })
+      .select("instagram_business_account_id")
       .eq("user_id", userId)
       .eq("is_connected", true),
   ]);
   if (socialError) throw socialError;
   if (instagramError) throw instagramError;
-  return (socialCount || 0) + (instagramCount || 0);
+
+  const targets = new Set();
+  for (const row of socialRows || []) {
+    targets.add([
+      row.provider,
+      row.account_id || row.page_id || row.instagram_business_id || row.username,
+    ].filter(Boolean).join(":"));
+  }
+  for (const row of instagramRows || []) {
+    targets.add(`instagram:${row.instagram_business_account_id}`);
+  }
+  return targets.size;
 }
 
 async function assertCanConnectTarget({ user, provider, accountId }) {
   const userId = user.userId;
   const entitlementUserId = user.authUserId || userId;
-  const entitlements = await getEntitlements(entitlementUserId, user.email, user.token);
+  let email = user.email;
+  if (!email) {
+    const { data, error } = await supabase
+      .from("users")
+      .select("email")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error) throw error;
+    email = data?.email || null;
+  }
+  const entitlements = await getEntitlements(entitlementUserId, email, user.token);
   const limit = entitlements.limits.social_accounts;
 
   if (!Number.isFinite(limit)) return;
@@ -163,6 +226,11 @@ router.get("/google/callback", async (req, res) => {
         decodedState.userId,
       );
       await googleOAuth.storeTokens(decodedState.userId, tokenData);
+      notifyAccountConnected(
+        decodedState.userId,
+        "YouTube",
+        tokenData.userInfo?.username || tokenData.userInfo?.name,
+      );
       return res.redirect(`${CLIENT_URL}/dashboard?success=youtube`);
     }
 
@@ -252,6 +320,11 @@ router.get("/googleBusiness/callback", async (req, res) => {
         decodedState.userId,
       );
       await googleBusinessOAuth.storeTokens(decodedState.userId, tokenData);
+      notifyAccountConnected(
+        decodedState.userId,
+        "Google Business",
+        tokenData.userInfo?.name,
+      );
       return res.redirect(`${CLIENT_URL}/dashboard?success=googleBusiness_connected`);
     }
 
@@ -310,42 +383,12 @@ router.get("/instagram", async (req, res) => {
 });
 
 router.get("/instagram/callback", async (req, res) => {
-  const { code, error, state } = req.query;
-
-  console.log("\n🔵 Instagram OAuth Callback Received");
-  console.log("Query params:", {
-    code: code ? "present" : "missing",
-    error,
-    state: state ? "present" : "missing",
-  });
-
-  if (error) return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied`);
-  if (!code || !state)
-    return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
-
-  const parsed = decodeState(state);
-  if (!parsed?.userId)
-    return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
-
-  try {
-    const tokenData = await instagramOAuth.exchangeCodeForToken(code);
-    await assertCanConnectTarget({
-      user: { userId: parsed.userId },
-      provider: "instagram",
-      accountId: tokenData.instagramBusinessId,
-    });
-    await instagramOAuth.storeTokens(parsed.userId, tokenData);
-
-    res.redirect(`${CLIENT_URL}/dashboard?success=instagram_connected`);
-  } catch (err) {
-    console.error("❌ IG callback error:", err.message);
-    const message = encodeURIComponent(
-      err?.message || "Failed to connect Instagram account",
-    );
-    res.redirect(
-      `${CLIENT_URL}/dashboard?error=instagram_connection_failed&message=${message}`,
-    );
-  }
+  const message = encodeURIComponent(
+    "This legacy Instagram callback is disabled. Use Instagram Login for Business.",
+  );
+  return res.redirect(
+    `${CLIENT_URL}/dashboard?error=legacy_instagram_callback_disabled&message=${message}`,
+  );
 });
 
 /* ---------------- FACEBOOK ---------------- */
@@ -387,12 +430,15 @@ router.get("/facebook", async (req, res) => {
     return res.redirect(authUrl);
   } catch (error) {
     console.error("Facebook init error:", error);
-    res.redirect(`${CLIENT_URL}/dashboard?error=facebook_oauth_failed`);
+    res.redirect(dashboardRedirect({
+      error: "facebook_oauth_failed",
+      message: error.message,
+    }));
   }
 });
 
 router.get("/facebook/callback", async (req, res) => {
-  const { code, error, state } = req.query;
+  const { code, error, error_description: errorDescription, error_reason: errorReason, state } = req.query;
 
   console.log("\n🔵 Facebook OAuth Callback Received");
   console.log("Query params:", {
@@ -401,7 +447,12 @@ router.get("/facebook/callback", async (req, res) => {
     state: state ? "present" : "missing",
   });
 
-  if (error) return res.redirect(`${CLIENT_URL}/dashboard?error=access_denied`);
+  if (error) {
+    return res.redirect(dashboardRedirect({
+      error: "facebook_access_denied",
+      message: errorDescription || errorReason || error,
+    }));
+  }
   if (!code || !state)
     return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
 
@@ -411,28 +462,21 @@ router.get("/facebook/callback", async (req, res) => {
 
   try {
     const tokenData = await facebookOAuth.exchangeCodeForToken(code);
-    if (tokenData.pages?.length > 1) {
-      const pendingId = crypto.randomUUID();
-      pendingOAuthSelections.set(pendingId, {
-        provider: "facebook",
-        userId: parsed.userId,
-        tokenData,
-        expiresAt: Date.now() + 10 * 60 * 1000,
-      });
-      return res.redirect(`${CLIENT_URL}/connect/select?provider=facebook&pending=${pendingId}`);
-    }
-    const page = tokenData.pages?.[0];
-    await assertCanConnectTarget({
-      user: { userId: parsed.userId },
+    const pendingId = crypto.randomUUID();
+    pendingOAuthSelections.set(pendingId, {
       provider: "facebook",
-      accountId: page?.pageId || tokenData.pageId,
+      userId: parsed.userId,
+      tokenData,
+      expiresAt: Date.now() + 10 * 60 * 1000,
     });
-    await facebookOAuth.storeTokens(parsed.userId, tokenData);
-
-    res.redirect(`${CLIENT_URL}/dashboard?success=facebook_connected`);
+    console.log(`FB: pending page selection created (${tokenData.pages?.length || 0} pages): ${pendingId}`);
+    return res.redirect(`${CLIENT_URL}/connect/select?provider=facebook&pending=${pendingId}`);
   } catch (err) {
     console.error("❌ FB callback error:", err.message);
-    res.redirect(`${CLIENT_URL}/dashboard?error=facebook_connection_failed`);
+    res.redirect(dashboardRedirect({
+      error: "facebook_connection_failed",
+      message: err.message,
+    }));
   }
 });
 
@@ -494,16 +538,27 @@ router.get("/pinterest/callback", async (req, res) => {
     return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_callback`);
 
   const parsed = decodeState(state);
-  if (!parsed?.userId)
+
+  // Strict State & Nonce Validation
+  const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+  if (
+    !parsed?.userId ||
+    parsed.provider !== "pinterest" ||
+    !parsed.ts ||
+    Date.now() - parsed.ts > FIFTEEN_MINUTES_MS
+  ) {
+    console.error("❌ [PINTEREST-OAUTH] State validation failed (expired state, invalid provider, or user mismatch)");
     return res.redirect(`${CLIENT_URL}/dashboard?error=invalid_state`);
+  }
 
   try {
     const tokenData = await pinterestOAuth.exchangeCodeForToken(code);
     await pinterestOAuth.storeTokens(parsed.userId, tokenData);
+    notifyAccountConnected(parsed.userId, "Pinterest", tokenData.username);
 
     res.redirect(`${CLIENT_URL}/dashboard?success=pinterest_connected`);
   } catch (err) {
-    console.error("Pinterest callback error:", err);
+    console.error("❌ [PINTEREST-OAUTH] Callback error:", err.message || err);
     res.redirect(`${CLIENT_URL}/dashboard?error=pinterest_connection_failed`);
   }
 });
@@ -619,6 +674,7 @@ router.get("/linkedin/callback", async (req, res) => {
   try {
     const tokenData = await linkedinOAuth.exchangeCodeForToken(code);
     await linkedinOAuth.storeTokens(parsed.userId, tokenData);
+    notifyAccountConnected(parsed.userId, "LinkedIn", tokenData.name);
 
     res.redirect(`${CLIENT_URL}/dashboard?success=linkedin_connected`);
   } catch (err) {
@@ -695,6 +751,7 @@ router.get("/mastodon/callback", async (req, res) => {
       parsed.instanceUrl,
       tokenData,
     );
+    notifyAccountConnected(parsed.userId, "Mastodon", tokenData.username);
 
     res.redirect(`${CLIENT_URL}/dashboard?success=mastodon_connected`);
   } catch (err) {
@@ -739,7 +796,10 @@ router.get("/threads", async (req, res) => {
       );
     }
 
-    const state = threadsOAuth.makeState(userId);
+    const state = threadsOAuth.makeState({
+      userId,
+      authUserId: jwt.decode(String(token))?.sub,
+    });
     const authUrl = threadsOAuth.getAuthorizationUrl(state);
     return res.redirect(authUrl);
   } catch (error) {
@@ -762,11 +822,12 @@ router.get("/threads/callback", async (req, res) => {
   try {
     const tokenData = await threadsOAuth.exchangeCodeForToken(code);
     await assertCanConnectTarget({
-      user: { userId: parsed.userId },
+      user: { userId: parsed.userId, authUserId: parsed.authUserId },
       provider: "threads",
       accountId: tokenData.threadsUserId,
     });
     await threadsOAuth.storeTokens(parsed.userId, tokenData);
+    notifyAccountConnected(parsed.userId, "Threads", tokenData.username);
 
     console.log(
       `✅ [AUTH] Threads connected successfully for user ${parsed.userId}`,
@@ -873,6 +934,7 @@ router.get("/x/callback", async (req, res) => {
     );
     console.log(" - Token exchange success!");
     await xOAuth.storeTokens(parsed.userId, tokenData);
+    notifyAccountConnected(parsed.userId, "X (Twitter)", tokenData.username);
 
     console.log(`✅ [AUTH] X connected successfully for user ${parsed.userId}`);
     res.redirect(`${CLIENT_URL}/dashboard?success=x_connected`);
@@ -1002,6 +1064,14 @@ router.post("/linkedin/connect", authenticateUser, async (req, res) => {
 // Pinterest manual connection with access token
 router.post("/pinterest/connect", authenticateUser, async (req, res) => {
   try {
+    const isManualAllowed = process.env.NODE_ENV !== 'production' || process.env.ALLOW_MANUAL_PINTEREST_TOKEN === 'true';
+    if (!isManualAllowed) {
+      return res.status(403).json({
+        success: false,
+        error: "Manual token connection is disabled in production. Please use official Pinterest OAuth.",
+      });
+    }
+
     const { accessToken, boardId } = req.body;
     const userId = req.user.userId;
 
@@ -1124,13 +1194,43 @@ router.get("/pending-selection/:id", authenticateUser, async (req, res) => {
   if (pending.userId !== req.user.userId) {
     return res.status(403).json({ success: false, error: "Selection does not belong to this user." });
   }
+  console.log(`FB: pending page selection fetched: ${req.params.id}`);
+
+  const userIds = [...new Set([req.user.userId, req.user.authUserId].filter(Boolean))];
+  const { data: existingRows, error: existingError } = await supabase
+    .from("social_tokens")
+    .select("account_id,page_id")
+    .in("user_id", userIds)
+    .eq("provider", pending.provider);
+
+  if (existingError) {
+    return res.status(500).json({ success: false, error: existingError.message });
+  }
+
+  const entitlements = await getEntitlements(req.user.authUserId || req.user.userId, req.user.email, req.token);
+  const accountLimit = entitlements.limits.social_accounts;
+  const connectedCount = await getConnectedTargetCount(req.user.userId);
+  const availableSlots = Number.isFinite(accountLimit)
+    ? Math.max(0, accountLimit - connectedCount)
+    : Number.MAX_SAFE_INTEGER;
+  const connectedIds = new Set(
+    (existingRows || [])
+      .flatMap((row) => [row.account_id, row.page_id])
+      .filter(Boolean)
+      .map(String),
+  );
+
   res.json({
     success: true,
     provider: pending.provider,
+    accountLimit,
+    connectedCount,
+    availableSlots,
     accounts: (pending.tokenData.pages || []).map((page) => ({
       id: page.pageId,
       name: page.userInfo?.pageName,
       picture: page.userInfo?.picture?.data?.url || page.userInfo?.picture?.url || null,
+      alreadyConnected: connectedIds.has(String(page.pageId)),
     })),
   });
 });
@@ -1150,7 +1250,34 @@ router.post("/pending-selection/:id", authenticateUser, async (req, res) => {
     if (!pages.length) {
       return res.status(400).json({ success: false, error: "Select at least one account." });
     }
-    for (const page of pages) {
+
+    const { data: existingRows, error: existingError } = await supabase
+      .from("social_tokens")
+      .select("account_id,page_id")
+      .eq("user_id", req.user.userId)
+      .eq("provider", "facebook");
+    if (existingError) throw existingError;
+
+    const connectedIds = new Set(
+      (existingRows || [])
+        .flatMap((row) => [row.account_id, row.page_id])
+        .filter(Boolean)
+        .map(String),
+    );
+    const newPages = pages.filter((page) => !connectedIds.has(String(page.pageId)));
+    const entitlements = await getEntitlements(req.user.authUserId || req.user.userId, req.user.email, req.token);
+    const accountLimit = entitlements.limits.social_accounts;
+
+    if (Number.isFinite(accountLimit)) {
+      const used = await getConnectedTargetCount(req.user.userId);
+      if (used + newPages.length > accountLimit) {
+        const error = new Error(`Your plan allows ${accountLimit} connected social account${accountLimit === 1 ? "" : "s"}. Deselect accounts or upgrade to connect more.`);
+        error.code = "PLAN_LIMIT_REACHED";
+        throw error;
+      }
+    }
+
+    for (const page of newPages) {
       await assertCanConnectTarget({
         user: req.user,
         provider: "facebook",
@@ -1159,6 +1286,7 @@ router.post("/pending-selection/:id", authenticateUser, async (req, res) => {
     }
     await facebookOAuth.storeTokens(req.user.userId, { ...pending.tokenData, pages });
     pendingOAuthSelections.delete(req.params.id);
+    console.log(`FB: saved selected pages: ${pages.map((page) => page.pageId).join(", ")}`);
     res.json({ success: true });
   } catch (error) {
     res.status(error.code === "PLAN_LIMIT_REACHED" ? 403 : 500).json({
@@ -1214,7 +1342,7 @@ router.delete("/disconnect/:provider", authenticateUser, async (req, res) => {
       }
       const { data: igData, error: igError } = await igQuery.select();
       console.log(`[DISCONNECT] igData=${JSON.stringify(igData)} error=${JSON.stringify(igError)}`);
-      
+
       if (igError) throw igError;
 
       const disconnectedBusinessIds = (igData || [])
@@ -1250,7 +1378,7 @@ router.delete("/disconnect/:provider", authenticateUser, async (req, res) => {
           console.log(`[DISCONNECT] Paused automations for account(s): ${disconnectedIds.join(", ")}`);
         }
       }
-      
+
       if (accountId) {
         return res.json({
           success: true,

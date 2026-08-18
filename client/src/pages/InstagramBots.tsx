@@ -1,7 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { BookOpen, Bot, CheckCircle2, Inbox, Info, Link2, MessageCircle, Plus, ShieldCheck, Sparkles, TestTube2, Trash2, X, Zap } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+  Bot,
+  CheckCircle2,
+  Inbox,
+  Info,
+  Link2,
+  MessageCircle,
+  Plus,
+  Power,
+  ShieldCheck,
+  Sparkles,
+  TestTube2,
+  Trash2,
+  X,
+  Zap,
+} from "lucide-react";
 import BotBuilderForm from "@/components/instagram/BotBuilderForm";
 import KnowledgeBaseUploader from "@/components/instagram/KnowledgeBaseUploader";
 import TestChat from "@/components/instagram/TestChat";
@@ -10,9 +28,13 @@ import { useAuth } from "@/context/AuthContext";
 import { useDialog } from "@/context/DialogContext";
 import { useInstagramAccounts } from "@/hooks/useInstagramAccounts";
 import { useInstagramBots } from "@/hooks/useInstagramBots";
-import { deleteInstagramBot, fetchInstagramAnalytics } from "@/services/instagramApi";
+import { deleteInstagramBot, fetchInstagramAnalytics, updateInstagramBot } from "@/services/instagramApi";
 
 export default function InstagramBots() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const isEditMode = searchParams.has("mode") || searchParams.has("edit");
+
   const { connectedAccounts } = useAuth();
   const { confirm } = useDialog();
   const hasPostingInstagram = Boolean(connectedAccounts.instagram?.connected);
@@ -23,6 +45,8 @@ export default function InstagramBots() {
   const [selectedBotId, setSelectedBotId] = useState<string | undefined>();
   const [analytics, setAnalytics] = useState<any>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [activeStep, setActiveStep] = useState<number>(0);
+  const [userSetStep, setUserSetStep] = useState(false);
 
   useEffect(() => {
     fetchInstagramAnalytics().then(setAnalytics).catch(() => null);
@@ -36,8 +60,25 @@ export default function InstagramBots() {
   const connectedAccount = accounts.find((account) => account.is_connected);
   const accountsBusy = accountsLoading || syncing;
   const activeBots = bots.filter((bot) => bot.is_active).length;
-  const currentStep = !connectedAccount ? 0 : !selectedBot?.id ? 1 : 2;
   const hasBot = bots.length > 0;
+
+  useEffect(() => {
+    if (!loading && activeBots > 0 && !isEditMode) {
+      navigate("/dashboard/instapilot/inbox", { replace: true });
+    }
+  }, [loading, activeBots, isEditMode, navigate]);
+
+  useEffect(() => {
+    if (!userSetStep) {
+      if (!connectedAccount) {
+        setActiveStep(0);
+      } else if (!selectedBot?.id) {
+        setActiveStep(1);
+      } else if (activeStep === 0) {
+        setActiveStep(1);
+      }
+    }
+  }, [connectedAccount, selectedBot?.id, userSetStep]);
 
   const removeBot = async (bot: any) => {
     const ok = await confirm(
@@ -60,6 +101,21 @@ export default function InstagramBots() {
       toast.error(err.response?.data?.error || err.message || "Failed to delete bot");
     }
   };
+
+  if (loading && !isEditMode) {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center bg-[#f7f5f2]">
+        <div className="flex items-center gap-3 rounded-xl border border-black/10 bg-white px-6 py-4 shadow-sm text-sm font-semibold text-[var(--ink)]">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--arc)] border-t-transparent" />
+          <span>Checking active InstaPilot bot...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!loading && activeBots > 0 && !isEditMode) {
+    return null;
+  }
 
   return (
     <div className="min-h-full bg-[#f7f5f2] px-4 py-5 lg:px-8">
@@ -93,7 +149,7 @@ export default function InstagramBots() {
                 </div>
               </div>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-[var(--slate)]">
-                Follow the steps below. Connect once, add business answers, test replies, then activate when everything feels right. One workspace can have one InstaPilot bot, so edits happen inside the existing bot.
+                Follow the 4 steps below. First connect, save bot identity, add knowledge base answers, then test & activate live. Click any step to switch view.
               </p>
             </div>
             <div className="flex flex-wrap gap-2 lg:justify-end">
@@ -117,6 +173,7 @@ export default function InstagramBots() {
           </div>
         </header>
 
+        {/* 4-Step Interactive Wizard Header */}
         <section className="rounded-xl border border-black/10 bg-white p-4 shadow-sm">
           <div className="grid gap-3 lg:grid-cols-4">
             <StepCard
@@ -124,17 +181,45 @@ export default function InstagramBots() {
               title="Connect"
               text={connectedAccount ? `@${connectedAccount.instagram_username || "instagram"} connected` : "Connect Instagram once"}
               done={Boolean(connectedAccount)}
-              active={currentStep === 0}
+              active={activeStep === 0}
+              onClick={() => {
+                setUserSetStep(true);
+                setActiveStep(0);
+              }}
             />
             <StepCard
               number="2"
               title="Bot details"
               text={selectedBot?.id ? `${selectedBot.bot_name} saved` : "Name, language, tone"}
               done={Boolean(selectedBot?.id)}
-              active={currentStep === 1}
+              active={activeStep === 1}
+              onClick={() => {
+                setUserSetStep(true);
+                setActiveStep(1);
+              }}
             />
-            <StepCard number="3" title="Knowledge" text="FAQs, pricing, policies" done={false} active={currentStep === 2} />
-            <StepCard number="4" title="Test & activate" text="Preview before going live" done={activeBots > 0} active={false} />
+            <StepCard
+              number="3"
+              title="Knowledge"
+              text="FAQs, pricing, policies"
+              done={Boolean(selectedBot?.id && (selectedBot?.knowledge_count > 0 || selectedBot?.sources_count > 0))}
+              active={activeStep === 2}
+              onClick={() => {
+                setUserSetStep(true);
+                setActiveStep(2);
+              }}
+            />
+            <StepCard
+              number="4"
+              title="Test & activate"
+              text="Preview & turn live"
+              done={activeBots > 0}
+              active={activeStep === 3}
+              onClick={() => {
+                setUserSetStep(true);
+                setActiveStep(3);
+              }}
+            />
           </div>
         </section>
 
@@ -149,34 +234,6 @@ export default function InstagramBots() {
         </section>
 
         {error ? <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div> : null}
-        {!connectedAccount && hasPostingInstagram && accountsBusy ? (
-          <SyncSkeleton />
-        ) : !connectedAccount ? (
-          <section className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-950">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="font-semibold text-amber-950">
-                  {hasPostingInstagram ? "Instagram posting account found. InstaPilot will sync it automatically." : "Connect Instagram once to use both posting and InstaPilot."}
-                </p>
-                <p className="mt-1 text-amber-800">
-                  {hasPostingInstagram
-                    ? "If it does not appear in a few seconds, use Sync now. No separate Instagram login is needed."
-                    : "Use the same official Meta connection used for autoposting. After connecting, this builder will pick it up automatically."}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-wrap gap-2">
-                {hasPostingInstagram ? (
-                  <Button type="button" variant="outline" onClick={() => syncFromSocialPilot()} disabled={syncing}>
-                    {syncing ? "Syncing..." : "Sync now"}
-                  </Button>
-                ) : null}
-                <Button asChild>
-                  <Link to="/dashboard/instapilot/connect">Connect Instagram</Link>
-                </Button>
-              </div>
-            </div>
-          </section>
-        ) : null}
 
         <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
           <aside className="space-y-4">
@@ -198,10 +255,14 @@ export default function InstagramBots() {
                   onClick={() => {
                     if (bots[0]?.id) {
                       setSelectedBotId(bots[0].id);
-                      toast("Only one InstaPilot bot is allowed. Edit the existing bot.", { icon: "i" });
+                      toast("Only one InstaPilot bot is allowed. Editing existing bot.", { icon: "i" });
+                      setUserSetStep(true);
+                      setActiveStep(1);
                       return;
                     }
                     setSelectedBotId(undefined);
+                    setUserSetStep(true);
+                    setActiveStep(1);
                   }}
                 >
                   {hasBot ? <Bot className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
@@ -214,11 +275,15 @@ export default function InstagramBots() {
                     role="button"
                     tabIndex={0}
                     key={bot.id}
-                    onClick={() => setSelectedBotId(bot.id)}
+                    onClick={() => {
+                      setSelectedBotId(bot.id);
+                      if (activeStep === 0) setActiveStep(1);
+                    }}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
                         setSelectedBotId(bot.id);
+                        if (activeStep === 0) setActiveStep(1);
                       }
                     }}
                     className={`w-full rounded-lg border p-4 text-left transition ${
@@ -258,7 +323,7 @@ export default function InstagramBots() {
                 ))}
                 {!loading && bots.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-black/20 bg-[#f8f6f3] p-5 text-sm leading-6 text-[var(--slate)]">
-                    You can create one InstaPilot bot for this workspace. After saving, use the same bot card to edit settings, knowledge, and activation.
+                    You can create one InstaPilot bot for this workspace. Use the wizard steps to set up identity and knowledge base.
                   </div>
                 ) : null}
               </div>
@@ -266,21 +331,223 @@ export default function InstagramBots() {
             <QuickStats analytics={analytics} activeBots={activeBots} />
           </aside>
 
+          {/* Dedicated Step Views */}
           <div className="space-y-5">
-            <BotBuilderForm
-              key={selectedBot?.id || "new"}
-              accounts={accounts}
-              accountsBusy={accountsBusy}
-              selectedBot={selectedBot}
-              onSaved={(savedBot) => {
-                if (savedBot?.id) setSelectedBotId(savedBot.id);
-                refreshAccounts();
-                refreshBots();
-              }}
-            />
-            <KnowledgeBaseUploader botId={selectedBot?.id} />
-          </div>
+            {/* Step 1: Connect */}
+            {activeStep === 0 && (
+              <div className="space-y-5">
+                <section className="rounded-xl border border-black/10 bg-white p-6 shadow-sm">
+                  <div className="flex items-center gap-3 border-b border-black/10 pb-4">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-50 text-[var(--arc)]">
+                      <Link2 className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--arc)]">Step 1 of 4</p>
+                      <h2 className="text-xl font-semibold text-[var(--ink)]">Instagram Account Connection</h2>
+                    </div>
+                  </div>
+                  {connectedAccount ? (
+                    <div className="mt-5 space-y-4">
+                      <div className="flex flex-col gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-950 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                          <div>
+                            <p className="font-semibold">Connected to @{connectedAccount.instagram_username || "instagram"}</p>
+                            <p className="text-xs text-emerald-800">Your Instagram account is linked and ready for automation.</p>
+                          </div>
+                        </div>
+                        <span className="shrink-0 rounded-md bg-emerald-600 px-3 py-1 text-xs font-bold text-white">Connected</span>
+                      </div>
+                      <div className="flex justify-end pt-2">
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            setUserSetStep(true);
+                            setActiveStep(1);
+                          }}
+                          className="gap-2 bg-[var(--arc)] text-white hover:bg-[#d95f27]"
+                        >
+                          <span>Proceed to Step 2: Bot Details</span>
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-5 space-y-4">
+                      <p className="text-sm leading-6 text-[var(--slate)]">
+                        Connect your official Instagram Professional / Business account once to enable DM automation.
+                      </p>
+                      {!connectedAccount && hasPostingInstagram && accountsBusy ? (
+                        <SyncSkeleton />
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {hasPostingInstagram ? (
+                            <Button type="button" variant="outline" onClick={() => syncFromSocialPilot()} disabled={syncing}>
+                              {syncing ? "Syncing..." : "Sync now"}
+                            </Button>
+                          ) : null}
+                          <Button asChild className="gap-2">
+                            <Link to="/dashboard/instapilot/connect">Connect Instagram Account</Link>
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </section>
+              </div>
+            )}
 
+            {/* Step 2: Bot Details */}
+            {activeStep === 1 && (
+              <div className="space-y-5">
+                <BotBuilderForm
+                  key={selectedBot?.id || "new"}
+                  accounts={accounts}
+                  accountsBusy={accountsBusy}
+                  selectedBot={selectedBot}
+                  onSaved={(savedBot) => {
+                    if (savedBot?.id) setSelectedBotId(savedBot.id);
+                    refreshAccounts();
+                    refreshBots();
+                    setUserSetStep(true);
+                    setActiveStep(2); // Automatically advance to Step 3 (Knowledge Base)
+                    toast.success("Bot saved! Moving to Knowledge Base configuration.");
+                  }}
+                />
+                {selectedBot?.id ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-black/10 bg-white p-4 shadow-sm">
+                    <p className="text-sm text-[var(--slate)]">Bot details saved. Ready to configure FAQs and knowledge base?</p>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setUserSetStep(true);
+                        setActiveStep(2);
+                      }}
+                      className="gap-2 bg-[var(--arc)] text-white hover:bg-[#d95f27]"
+                    >
+                      <span>Next: Add Knowledge Base</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            )}
+
+            {/* Step 3: Knowledge Base */}
+            {activeStep === 2 && (
+              <div className="space-y-5">
+                <KnowledgeBaseUploader botId={selectedBot?.id} />
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-black/10 bg-white p-4 shadow-sm">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setUserSetStep(true);
+                      setActiveStep(1);
+                    }}
+                    className="gap-2 bg-white"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span>Back to Bot Details</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setUserSetStep(true);
+                      setActiveStep(3);
+                    }}
+                    className="gap-2 bg-[var(--arc)] text-white hover:bg-[#d95f27]"
+                  >
+                    <span>Next: Test & Activate Bot</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Test & Activate */}
+            {activeStep === 3 && (
+              <div className="space-y-5">
+                <section className="overflow-hidden rounded-xl border border-black/10 bg-white shadow-sm">
+                  <div className="border-b border-black/10 bg-[#fffaf7] p-5">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                          <TestTube2 className="h-5 w-5" />
+                        </span>
+                        <div>
+                          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-emerald-700">Step 4 of 4</p>
+                          <h2 className="text-xl font-semibold text-[var(--ink)]">Test & Activate Bot</h2>
+                        </div>
+                      </div>
+                      <span
+                        className={`rounded-md px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] ${
+                          selectedBot?.is_active ? "bg-emerald-100 text-emerald-800" : "bg-black/5 text-[var(--slate)]"
+                        }`}
+                      >
+                        {selectedBot?.is_active ? "Live" : "Draft / Paused"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-5">
+                    <p className="text-sm text-[var(--slate)]">
+                      Test how your bot responds to user questions in real-time. Once your test responses look great, activate your bot live!
+                    </p>
+                  </div>
+                </section>
+
+                <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
+                  <TestChat botId={selectedBot?.id} compact={false} showHeader={false} />
+
+                  <div className="space-y-4">
+                    <div className="rounded-xl border border-black/10 bg-white p-5 shadow-sm">
+                      <h3 className="font-semibold text-[var(--ink)]">Live Activation</h3>
+                      <p className="mt-1 text-xs leading-5 text-[var(--slate)]">
+                        When active, this bot will automatically reply to incoming Instagram DMs using your saved knowledge base.
+                      </p>
+                      <div className="mt-5">
+                        <Button
+                          type="button"
+                          onClick={async () => {
+                            if (!selectedBot?.id) return;
+                            try {
+                              await updateInstagramBot(selectedBot.id, { is_active: !selectedBot.is_active });
+                              toast.success(selectedBot.is_active ? "Bot paused" : "Bot activated live!");
+                              refreshBots();
+                            } catch (err: any) {
+                              toast.error(err.message || "Failed to update status");
+                            }
+                          }}
+                          disabled={!selectedBot?.id}
+                          className={`w-full gap-2 py-6 text-base font-bold shadow-sm ${
+                            selectedBot?.is_active
+                              ? "bg-amber-600 text-white hover:bg-amber-700"
+                              : "bg-emerald-600 text-white hover:bg-emerald-700"
+                          }`}
+                        >
+                          <Power className="h-5 w-5" />
+                          {selectedBot?.is_active ? "Pause Bot" : "Activate Bot Live"}
+                        </Button>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setUserSetStep(true);
+                        setActiveStep(2);
+                      }}
+                      className="w-full gap-2 bg-white"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      <span>Back to Knowledge Base</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <PreviewDrawer open={previewOpen} onClose={() => setPreviewOpen(false)} botId={selectedBot?.id} />
@@ -305,19 +572,54 @@ function SyncSkeleton() {
   );
 }
 
-function StepCard({ number, title, text, done, active }: { number: string; title: string; text: string; done: boolean; active: boolean }) {
+function StepCard({
+  number,
+  title,
+  text,
+  done,
+  active,
+  onClick,
+}: {
+  number: string;
+  title: string;
+  text: string;
+  done: boolean;
+  active: boolean;
+  onClick?: () => void;
+}) {
   return (
-    <div className={`rounded-lg border p-4 ${active ? "border-[var(--arc)] bg-[#fff7f2]" : done ? "border-emerald-200 bg-emerald-50" : "border-black/10 bg-[#f8f6f3]"}`}>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group w-full rounded-xl border p-4 text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--arc)]/20 ${
+        active
+          ? "border-[var(--arc)] bg-[#fff7f2] shadow-md ring-2 ring-[var(--arc)]/20"
+          : done
+            ? "border-emerald-200 bg-emerald-50/70 hover:border-emerald-300 hover:bg-emerald-50"
+            : "border-black/10 bg-[#f8f6f3] hover:border-black/20 hover:bg-white"
+      }`}
+    >
       <div className="flex items-center gap-3">
-        <span className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${done ? "bg-emerald-600 text-white" : active ? "bg-[var(--arc)] text-white" : "bg-white text-[var(--slate)]"}`}>
+        <span
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-transform group-hover:scale-105 ${
+            done
+              ? "bg-emerald-600 text-white shadow-sm"
+              : active
+                ? "bg-[var(--arc)] text-white shadow-sm"
+                : "bg-white text-[var(--slate)] border border-black/10"
+          }`}
+        >
           {done ? <CheckCircle2 className="h-4 w-4" /> : number}
         </span>
         <div className="min-w-0">
-          <div className="font-semibold text-[var(--ink)]">{title}</div>
+          <div className="flex items-center gap-1.5 font-semibold text-[var(--ink)]">
+            <span>{title}</span>
+            {active ? <span className="h-2 w-2 rounded-full bg-[var(--arc)] animate-pulse" /> : null}
+          </div>
           <div className="truncate text-xs text-[var(--slate)]">{text}</div>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 

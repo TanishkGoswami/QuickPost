@@ -47,7 +47,10 @@ function History() {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    if (!dateString) return "Date unavailable";
+    const date = new Date(dateString);
+    if (!Number.isFinite(date.getTime())) return "Date unavailable";
+    return date.toLocaleDateString("en-US", {
       weekday: "short",
       month: "short",
       day: "numeric",
@@ -151,30 +154,249 @@ function History() {
   );
 
   return (
-    <div className="p-0 mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div className="history-page">
+      <style>{`
+        .history-page {
+          width: 100%;
+          max-width: 1380px;
+          margin: 0 auto;
+          padding: 24px;
+          color: var(--ink, #111);
+        }
+        .history-header {
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 20px;
+        }
+        .history-title {
+          margin: 0 0 6px;
+          color: var(--ink, #111);
+          font-size: 28px;
+          font-weight: 650;
+          letter-spacing: -0.02em;
+          line-height: 1.1;
+        }
+        .history-subtitle {
+          margin: 0;
+          color: var(--slate, #626260);
+          font-size: 14px;
+        }
+        .history-toolbar {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex: 0 0 auto;
+        }
+        .history-search {
+          position: relative;
+          width: min(280px, 42vw);
+        }
+        .history-search svg {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          width: 16px;
+          height: 16px;
+          color: var(--slate, #626260);
+          transform: translateY(-50%);
+          pointer-events: none;
+        }
+        .history-search input {
+          width: 100%;
+          min-height: 42px;
+          padding: 9px 12px 9px 38px;
+          border: 1px solid var(--dust, #d3cec6);
+          border-radius: 8px;
+          background: #fff;
+          color: var(--ink, #111);
+          font-size: 14px;
+          outline: none;
+          box-shadow: none;
+        }
+        .history-filter-btn {
+          width: 42px;
+          height: 42px;
+          flex: 0 0 42px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid var(--dust, #d3cec6);
+          border-radius: 8px;
+          background: #fff;
+          color: var(--ink, #111);
+          cursor: pointer;
+        }
+        .history-list {
+          display: grid;
+          gap: 12px;
+        }
+        .history-card {
+          overflow: hidden;
+          border: 1px solid var(--dust, #d3cec6);
+          border-radius: 8px;
+          background: #fff;
+          box-shadow: none;
+          transition: border-color 160ms ease, background 160ms ease;
+        }
+        .history-card:hover,
+        .history-card.is-expanded {
+          border-color: #bdb6ad;
+          background: #fffefa;
+        }
+        .history-row {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          min-height: 108px;
+          padding: 16px 20px;
+          cursor: pointer;
+        }
+        .history-thumb {
+          width: 72px;
+          height: 72px;
+          border: 1px solid var(--dust, #d3cec6);
+          border-radius: 8px;
+          flex-shrink: 0;
+          overflow: hidden;
+          position: relative;
+          background: #ebe7e1;
+        }
+        .history-chevron {
+          width: 32px;
+          height: 32px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border: 0;
+          border-radius: 50%;
+          background: #f0ebe4;
+          color: var(--slate, #626260);
+          flex-shrink: 0;
+        }
+        .history-empty {
+          padding: 48px 20px;
+          border: 1px solid var(--dust, #d3cec6);
+          border-radius: 8px;
+          background: #fff;
+          text-align: center;
+        }
+        .history-expanded {
+          padding: 16px 20px 20px;
+          border-top: 1px solid rgba(20,20,19,0.08);
+          background: #faf8f5;
+        }
+        .history-detail-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 10px;
+        }
+        .history-detail-card {
+          padding: 14px;
+          border: 1px solid var(--dust, #d3cec6);
+          border-radius: 8px;
+          background: #fff;
+        }
+        .history-detail-card h4 {
+          margin: 0 0 10px;
+          color: var(--slate, #626260);
+          font-size: 11px;
+          font-weight: 650;
+        }
+        .history-meta {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 240px;
+          gap: 10px;
+          margin-top: 12px;
+        }
+        .history-meta-card {
+          min-width: 0;
+          padding: 14px;
+          border: 1px solid var(--dust, #d3cec6);
+          border-radius: 8px;
+          background: #fff;
+        }
+        .history-meta-card h4 {
+          margin: 0 0 10px;
+          color: var(--slate, #626260);
+          font-size: 11px;
+          font-weight: 650;
+        }
+        .history-date {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          color: var(--slate, #626260);
+          font-size: 11px;
+          font-weight: 650;
+          letter-spacing: 0;
+          text-transform: none;
+        }
+        .history-caption {
+          margin: 8px 0 12px;
+          color: var(--ink, #111);
+          font-size: 18px;
+          font-weight: 650;
+          line-height: 1.25;
+        }
+        .history-status-pill {
+          padding: 4px 8px;
+          border: 1px solid #cfd6ff;
+          border-radius: 999px;
+          background: #eef1ff;
+          color: #4f58b8;
+          font-size: 10px;
+          font-weight: 650;
+        }
+        .history-platform-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 5px 9px;
+          border-radius: 999px;
+          font-size: 11px;
+          font-weight: 650;
+        }
+        .history-platform-pill.success {
+          border: 1px solid #bfe8cc;
+          background: #effbf3;
+          color: #087832;
+        }
+        .history-platform-pill.failed {
+          border: 1px solid #fac7c2;
+          background: #fff1ef;
+          color: #b62216;
+        }
+        @media (max-width: 768px) {
+          .history-page { padding: 18px 14px 32px; }
+          .history-header { align-items: stretch; flex-direction: column; }
+          .history-toolbar { width: 100%; }
+          .history-search { width: 100%; flex: 1 1 auto; }
+          .history-row { align-items: flex-start; padding: 14px; }
+          .history-thumb { width: 62px; height: 62px; }
+          .history-caption { font-size: 16px; }
+          .history-meta { grid-template-columns: 1fr; }
+        }
+      `}</style>
+      <div className="history-header">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Post History
-          </h1>
-          <p className="text-gray-600">
-            Review and track your multi-platform broadcasts
-          </p>
+          <h1 className="history-title">Post History</h1>
+          <p className="history-subtitle">Review and track your multi-platform broadcasts</p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <div className="history-toolbar">
+          <div className="history-search">
+            <Search />
             <input
               type="text"
               placeholder="Search posts..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 shadow-sm transition-all"
             />
           </div>
-          <button className="p-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 shadow-sm transition-all">
-            <Filter className="w-5 h-5 text-gray-600" />
+          <button type="button" className="history-filter-btn" aria-label="Filter posts">
+            <Filter className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -183,18 +405,18 @@ function History() {
         name="history-list"
         loading={loading}
         fixture={
-          <div className="space-y-6">
+          <div className="history-list">
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-32 bg-white rounded-2xl border border-gray-100 shadow-sm"
+                className="h-28 bg-white rounded-lg border border-gray-200"
               />
             ))}
           </div>
         }
       >
         {filteredBroadcasts.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-16 text-center shadow-sm">
+          <div className="history-empty">
             <img src="https://illustrations.popsy.co/amber/success.svg" alt="No posts found" className="h-40 object-contain mx-auto mb-6" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
               No posts found
@@ -204,7 +426,7 @@ function History() {
             </p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="history-list">
             {filteredBroadcasts.map((post) => {
               const selectedBasePlatforms = new Set([
                 ...(post.selected_channels || []),
@@ -292,18 +514,14 @@ function History() {
               return (
                 <div
                   key={post.id}
-                  className={`bg-white rounded-2xl border transition-all duration-300 overflow-hidden shadow-sm hover:shadow-md ${
-                    expandedId === post.id
-                      ? "border-blue-200 ring-1 ring-blue-100"
-                      : "border-gray-100"
-                  }`}
+                  className={`history-card ${expandedId === post.id ? "is-expanded" : ""}`}
                 >
                   <div
-                    className="p-5 flex items-start gap-5 cursor-pointer"
+                    className="history-row"
                     onClick={() => toggleExpand(post.id)}
                   >
                     {/* Media Preview */}
-                    <div className="w-24 h-24 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 relative border border-gray-100">
+                    <div className="history-thumb">
                       {post.media_url ? (
                         <img
                           src={post.media_url}
@@ -338,8 +556,8 @@ function History() {
 
                     {/* Content Summary */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2 text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="history-date">
                           <Calendar className="w-3.5 h-3.5" />
                           {post.status === "scheduled"
                             ? `Scheduled for ${formatDate(post.scheduled_for)}`
@@ -347,11 +565,11 @@ function History() {
                         </div>
                         <div className="flex items-center gap-2">
                           {post.status === "scheduled" && (
-                            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[9px] font-bold uppercase tracking-tighter border border-indigo-200 shadow-sm animate-pulse">
+                            <span className="history-status-pill">
                               Scheduled
                             </span>
                           )}
-                          <div className="p-1 bg-gray-50 rounded-full">
+                          <div className="history-chevron">
                             {expandedId === post.id ? (
                               <ChevronUp className="w-4 h-4 text-gray-400" />
                             ) : (
@@ -361,7 +579,7 @@ function History() {
                         </div>
                       </div>
 
-                      <h3 className="text-lg font-bold text-gray-900 line-clamp-1 mb-3 pr-8">
+                      <h3 className="history-caption line-clamp-1 pr-8">
                         {post.caption || "Untitled Broadcast"}
                       </h3>
 
@@ -370,10 +588,10 @@ function History() {
                         {platforms.map((platform) => (
                           <div
                             key={platform.id}
-                            className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold ${
+                            className={`history-platform-pill ${
                               platform.success
-                                ? "bg-green-50 text-green-700 border border-green-100"
-                                : "bg-red-50 text-red-700 border border-red-100"
+                                ? "success"
+                                : "failed"
                             }`}
                           >
                             {getPlatformIcon(platform.id)}
@@ -391,12 +609,12 @@ function History() {
 
                   {/* Expanded Breakdown */}
                   {expandedId === post.id && (
-                    <div className="px-5 pb-6 pt-2 border-t border-gray-50 bg-gray-50/20 animate-in slide-in-from-top-2 duration-300">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+                    <div className="history-expanded animate-in slide-in-from-top-2 duration-300">
+                      <div className="history-detail-grid">
                         {platforms.map((platform) => (
                           <div
                             key={platform.id}
-                            className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm transition-transform hover:scale-[1.02]"
+                            className="history-detail-card"
                           >
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center gap-2 text-sm">
@@ -441,9 +659,9 @@ function History() {
                       </div>
 
                       {/* Meta Data */}
-                      <div className="mt-6 flex flex-col md:flex-row gap-4">
-                        <div className="flex-1 p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
-                          <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 border-b border-gray-50 pb-2">
+                      <div className="history-meta">
+                        <div className="history-meta-card">
+                          <h4>
                             Full Caption
                           </h4>
                           <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
@@ -451,8 +669,8 @@ function History() {
                           </p>
                         </div>
 
-                        <div className="w-full md:w-64 p-4 bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col items-center justify-center text-center">
-                          <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 w-full border-b border-gray-50 pb-2">
+                        <div className="history-meta-card flex flex-col items-center justify-center text-center">
+                          <h4>
                             Media Data
                           </h4>
                           {post.media_type === "image" ||

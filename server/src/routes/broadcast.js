@@ -279,7 +279,10 @@ async function processBroadcastJob({
   let autoCoverImageUrl = null;
 
   try {
-    if (isCloudinaryConfigured()) {
+    const nonYoutubeChannels = (channels || []).filter((c) => !String(c).startsWith("youtube"));
+    const needsCloudinary = isScheduled || nonYoutubeChannels.length > 0;
+
+    if (isCloudinaryConfigured() && needsCloudinary) {
       console.log(
         `☁️  [JOB:${jobId}] Uploading ${uploadedFiles.length} file(s) to Cloudinary...`,
       );
@@ -380,6 +383,25 @@ async function processBroadcastJob({
       });
 
       console.log(`✓ [JOB:${jobId}] All files uploaded. URLs:`, mediaUrls);
+    } else if (isCloudinaryConfigured() && !needsCloudinary) {
+      console.log(`⚡ [JOB:${jobId}] Direct YouTube route: Bypassing Cloudinary video upload for immediate publishing.`);
+      const serverPublicUrl = process.env.SERVER_PUBLIC_URL || "http://localhost:5000";
+      mediaUrls = filenames.map((name) => `${serverPublicUrl}/uploads/${name}`);
+
+      if (thumbnailFile) {
+        updateJob(jobId, { step: "Uploading custom thumbnail…", progress: 28 });
+        const thumbUpload = await uploadToCloudinary(thumbnailFile.path, "image");
+        finalThumbnailUrl = thumbUpload.url;
+      }
+
+      updateJob(jobId, {
+        progress: 30,
+        step: "Direct streaming to YouTube…",
+        meta: {
+          ...(getJob(jobId)?.meta || {}),
+          previewUrl: finalThumbnailUrl || null,
+        },
+      });
     } else {
       // Fallback to local URLs if No Cloudinary
       const serverPublicUrl =
@@ -536,14 +558,32 @@ async function processBroadcastJob({
 
   for (const account of resolveSocialPublishChannels("pinterest", channels, tokens.pinterestAccounts || [])) {
     const resolvedCaption = resolveMentions(platData?.pinterest?.title || caption, 'pinterest', account);
+    const targetAccountId = account.accountId || account.account_id || account.id;
     platformPromises.push(
-      postToPinterest(
-        primaryMediaUrl,
-        resolvedCaption,
-        account,
-        platData?.pinterest?.link,
-        platData?.pinterest?.boardId || account.boardId,
-      ).then((r) => onChannelComplete(account.channel, r)),
+      (async () => {
+        try {
+          const validTokenInfo = await pinterestOAuth.getValidAccessToken(req.user.userId, targetAccountId);
+          const activeAccount = {
+            ...account,
+            accessToken: validTokenInfo.accessToken,
+            boardId: platData?.pinterest?.boardId || validTokenInfo.boardId || account.boardId
+          };
+          const result = await postToPinterest(
+            primaryMediaUrl,
+            resolvedCaption,
+            activeAccount,
+            platData?.pinterest?.link,
+            activeAccount.boardId,
+            broadcastId || null
+          );
+          onChannelComplete(account.channel, result);
+          return result;
+        } catch (err) {
+          const errRes = { success: false, platform: 'Pinterest', error: err.message };
+          onChannelComplete(account.channel, errRes);
+          return errRes;
+        }
+      })()
     );
   }
 

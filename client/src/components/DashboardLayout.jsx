@@ -85,7 +85,7 @@ function DashboardShellSkeleton({ isDesktop }) {
       <section style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         <header
           style={{
-            height: 56,
+            height: 64,
             flexShrink: 0,
             borderBottom: "1px solid var(--dust, #d3cec6)",
             background: "var(--canvas, #f5f1ec)",
@@ -159,16 +159,14 @@ function DashboardShellSkeleton({ isDesktop }) {
 }
 
 const DashboardLayout = () => {
-  const { isAuthenticated, loading, user } = useAuth();
+  const { isAuthenticated, loading, profileLoading, refreshAccounts, user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const [hideUpgradeBanner, setHideUpgradeBanner] = useState(false);
-  const location = useLocation();
   const navigate = useNavigate();
-  const isTrendsPage = location.pathname.includes('/dashboard/trends');
-  const isAutoDMWorkspace = location.pathname.startsWith('/dashboard/auto-dm');
-  const showDashboardChrome = !isTrendsPage;
-  const showUpgradeBanner = showDashboardChrome && !hideUpgradeBanner && isFreePlan(user);
+  const location = useLocation();
+  const showDashboardChrome = true;
+  const showUpgradeBanner = showDashboardChrome && !hideUpgradeBanner && !profileLoading && isFreePlan(user);
   const bannerHeight = showUpgradeBanner ? 52 : 0;
 
   useEffect(() => {
@@ -180,6 +178,12 @@ const DashboardLayout = () => {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const success = new URLSearchParams(location.search).get("success");
+    if (success?.endsWith("_connected")) refreshAccounts();
+  }, [isAuthenticated, location.search, refreshAccounts]);
 
   // ── Wait for Supabase to restore session before deciding ──
   if (loading) {
@@ -277,7 +281,6 @@ const DashboardLayout = () => {
           onMenuClick={() => setSidebarOpen((o) => !o)}
           sidebarOpen={sidebarOpen}
           isDesktop={isDesktop}
-          isTrendsPage={isTrendsPage}
           topOffset={bannerHeight}
         />
 

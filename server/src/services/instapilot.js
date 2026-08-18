@@ -153,13 +153,30 @@ export async function importConnectedInstagram(user) {
     profile.picture?.data?.url ||
     profile.picture ||
     null;
-  // Preserve existing webhook_status and token if account already exists
+  // Preserve existing webhook_status and token if account already exists.
   const { data: existingAccount } = await supabase
     .from('instagram_accounts')
-    .select('webhook_status, access_token_encrypted')
+    .select('id, webhook_status, webhook_instagram_user_id, access_token_encrypted')
     .eq('user_id', user.userId)
     .eq('instagram_business_account_id', socialToken.instagram_business_id)
     .maybeSingle();
+
+  const { data: duplicateAccount, error: duplicateError } = await supabase
+    .from('instagram_accounts')
+    .select('id, user_id, instagram_username')
+    .eq('instagram_business_account_id', socialToken.instagram_business_id)
+    .eq('is_connected', true)
+    .neq('user_id', user.userId)
+    .limit(1)
+    .maybeSingle();
+  if (duplicateError) throw duplicateError;
+  if (duplicateAccount) {
+    const err = new Error(
+      `This Instagram account is already connected to another workspace. Disconnect @${duplicateAccount.instagram_username || 'this account'} there before importing it here.`
+    );
+    err.status = 409;
+    throw err;
+  }
 
   let tokenEncrypted = existingAccount?.access_token_encrypted;
   if (tokenEncrypted) {
@@ -187,6 +204,7 @@ export async function importConnectedInstagram(user) {
     token_expires_at: socialToken.token_expiry || null,
     permissions,
     webhook_status: existingAccount?.webhook_status || 'configure_in_meta',
+    webhook_instagram_user_id: existingAccount?.webhook_instagram_user_id || null,
     token_status: 'active',
     is_connected: true,
     updated_at: new Date().toISOString(),
@@ -233,6 +251,23 @@ async function getOwnedAccount(userId, accountId) {
 
 async function getPageTokenForAccount(account) {
   return decryptToken(account.access_token_encrypted).pageAccessToken;
+}
+
+async function clearAndAssignWebhookRecipient(account, recipientId) {
+  await supabase
+    .from('instagram_accounts')
+    .update({ webhook_instagram_user_id: null, updated_at: new Date().toISOString() })
+    .eq('webhook_instagram_user_id', recipientId)
+    .neq('id', account.id);
+
+  const { data, error } = await supabase
+    .from('instagram_accounts')
+    .update({ webhook_instagram_user_id: recipientId, updated_at: new Date().toISOString() })
+    .eq('id', account.id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
 }
 
 export async function disconnectAccount(userId, accountId) {
@@ -608,25 +643,35 @@ async function retrieveKnowledge(botId, question) {
 
 export async function generateReply({ bot, messageText, conversation = null }) {
   const chunks = await retrieveKnowledge(bot.id, messageText);
-  if (!chunks.length) {
-    return { text: bot.fallback_message || DEFAULT_REPLY, confidence: 0.25, handoff: true };
+  // Fall back to top knowledge chunks if keyword score is 0
+  let effectiveChunks = chunks;
+  if (!effectiveChunks.length || !effectiveChunks.some((c) => c.score > 0)) {
+    const { data: allChunks } = await supabase
+      .from('knowledge_chunks')
+      .select('chunk_text, metadata')
+      .eq('bot_id', bot.id)
+      .limit(5);
+    if (allChunks?.length) effectiveChunks = allChunks;
   }
 
   if (!process.env.OPENAI_API_KEY) {
+    const defaultText = effectiveChunks[0]?.chunk_text || bot.fallback_message || DEFAULT_REPLY;
     return {
-      text: `${chunks[0].chunk_text.slice(0, 420)}${chunks[0].chunk_text.length > 420 ? '...' : ''}`,
+      text: `${defaultText.slice(0, 420)}${defaultText.length > 420 ? '...' : ''}`,
       confidence: 0.55,
-      handoff: true,
+      handoff: false,
     };
   }
 
   const prompt = [
-    `You reply as ${bot.business_name}, never as ChatGPT.`,
-    `Tone: ${bot.tone}. Language: ${bot.language}. Goal: ${bot.bot_goal}.`,
-    'Use only the knowledge base excerpts. Keep Instagram DM replies short and natural.',
-    'If the answer is not present, say the team will help or ask one clarifying question.',
-    'Never invent prices, policies, discounts, timelines, or guarantees.',
-    'Do not request sensitive information unless configured lead fields require it.',
+    `You are the official Instagram DM AI assistant for ${bot.business_name}.`,
+    `Tone: ${bot.tone || 'friendly and professional'}. Language: ${bot.language || 'English'}. Goal: ${bot.bot_goal || 'Assist customers, answer questions, and collect contact details'}.`,
+    'Rules:',
+    '1. For greetings (e.g. "hello", "hi", "hey"), reply warmly and ask how you can assist them with our services.',
+    '2. Use the Knowledge Base to answer business questions accurately.',
+    '3. When the customer asks about pricing, booking a demo, or getting started, politely ask for their name, phone number, or email address so our team can assist them.',
+    '4. Never invent prices, policies, discounts, or guarantees not listed in the Knowledge Base.',
+    '5. Keep Instagram DM replies concise, natural, friendly, and mobile-friendly.',
   ].join('\n');
 
   const { data } = await axios.post(
@@ -638,15 +683,14 @@ export async function generateReply({ bot, messageText, conversation = null }) {
         { role: 'system', content: prompt },
         {
           role: 'user',
-          content: `Knowledge:\n${chunks.map((c, i) => `[${i + 1}] ${c.chunk_text}`).join('\n\n')}\n\nUser: ${messageText}`,
+          content: `Knowledge Base:\n${effectiveChunks.map((c, i) => `[${i + 1}] ${c.chunk_text}`).join('\n\n')}\n\nCustomer Message: ${messageText}`,
         },
       ],
     },
     { headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` } }
   );
   const text = data.choices?.[0]?.message?.content?.trim() || bot.fallback_message || DEFAULT_REPLY;
-  const confidence = chunks[0]?.score > 0 ? 0.82 : 0.58;
-  return { text, confidence, handoff: confidence < Number(bot.confidence_threshold || 0.68) };
+  return { text, confidence: 0.85, handoff: false };
 }
 
 export async function testReply(userId, botId, messageText) {
@@ -714,20 +758,7 @@ async function findAccountByRecipient(recipientId) {
             console.log(
               `[INSTAPILOT] Self-healing mapped webhook recipient ${recipientId} to account ${account.instagram_username}`
             );
-            // First clear this webhook ID on other accounts to avoid unique constraint violations
-            await supabase
-              .from('instagram_accounts')
-              .update({ webhook_instagram_user_id: null })
-              .eq('webhook_instagram_user_id', recipientId);
-
-            // Update matched account
-            await supabase
-              .from('instagram_accounts')
-              .update({ webhook_instagram_user_id: recipientId, updated_at: new Date().toISOString() })
-              .eq('id', account.id);
-
-            account.webhook_instagram_user_id = recipientId;
-            return account;
+            return clearAndAssignWebhookRecipient(account, recipientId);
           }
         }
       } catch (e) {
@@ -795,6 +826,24 @@ async function upsertConversation(account, bot, senderId) {
   return data;
 }
 
+async function findExistingInboundMessage({ accountId, senderId, recipientId, text, metaMessageId }) {
+  if (metaMessageId) {
+    const { data, error } = await supabase
+      .from('instagram_messages')
+      .select('id')
+      .eq('instagram_account_id', accountId)
+      .eq('direction', 'inbound')
+      .eq('raw_payload->message->>mid', metaMessageId)
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (data) return data;
+  }
+
+  // Do not deduplicate by message text so users typing "Hello" or "Hi" multiple times get replies.
+  return null;
+}
+
 async function fetchInstagramScopedUserProfile(account, senderId) {
   const accessToken = await getPageTokenForAccount(account);
   const { data } = await axios.get(`https://graph.instagram.com/${GRAPH_VERSION}/${senderId}`, {
@@ -804,6 +853,59 @@ async function fetchInstagramScopedUserProfile(account, senderId) {
     },
   });
   return data || null;
+}
+
+function conversationNeedsProfileRefresh(conversation) {
+  return (
+    !conversation.instagram_username ||
+    !conversation.profile_pic_url ||
+    typeof conversation.is_user_follow_business !== 'boolean' ||
+    typeof conversation.is_business_follow_user !== 'boolean'
+  );
+}
+
+async function refreshConversationProfile(conversation) {
+  if (!conversationNeedsProfileRefresh(conversation)) return conversation;
+
+  try {
+    const account = await getOwnedAccount(conversation.user_id, conversation.instagram_account_id);
+    const profile = await fetchInstagramScopedUserProfile(account, conversation.instagram_user_id);
+    if (!profile) return conversation;
+
+    const updates = {
+      instagram_username: profile.username || conversation.instagram_username || null,
+      instagram_name: profile.name || conversation.instagram_name || null,
+      profile_pic_url: profile.profile_pic || conversation.profile_pic_url || null,
+      follower_count: Number.isFinite(profile.follower_count)
+        ? profile.follower_count
+        : conversation.follower_count || null,
+      is_user_follow_business:
+        typeof profile.is_user_follow_business === 'boolean'
+          ? profile.is_user_follow_business
+          : conversation.is_user_follow_business,
+      is_business_follow_user:
+        typeof profile.is_business_follow_user === 'boolean'
+          ? profile.is_business_follow_user
+          : conversation.is_business_follow_user,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from('instagram_conversations')
+      .update(updates)
+      .eq('id', conversation.id)
+      .eq('user_id', conversation.user_id)
+      .select('*, instagram_bots(bot_name), instagram_messages(message_text,direction,created_at), instagram_leads(*)')
+      .single();
+    if (error) throw error;
+    return data || { ...conversation, ...updates };
+  } catch (error) {
+    console.warn(
+      `[INSTAPILOT] Could not refresh profile for conversation ${conversation.id}:`,
+      error.response?.data || error.message
+    );
+    return conversation;
+  }
 }
 
 export async function processInstagramWebhook(payload) {
@@ -820,12 +922,94 @@ export async function processInstagramWebhook(payload) {
   return events.filter(Boolean);
 }
 
+export function extractLeadDataFromText(text) {
+  if (!text || typeof text !== 'string') return {};
+  const extracted = {};
+
+  // 1. Phone extraction
+  const phoneMatch = text.match(/(?:\+?\d{1,3}[\s-]?)?\(?\d{3,5}\)?[\s-]?\d{3,5}[\s-]?\d{3,5}/);
+  if (phoneMatch) {
+    const cleaned = phoneMatch[0].replace(/[^\d+]/g, '');
+    if (cleaned.length >= 10 && cleaned.length <= 15) {
+      extracted.phone = cleaned;
+    }
+  }
+
+  // 2. Email extraction
+  const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+  if (emailMatch) {
+    extracted.email = emailMatch[0].toLowerCase();
+  }
+
+  // 3. Name extraction ("My name is John", "Name: Alex", "I am Priyansh")
+  const nameMatch = text.match(/(?:my name is|i am|name[:\s]+)\s*([a-zA-Z\s]{2,30})/i);
+  if (nameMatch && nameMatch[1]) {
+    const name = nameMatch[1].trim();
+    if (name && !['here', 'the', 'a', 'not', 'user'].includes(name.toLowerCase())) {
+      extracted.name = name;
+    }
+  }
+
+  // 4. City extraction ("I live in Bhopal", "City: Mumbai", "from Delhi")
+  const cityMatch = text.match(/(?:i live in|from|city[:\s]+)\s*([a-zA-Z\s]{2,20})/i);
+  if (cityMatch && cityMatch[1]) {
+    const city = cityMatch[1].trim();
+    if (city && !['here', 'the', 'a', 'india'].includes(city.toLowerCase())) {
+      extracted.city = city;
+    }
+  }
+
+  return extracted;
+}
+
 async function handleInboundMessage({ senderId, recipientId, messaging }) {
   const account = await findAccountByRecipient(recipientId);
   if (!account) return { skipped: true, reason: 'account_not_found' };
   const bot = await findActiveBotForAccount(account.id);
   const conversation = await upsertConversation(account, bot, senderId);
   const text = messaging.message.text;
+  const metaMessageId = messaging.message.mid || null;
+
+  // Extract and save lead details (Phone, Email, Name, City) automatically
+  const extractedLead = extractLeadDataFromText(text);
+  if (Object.keys(extractedLead).length > 0) {
+    const mergedLeadData = {
+      ...(conversation.lead_data || {}),
+      ...extractedLead,
+    };
+    conversation.lead_data = mergedLeadData;
+
+    await supabase
+      .from('instagram_conversations')
+      .update({ lead_data: mergedLeadData, updated_at: new Date().toISOString() })
+      .eq('id', conversation.id);
+
+    await supabase.from('instagram_leads').upsert(
+      {
+        user_id: account.user_id,
+        bot_id: bot?.id || null,
+        conversation_id: conversation.id,
+        name: mergedLeadData.name || conversation.instagram_name || null,
+        phone: mergedLeadData.phone || null,
+        email: mergedLeadData.email || null,
+        city: mergedLeadData.city || null,
+        status: 'captured',
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'conversation_id' }
+    );
+  }
+
+  const existingInbound = await findExistingInboundMessage({
+    accountId: account.id,
+    senderId,
+    recipientId,
+    text,
+    metaMessageId,
+  });
+  if (existingInbound) {
+    return { skipped: true, reason: 'duplicate_inbound_message', messageId: existingInbound.id };
+  }
 
   const { error: inboundError } = await supabase.from('instagram_messages').insert({
     user_id: account.user_id,
@@ -867,12 +1051,18 @@ async function handleInboundMessage({ senderId, recipientId, messaging }) {
 
   let sendText = reply.handoff ? bot.fallback_message || DEFAULT_REPLY : reply.text;
 
-  const usage = await consumeUsage(
-    account.user_id,
-    'autodm_replies_per_month',
-    1,
-    'month',
-  );
+  let usage = { allowed: true };
+  try {
+    usage = await consumeUsage(
+      account.user_id,
+      'autodm_replies_per_month',
+      1,
+      'month',
+    );
+  } catch (err) {
+    console.warn('[INSTAPILOT] Entitlement check warning, proceeding with reply:', err.message);
+  }
+
   if (!usage.allowed) {
     return { skipped: true, reason: 'monthly_reply_limit_reached' };
   }
@@ -880,24 +1070,8 @@ async function handleInboundMessage({ senderId, recipientId, messaging }) {
   const watermark = '_⚡ Automation is powered by @Getaipilot_';
 
   // Send main message
-  await sendInstagramMessage({ account, recipientId: senderId, text: sendText, messagingType: 'RESPONSE' });
-  await supabase.from('instagram_messages').insert({
-    user_id: account.user_id,
-    bot_id: bot.id,
-    instagram_account_id: account.id,
-    conversation_id: conversation.id,
-    sender_id: recipientId,
-    recipient_id: senderId,
-    message_text: sendText,
-    direction: 'outbound',
-    ai_generated: true,
-    confidence_score: reply.confidence,
-    status: 'sent',
-  });
-
-  // Send watermark as separate message if free plan
-  if (isFreePlan) {
-    await sendInstagramMessage({ account, recipientId: senderId, text: watermark, messagingType: 'RESPONSE' });
+  try {
+    await sendInstagramMessage({ account, recipientId: senderId, text: sendText, messagingType: 'RESPONSE' });
     await supabase.from('instagram_messages').insert({
       user_id: account.user_id,
       bot_id: bot.id,
@@ -905,13 +1079,39 @@ async function handleInboundMessage({ senderId, recipientId, messaging }) {
       conversation_id: conversation.id,
       sender_id: recipientId,
       recipient_id: senderId,
-      message_text: watermark,
+      message_text: sendText,
       direction: 'outbound',
       ai_generated: true,
       confidence_score: reply.confidence,
       status: 'sent',
     });
+
+    // Send watermark as separate message if free plan
+    if (isFreePlan) {
+      try {
+        await sendInstagramMessage({ account, recipientId: senderId, text: watermark, messagingType: 'RESPONSE' });
+        await supabase.from('instagram_messages').insert({
+          user_id: account.user_id,
+          bot_id: bot.id,
+          instagram_account_id: account.id,
+          conversation_id: conversation.id,
+          sender_id: recipientId,
+          recipient_id: senderId,
+          message_text: watermark,
+          direction: 'outbound',
+          ai_generated: true,
+          confidence_score: reply.confidence,
+          status: 'sent',
+        });
+      } catch (watermarkError) {
+        console.warn('[INSTAPILOT] Failed to send watermark message:', watermarkError.message);
+      }
+    }
+  } catch (sendErr) {
+    console.error('❌ [INSTAPILOT] Failed to send Instagram DM reply:', sendErr.response?.data || sendErr.message);
+    return { skipped: true, reason: 'send_message_failed', error: sendErr.response?.data?.error?.message || sendErr.message };
   }
+
   await supabase
     .from('instagram_bots')
     .update({ replies_sent_today: quotaBot.repliesSentToday + 1 })
@@ -974,17 +1174,20 @@ export async function listConversations(userId) {
     .order('last_message_at', { ascending: false })
     .limit(50);
   if (error) throw error;
-  return data || [];
+  return Promise.all((data || []).map(refreshConversationProfile));
 }
 
 export async function getConversation(userId, conversationId) {
-  const { data: conversation, error } = await supabase
+  let { data: conversation, error } = await supabase
     .from('instagram_conversations')
     .select('*, instagram_leads(*)')
     .eq('user_id', userId)
     .eq('id', conversationId)
     .maybeSingle();
   if (error) throw error;
+  if (conversation) {
+    conversation = await refreshConversationProfile(conversation);
+  }
   const { data: messages, error: messagesError } = await supabase
     .from('instagram_messages')
     .select('*')

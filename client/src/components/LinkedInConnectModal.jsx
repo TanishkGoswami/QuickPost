@@ -60,7 +60,7 @@ export default function LinkedInConnectModal({ isOpen, onClose }) {
       <div className="space-y-6">
         <div className="text-center">
           <p className="text-sm text-gray-600 leading-relaxed mb-6">
-            Click the button below to securely connect your LinkedIn account. You'll be redirected to LinkedIn to authorize QuickPost.
+            Click the button below to securely connect your LinkedIn account. You'll be redirected to LinkedIn to authorize GAP Social-pilot.
           </p>
           <div className="flex justify-center">
              <div className="relative w-24 h-24 mb-2">
